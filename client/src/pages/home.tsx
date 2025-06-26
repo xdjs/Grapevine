@@ -17,10 +17,35 @@ export default function Home() {
   });
 
   const handleNetworkData = (data: NetworkData) => {
-    setNetworkData(data);
+    if (!networkData) {
+      // First artist - set data directly
+      setNetworkData(data);
+    } else {
+      // Merge with existing data
+      const existingNodeIds = new Set(networkData.nodes.map(n => n.id));
+      const existingLinks = new Set(networkData.links.map(l => `${typeof l.source === 'string' ? l.source : l.source.id}-${typeof l.target === 'string' ? l.target : l.target.id}`));
+      
+      const newNodes = data.nodes.filter(node => !existingNodeIds.has(node.id));
+      const newLinks = data.links.filter(link => {
+        const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+        const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+        return !existingLinks.has(`${sourceId}-${targetId}`) && !existingLinks.has(`${targetId}-${sourceId}`);
+      });
+      
+      setNetworkData({
+        nodes: [...networkData.nodes, ...newNodes],
+        links: [...networkData.links, ...newLinks]
+      });
+    }
+    
     if (!showNetworkView) {
       setTimeout(() => setShowNetworkView(true), 100);
     }
+  };
+
+  const handleReset = () => {
+    setNetworkData(null);
+    setShowNetworkView(false);
   };
 
   const handleZoomChange = (transform: { k: number; x: number; y: number }) => {
@@ -38,6 +63,7 @@ export default function Home() {
       {/* Network Visualization */}
       {networkData && (
         <NetworkVisualizer
+          key={`network-${networkData.nodes.length}-${networkData.links.length}`}
           data={networkData}
           visible={showNetworkView}
           filterState={filterState}
@@ -61,6 +87,7 @@ export default function Home() {
               const event = new CustomEvent('network-zoom', { detail: { action: 'reset' } });
               window.dispatchEvent(event);
             }}
+            onClearAll={handleReset}
           />
           <FilterControls
             filterState={filterState}

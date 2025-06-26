@@ -58,6 +58,13 @@ export class MemStorage implements IStorage {
     const ashe = await this.createArtist({ name: "Ashe", type: "artist" });
     const selenaGomez = await this.createArtist({ name: "Selena Gomez", type: "artist" });
     
+    // Additional artists for testing
+    const edSheeran = await this.createArtist({ name: "Ed Sheeran", type: "artist" });
+    const johnnyMcDaid = await this.createArtist({ name: "Johnny McDaid", type: "songwriter" });
+    const benny = await this.createArtist({ name: "Benny Blanco", type: "producer" });
+    const justinBieber = await this.createArtist({ name: "Justin Bieber", type: "artist" });
+    const skrillex = await this.createArtist({ name: "Skrillex", type: "producer" });
+    
     // Create collaborations for Taylor Swift
     await this.createCollaboration({ fromArtistId: taylorSwift.id, toArtistId: jackAntonoff.id, collaborationType: "production" });
     await this.createCollaboration({ fromArtistId: taylorSwift.id, toArtistId: aaronDessner.id, collaborationType: "production" });
@@ -84,6 +91,16 @@ export class MemStorage implements IStorage {
     await this.createCollaboration({ fromArtistId: billieEilish.id, toArtistId: robKinelski.id, collaborationType: "production" });
     await this.createCollaboration({ fromArtistId: finneas.id, toArtistId: ashe.id, collaborationType: "production" });
     await this.createCollaboration({ fromArtistId: finneas.id, toArtistId: selenaGomez.id, collaborationType: "production" });
+    
+    // Create collaborations for Ed Sheeran
+    await this.createCollaboration({ fromArtistId: edSheeran.id, toArtistId: johnnyMcDaid.id, collaborationType: "songwriting" });
+    await this.createCollaboration({ fromArtistId: edSheeran.id, toArtistId: benny.id, collaborationType: "production" });
+    await this.createCollaboration({ fromArtistId: benny.id, toArtistId: justinBieber.id, collaborationType: "production" });
+    await this.createCollaboration({ fromArtistId: skrillex.id, toArtistId: justinBieber.id, collaborationType: "production" });
+    
+    // Cross-connections to make network more interesting
+    await this.createCollaboration({ fromArtistId: benny.id, toArtistId: selenaGomez.id, collaborationType: "production" });
+    await this.createCollaboration({ fromArtistId: johnnyMcDaid.id, toArtistId: taylorSwift.id, collaborationType: "songwriting" });
   }
 
   async getArtist(id: number): Promise<Artist | undefined> {

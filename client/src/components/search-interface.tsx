@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,9 +24,11 @@ export default function SearchInterface({ onNetworkData, showNetworkView }: Sear
   });
 
   // Update network data when query succeeds
-  if (data && data !== undefined) {
-    onNetworkData(data);
-  }
+  useEffect(() => {
+    if (data && data !== undefined) {
+      onNetworkData(data);
+    }
+  }, [data]);
 
   const handleSearch = () => {
     const query = searchQuery.trim();
