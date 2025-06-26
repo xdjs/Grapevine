@@ -1,0 +1,52 @@
+import { pgTable, text, serial, integer, jsonb } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+export const artists = pgTable("artists", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  type: text("type").notNull(), // 'artist', 'producer', 'songwriter'
+});
+
+export const collaborations = pgTable("collaborations", {
+  id: serial("id").primaryKey(),
+  fromArtistId: integer("from_artist_id").notNull(),
+  toArtistId: integer("to_artist_id").notNull(),
+  collaborationType: text("collaboration_type").notNull(), // 'production', 'songwriting'
+});
+
+export const insertArtistSchema = createInsertSchema(artists).omit({
+  id: true,
+});
+
+export const insertCollaborationSchema = createInsertSchema(collaborations).omit({
+  id: true,
+});
+
+export type InsertArtist = z.infer<typeof insertArtistSchema>;
+export type Artist = typeof artists.$inferSelect;
+export type InsertCollaboration = z.infer<typeof insertCollaborationSchema>;
+export type Collaboration = typeof collaborations.$inferSelect;
+
+// Network data types for API responses
+export const networkNodeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.enum(['artist', 'producer', 'songwriter']),
+  size: z.number(),
+  collaborations: z.array(z.string()).optional(),
+});
+
+export const networkLinkSchema = z.object({
+  source: z.string(),
+  target: z.string(),
+});
+
+export const networkDataSchema = z.object({
+  nodes: z.array(networkNodeSchema),
+  links: z.array(networkLinkSchema),
+});
+
+export type NetworkNode = z.infer<typeof networkNodeSchema>;
+export type NetworkLink = z.infer<typeof networkLinkSchema>;
+export type NetworkData = z.infer<typeof networkDataSchema>;
