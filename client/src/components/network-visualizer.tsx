@@ -344,29 +344,40 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
-  // Apply zoom using D3's zoom behavior
+  // Apply zoom using SVG viewBox manipulation
   const applyZoom = (scale: number) => {
-    if (!svgRef.current || !zoomRef.current) {
-      console.log('Missing refs:', { svg: !!svgRef.current, zoom: !!zoomRef.current });
+    if (!svgRef.current) {
+      console.log('Missing SVG ref');
       return;
     }
     
-    const svg = d3.select(svgRef.current);
     const width = window.innerWidth;
     const height = window.innerHeight;
-    const centerX = width / 2;
-    const centerY = height / 2;
     
-    console.log('Applying zoom:', { scale, centerX, centerY });
+    // Calculate new viewBox dimensions for zoom effect
+    const newWidth = width / scale;
+    const newHeight = height / scale;
+    const offsetX = (width - newWidth) / 2;
+    const offsetY = (height - newHeight) / 2;
     
-    // Use the zoom transform method directly
-    const transform = d3.zoomIdentity.translate(centerX, centerY).scale(scale).translate(-centerX, -centerY);
+    console.log('Applying viewBox zoom:', { scale, newWidth, newHeight, offsetX, offsetY });
     
+    // Apply viewBox for zoom effect with smooth transition
+    const svg = d3.select(svgRef.current);
     svg.transition()
       .duration(300)
-      .call(zoomRef.current.transform, transform);
+      .attrTween('viewBox', () => {
+        const currentViewBox = svgRef.current?.getAttribute('viewBox') || `0 0 ${width} ${height}`;
+        const [cx, cy, cw, ch] = currentViewBox.split(' ').map(Number);
+        const interpolator = d3.interpolate([cx, cy, cw, ch], [offsetX, offsetY, newWidth, newHeight]);
+        return (t: number) => {
+          const [x, y, w, h] = interpolator(t);
+          return `${x} ${y} ${w} ${h}`;
+        };
+      });
     
     setCurrentZoom(scale);
+    onZoomChange({ k: scale, x: offsetX, y: offsetY });
   };
 
   // Handle zoom controls
