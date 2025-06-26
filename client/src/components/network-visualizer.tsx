@@ -149,7 +149,7 @@ export default function NetworkVisualizer({
       .attr("class", "link network-link")
       .attr("stroke-width", 2);
 
-    // Create nodes
+    // Create nodes with direct styling
     const nodeElements = networkGroup
       .selectAll(".node")
       .data(data.nodes)
@@ -157,9 +157,36 @@ export default function NetworkVisualizer({
       .append("circle")
       .attr("class", (d) => `node network-node node-${d.type}`)
       .attr("r", (d) => d.size)
-      .on("mouseover", showTooltip)
+      .attr("fill", (d) => {
+        if (d.type === 'artist') return 'hsl(330, 81%, 60%)';
+        if (d.type === 'producer') return 'hsl(271, 81%, 60%)';
+        if (d.type === 'songwriter') return 'hsl(173, 80%, 40%)';
+        return 'hsl(207, 90%, 54%)';
+      })
+      .attr("stroke", (d) => {
+        if (d.type === 'artist') return 'hsl(330, 81%, 50%)';
+        if (d.type === 'producer') return 'hsl(271, 81%, 50%)';
+        if (d.type === 'songwriter') return 'hsl(173, 80%, 30%)';
+        return 'hsl(207, 90%, 44%)';
+      })
+      .attr("stroke-width", 3)
+      .style("cursor", "pointer")
+      .on("mouseover", function(event, d) {
+        d3.select(this).attr("stroke", "white").attr("stroke-width", 4);
+        showTooltip(event, d);
+      })
       .on("mousemove", moveTooltip)
-      .on("mouseout", hideTooltip)
+      .on("mouseout", function(event, d) {
+        d3.select(this)
+          .attr("stroke", (d) => {
+            if (d.type === 'artist') return 'hsl(330, 81%, 50%)';
+            if (d.type === 'producer') return 'hsl(271, 81%, 50%)';
+            if (d.type === 'songwriter') return 'hsl(173, 80%, 30%)';
+            return 'hsl(207, 90%, 44%)';
+          })
+          .attr("stroke-width", 3);
+        hideTooltip();
+      })
       .call(
         d3
           .drag<SVGCircleElement, NetworkNode>()
