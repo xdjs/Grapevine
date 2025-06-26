@@ -317,8 +317,19 @@ export default function NetworkVisualizer({
     const offsetX = (width - newWidth) / 2;
     const offsetY = (height - newHeight) / 2;
     
-    // Apply viewBox for zoom effect
-    svgRef.current.setAttribute('viewBox', `${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
+    // Apply viewBox for zoom effect with smooth transition
+    const svg = d3.select(svgRef.current);
+    svg.transition()
+      .duration(200)
+      .attrTween('viewBox', () => {
+        const currentViewBox = svgRef.current?.getAttribute('viewBox') || `0 0 ${width} ${height}`;
+        const [cx, cy, cw, ch] = currentViewBox.split(' ').map(Number);
+        const interpolator = d3.interpolate([cx, cy, cw, ch], [offsetX, offsetY, newWidth, newHeight]);
+        return (t: number) => {
+          const [x, y, w, h] = interpolator(t);
+          return `${x} ${y} ${w} ${h}`;
+        };
+      });
     
     onZoomChange({ k: scale, x: offsetX, y: offsetY });
   };
@@ -330,21 +341,18 @@ export default function NetworkVisualizer({
 
       switch (action) {
         case "in":
-          const newZoomIn = Math.min(5, currentZoom * 1.5); // Cap at 5x zoom
-          console.log("Zooming in to:", newZoomIn);
+          const newZoomIn = Math.min(5, currentZoom * 1.2); // Cap at 5x zoom
           setCurrentZoom(newZoomIn);
           applyZoom(newZoomIn);
           break;
           
         case "out":
-          const newZoomOut = Math.max(0.2, currentZoom / 1.5); // Min 0.2x zoom
-          console.log("Zooming out to:", newZoomOut);
+          const newZoomOut = Math.max(0.2, currentZoom / 1.2); // Min 0.2x zoom
           setCurrentZoom(newZoomOut);
           applyZoom(newZoomOut);
           break;
           
         case "reset":
-          console.log("Resetting zoom");
           setCurrentZoom(1);
           applyZoom(1);
           break;
