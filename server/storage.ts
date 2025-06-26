@@ -519,4 +519,23 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { DatabaseStorage } from './database-storage';
+import { isDatabaseAvailable } from './supabase';
+
+// Initialize storage based on database availability
+let storage: IStorage;
+
+try {
+  if (isDatabaseAvailable()) {
+    storage = new DatabaseStorage();
+    console.log('Using database storage (Supabase)');
+  } else {
+    storage = new MemStorage();
+    console.log('Using in-memory storage (fallback)');
+  }
+} catch (error) {
+  console.warn('Database storage initialization failed, falling back to in-memory storage:', error);
+  storage = new MemStorage();
+}
+
+export { storage };

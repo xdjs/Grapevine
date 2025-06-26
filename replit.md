@@ -25,9 +25,10 @@ This is a full-stack web application that visualizes music collaboration network
 
 ### Data Storage
 - **ORM**: Drizzle ORM with PostgreSQL dialect
+- **Database**: Supabase PostgreSQL (with fallback to in-memory storage)
 - **Schema**: Two main tables - artists and collaborations
 - **Migrations**: Drizzle Kit for database migrations
-- **Connection**: @neondatabase/serverless for serverless PostgreSQL connections
+- **Connection**: Direct PostgreSQL connection via Drizzle with Supabase backend
 
 ## Key Components
 
@@ -103,10 +104,23 @@ Now integrates with multiple authentic sources for comprehensive collaboration d
 3. **Production Start**: `npm run start` - serves built application
 
 ### Database Setup
-- Uses Drizzle migrations stored in `./migrations`
+
+#### Supabase Configuration
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Go to Settings → Database in your Supabase dashboard
+3. Copy the connection string from the "Connection pooling" section
+4. Set the `DATABASE_URL` environment variable with your Supabase connection string
+5. Run database migrations with `npm run db:push`
+
+#### Environment Variables
+- `DATABASE_URL`: Required for Supabase database connection
+- `SUPABASE_URL`: Your Supabase project URL (optional, for direct Supabase client usage)
+- `SUPABASE_ANON_KEY`: Your Supabase anonymous key (optional, for direct Supabase client usage)
+
+#### Fallback Behavior
+- If no DATABASE_URL is provided, the system automatically uses in-memory storage
 - Schema defined in `shared/schema.ts`
-- Environment variable `DATABASE_URL` required for database connection
-- `npm run db:push` command available for schema updates
+- Drizzle migrations stored in `./migrations`
 
 ## Changelog
 
