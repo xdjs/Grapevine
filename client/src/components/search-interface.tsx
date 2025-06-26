@@ -120,7 +120,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView }: Sear
           />
           <Button
             onClick={handleSearch}
-            className="absolute right-2 top-2 bottom-2 px-4 bg-blue-600 hover:bg-blue-700 text-sm"
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-sm"
             disabled={isLoading}
             size="sm"
           >
