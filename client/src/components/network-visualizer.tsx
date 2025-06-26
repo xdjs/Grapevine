@@ -168,19 +168,20 @@ export default function NetworkVisualizer({
           .on("end", dragended)
       );
 
-    // Add labels for main nodes (size >= 15)
+    // Add labels for all nodes
     const labelElements = networkGroup
       .selectAll(".label")
-      .data(data.nodes.filter((d) => d.size >= 15))
+      .data(data.nodes)
       .enter()
       .append("text")
       .attr("class", "label")
       .attr("text-anchor", "middle")
       .attr("dy", "0.35em")
-      .attr("font-size", "12px")
-      .attr("font-weight", "500")
+      .attr("font-size", (d) => d.type === 'artist' ? "14px" : "11px")
+      .attr("font-weight", (d) => d.type === 'artist' ? "600" : "500")
       .attr("fill", "white")
       .attr("pointer-events", "none")
+      .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.8)")
       .text((d) => d.name);
 
     // Create tooltip
