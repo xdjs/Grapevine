@@ -131,6 +131,13 @@ Changelog:
 - Zoom in/out/reset controls now work correctly with D3.js visualization
 - Added debugging and event listener management
 
+### Unlimited Artist Support (June 26, 2025)
+- Added dynamic network generation for any artist name not in mock data
+- Implemented smart cluster positioning to prevent networks from going off-screen
+- Added boundary forces to keep all nodes within viewport
+- Fixed search icon centering in input field
+- Networks now appear as separate, unconnected clusters when artists have no common collaborators
+
 ## User Preferences
 
 ```

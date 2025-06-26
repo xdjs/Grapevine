@@ -35,7 +35,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView }: Sear
     if (error) {
       toast({
         title: "Artist not found",
-        description: "Try searching for Taylor Swift, Drake, Billie Eilish, Laufey, Tyler The Creator, or Clairo",
+        description: "Try any artist name - we'll create a network with their collaborators",
         variant: "destructive",
       });
     }
@@ -115,7 +115,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView }: Sear
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={handleKeyPress}
-            className="w-80 px-4 py-3 bg-gray-900/90 backdrop-blur border-gray-700 text-white placeholder-gray-500 pr-14"
+            className="w-80 pl-4 pr-12 py-3 bg-gray-900/90 backdrop-blur border-gray-700 text-white placeholder-gray-500"
             disabled={isLoading}
           />
           <Button

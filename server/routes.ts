@@ -10,10 +10,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const artistName = req.params.artistName;
       const networkData = await storage.getNetworkData(artistName);
       
-      if (!networkData) {
-        return res.status(404).json({ message: "Artist not found" });
-      }
-      
+      // Since we generate dynamic networks for unknown artists, this should never be null
       res.json(networkData);
     } catch (error) {
       console.error("Error fetching network data:", error);

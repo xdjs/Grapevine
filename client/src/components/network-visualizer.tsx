@@ -53,6 +53,77 @@ export default function NetworkVisualizer({
     svg.call(zoom);
     zoomRef.current = zoom;
 
+    // Find connected components for cluster positioning
+    const findConnectedComponents = () => {
+      const visited = new Set<string>();
+      const components: NetworkNode[][] = [];
+      
+      for (const node of data.nodes) {
+        if (visited.has(node.id)) continue;
+        
+        const component: NetworkNode[] = [];
+        const queue = [node];
+        
+        while (queue.length > 0) {
+          const current = queue.shift()!;
+          if (visited.has(current.id)) continue;
+          
+          visited.add(current.id);
+          component.push(current);
+          
+          // Find connected nodes
+          for (const link of validLinks) {
+            const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+            const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+            
+            if (sourceId === current.id) {
+              const target = data.nodes.find(n => n.id === targetId);
+              if (target && !visited.has(target.id)) queue.push(target);
+            } else if (targetId === current.id) {
+              const source = data.nodes.find(n => n.id === sourceId);
+              if (source && !visited.has(source.id)) queue.push(source);
+            }
+          }
+        }
+        
+        if (component.length > 0) components.push(component);
+      }
+      
+      return components;
+    };
+
+    const components = findConnectedComponents();
+    
+    // Position components in a grid layout to prevent overlap
+    const componentsPerRow = Math.ceil(Math.sqrt(components.length));
+    const componentWidth = width / componentsPerRow;
+    const componentHeight = height / Math.ceil(components.length / componentsPerRow);
+    
+    components.forEach((component, index) => {
+      const row = Math.floor(index / componentsPerRow);
+      const col = index % componentsPerRow;
+      const centerX = col * componentWidth + componentWidth / 2;
+      const centerY = row * componentHeight + componentHeight / 2;
+      
+      component.forEach(node => {
+        if (!node.x && !node.y) {
+          node.x = centerX + (Math.random() - 0.5) * 100;
+          node.y = centerY + (Math.random() - 0.5) * 100;
+        }
+      });
+    });
+
+    // Create boundary force to keep nodes within viewport
+    const boundaryForce = () => {
+      const margin = 50;
+      for (const node of data.nodes) {
+        if (node.x! < margin) node.x = margin;
+        if (node.x! > width - margin) node.x = width - margin;
+        if (node.y! < margin) node.y = margin;
+        if (node.y! > height - margin) node.y = height - margin;
+      }
+    };
+
     // Create simulation
     const simulation = d3
       .forceSimulation<NetworkNode>(data.nodes)
@@ -61,11 +132,11 @@ export default function NetworkVisualizer({
         d3
           .forceLink<NetworkNode, NetworkLink>(validLinks)
           .id((d) => d.id)
-          .distance(100)
+          .distance(80)
       )
-      .force("charge", d3.forceManyBody().strength(-300))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 5));
+      .force("charge", d3.forceManyBody().strength(-150))
+      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
+      .force("boundary", boundaryForce);
 
     simulationRef.current = simulation;
 

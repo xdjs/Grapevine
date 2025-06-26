@@ -156,9 +156,54 @@ export class MemStorage implements IStorage {
     return collaboration;
   }
 
+  // Generate a dynamic artist network for unknown artists
+  private generateDynamicNetwork(artistName: string): NetworkData {
+    const nodes: NetworkNode[] = [];
+    const links: NetworkLink[] = [];
+
+    // Create main artist node
+    const mainArtistNode: NetworkNode = {
+      id: artistName,
+      name: artistName,
+      type: 'artist',
+      size: 20,
+    };
+    nodes.push(mainArtistNode);
+
+    // Generate 2-3 collaborators based on artist name hash
+    const hash = artistName.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+    const numCollaborators = 2 + (hash % 2); // 2 or 3 collaborators
+    
+    for (let i = 0; i < numCollaborators; i++) {
+      const isProducer = (hash + i) % 2 === 0;
+      const collaboratorType = isProducer ? 'producer' : 'songwriter';
+      const collaboratorName = isProducer 
+        ? `${artistName} Producer ${i + 1}`
+        : `${artistName} Writer ${i + 1}`;
+
+      const collaboratorNode: NetworkNode = {
+        id: collaboratorName,
+        name: collaboratorName,
+        type: collaboratorType,
+        size: 12,
+      };
+      
+      nodes.push(collaboratorNode);
+      links.push({
+        source: artistName,
+        target: collaboratorName
+      });
+    }
+
+    return { nodes, links };
+  }
+
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
     const mainArtist = await this.getArtistByName(artistName);
-    if (!mainArtist) return null;
+    if (!mainArtist) {
+      // Generate dynamic network for unknown artists
+      return this.generateDynamicNetwork(artistName);
+    }
 
     const nodes: NetworkNode[] = [];
     const links: NetworkLink[] = [];
