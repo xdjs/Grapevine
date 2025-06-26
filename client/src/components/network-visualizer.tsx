@@ -305,38 +305,47 @@ export default function NetworkVisualizer({
 
   // Handle zoom controls
   useEffect(() => {
+    let isZooming = false;
+    
     const handleZoomEvent = (event: CustomEvent) => {
-      if (!zoomRef.current || !svgRef.current) return;
+      if (!zoomRef.current || !svgRef.current || isZooming) return;
 
+      isZooming = true;
       const svg = d3.select(svgRef.current);
       const { action } = event.detail;
 
+      const onTransitionEnd = () => {
+        setTimeout(() => {
+          isZooming = false;
+        }, 50);
+      };
+
       switch (action) {
         case "in":
-          console.log("Zooming in, current scale:", d3.zoomTransform(svgRef.current).k);
-          svg.transition().duration(300).call(
-            zoomRef.current.scaleBy,
-            1.5
-          );
+          svg.transition()
+            .duration(250)
+            .call(zoomRef.current.scaleBy, 1.5)
+            .on("end", onTransitionEnd);
           break;
         case "out":
-          console.log("Zooming out, current scale:", d3.zoomTransform(svgRef.current).k);
-          svg.transition().duration(300).call(
-            zoomRef.current.scaleBy,
-            1 / 1.5
-          );
+          svg.transition()
+            .duration(250)
+            .call(zoomRef.current.scaleBy, 1 / 1.5)
+            .on("end", onTransitionEnd);
           break;
         case "reset":
-          console.log("Resetting zoom");
-          svg.transition().duration(500).call(
-            zoomRef.current.transform,
-            d3.zoomIdentity
-          );
+          svg.transition()
+            .duration(400)
+            .call(zoomRef.current.transform, d3.zoomIdentity)
+            .on("end", onTransitionEnd);
           break;
       }
     };
 
-    window.addEventListener("network-zoom", handleZoomEvent as EventListener);
+    if (visible) {
+      window.addEventListener("network-zoom", handleZoomEvent as EventListener);
+    }
+    
     return () => {
       window.removeEventListener("network-zoom", handleZoomEvent as EventListener);
     };
