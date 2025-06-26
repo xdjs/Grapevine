@@ -227,7 +227,7 @@ export default function NetworkVisualizer({
         content += d.collaborations.slice(0, 3).join("<br/>");
       }
 
-      content += `<br/><br/><em>Click to search on Music Nerd</em>`;
+      content += `<br/><br/><em>Click to search on AllMusic</em>`;
 
       tooltip.html(content).style("opacity", 1);
     }
@@ -243,13 +243,12 @@ export default function NetworkVisualizer({
     }
 
     function openMusicNerdProfile(artistName: string) {
-      // Create a search-friendly URL for Music Nerd
+      // Create a search-friendly URL for the artist
       const searchQuery = encodeURIComponent(artistName);
       
-      // Music Nerd appears to use a search-based interface
-      // We'll try their main search mechanism
-      const musicNerdUrl = `https://www.musicnerd.xyz/?search=${searchQuery}`;
-      window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
+      // Use AllMusic as it has a reliable search structure
+      const allMusicUrl = `https://www.allmusic.com/search/artists/${searchQuery}`;
+      window.open(allMusicUrl, '_blank', 'noopener,noreferrer');
     }
 
     function dragstarted(event: d3.D3DragEvent<SVGCircleElement, NetworkNode, unknown>, d: NetworkNode) {
