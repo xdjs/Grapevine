@@ -346,7 +346,10 @@ export default function NetworkVisualizer({
 
   // Apply zoom using D3's zoom behavior
   const applyZoom = (scale: number) => {
-    if (!svgRef.current || !zoomRef.current) return;
+    if (!svgRef.current || !zoomRef.current) {
+      console.log('Missing refs:', { svg: !!svgRef.current, zoom: !!zoomRef.current });
+      return;
+    }
     
     const svg = d3.select(svgRef.current);
     const width = window.innerWidth;
@@ -354,14 +357,14 @@ export default function NetworkVisualizer({
     const centerX = width / 2;
     const centerY = height / 2;
     
-    // Use scaleTo which properly handles zoom transitions
+    console.log('Applying zoom:', { scale, centerX, centerY });
+    
+    // Use the zoom transform method directly
+    const transform = d3.zoomIdentity.translate(centerX, centerY).scale(scale).translate(-centerX, -centerY);
+    
     svg.transition()
       .duration(300)
-      .call(
-        zoomRef.current.scaleTo,
-        scale,
-        [centerX, centerY]
-      );
+      .call(zoomRef.current.transform, transform);
     
     setCurrentZoom(scale);
   };
