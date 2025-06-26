@@ -351,24 +351,17 @@ export default function NetworkVisualizer({
     const svg = d3.select(svgRef.current);
     const width = window.innerWidth;
     const height = window.innerHeight;
-    
-    // Get current transform or default to center
-    const currentTransform = d3.zoomTransform(svgRef.current);
-    
-    // Calculate center point for zoom
     const centerX = width / 2;
     const centerY = height / 2;
     
-    // Create new transform with the desired scale, keeping it centered
-    const newTransform = d3.zoomIdentity
-      .translate(centerX, centerY)
-      .scale(scale)
-      .translate(-centerX, -centerY);
-    
-    // Apply the transform with transition
+    // Use scaleTo which properly handles zoom transitions
     svg.transition()
       .duration(300)
-      .call(zoomRef.current.transform, newTransform);
+      .call(
+        zoomRef.current.scaleTo,
+        scale,
+        [centerX, centerY]
+      );
     
     setCurrentZoom(scale);
   };
