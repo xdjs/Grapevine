@@ -113,7 +113,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView }: Sear
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={handleKeyPress}
-            className="w-80 px-4 py-3 bg-gray-900/90 backdrop-blur border-gray-700 text-white placeholder-gray-500 pr-16"
+            className="w-80 px-4 py-3 bg-gray-900/90 backdrop-blur border-gray-700 text-white placeholder-gray-500 pr-14"
             disabled={isLoading}
           />
           <Button

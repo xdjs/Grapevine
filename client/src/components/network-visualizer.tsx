@@ -243,7 +243,7 @@ export default function NetworkVisualizer({
     return () => {
       window.removeEventListener("network-zoom", handleZoomEvent as EventListener);
     };
-  }, []);
+  }, [visible]);
 
   function getNodeVisibility(node: NetworkNode, filterState: FilterState): boolean {
     if (node.type === "producer") return filterState.showProducers;

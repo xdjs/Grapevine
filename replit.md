@@ -111,7 +111,25 @@ Currently uses in-memory storage (`MemStorage`) with pre-populated mock data inc
 ```
 Changelog:
 - June 26, 2025. Initial setup
+- June 26, 2025. Fixed search icon positioning, network accumulation, and zoom functionality
 ```
+
+## Recent Changes
+
+### Fixed Network Accumulation (June 26, 2025)
+- Modified home page to merge new artist data with existing network instead of replacing
+- Added proper duplicate detection for nodes and links
+- Artists now build up connected webs when searching multiple times
+
+### Fixed UI Issues (June 26, 2025)
+- Corrected search icon positioning on both home and connections screens
+- Adjusted input padding to prevent text/button overlap
+- Added red "Clear All" button to zoom controls for resetting visualization
+
+### Fixed Zoom Controls (June 26, 2025)
+- Resolved zoom button functionality with proper event handling
+- Zoom in/out/reset controls now work correctly with D3.js visualization
+- Added debugging and event listener management
 
 ## User Preferences
 
