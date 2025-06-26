@@ -49,10 +49,11 @@ This is a full-stack web application that visualizes music collaboration network
 - **Legend**: Shows color coding for different artist types
 
 ### Real Music Database Integration
-Now integrates with authentic music databases for real collaboration data:
+Now integrates with multiple authentic sources for comprehensive collaboration data:
 - **MusicBrainz API**: Primary source for artist collaboration relationships
+- **Wikipedia API**: Secondary source for collaboration data when MusicBrainz lacks information
 - **Spotify Web API**: Provides artist profile images and additional metadata
-- **Fallback System**: Generated networks when real data unavailable
+- **Intelligent Fallback**: Three-tier system (MusicBrainz → Wikipedia → Generated) for maximum data coverage
 - **Rate Limiting**: Proper API throttling for sustainable data access
 
 ## Data Flow
@@ -142,11 +143,12 @@ Changelog:
 
 ### Real Music Database Integration (June 26, 2025)
 - Integrated MusicBrainz API for authentic artist collaboration relationships
+- Added Wikipedia API as secondary data source for comprehensive coverage
 - Combined Spotify Web API for real artist profile images and metadata
-- Implemented comprehensive fallback system when real data unavailable
+- Implemented intelligent three-tier fallback system (MusicBrainz → Wikipedia → Generated)
 - Added proper API rate limiting for sustainable data access
-- Networks now display actual music industry collaborations instead of generated data
-- Enhanced network generation with real producer/songwriter relationship mapping
+- Networks now display actual music industry collaborations from multiple authoritative sources
+- Enhanced collaboration extraction with natural language processing for Wikipedia content
 
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals

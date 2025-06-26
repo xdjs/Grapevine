@@ -1,6 +1,7 @@
 import { artists, collaborations, type Artist, type InsertArtist, type Collaboration, type InsertCollaboration, type NetworkData, type NetworkNode, type NetworkLink } from "@shared/schema";
 import { spotifyService } from "./spotify";
 import { musicBrainzService } from "./musicbrainz";
+import { wikipediaService } from "./wikipedia";
 
 export interface IStorage {
   // Artist methods
@@ -365,9 +366,57 @@ export class MemStorage implements IStorage {
         });
       }
 
-      // If no real collaborations found, fall back to generated data
+      // If no real collaborations found, try Wikipedia
       if (collaborationData.artists.length === 0) {
-        console.log(`No MusicBrainz collaborations found for ${artistName}, falling back to generated data`);
+        console.log(`No MusicBrainz collaborations found for ${artistName}, trying Wikipedia`);
+        
+        try {
+          const wikipediaCollaborators = await wikipediaService.getArtistCollaborations(artistName);
+          
+          if (wikipediaCollaborators.length > 0) {
+            // Add Wikipedia collaborators to the network
+            for (const collaborator of wikipediaCollaborators) {
+              // Get Spotify image for collaborator
+              let collaboratorImage = null;
+              let collaboratorSpotifyId = null;
+              
+              if (spotifyService.isConfigured()) {
+                try {
+                  const spotifyCollaborator = await spotifyService.searchArtist(collaborator.name);
+                  if (spotifyCollaborator) {
+                    collaboratorImage = spotifyService.getArtistImageUrl(spotifyCollaborator, 'medium');
+                    collaboratorSpotifyId = spotifyCollaborator.id;
+                  }
+                } catch (error) {
+                  // Continue without image
+                }
+              }
+
+              const collaboratorNode: NetworkNode = {
+                id: collaborator.name,
+                name: collaborator.name,
+                type: collaborator.type,
+                size: 15,
+                imageUrl: collaboratorImage,
+                spotifyId: collaboratorSpotifyId,
+              };
+              nodes.push(collaboratorNode);
+
+              links.push({
+                source: artistName,
+                target: collaborator.name,
+              });
+            }
+            
+            console.log(`Found ${wikipediaCollaborators.length} collaborators from Wikipedia for ${artistName}`);
+            return { nodes, links };
+          }
+        } catch (error) {
+          console.error('Error fetching Wikipedia collaborations:', error);
+        }
+        
+        // If both MusicBrainz and Wikipedia fail, fall back to generated data only as last resort
+        console.log(`No real collaboration data found for ${artistName}, falling back to generated data`);
         return this.generateDynamicNetworkWithImages(artistName);
       }
 
