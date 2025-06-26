@@ -118,10 +118,10 @@ Changelog:
 
 ## Recent Changes
 
-### Fixed Network Accumulation (June 26, 2025)
-- Modified home page to merge new artist data with existing network instead of replacing
-- Added proper duplicate detection for nodes and links
-- Artists now build up connected webs when searching multiple times
+### Network Replacement Behavior (June 26, 2025)
+- Modified home page to replace existing network when searching new artists
+- Each search now generates a completely fresh network visualization
+- Previous network data is cleared when new artist is searched
 
 ### Fixed UI Issues (June 26, 2025)
 - Corrected search icon positioning on both home and connections screens

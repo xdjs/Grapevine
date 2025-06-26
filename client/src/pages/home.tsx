@@ -17,29 +17,8 @@ export default function Home() {
   });
 
   const handleNetworkData = useCallback((data: NetworkData) => {
-    setNetworkData(prevData => {
-      if (!prevData) {
-        // First artist - set data directly
-        return data;
-      } else {
-        // Merge with existing data
-        const existingNodeIds = new Set(prevData.nodes.map(n => n.id));
-        const existingLinks = new Set(prevData.links.map(l => `${typeof l.source === 'string' ? l.source : l.source.id}-${typeof l.target === 'string' ? l.target : l.target.id}`));
-        
-        const newNodes = data.nodes.filter(node => !existingNodeIds.has(node.id));
-        const newLinks = data.links.filter(link => {
-          const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-          const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-          return !existingLinks.has(`${sourceId}-${targetId}`) && !existingLinks.has(`${targetId}-${sourceId}`);
-        });
-        
-        return {
-          nodes: [...prevData.nodes, ...newNodes],
-          links: [...prevData.links, ...newLinks]
-        };
-      }
-    });
-    
+    // Replace existing network with new data
+    setNetworkData(data);
     setShowNetworkView(true);
   }, []);
 
@@ -63,7 +42,7 @@ export default function Home() {
       {/* Network Visualization */}
       {networkData && (
         <NetworkVisualizer
-          key={`network-${networkData.nodes.length}-${networkData.links.length}`}
+          key={`network-${networkData.nodes[0]?.id || 'empty'}-${Date.now()}`}
           data={networkData}
           visible={showNetworkView}
           filterState={filterState}
