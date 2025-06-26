@@ -183,6 +183,10 @@ export default function NetworkVisualizer({
           .attr("stroke-width", 4);
         hideTooltip();
       })
+      .on("click", function(event, d) {
+        event.stopPropagation();
+        openMusicNerdProfile(d.name);
+      })
       .call(
         d3
           .drag<SVGCircleElement, NetworkNode>()
@@ -223,6 +227,8 @@ export default function NetworkVisualizer({
         content += d.collaborations.slice(0, 3).join("<br/>");
       }
 
+      content += `<br/><br/><em>Click to view artist profile</em>`;
+
       tooltip.html(content).style("opacity", 1);
     }
 
@@ -234,6 +240,16 @@ export default function NetworkVisualizer({
 
     function hideTooltip() {
       tooltip.style("opacity", 0);
+    }
+
+    function openMusicNerdProfile(artistName: string) {
+      // Since Music Nerd requires specific artist IDs, we'll use MusicBrainz as an alternative
+      // which provides comprehensive artist information and accepts name-based searches
+      const searchQuery = encodeURIComponent(artistName);
+      
+      // Open MusicBrainz artist search in a new tab as a reliable alternative
+      const musicBrainzUrl = `https://musicbrainz.org/search?query=${searchQuery}&type=artist&method=indexed`;
+      window.open(musicBrainzUrl, '_blank', 'noopener,noreferrer');
     }
 
     function dragstarted(event: d3.D3DragEvent<SVGCircleElement, NetworkNode, unknown>, d: NetworkNode) {
