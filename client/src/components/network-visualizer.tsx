@@ -315,27 +315,40 @@ export default function NetworkVisualizer({
       const svg = d3.select(svgRef.current);
       const networkGroup = svg.select(".network-group");
 
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+
       switch (action) {
         case "in":
           const newScaleIn = zoomScale * 1.5;
           setZoomScale(newScaleIn);
+          // Zoom towards center
+          const newPanXIn = centerX - (centerX - panX) * 1.5;
+          const newPanYIn = centerY - (centerY - panY) * 1.5;
+          setPanX(newPanXIn);
+          setPanY(newPanYIn);
           networkGroup.transition().duration(250)
-            .style("transform", `translate(${panX}px, ${panY}px) scale(${newScaleIn})`);
-          onZoomChange({ k: newScaleIn, x: panX, y: panY });
+            .attr("transform", `translate(${newPanXIn}, ${newPanYIn}) scale(${newScaleIn})`);
+          onZoomChange({ k: newScaleIn, x: newPanXIn, y: newPanYIn });
           break;
         case "out":
           const newScaleOut = zoomScale / 1.5;
           setZoomScale(newScaleOut);
+          // Zoom out from center
+          const newPanXOut = centerX - (centerX - panX) / 1.5;
+          const newPanYOut = centerY - (centerY - panY) / 1.5;
+          setPanX(newPanXOut);
+          setPanY(newPanYOut);
           networkGroup.transition().duration(250)
-            .style("transform", `translate(${panX}px, ${panY}px) scale(${newScaleOut})`);
-          onZoomChange({ k: newScaleOut, x: panX, y: panY });
+            .attr("transform", `translate(${newPanXOut}, ${newPanYOut}) scale(${newScaleOut})`);
+          onZoomChange({ k: newScaleOut, x: newPanXOut, y: newPanYOut });
           break;
         case "reset":
           setZoomScale(1);
           setPanX(0);
           setPanY(0);
           networkGroup.transition().duration(400)
-            .style("transform", `translate(0px, 0px) scale(1)`);
+            .attr("transform", `translate(0, 0) scale(1)`);
           onZoomChange({ k: 1, x: 0, y: 0 });
           break;
       }
