@@ -66,20 +66,20 @@
 @layer components {
   .node-artist { 
     fill: var(--artist-color);
-    stroke: hsl(0, 0%, 90%);
-    stroke-width: 2px;
+    stroke: hsl(330, 81%, 50%);
+    stroke-width: 3px;
   }
   
   .node-producer { 
     fill: var(--producer-color);
-    stroke: hsl(0, 0%, 90%);
-    stroke-width: 2px;
+    stroke: hsl(271, 81%, 50%);
+    stroke-width: 3px;
   }
   
   .node-songwriter { 
     fill: var(--songwriter-color);
-    stroke: hsl(0, 0%, 90%);
-    stroke-width: 2px;
+    stroke: hsl(173, 80%, 30%);
+    stroke-width: 3px;
   }
   
   .network-link { 
