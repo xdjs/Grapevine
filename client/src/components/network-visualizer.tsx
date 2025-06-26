@@ -185,7 +185,10 @@ export default function NetworkVisualizer({
       })
       .on("click", function(event, d) {
         event.stopPropagation();
-        openMusicNerdProfile(d.name);
+        // Only open Music Nerd for artists, not producers or songwriters
+        if (d.type === 'artist') {
+          openMusicNerdProfile(d.name);
+        }
       })
       .call(
         d3
@@ -227,7 +230,9 @@ export default function NetworkVisualizer({
         content += d.collaborations.slice(0, 3).join("<br/>");
       }
 
-      content += `<br/><br/><em>Click to search on Music Nerd</em>`;
+      if (d.type === 'artist') {
+        content += `<br/><br/><em>Click to search on Music Nerd</em>`;
+      }
 
       tooltip.html(content).style("opacity", 1);
     }
