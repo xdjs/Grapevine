@@ -347,38 +347,45 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
-  // Apply zoom using CSS transforms on the network group
+  // Apply zoom with proper D3 simulation management and transform origins
   const applyZoom = (scale: number) => {
-    if (!svgRef.current) {
-      console.log('Missing SVG ref');
+    if (!svgRef.current || !zoomRef.current) {
+      console.log('Missing refs for zoom operation');
       return;
     }
     
-    console.log('Applying CSS transform zoom:', { scale });
+    console.log('Applying zoom with simulation management:', { scale });
     
-    // Find the network group and apply CSS transform
-    const networkGroup = d3.select(svgRef.current).select('.network-group');
-    
-    if (networkGroup.empty()) {
-      console.log('Network group not found');
-      return;
+    // Stop the simulation temporarily to prevent conflicts
+    if (simulationRef.current) {
+      simulationRef.current.stop();
     }
     
-    // Calculate transform origin (center of viewport)
+    const svg = d3.select(svgRef.current);
     const width = window.innerWidth;
     const height = window.innerHeight;
     const centerX = width / 2;
     const centerY = height / 2;
     
-    // Apply CSS transform with smooth transition
-    networkGroup
-      .transition()
+    // Create proper D3 zoom transform
+    const transform = d3.zoomIdentity
+      .translate(centerX, centerY)
+      .scale(scale)
+      .translate(-centerX, -centerY);
+    
+    // Apply transform using D3's zoom behavior
+    svg.transition()
       .duration(300)
-      .style('transform', `translate(${centerX}px, ${centerY}px) scale(${scale}) translate(-${centerX}px, -${centerY}px)`)
-      .style('transform-origin', `${centerX}px ${centerY}px`);
+      .call(zoomRef.current.transform, transform)
+      .on('end', () => {
+        // Restart simulation after zoom completes
+        if (simulationRef.current) {
+          simulationRef.current.alpha(0.1).restart();
+        }
+      });
     
     setCurrentZoom(scale);
-    onZoomChange({ k: scale, x: 0, y: 0 });
+    onZoomChange({ k: scale, x: transform.x, y: transform.y });
   };
 
   // Handle zoom controls
@@ -389,29 +396,47 @@ export default function NetworkVisualizer({
 
       switch (action) {
         case "in":
-          const newZoomIn = Math.min(8, currentZoom * 1.5); // Cap at 8x zoom, more responsive
+          const newZoomIn = Math.min(5, currentZoom * 1.2); // Proper zoom limits
           console.log(`Zooming in to:`, newZoomIn);
-          applyZoom(newZoomIn);
+          if (newZoomIn !== currentZoom) { // Only zoom if within limits
+            applyZoom(newZoomIn);
+          }
           break;
           
         case "out":
-          const newZoomOut = Math.max(0.2, currentZoom / 1.5); // Min 0.2x zoom, more responsive
+          const newZoomOut = Math.max(0.3, currentZoom / 1.2); // Proper zoom limits
           console.log(`Zooming out to:`, newZoomOut);
-          applyZoom(newZoomOut);
+          if (newZoomOut !== currentZoom) { // Only zoom if within limits
+            applyZoom(newZoomOut);
+          }
           break;
           
         case "reset":
-          console.log(`Resetting zoom`);
-          // Reset CSS transform to original state
+          console.log(`Resetting zoom with simulation restart`);
+          // Stop simulation during reset
+          if (simulationRef.current) {
+            simulationRef.current.stop();
+          }
+          
           setCurrentZoom(1);
-          if (svgRef.current) {
-            const networkGroup = d3.select(svgRef.current).select('.network-group');
-            if (!networkGroup.empty()) {
-              networkGroup
-                .transition()
-                .duration(300)
-                .style('transform', 'none');
-            }
+          if (svgRef.current && zoomRef.current) {
+            const svg = d3.select(svgRef.current);
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            // Reset to identity transform
+            const resetTransform = d3.zoomIdentity;
+            
+            svg.transition()
+              .duration(300)
+              .call(zoomRef.current.transform, resetTransform)
+              .on('end', () => {
+                // Restart simulation after reset
+                if (simulationRef.current) {
+                  simulationRef.current.alpha(0.1).restart();
+                }
+              });
+            
             onZoomChange({ k: 1, x: 0, y: 0 });
           }
           break;
