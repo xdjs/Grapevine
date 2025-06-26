@@ -27,6 +27,9 @@ export default function NetworkVisualizer({
     const width = window.innerWidth;
     const height = window.innerHeight;
 
+    // Set initial viewBox for proper zoom functionality
+    svg.attr("viewBox", `0 0 ${width} ${height}`);
+
     // Clear existing content
     svg.selectAll("*").remove();
 
@@ -401,7 +404,17 @@ export default function NetworkVisualizer({
           
         case "reset":
           console.log(`Resetting zoom`);
-          applyZoom(1);
+          // Reset both the zoom state and viewBox directly
+          setCurrentZoom(1);
+          if (svgRef.current) {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            d3.select(svgRef.current)
+              .transition()
+              .duration(300)
+              .attr("viewBox", `0 0 ${width} ${height}`);
+            onZoomChange({ k: 1, x: 0, y: 0 });
+          }
           break;
       }
     };
