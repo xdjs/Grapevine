@@ -76,14 +76,17 @@ export default function Home() {
         <>
           <ZoomControls
             onZoomIn={() => {
+              console.log("Zoom in button clicked");
               const event = new CustomEvent('network-zoom', { detail: { action: 'in' } });
               window.dispatchEvent(event);
             }}
             onZoomOut={() => {
+              console.log("Zoom out button clicked");
               const event = new CustomEvent('network-zoom', { detail: { action: 'out' } });
               window.dispatchEvent(event);
             }}
             onZoomReset={() => {
+              console.log("Zoom reset button clicked");
               const event = new CustomEvent('network-zoom', { detail: { action: 'reset' } });
               window.dispatchEvent(event);
             }}

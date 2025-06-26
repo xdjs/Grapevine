@@ -311,45 +311,82 @@ export default function NetworkVisualizer({
     const handleZoomEvent = (event: CustomEvent) => {
       if (!svgRef.current) return;
 
+      console.log("Zoom event received:", event.detail);
       const { action } = event.detail;
       const svg = d3.select(svgRef.current);
       const networkGroup = svg.select(".network-group");
 
-      const centerX = window.innerWidth / 2;
-      const centerY = window.innerHeight / 2;
-
       switch (action) {
         case "in":
           const newScaleIn = zoomScale * 1.5;
+          console.log("Zooming in to:", newScaleIn);
           setZoomScale(newScaleIn);
-          // Zoom towards center
-          const newPanXIn = centerX - (centerX - panX) * 1.5;
-          const newPanYIn = centerY - (centerY - panY) * 1.5;
-          setPanX(newPanXIn);
-          setPanY(newPanYIn);
-          networkGroup.transition().duration(250)
-            .attr("transform", `translate(${newPanXIn}, ${newPanYIn}) scale(${newScaleIn})`);
-          onZoomChange({ k: newScaleIn, x: newPanXIn, y: newPanYIn });
+          
+          // Apply transform to both the group and stop any ongoing simulation updates
+          if (simulationRef.current) {
+            simulationRef.current.stop();
+          }
+          
+          networkGroup
+            .transition()
+            .duration(250)
+            .attr("transform", `translate(${window.innerWidth/2}, ${window.innerHeight/2}) scale(${newScaleIn}) translate(${-window.innerWidth/2}, ${-window.innerHeight/2})`);
+          
+          onZoomChange({ k: newScaleIn, x: 0, y: 0 });
+          
+          // Restart simulation after transform
+          setTimeout(() => {
+            if (simulationRef.current) {
+              simulationRef.current.alpha(0.1).restart();
+            }
+          }, 300);
           break;
+          
         case "out":
-          const newScaleOut = zoomScale / 1.5;
+          const newScaleOut = Math.max(0.1, zoomScale / 1.5);
+          console.log("Zooming out to:", newScaleOut);
           setZoomScale(newScaleOut);
-          // Zoom out from center
-          const newPanXOut = centerX - (centerX - panX) / 1.5;
-          const newPanYOut = centerY - (centerY - panY) / 1.5;
-          setPanX(newPanXOut);
-          setPanY(newPanYOut);
-          networkGroup.transition().duration(250)
-            .attr("transform", `translate(${newPanXOut}, ${newPanYOut}) scale(${newScaleOut})`);
-          onZoomChange({ k: newScaleOut, x: newPanXOut, y: newPanYOut });
+          
+          if (simulationRef.current) {
+            simulationRef.current.stop();
+          }
+          
+          networkGroup
+            .transition()
+            .duration(250)
+            .attr("transform", `translate(${window.innerWidth/2}, ${window.innerHeight/2}) scale(${newScaleOut}) translate(${-window.innerWidth/2}, ${-window.innerHeight/2})`);
+          
+          onZoomChange({ k: newScaleOut, x: 0, y: 0 });
+          
+          setTimeout(() => {
+            if (simulationRef.current) {
+              simulationRef.current.alpha(0.1).restart();
+            }
+          }, 300);
           break;
+          
         case "reset":
+          console.log("Resetting zoom");
           setZoomScale(1);
           setPanX(0);
           setPanY(0);
-          networkGroup.transition().duration(400)
+          
+          if (simulationRef.current) {
+            simulationRef.current.stop();
+          }
+          
+          networkGroup
+            .transition()
+            .duration(400)
             .attr("transform", `translate(0, 0) scale(1)`);
+          
           onZoomChange({ k: 1, x: 0, y: 0 });
+          
+          setTimeout(() => {
+            if (simulationRef.current) {
+              simulationRef.current.alpha(0.3).restart();
+            }
+          }, 500);
           break;
       }
     };
