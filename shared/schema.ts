@@ -6,6 +6,8 @@ export const artists = pgTable("artists", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
   type: text("type").notNull(), // 'artist', 'producer', 'songwriter'
+  imageUrl: text("image_url"),
+  spotifyId: text("spotify_id"),
 });
 
 export const collaborations = pgTable("collaborations", {
@@ -35,6 +37,8 @@ export const networkNodeSchema = z.object({
   type: z.enum(['artist', 'producer', 'songwriter']),
   size: z.number(),
   collaborations: z.array(z.string()).optional(),
+  imageUrl: z.string().nullable().optional(),
+  spotifyId: z.string().nullable().optional(),
 });
 
 export const networkLinkSchema = z.object({

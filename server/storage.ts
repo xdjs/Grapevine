@@ -1,4 +1,5 @@
 import { artists, collaborations, type Artist, type InsertArtist, type Collaboration, type InsertCollaboration, type NetworkData, type NetworkNode, type NetworkLink } from "@shared/schema";
+import { spotifyService } from "./spotify";
 
 export interface IStorage {
   // Artist methods
@@ -138,7 +139,13 @@ export class MemStorage implements IStorage {
 
   async createArtist(insertArtist: InsertArtist): Promise<Artist> {
     const id = this.currentArtistId++;
-    const artist: Artist = { ...insertArtist, id };
+    const artist: Artist = { 
+      id,
+      name: insertArtist.name,
+      type: insertArtist.type,
+      imageUrl: insertArtist.imageUrl || null,
+      spotifyId: insertArtist.spotifyId || null
+    };
     this.artists.set(id, artist);
     return artist;
   }
@@ -198,11 +205,83 @@ export class MemStorage implements IStorage {
     return { nodes, links };
   }
 
+  private async generateDynamicNetworkWithImages(artistName: string): Promise<NetworkData> {
+    const nodes: NetworkNode[] = [];
+    const links: NetworkLink[] = [];
+
+    // Try to get the main artist from Spotify
+    let mainArtistImage = null;
+    let mainArtistSpotifyId = null;
+    
+    if (spotifyService.isConfigured()) {
+      try {
+        const spotifyArtist = await spotifyService.searchArtist(artistName);
+        if (spotifyArtist) {
+          mainArtistImage = spotifyService.getArtistImageUrl(spotifyArtist, 'medium');
+          mainArtistSpotifyId = spotifyArtist.id;
+        }
+      } catch (error) {
+        console.warn(`Could not fetch Spotify data for ${artistName}:`, error);
+      }
+    }
+
+    const mainArtistNode: NetworkNode = {
+      id: artistName,
+      name: artistName,
+      type: 'artist',
+      size: 20,
+      imageUrl: mainArtistImage,
+      spotifyId: mainArtistSpotifyId,
+    };
+    nodes.push(mainArtistNode);
+
+    // Generate collaborators with potential Spotify images
+    const collaboratorNames = this.generateCollaboratorNames();
+    const clusterCenterX = Math.random() * 400 + 200;
+    const clusterCenterY = Math.random() * 300 + 150;
+
+    for (let i = 0; i < collaboratorNames.length; i++) {
+      const collaborator = collaboratorNames[i];
+      let collaboratorImage = null;
+      let collaboratorSpotifyId = null;
+
+      // Try to fetch real artist images for some collaborators
+      if (spotifyService.isConfigured() && Math.random() > 0.3) { // 70% chance to try Spotify
+        try {
+          const spotifyCollaborator = await spotifyService.searchArtist(collaborator.name);
+          if (spotifyCollaborator) {
+            collaboratorImage = spotifyService.getArtistImageUrl(spotifyCollaborator, 'medium');
+            collaboratorSpotifyId = spotifyCollaborator.id;
+          }
+        } catch (error) {
+          // Silently continue without image if Spotify search fails
+        }
+      }
+
+      const collaboratorNode: NetworkNode = {
+        id: collaborator.name,
+        name: collaborator.name,
+        type: collaborator.type,
+        size: 15,
+        imageUrl: collaboratorImage,
+        spotifyId: collaboratorSpotifyId,
+      };
+      nodes.push(collaboratorNode);
+
+      links.push({
+        source: artistName,
+        target: collaborator.name,
+      });
+    }
+
+    return { nodes, links };
+  }
+
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
     const mainArtist = await this.getArtistByName(artistName);
     if (!mainArtist) {
-      // Generate dynamic network for unknown artists
-      return this.generateDynamicNetwork(artistName);
+      // Generate dynamic network for unknown artists with Spotify images
+      return this.generateDynamicNetworkWithImages(artistName);
     }
 
     const nodes: NetworkNode[] = [];
