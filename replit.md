@@ -145,6 +145,13 @@ Changelog:
 - Updated filter controls to match new color scheme
 - Added permanent stroke outlines to all nodes for better visibility
 
+### Enhanced Dynamic Network Generation (June 26, 2025)
+- Improved dynamic artist network creation with realistic collaborator names
+- Added pools of 20 real producer and songwriter names for authentic networks
+- Increased collaborator count to 3-5 per new artist (was 2-3)
+- Ensured every generated network has at least one producer and one songwriter
+- Added duplicate prevention for cleaner network generation
+
 ## User Preferences
 
 ```
