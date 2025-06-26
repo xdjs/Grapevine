@@ -313,19 +313,22 @@ export default function NetworkVisualizer({
 
       switch (action) {
         case "in":
-          svg.transition().duration(400).ease(d3.easeCircleOut).call(
+          console.log("Zooming in, current scale:", d3.zoomTransform(svgRef.current).k);
+          svg.transition().duration(300).call(
             zoomRef.current.scaleBy,
-            2.0
+            1.5
           );
           break;
         case "out":
-          svg.transition().duration(400).ease(d3.easeCircleOut).call(
+          console.log("Zooming out, current scale:", d3.zoomTransform(svgRef.current).k);
+          svg.transition().duration(300).call(
             zoomRef.current.scaleBy,
-            0.5
+            1 / 1.5
           );
           break;
         case "reset":
-          svg.transition().duration(750).ease(d3.easeCircleOut).call(
+          console.log("Resetting zoom");
+          svg.transition().duration(500).call(
             zoomRef.current.transform,
             d3.zoomIdentity
           );
