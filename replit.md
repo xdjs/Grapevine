@@ -131,10 +131,10 @@ Changelog:
 - Zoom in/out/reset controls now work correctly with D3.js visualization
 - Added debugging and event listener management
 
-### Fixed Artist Connection Visibility (June 26, 2025)
-- Added direct artist-to-artist connections for artists who share collaborators
-- Artists now remain visible and connected when producers/songwriters are filtered out
-- Improved search icon positioning in network view with centered alignment
+### Removed Artist-to-Artist Connections (June 26, 2025)
+- Removed direct connections between artists who share collaborators
+- Artists are now only connected to their producers and songwriters
+- Network visualization is cleaner with no artist-to-artist links
 
 ## User Preferences
 
