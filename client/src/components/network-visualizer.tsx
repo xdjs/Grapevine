@@ -308,38 +308,46 @@ export default function NetworkVisualizer({
     let isZooming = false;
     
     const handleZoomEvent = (event: CustomEvent) => {
-      if (!zoomRef.current || !svgRef.current || isZooming) return;
+      if (!svgRef.current || isZooming) return;
 
       isZooming = true;
       const svg = d3.select(svgRef.current);
+      const networkGroup = svg.select(".network-group");
       const { action } = event.detail;
 
-      const onTransitionEnd = () => {
-        setTimeout(() => {
-          isZooming = false;
-        }, 50);
-      };
+      // Get current transform
+      const currentTransform = d3.zoomTransform(svgRef.current);
+      let newTransform;
 
       switch (action) {
         case "in":
-          svg.transition()
-            .duration(250)
-            .call(zoomRef.current.scaleBy, 1.5)
-            .on("end", onTransitionEnd);
+          newTransform = currentTransform.scale(1.5);
           break;
         case "out":
-          svg.transition()
-            .duration(250)
-            .call(zoomRef.current.scaleBy, 1 / 1.5)
-            .on("end", onTransitionEnd);
+          newTransform = currentTransform.scale(1 / 1.5);
           break;
         case "reset":
-          svg.transition()
-            .duration(400)
-            .call(zoomRef.current.transform, d3.zoomIdentity)
-            .on("end", onTransitionEnd);
+          newTransform = d3.zoomIdentity;
           break;
+        default:
+          isZooming = false;
+          return;
       }
+
+      // Apply transform with transition
+      networkGroup.transition()
+        .duration(250)
+        .attr("transform", newTransform.toString())
+        .on("end", () => {
+          // Update the zoom behavior's internal state
+          if (zoomRef.current) {
+            svg.call(zoomRef.current.transform, newTransform);
+          }
+          isZooming = false;
+        });
+
+      // Update immediately for responsive feel
+      onZoomChange({ k: newTransform.k, x: newTransform.x, y: newTransform.y });
     };
 
     if (visible) {
@@ -349,7 +357,7 @@ export default function NetworkVisualizer({
     return () => {
       window.removeEventListener("network-zoom", handleZoomEvent as EventListener);
     };
-  }, [visible]);
+  }, [visible, onZoomChange]);
 
   function getNodeVisibility(node: NetworkNode, filterState: FilterState): boolean {
     if (node.type === "producer") return filterState.showProducers;
