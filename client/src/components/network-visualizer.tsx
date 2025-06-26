@@ -43,7 +43,7 @@ export default function NetworkVisualizer({
     // Create zoom behavior
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.1, 4])
+      .scaleExtent([0.2, 8])
       .on("zoom", (event) => {
         const { transform } = event;
         networkGroup.attr("transform", transform);
@@ -313,19 +313,19 @@ export default function NetworkVisualizer({
 
       switch (action) {
         case "in":
-          svg.transition().duration(300).call(
+          svg.transition().duration(400).ease(d3.easeCircleOut).call(
             zoomRef.current.scaleBy,
-            1.5
+            2.0
           );
           break;
         case "out":
-          svg.transition().duration(300).call(
+          svg.transition().duration(400).ease(d3.easeCircleOut).call(
             zoomRef.current.scaleBy,
-            1 / 1.5
+            0.5
           );
           break;
         case "reset":
-          svg.transition().duration(500).call(
+          svg.transition().duration(750).ease(d3.easeCircleOut).call(
             zoomRef.current.transform,
             d3.zoomIdentity
           );
