@@ -111,7 +111,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView }: Sear
         <div className="relative">
           <Input
             type="text"
-            placeholder="Search artist..."
+            placeholder="Enter artist name (e.g., Taylor Swift, Drake)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={handleKeyPress}
