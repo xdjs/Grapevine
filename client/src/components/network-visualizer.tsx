@@ -347,7 +347,7 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
-  // Apply zoom with proper D3 simulation management and transform origins
+  // Apply zoom with proper D3 simulation management and transition handling
   const applyZoom = (scale: number) => {
     if (!svgRef.current || !zoomRef.current) {
       console.log('Missing refs for zoom operation');
@@ -359,6 +359,7 @@ export default function NetworkVisualizer({
     // Stop the simulation temporarily to prevent conflicts
     if (simulationRef.current) {
       simulationRef.current.stop();
+      console.log('NetworkVisualizer: Simulation stopped for zoom operation');
     }
     
     const svg = d3.select(svgRef.current);
@@ -373,15 +374,25 @@ export default function NetworkVisualizer({
       .scale(scale)
       .translate(-centerX, -centerY);
     
-    // Apply transform using D3's zoom behavior
+    // Apply transform using D3's zoom behavior with transition end handling
     svg.transition()
       .duration(300)
       .call(zoomRef.current.transform, transform)
+      .on('start', () => {
+        console.log('NetworkVisualizer: Zoom transition started');
+      })
       .on('end', () => {
+        console.log('NetworkVisualizer: Zoom transition ended, restarting simulation');
         // Restart simulation after zoom completes
         if (simulationRef.current) {
           simulationRef.current.alpha(0.1).restart();
         }
+        // Signal that zoom operation is complete
+        const zoomCompleteEvent = new CustomEvent('zoom-complete', { 
+          detail: { scale, completed: true } 
+        });
+        console.log('NetworkVisualizer: Dispatching zoom-complete event', { scale });
+        window.dispatchEvent(zoomCompleteEvent);
       });
     
     setCurrentZoom(scale);
@@ -430,11 +441,21 @@ export default function NetworkVisualizer({
             svg.transition()
               .duration(300)
               .call(zoomRef.current.transform, resetTransform)
+              .on('start', () => {
+                console.log('NetworkVisualizer: Zoom reset transition started');
+              })
               .on('end', () => {
+                console.log('NetworkVisualizer: Zoom reset transition ended, restarting simulation');
                 // Restart simulation after reset
                 if (simulationRef.current) {
                   simulationRef.current.alpha(0.1).restart();
                 }
+                // Signal that zoom reset operation is complete
+                const zoomCompleteEvent = new CustomEvent('zoom-complete', { 
+                  detail: { scale: 1, completed: true, type: 'reset' } 
+                });
+                console.log('NetworkVisualizer: Dispatching zoom-complete event for reset');
+                window.dispatchEvent(zoomCompleteEvent);
               });
             
             onZoomChange({ k: 1, x: 0, y: 0 });
