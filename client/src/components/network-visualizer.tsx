@@ -18,9 +18,7 @@ export default function NetworkVisualizer({
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
-  const [zoomScale, setZoomScale] = useState(1);
-  const [panX, setPanX] = useState(0);
-  const [panY, setPanY] = useState(0);
+  const [currentZoom, setCurrentZoom] = useState(1);
 
   useEffect(() => {
     if (!svgRef.current || !data || !visible) return;
@@ -306,87 +304,49 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
+  // Simple zoom implementation using viewBox
+  const applyZoom = (scale: number) => {
+    if (!svgRef.current) return;
+    
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    
+    // Calculate new viewBox dimensions
+    const newWidth = width / scale;
+    const newHeight = height / scale;
+    const offsetX = (width - newWidth) / 2;
+    const offsetY = (height - newHeight) / 2;
+    
+    // Apply viewBox for zoom effect
+    svgRef.current.setAttribute('viewBox', `${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
+    
+    onZoomChange({ k: scale, x: offsetX, y: offsetY });
+  };
+
   // Handle zoom controls
   useEffect(() => {
     const handleZoomEvent = (event: CustomEvent) => {
-      if (!svgRef.current) return;
-
-      console.log("Zoom event received:", event.detail);
       const { action } = event.detail;
-      const svg = d3.select(svgRef.current);
-      const networkGroup = svg.select(".network-group");
 
       switch (action) {
         case "in":
-          const newScaleIn = zoomScale * 1.5;
-          console.log("Zooming in to:", newScaleIn);
-          setZoomScale(newScaleIn);
-          
-          // Apply transform to both the group and stop any ongoing simulation updates
-          if (simulationRef.current) {
-            simulationRef.current.stop();
-          }
-          
-          networkGroup
-            .transition()
-            .duration(250)
-            .attr("transform", `translate(${window.innerWidth/2}, ${window.innerHeight/2}) scale(${newScaleIn}) translate(${-window.innerWidth/2}, ${-window.innerHeight/2})`);
-          
-          onZoomChange({ k: newScaleIn, x: 0, y: 0 });
-          
-          // Restart simulation after transform
-          setTimeout(() => {
-            if (simulationRef.current) {
-              simulationRef.current.alpha(0.1).restart();
-            }
-          }, 300);
+          const newZoomIn = Math.min(5, currentZoom * 1.5); // Cap at 5x zoom
+          console.log("Zooming in to:", newZoomIn);
+          setCurrentZoom(newZoomIn);
+          applyZoom(newZoomIn);
           break;
           
         case "out":
-          const newScaleOut = Math.max(0.1, zoomScale / 1.5);
-          console.log("Zooming out to:", newScaleOut);
-          setZoomScale(newScaleOut);
-          
-          if (simulationRef.current) {
-            simulationRef.current.stop();
-          }
-          
-          networkGroup
-            .transition()
-            .duration(250)
-            .attr("transform", `translate(${window.innerWidth/2}, ${window.innerHeight/2}) scale(${newScaleOut}) translate(${-window.innerWidth/2}, ${-window.innerHeight/2})`);
-          
-          onZoomChange({ k: newScaleOut, x: 0, y: 0 });
-          
-          setTimeout(() => {
-            if (simulationRef.current) {
-              simulationRef.current.alpha(0.1).restart();
-            }
-          }, 300);
+          const newZoomOut = Math.max(0.2, currentZoom / 1.5); // Min 0.2x zoom
+          console.log("Zooming out to:", newZoomOut);
+          setCurrentZoom(newZoomOut);
+          applyZoom(newZoomOut);
           break;
           
         case "reset":
           console.log("Resetting zoom");
-          setZoomScale(1);
-          setPanX(0);
-          setPanY(0);
-          
-          if (simulationRef.current) {
-            simulationRef.current.stop();
-          }
-          
-          networkGroup
-            .transition()
-            .duration(400)
-            .attr("transform", `translate(0, 0) scale(1)`);
-          
-          onZoomChange({ k: 1, x: 0, y: 0 });
-          
-          setTimeout(() => {
-            if (simulationRef.current) {
-              simulationRef.current.alpha(0.3).restart();
-            }
-          }, 500);
+          setCurrentZoom(1);
+          applyZoom(1);
           break;
       }
     };
@@ -398,7 +358,7 @@ export default function NetworkVisualizer({
     return () => {
       window.removeEventListener("network-zoom", handleZoomEvent as EventListener);
     };
-  }, [visible, zoomScale, panX, panY, onZoomChange]);
+  }, [visible, currentZoom, onZoomChange]);
 
   function getNodeVisibility(node: NetworkNode, filterState: FilterState): boolean {
     if (node.type === "producer") return filterState.showProducers;
