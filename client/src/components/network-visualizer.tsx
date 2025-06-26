@@ -227,7 +227,7 @@ export default function NetworkVisualizer({
         content += d.collaborations.slice(0, 3).join("<br/>");
       }
 
-      content += `<br/><br/><em>Click to view artist profile</em>`;
+      content += `<br/><br/><em>Click to search on Music Nerd</em>`;
 
       tooltip.html(content).style("opacity", 1);
     }
@@ -243,13 +243,13 @@ export default function NetworkVisualizer({
     }
 
     function openMusicNerdProfile(artistName: string) {
-      // Since Music Nerd requires specific artist IDs, we'll use MusicBrainz as an alternative
-      // which provides comprehensive artist information and accepts name-based searches
+      // Create a search-friendly URL for Music Nerd
       const searchQuery = encodeURIComponent(artistName);
       
-      // Open MusicBrainz artist search in a new tab as a reliable alternative
-      const musicBrainzUrl = `https://musicbrainz.org/search?query=${searchQuery}&type=artist&method=indexed`;
-      window.open(musicBrainzUrl, '_blank', 'noopener,noreferrer');
+      // Music Nerd appears to use a search-based interface
+      // We'll try their main search mechanism
+      const musicNerdUrl = `https://www.musicnerd.xyz/?search=${searchQuery}`;
+      window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
     }
 
     function dragstarted(event: d3.D3DragEvent<SVGCircleElement, NetworkNode, unknown>, d: NetworkNode) {
