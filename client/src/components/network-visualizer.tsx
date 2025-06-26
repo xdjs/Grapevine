@@ -344,56 +344,56 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
-  // Simple zoom implementation using viewBox
+  // Apply zoom using D3's zoom behavior
   const applyZoom = (scale: number) => {
-    if (!svgRef.current) return;
+    if (!svgRef.current || !zoomRef.current) return;
     
+    const svg = d3.select(svgRef.current);
     const width = window.innerWidth;
     const height = window.innerHeight;
     
-    // Calculate new viewBox dimensions
-    const newWidth = width / scale;
-    const newHeight = height / scale;
-    const offsetX = (width - newWidth) / 2;
-    const offsetY = (height - newHeight) / 2;
+    // Get current transform or default to center
+    const currentTransform = d3.zoomTransform(svgRef.current);
     
-    // Apply viewBox for zoom effect with smooth transition
-    const svg = d3.select(svgRef.current);
+    // Calculate center point for zoom
+    const centerX = width / 2;
+    const centerY = height / 2;
+    
+    // Create new transform with the desired scale, keeping it centered
+    const newTransform = d3.zoomIdentity
+      .translate(centerX, centerY)
+      .scale(scale)
+      .translate(-centerX, -centerY);
+    
+    // Apply the transform with transition
     svg.transition()
-      .duration(200)
-      .attrTween('viewBox', () => {
-        const currentViewBox = svgRef.current?.getAttribute('viewBox') || `0 0 ${width} ${height}`;
-        const [cx, cy, cw, ch] = currentViewBox.split(' ').map(Number);
-        const interpolator = d3.interpolate([cx, cy, cw, ch], [offsetX, offsetY, newWidth, newHeight]);
-        return (t: number) => {
-          const [x, y, w, h] = interpolator(t);
-          return `${x} ${y} ${w} ${h}`;
-        };
-      });
+      .duration(300)
+      .call(zoomRef.current.transform, newTransform);
     
-    onZoomChange({ k: scale, x: offsetX, y: offsetY });
+    setCurrentZoom(scale);
   };
 
   // Handle zoom controls
   useEffect(() => {
     const handleZoomEvent = (event: CustomEvent) => {
       const { action } = event.detail;
+      console.log(`Zoom ${action} button clicked`);
 
       switch (action) {
         case "in":
-          const newZoomIn = Math.min(5, currentZoom * 1.2); // Cap at 5x zoom
-          setCurrentZoom(newZoomIn);
+          const newZoomIn = Math.min(8, currentZoom * 1.5); // Cap at 8x zoom, more responsive
+          console.log(`Zooming in to:`, newZoomIn);
           applyZoom(newZoomIn);
           break;
           
         case "out":
-          const newZoomOut = Math.max(0.2, currentZoom / 1.2); // Min 0.2x zoom
-          setCurrentZoom(newZoomOut);
+          const newZoomOut = Math.max(0.2, currentZoom / 1.5); // Min 0.2x zoom, more responsive
+          console.log(`Zooming out to:`, newZoomOut);
           applyZoom(newZoomOut);
           break;
           
         case "reset":
-          setCurrentZoom(1);
+          console.log(`Resetting zoom`);
           applyZoom(1);
           break;
       }
@@ -406,7 +406,7 @@ export default function NetworkVisualizer({
     return () => {
       window.removeEventListener("network-zoom", handleZoomEvent as EventListener);
     };
-  }, [visible, currentZoom, onZoomChange]);
+  }, [visible, currentZoom]);
 
   function getNodeVisibility(node: NetworkNode, filterState: FilterState): boolean {
     if (node.type === "producer") return filterState.showProducers;
