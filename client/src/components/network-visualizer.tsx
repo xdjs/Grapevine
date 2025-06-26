@@ -157,34 +157,29 @@ export default function NetworkVisualizer({
       .append("circle")
       .attr("class", (d) => `node network-node node-${d.type}`)
       .attr("r", (d) => d.size)
-      .attr("fill", (d) => {
+      .attr("fill", "transparent")
+      .attr("stroke", (d) => {
         if (d.type === 'artist') return 'hsl(330, 81%, 60%)';
         if (d.type === 'producer') return 'hsl(271, 81%, 60%)';
         if (d.type === 'songwriter') return 'hsl(173, 80%, 40%)';
         return 'hsl(207, 90%, 54%)';
       })
-      .attr("stroke", (d) => {
-        if (d.type === 'artist') return 'hsl(330, 81%, 50%)';
-        if (d.type === 'producer') return 'hsl(271, 81%, 50%)';
-        if (d.type === 'songwriter') return 'hsl(173, 80%, 30%)';
-        return 'hsl(207, 90%, 44%)';
-      })
-      .attr("stroke-width", 3)
+      .attr("stroke-width", 4)
       .style("cursor", "pointer")
       .on("mouseover", function(event, d) {
-        d3.select(this).attr("stroke", "white").attr("stroke-width", 4);
+        d3.select(this).attr("stroke", "white").attr("stroke-width", 6);
         showTooltip(event, d);
       })
       .on("mousemove", moveTooltip)
       .on("mouseout", function(event, d) {
         d3.select(this)
           .attr("stroke", (d) => {
-            if (d.type === 'artist') return 'hsl(330, 81%, 50%)';
-            if (d.type === 'producer') return 'hsl(271, 81%, 50%)';
-            if (d.type === 'songwriter') return 'hsl(173, 80%, 30%)';
-            return 'hsl(207, 90%, 44%)';
+            if (d.type === 'artist') return 'hsl(330, 81%, 60%)';
+            if (d.type === 'producer') return 'hsl(271, 81%, 60%)';
+            if (d.type === 'songwriter') return 'hsl(173, 80%, 40%)';
+            return 'hsl(207, 90%, 54%)';
           })
-          .attr("stroke-width", 3);
+          .attr("stroke-width", 4);
         hideTooltip();
       })
       .call(
