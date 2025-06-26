@@ -170,55 +170,22 @@ export class MemStorage implements IStorage {
     };
     nodes.push(mainArtistNode);
 
-    // Common producer and songwriter names for realistic generation
-    const producerNames = [
-      'Mike Dean', 'Metro Boomin', 'Timbaland', 'Dr. Dre', 'Pharrell Williams',
-      'Rick Rubin', 'Quincy Jones', 'The Neptunes', 'Kanye West', 'Just Blaze',
-      'Alchemist', 'DJ Premier', 'Hit-Boy', 'London on da Track', 'Southside',
-      'TM88', 'Wheezy', 'Pi\'erre Bourne', 'Murda Beatz', 'OZ'
-    ];
-
-    const songwriterNames = [
-      'Julia Michaels', 'Justin Tranter', 'Ryan Tedder', 'Sia', 'Ed Sheeran',
-      'Max Martin', 'Shellback', 'Benny Blanco', 'Charlie Puth', 'The Weeknd',
-      'Frank Dukes', 'Andrew Watt', 'Ludwig Göransson', 'Jon Bellion', 'Tainy',
-      'Ester Dean', 'Ne-Yo', 'John Legend', 'Alicia Keys', 'John Mayer'
-    ];
-
-    // Generate 3-5 collaborators based on artist name hash
+    // Generate 2-3 collaborators based on artist name hash
     const hash = artistName.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-    const numCollaborators = 3 + (hash % 3); // 3-5 collaborators
-    
-    // Ensure we have at least one producer and one songwriter
-    const collaboratorTypes: ('producer' | 'songwriter')[] = ['producer', 'songwriter'];
-    
-    // Add random additional types
-    for (let i = 2; i < numCollaborators; i++) {
-      collaboratorTypes.push((hash + i) % 2 === 0 ? 'producer' : 'songwriter');
-    }
-
-    // Shuffle the array to randomize order
-    for (let i = collaboratorTypes.length - 1; i > 0; i--) {
-      const j = (hash + i) % (i + 1);
-      [collaboratorTypes[i], collaboratorTypes[j]] = [collaboratorTypes[j], collaboratorTypes[i]];
-    }
+    const numCollaborators = 2 + (hash % 2); // 2 or 3 collaborators
     
     for (let i = 0; i < numCollaborators; i++) {
-      const collaboratorType = collaboratorTypes[i];
-      const namePool = collaboratorType === 'producer' ? producerNames : songwriterNames;
-      const nameIndex = (hash + i * 7) % namePool.length;
-      const collaboratorName = namePool[nameIndex];
-
-      // Check if this collaborator already exists
-      if (nodes.some(node => node.id === collaboratorName)) {
-        continue; // Skip duplicates
-      }
+      const isProducer = (hash + i) % 2 === 0;
+      const collaboratorType = isProducer ? 'producer' : 'songwriter';
+      const collaboratorName = isProducer 
+        ? `${artistName} Producer ${i + 1}`
+        : `${artistName} Writer ${i + 1}`;
 
       const collaboratorNode: NetworkNode = {
         id: collaboratorName,
         name: collaboratorName,
         type: collaboratorType,
-        size: collaboratorType === 'producer' ? 14 : 12,
+        size: 12,
       };
       
       nodes.push(collaboratorNode);
