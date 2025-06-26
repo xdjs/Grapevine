@@ -25,9 +25,9 @@
   --radius: 0.5rem;
   
   /* Custom network colors */
-  --artist-color: hsl(207, 90%, 54%);
-  --producer-color: hsl(142, 76%, 36%);
-  --songwriter-color: hsl(45, 93%, 47%);
+  --artist-color: hsl(330, 81%, 60%);
+  --producer-color: hsl(271, 81%, 60%);
+  --songwriter-color: hsl(173, 80%, 40%);
 }
 
 .dark {

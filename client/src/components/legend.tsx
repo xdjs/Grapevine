@@ -4,15 +4,15 @@ export default function Legend() {
       <h3 className="text-sm font-semibold text-gray-300 mb-3">Legend</h3>
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+          <div className="w-4 h-4 rounded-full bg-pink-500"></div>
           <span className="text-sm text-white">Artists</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-emerald-500"></div>
+          <div className="w-4 h-4 rounded-full bg-purple-500"></div>
           <span className="text-sm text-white">Producers</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-amber-500"></div>
+          <div className="w-4 h-4 rounded-full bg-teal-500"></div>
           <span className="text-sm text-white">Songwriters</span>
         </div>
       </div>
