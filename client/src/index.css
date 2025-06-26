@@ -65,15 +65,21 @@
 
 @layer components {
   .node-artist { 
-    fill: var(--artist-color); 
+    fill: var(--artist-color);
+    stroke: hsl(0, 0%, 90%);
+    stroke-width: 2px;
   }
   
   .node-producer { 
-    fill: var(--producer-color); 
+    fill: var(--producer-color);
+    stroke: hsl(0, 0%, 90%);
+    stroke-width: 2px;
   }
   
   .node-songwriter { 
-    fill: var(--songwriter-color); 
+    fill: var(--songwriter-color);
+    stroke: hsl(0, 0%, 90%);
+    stroke-width: 2px;
   }
   
   .network-link { 
@@ -83,7 +89,7 @@
   
   .network-node:hover { 
     stroke: hsl(0, 0%, 100%); 
-    stroke-width: 2px; 
+    stroke-width: 3px; 
     cursor: pointer; 
   }
   

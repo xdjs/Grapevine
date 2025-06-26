@@ -138,6 +138,13 @@ Changelog:
 - Fixed search icon centering in input field
 - Networks now appear as separate, unconnected clusters when artists have no common collaborators
 
+### Visual Improvements (June 26, 2025)
+- Updated color scheme to appealing pinks, purples, and teals
+- Artists: Pink (#ec4899), Producers: Purple (#a855f7), Songwriters: Teal (#14b8a6)
+- Made all artist names visible on nodes with improved text shadows
+- Updated filter controls to match new color scheme
+- Added permanent stroke outlines to all nodes for better visibility
+
 ## User Preferences
 
 ```
