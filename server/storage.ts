@@ -217,6 +217,92 @@ export class MemStorage implements IStorage {
       }
     }
 
+    // Add direct artist-to-artist connections for artists who share collaborators
+    const artistNodes = nodes.filter(node => node.type === 'artist');
+    const addedDirectLinks = new Set<string>();
+    
+    // For each pair of artists, check if they share any producers/songwriters
+    for (let i = 0; i < artistNodes.length; i++) {
+      for (let j = i + 1; j < artistNodes.length; j++) {
+        const artist1 = artistNodes[i];
+        const artist2 = artistNodes[j];
+        
+        // Find all collaborators (producers/songwriters) for each artist
+        const artist1Collaborators = new Set<string>();
+        const artist2Collaborators = new Set<string>();
+        
+        // Collect collaborators for artist1
+        links.forEach(link => {
+          let collaboratorId: string | null = null;
+          
+          if (link.source === artist1.id) {
+            const targetNode = nodeMap.get(link.target as string);
+            if (targetNode && (targetNode.type === 'producer' || targetNode.type === 'songwriter')) {
+              collaboratorId = targetNode.id;
+            }
+          } else if (link.target === artist1.id) {
+            const sourceNode = nodeMap.get(link.source as string);
+            if (sourceNode && (sourceNode.type === 'producer' || sourceNode.type === 'songwriter')) {
+              collaboratorId = sourceNode.id;
+            }
+          }
+          
+          if (collaboratorId) {
+            artist1Collaborators.add(collaboratorId);
+          }
+        });
+        
+        // Collect collaborators for artist2
+        links.forEach(link => {
+          let collaboratorId: string | null = null;
+          
+          if (link.source === artist2.id) {
+            const targetNode = nodeMap.get(link.target as string);
+            if (targetNode && (targetNode.type === 'producer' || targetNode.type === 'songwriter')) {
+              collaboratorId = targetNode.id;
+            }
+          } else if (link.target === artist2.id) {
+            const sourceNode = nodeMap.get(link.source as string);
+            if (sourceNode && (sourceNode.type === 'producer' || sourceNode.type === 'songwriter')) {
+              collaboratorId = sourceNode.id;
+            }
+          }
+          
+          if (collaboratorId) {
+            artist2Collaborators.add(collaboratorId);
+          }
+        });
+        
+        // Check for shared collaborators
+        const sharedCollaborators: string[] = [];
+        artist1Collaborators.forEach(collaborator => {
+          if (artist2Collaborators.has(collaborator)) {
+            sharedCollaborators.push(collaborator);
+          }
+        });
+        
+        // If they share collaborators, add a direct link
+        if (sharedCollaborators.length > 0) {
+          const linkKey = `${artist1.id}-${artist2.id}`;
+          const reverseLinkKey = `${artist2.id}-${artist1.id}`;
+          
+          // Check if this link doesn't already exist
+          const linkExists = links.some(link => 
+            (link.source === artist1.id && link.target === artist2.id) ||
+            (link.source === artist2.id && link.target === artist1.id)
+          );
+          
+          if (!linkExists && !addedDirectLinks.has(linkKey) && !addedDirectLinks.has(reverseLinkKey)) {
+            links.push({
+              source: artist1.id,
+              target: artist2.id,
+            });
+            addedDirectLinks.add(linkKey);
+          }
+        }
+      }
+    }
+
     return { nodes, links };
   }
 }
