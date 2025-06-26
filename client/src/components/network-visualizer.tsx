@@ -186,7 +186,10 @@ export default function NetworkVisualizer({
 
     svg.selectAll(".node").style("opacity", function () {
       const d = d3.select(this).datum() as NetworkNode;
-      return getNodeVisibility(d, filterState) ? 1 : 0;
+      if (d.type === "producer" && !filterState.showProducers) return 0;
+      if (d.type === "songwriter" && !filterState.showSongwriters) return 0;
+      if (d.type === "artist" && !filterState.showArtists) return 0;
+      return 1;
     });
 
     svg.selectAll(".link").style("opacity", function () {
