@@ -1,5 +1,6 @@
 import { artists, collaborations, type Artist, type InsertArtist, type Collaboration, type InsertCollaboration, type NetworkData, type NetworkNode, type NetworkLink } from "@shared/schema";
 import { spotifyService } from "./spotify";
+import { musicBrainzService } from "./musicbrainz";
 
 export interface IStorage {
   // Artist methods
@@ -205,6 +206,24 @@ export class MemStorage implements IStorage {
     return { nodes, links };
   }
 
+  private generateCollaboratorNames(artistName: string): Array<{ name: string; type: 'producer' | 'songwriter' }> {
+    const hash = artistName.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+    const numCollaborators = 2 + (hash % 3); // 2-4 collaborators
+    const collaborators: Array<{ name: string; type: 'producer' | 'songwriter' }> = [];
+    
+    for (let i = 0; i < numCollaborators; i++) {
+      const isProducer = (hash + i) % 2 === 0;
+      const type: 'producer' | 'songwriter' = isProducer ? 'producer' : 'songwriter';
+      const name = isProducer 
+        ? `${artistName} Producer ${i + 1}`
+        : `${artistName} Writer ${i + 1}`;
+      
+      collaborators.push({ name, type });
+    }
+    
+    return collaborators;
+  }
+
   private async generateDynamicNetworkWithImages(artistName: string): Promise<NetworkData> {
     const nodes: NetworkNode[] = [];
     const links: NetworkLink[] = [];
@@ -236,7 +255,7 @@ export class MemStorage implements IStorage {
     nodes.push(mainArtistNode);
 
     // Generate collaborators with potential Spotify images
-    const collaboratorNames = this.generateCollaboratorNames();
+    const collaboratorNames = this.generateCollaboratorNames(artistName);
     const clusterCenterX = Math.random() * 400 + 200;
     const clusterCenterY = Math.random() * 300 + 150;
 
@@ -277,11 +296,94 @@ export class MemStorage implements IStorage {
     return { nodes, links };
   }
 
+  private async generateRealCollaborationNetwork(artistName: string): Promise<NetworkData> {
+    const nodes: NetworkNode[] = [];
+    const links: NetworkLink[] = [];
+
+    try {
+      // Get real collaboration data from MusicBrainz
+      const collaborationData = await musicBrainzService.getArtistCollaborations(artistName);
+      
+      // Get Spotify image for main artist
+      let mainArtistImage = null;
+      let mainArtistSpotifyId = null;
+      
+      if (spotifyService.isConfigured()) {
+        try {
+          const spotifyArtist = await spotifyService.searchArtist(artistName);
+          if (spotifyArtist) {
+            mainArtistImage = spotifyService.getArtistImageUrl(spotifyArtist, 'medium');
+            mainArtistSpotifyId = spotifyArtist.id;
+          }
+        } catch (error) {
+          console.warn(`Could not fetch Spotify data for ${artistName}`);
+        }
+      }
+
+      // Create main artist node
+      const mainArtistNode: NetworkNode = {
+        id: artistName,
+        name: artistName,
+        type: 'artist',
+        size: 20,
+        imageUrl: mainArtistImage,
+        spotifyId: mainArtistSpotifyId,
+      };
+      nodes.push(mainArtistNode);
+
+      // Add collaborating artists from MusicBrainz
+      for (const collaborator of collaborationData.artists) {
+        // Get Spotify image for collaborator
+        let collaboratorImage = null;
+        let collaboratorSpotifyId = null;
+        
+        if (spotifyService.isConfigured()) {
+          try {
+            const spotifyCollaborator = await spotifyService.searchArtist(collaborator.name);
+            if (spotifyCollaborator) {
+              collaboratorImage = spotifyService.getArtistImageUrl(spotifyCollaborator, 'medium');
+              collaboratorSpotifyId = spotifyCollaborator.id;
+            }
+          } catch (error) {
+            // Continue without image
+          }
+        }
+
+        const collaboratorNode: NetworkNode = {
+          id: collaborator.name,
+          name: collaborator.name,
+          type: collaborator.type as 'artist' | 'producer' | 'songwriter',
+          size: 15,
+          imageUrl: collaboratorImage,
+          spotifyId: collaboratorSpotifyId,
+        };
+        nodes.push(collaboratorNode);
+
+        links.push({
+          source: artistName,
+          target: collaborator.name,
+        });
+      }
+
+      // If no real collaborations found, fall back to generated data
+      if (collaborationData.artists.length === 0) {
+        console.log(`No MusicBrainz collaborations found for ${artistName}, falling back to generated data`);
+        return this.generateDynamicNetworkWithImages(artistName);
+      }
+
+      return { nodes, links };
+    } catch (error) {
+      console.error('Error generating real collaboration network:', error);
+      // Fall back to generated network
+      return this.generateDynamicNetworkWithImages(artistName);
+    }
+  }
+
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
     const mainArtist = await this.getArtistByName(artistName);
     if (!mainArtist) {
-      // Generate dynamic network for unknown artists with Spotify images
-      return this.generateDynamicNetworkWithImages(artistName);
+      // Try to get real collaboration data from MusicBrainz first
+      return this.generateRealCollaborationNetwork(artistName);
     }
 
     const nodes: NetworkNode[] = [];
