@@ -82,18 +82,18 @@ export default function SearchInterface({ onNetworkData, showNetworkView }: Sear
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={handleKeyPress}
-              className="w-full px-6 py-4 bg-gray-900 border-gray-700 text-white placeholder-gray-500 text-lg h-14 pr-20"
+              className="w-full px-6 py-4 bg-gray-900 border-gray-700 text-white placeholder-gray-500 text-lg h-14 pr-16"
               disabled={isLoading}
             />
             <Button
               onClick={handleSearch}
-              className="absolute right-2 top-2 bottom-2 px-6 bg-blue-600 hover:bg-blue-700"
+              className="absolute right-2 top-2 bottom-2 px-4 bg-blue-600 hover:bg-blue-700"
               disabled={isLoading}
             >
               {isLoading ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                "Search"
+                <Search className="w-4 h-4" />
               )}
             </Button>
           </div>

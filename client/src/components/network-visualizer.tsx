@@ -29,6 +29,17 @@ export default function NetworkVisualizer({
     // Clear existing content
     svg.selectAll("*").remove();
 
+    // Filter out links where either node doesn't exist or is isolated
+    const nodeSet = new Set(data.nodes.map(n => n.id));
+    const validLinks = data.links.filter(link => {
+      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+      return nodeSet.has(sourceId) && nodeSet.has(targetId);
+    });
+
+    // Create network group
+    const networkGroup = svg.append("g").attr("class", "network-group");
+
     // Create zoom behavior
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
@@ -42,16 +53,13 @@ export default function NetworkVisualizer({
     svg.call(zoom);
     zoomRef.current = zoom;
 
-    // Create network group
-    const networkGroup = svg.append("g").attr("class", "network-group");
-
     // Create simulation
     const simulation = d3
       .forceSimulation<NetworkNode>(data.nodes)
       .force(
         "link",
         d3
-          .forceLink<NetworkNode, NetworkLink>(data.links)
+          .forceLink<NetworkNode, NetworkLink>(validLinks)
           .id((d) => d.id)
           .distance(100)
       )
@@ -64,7 +72,7 @@ export default function NetworkVisualizer({
     // Create links
     const linkElements = networkGroup
       .selectAll(".link")
-      .data(data.links)
+      .data(validLinks)
       .enter()
       .append("line")
       .attr("class", "link network-link")
@@ -211,13 +219,22 @@ export default function NetworkVisualizer({
 
       switch (action) {
         case "in":
-          svg.transition().duration(300).call(zoomRef.current.scaleBy, 1.5);
+          svg.transition().duration(300).call(
+            zoomRef.current.scaleBy,
+            1.5
+          );
           break;
         case "out":
-          svg.transition().duration(300).call(zoomRef.current.scaleBy, 1 / 1.5);
+          svg.transition().duration(300).call(
+            zoomRef.current.scaleBy,
+            1 / 1.5
+          );
           break;
         case "reset":
-          svg.transition().duration(500).call(zoomRef.current.transform, d3.zoomIdentity);
+          svg.transition().duration(500).call(
+            zoomRef.current.transform,
+            d3.zoomIdentity
+          );
           break;
       }
     };
