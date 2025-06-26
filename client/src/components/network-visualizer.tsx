@@ -227,7 +227,7 @@ export default function NetworkVisualizer({
         content += d.collaborations.slice(0, 3).join("<br/>");
       }
 
-      content += `<br/><br/><em>Click to search on AllMusic</em>`;
+      content += `<br/><br/><em>Click to search on Music Nerd</em>`;
 
       tooltip.html(content).style("opacity", 1);
     }
@@ -243,12 +243,32 @@ export default function NetworkVisualizer({
     }
 
     function openMusicNerdProfile(artistName: string) {
-      // Create a search-friendly URL for the artist
+      // Create a search-friendly URL for Music Nerd
       const searchQuery = encodeURIComponent(artistName);
       
-      // Use AllMusic as it has a reliable search structure
-      const allMusicUrl = `https://www.allmusic.com/search/artists/${searchQuery}`;
-      window.open(allMusicUrl, '_blank', 'noopener,noreferrer');
+      // Music Nerd uses a simple interface - we'll direct to their main page
+      // and let users search from there since they don't have a direct search URL structure
+      const musicNerdUrl = `https://www.musicnerd.xyz/`;
+      
+      // Open Music Nerd in a new tab
+      const newWindow = window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
+      
+      // Try to focus on the search input if possible (this is a best effort)
+      if (newWindow) {
+        setTimeout(() => {
+          try {
+            // This will only work if same-origin, but we'll try
+            const searchInput = newWindow.document.querySelector('input[type="text"], input[placeholder*="artist"]');
+            if (searchInput) {
+              (searchInput as HTMLInputElement).value = artistName;
+              (searchInput as HTMLInputElement).focus();
+            }
+          } catch (e) {
+            // Cross-origin restrictions will prevent this, but that's expected
+            console.log('Cross-origin restrictions prevent auto-filling search');
+          }
+        }, 1000);
+      }
     }
 
     function dragstarted(event: d3.D3DragEvent<SVGCircleElement, NetworkNode, unknown>, d: NetworkNode) {
