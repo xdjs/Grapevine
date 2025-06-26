@@ -347,40 +347,38 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
-  // Apply zoom using SVG viewBox manipulation
+  // Apply zoom using CSS transforms on the network group
   const applyZoom = (scale: number) => {
     if (!svgRef.current) {
       console.log('Missing SVG ref');
       return;
     }
     
+    console.log('Applying CSS transform zoom:', { scale });
+    
+    // Find the network group and apply CSS transform
+    const networkGroup = d3.select(svgRef.current).select('.network-group');
+    
+    if (networkGroup.empty()) {
+      console.log('Network group not found');
+      return;
+    }
+    
+    // Calculate transform origin (center of viewport)
     const width = window.innerWidth;
     const height = window.innerHeight;
+    const centerX = width / 2;
+    const centerY = height / 2;
     
-    // Calculate new viewBox dimensions for zoom effect
-    const newWidth = width / scale;
-    const newHeight = height / scale;
-    const offsetX = (width - newWidth) / 2;
-    const offsetY = (height - newHeight) / 2;
-    
-    console.log('Applying viewBox zoom:', { scale, newWidth, newHeight, offsetX, offsetY });
-    
-    // Apply viewBox for zoom effect with smooth transition
-    const svg = d3.select(svgRef.current);
-    svg.transition()
+    // Apply CSS transform with smooth transition
+    networkGroup
+      .transition()
       .duration(300)
-      .attrTween('viewBox', () => {
-        const currentViewBox = svgRef.current?.getAttribute('viewBox') || `0 0 ${width} ${height}`;
-        const [cx, cy, cw, ch] = currentViewBox.split(' ').map(Number);
-        const interpolator = d3.interpolate([cx, cy, cw, ch], [offsetX, offsetY, newWidth, newHeight]);
-        return (t: number) => {
-          const [x, y, w, h] = interpolator(t);
-          return `${x} ${y} ${w} ${h}`;
-        };
-      });
+      .style('transform', `translate(${centerX}px, ${centerY}px) scale(${scale}) translate(-${centerX}px, -${centerY}px)`)
+      .style('transform-origin', `${centerX}px ${centerY}px`);
     
     setCurrentZoom(scale);
-    onZoomChange({ k: scale, x: offsetX, y: offsetY });
+    onZoomChange({ k: scale, x: 0, y: 0 });
   };
 
   // Handle zoom controls
@@ -404,15 +402,16 @@ export default function NetworkVisualizer({
           
         case "reset":
           console.log(`Resetting zoom`);
-          // Reset both the zoom state and viewBox directly
+          // Reset CSS transform to original state
           setCurrentZoom(1);
           if (svgRef.current) {
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            d3.select(svgRef.current)
-              .transition()
-              .duration(300)
-              .attr("viewBox", `0 0 ${width} ${height}`);
+            const networkGroup = d3.select(svgRef.current).select('.network-group');
+            if (!networkGroup.empty()) {
+              networkGroup
+                .transition()
+                .duration(300)
+                .style('transform', 'none');
+            }
             onZoomChange({ k: 1, x: 0, y: 0 });
           }
           break;
