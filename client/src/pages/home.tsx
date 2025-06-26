@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import SearchInterface from "@/components/search-interface";
 import NetworkVisualizer from "@/components/network-visualizer";
 import ZoomControls from "@/components/zoom-controls";
@@ -16,32 +16,32 @@ export default function Home() {
     showArtists: true,
   });
 
-  const handleNetworkData = (data: NetworkData) => {
-    if (!networkData) {
-      // First artist - set data directly
-      setNetworkData(data);
-    } else {
-      // Merge with existing data
-      const existingNodeIds = new Set(networkData.nodes.map(n => n.id));
-      const existingLinks = new Set(networkData.links.map(l => `${typeof l.source === 'string' ? l.source : l.source.id}-${typeof l.target === 'string' ? l.target : l.target.id}`));
-      
-      const newNodes = data.nodes.filter(node => !existingNodeIds.has(node.id));
-      const newLinks = data.links.filter(link => {
-        const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-        const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-        return !existingLinks.has(`${sourceId}-${targetId}`) && !existingLinks.has(`${targetId}-${sourceId}`);
-      });
-      
-      setNetworkData({
-        nodes: [...networkData.nodes, ...newNodes],
-        links: [...networkData.links, ...newLinks]
-      });
-    }
+  const handleNetworkData = useCallback((data: NetworkData) => {
+    setNetworkData(prevData => {
+      if (!prevData) {
+        // First artist - set data directly
+        return data;
+      } else {
+        // Merge with existing data
+        const existingNodeIds = new Set(prevData.nodes.map(n => n.id));
+        const existingLinks = new Set(prevData.links.map(l => `${typeof l.source === 'string' ? l.source : l.source.id}-${typeof l.target === 'string' ? l.target : l.target.id}`));
+        
+        const newNodes = data.nodes.filter(node => !existingNodeIds.has(node.id));
+        const newLinks = data.links.filter(link => {
+          const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+          const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+          return !existingLinks.has(`${sourceId}-${targetId}`) && !existingLinks.has(`${targetId}-${sourceId}`);
+        });
+        
+        return {
+          nodes: [...prevData.nodes, ...newNodes],
+          links: [...prevData.links, ...newLinks]
+        };
+      }
+    });
     
-    if (!showNetworkView) {
-      setTimeout(() => setShowNetworkView(true), 100);
-    }
-  };
+    setShowNetworkView(true);
+  }, []);
 
   const handleReset = () => {
     setNetworkData(null);

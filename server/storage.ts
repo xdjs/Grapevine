@@ -65,6 +65,19 @@ export class MemStorage implements IStorage {
     const justinBieber = await this.createArtist({ name: "Justin Bieber", type: "artist" });
     const skrillex = await this.createArtist({ name: "Skrillex", type: "producer" });
     
+    // Independent artists with no common collaborators
+    const laufey = await this.createArtist({ name: "Laufey", type: "artist" });
+    const spencerStewart = await this.createArtist({ name: "Spencer Stewart", type: "producer" });
+    const adamYassin = await this.createArtist({ name: "Adam Yaasin", type: "songwriter" });
+    
+    const tylerTheCreator = await this.createArtist({ name: "Tyler, The Creator", type: "artist" });
+    const lomatPowers = await this.createArtist({ name: "Loma Powers", type: "producer" });
+    const kaliUchis = await this.createArtist({ name: "Kali Uchis", type: "artist" });
+    
+    const clairo = await this.createArtist({ name: "Clairo", type: "artist" });
+    const rostam = await this.createArtist({ name: "Rostam", type: "producer" });
+    const jacksonFoote = await this.createArtist({ name: "Jackson Foote", type: "songwriter" });
+    
     // Create collaborations for Taylor Swift
     await this.createCollaboration({ fromArtistId: taylorSwift.id, toArtistId: jackAntonoff.id, collaborationType: "production" });
     await this.createCollaboration({ fromArtistId: taylorSwift.id, toArtistId: aaronDessner.id, collaborationType: "production" });
@@ -101,6 +114,16 @@ export class MemStorage implements IStorage {
     // Cross-connections to make network more interesting
     await this.createCollaboration({ fromArtistId: benny.id, toArtistId: selenaGomez.id, collaborationType: "production" });
     await this.createCollaboration({ fromArtistId: johnnyMcDaid.id, toArtistId: taylorSwift.id, collaborationType: "songwriting" });
+    
+    // Independent artist networks (no cross-connections with main network)
+    await this.createCollaboration({ fromArtistId: laufey.id, toArtistId: spencerStewart.id, collaborationType: "production" });
+    await this.createCollaboration({ fromArtistId: laufey.id, toArtistId: adamYassin.id, collaborationType: "songwriting" });
+    
+    await this.createCollaboration({ fromArtistId: tylerTheCreator.id, toArtistId: lomatPowers.id, collaborationType: "production" });
+    await this.createCollaboration({ fromArtistId: tylerTheCreator.id, toArtistId: kaliUchis.id, collaborationType: "songwriting" });
+    
+    await this.createCollaboration({ fromArtistId: clairo.id, toArtistId: rostam.id, collaborationType: "production" });
+    await this.createCollaboration({ fromArtistId: clairo.id, toArtistId: jacksonFoote.id, collaborationType: "songwriting" });
   }
 
   async getArtist(id: number): Promise<Artist | undefined> {

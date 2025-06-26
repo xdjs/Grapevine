@@ -28,7 +28,18 @@ export default function SearchInterface({ onNetworkData, showNetworkView }: Sear
     if (data && data !== undefined) {
       onNetworkData(data);
     }
-  }, [data]);
+  }, [data, onNetworkData]);
+
+  // Show error toast when query fails
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Artist not found",
+        description: "Try searching for Taylor Swift, Drake, Billie Eilish, Laufey, Tyler The Creator, or Clairo",
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
 
   const handleSearch = () => {
     const query = searchQuery.trim();
@@ -47,15 +58,6 @@ export default function SearchInterface({ onNetworkData, showNetworkView }: Sear
       handleSearch();
     }
   };
-
-  // Show error toast when query fails
-  if (error) {
-    toast({
-      title: "Artist not found",
-      description: "Try searching for Taylor Swift, Drake, or Billie Eilish",
-      variant: "destructive",
-    });
-  }
 
   return (
     <>
