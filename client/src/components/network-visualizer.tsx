@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 
@@ -18,6 +18,9 @@ export default function NetworkVisualizer({
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  const [zoomScale, setZoomScale] = useState(1);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
 
   useEffect(() => {
     if (!svgRef.current || !data || !visible) return;
@@ -305,49 +308,37 @@ export default function NetworkVisualizer({
 
   // Handle zoom controls
   useEffect(() => {
-    let isZooming = false;
-    
     const handleZoomEvent = (event: CustomEvent) => {
-      if (!svgRef.current || isZooming) return;
+      if (!svgRef.current) return;
 
-      isZooming = true;
+      const { action } = event.detail;
       const svg = d3.select(svgRef.current);
       const networkGroup = svg.select(".network-group");
-      const { action } = event.detail;
-
-      // Get current transform
-      const currentTransform = d3.zoomTransform(svgRef.current);
-      let newTransform;
 
       switch (action) {
         case "in":
-          newTransform = currentTransform.scale(1.5);
+          const newScaleIn = zoomScale * 1.5;
+          setZoomScale(newScaleIn);
+          networkGroup.transition().duration(250)
+            .style("transform", `translate(${panX}px, ${panY}px) scale(${newScaleIn})`);
+          onZoomChange({ k: newScaleIn, x: panX, y: panY });
           break;
         case "out":
-          newTransform = currentTransform.scale(1 / 1.5);
+          const newScaleOut = zoomScale / 1.5;
+          setZoomScale(newScaleOut);
+          networkGroup.transition().duration(250)
+            .style("transform", `translate(${panX}px, ${panY}px) scale(${newScaleOut})`);
+          onZoomChange({ k: newScaleOut, x: panX, y: panY });
           break;
         case "reset":
-          newTransform = d3.zoomIdentity;
+          setZoomScale(1);
+          setPanX(0);
+          setPanY(0);
+          networkGroup.transition().duration(400)
+            .style("transform", `translate(0px, 0px) scale(1)`);
+          onZoomChange({ k: 1, x: 0, y: 0 });
           break;
-        default:
-          isZooming = false;
-          return;
       }
-
-      // Apply transform with transition
-      networkGroup.transition()
-        .duration(250)
-        .attr("transform", newTransform.toString())
-        .on("end", () => {
-          // Update the zoom behavior's internal state
-          if (zoomRef.current) {
-            svg.call(zoomRef.current.transform, newTransform);
-          }
-          isZooming = false;
-        });
-
-      // Update immediately for responsive feel
-      onZoomChange({ k: newTransform.k, x: newTransform.x, y: newTransform.y });
     };
 
     if (visible) {
@@ -357,7 +348,7 @@ export default function NetworkVisualizer({
     return () => {
       window.removeEventListener("network-zoom", handleZoomEvent as EventListener);
     };
-  }, [visible, onZoomChange]);
+  }, [visible, zoomScale, panX, panY, onZoomChange]);
 
   function getNodeVisibility(node: NetworkNode, filterState: FilterState): boolean {
     if (node.type === "producer") return filterState.showProducers;
