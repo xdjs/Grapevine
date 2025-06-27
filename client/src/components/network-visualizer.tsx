@@ -51,7 +51,7 @@ export default function NetworkVisualizer({
           const { transform } = event;
           console.log(`User zoom event triggered with transform:`, transform);
           networkGroup.attr("transform", transform);
-          setCurrentZoom(transform.k);
+          // Don't update currentZoom here to avoid conflicts with button zoom
           onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
         }
       });
@@ -382,14 +382,6 @@ export default function NetworkVisualizer({
       .attr("transform", transformString)
       .on("end", () => {
         console.log(`Persistent zoom completed and locked at scale: ${scale}`);
-        // Update the D3 zoom transform to match our manual transform
-        if (zoomRef.current && svgRef.current) {
-          const newTransform = d3.zoomIdentity
-            .translate(centerX, centerY)
-            .scale(scale)
-            .translate(-centerX, -centerY);
-          zoomRef.current.transform(d3.select(svgRef.current), newTransform);
-        }
         onZoomChange({ k: scale, x: centerX * (1 - scale), y: centerY * (1 - scale) });
       });
   };
@@ -399,6 +391,11 @@ export default function NetworkVisualizer({
     const handleZoomEvent = (event: CustomEvent) => {
       const { action } = event.detail;
       console.log(`Zoom ${action} button clicked, current zoom: ${currentZoom}`);
+
+      // Temporarily disable D3 zoom during button operations
+      if (svgRef.current && zoomRef.current) {
+        d3.select(svgRef.current).on('.zoom', null);
+      }
 
       switch (action) {
         case "in":
@@ -421,6 +418,13 @@ export default function NetworkVisualizer({
           applyZoom(1);
           break;
       }
+
+      // Re-enable D3 zoom after a delay
+      setTimeout(() => {
+        if (svgRef.current && zoomRef.current) {
+          d3.select(svgRef.current).call(zoomRef.current);
+        }
+      }, 300);
     };
 
     if (visible) {
