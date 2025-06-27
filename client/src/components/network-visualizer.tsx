@@ -392,42 +392,24 @@ export default function NetworkVisualizer({
           break;
       }
 
-      // Get the current transform to preserve position during zoom
-      const currentTransform = d3.zoomTransform(svg.node()!);
-      
-      // Get SVG dimensions for center calculation
+      // Get SVG dimensions for center point calculation
       const svgRect = svg.node()!.getBoundingClientRect();
       const centerX = svgRect.width / 2;
       const centerY = svgRect.height / 2;
 
-      let newTransform;
-
       if (action === "reset") {
-        // For reset, center the view at scale 1
-        newTransform = d3.zoomIdentity
-          .translate(centerX, centerY)
-          .scale(1)
-          .translate(-centerX, -centerY);
+        // For reset, use D3's scaleTo method to reset to scale 1 at center
+        svg.transition()
+          .duration(300)
+          .ease(d3.easeQuadOut)
+          .call(zoomRef.current.scaleTo, 1, [centerX, centerY]);
       } else {
-        // For zoom in/out, scale around the visual center point
-        // Calculate the scale factor
-        const scaleFactor = newScale / currentTransform.k;
-        
-        // Apply the scale around the center point
-        newTransform = d3.zoomIdentity
-          .translate(centerX, centerY)
-          .scale(newScale)
-          .translate(
-            (currentTransform.x - centerX) / scaleFactor,
-            (currentTransform.y - centerY) / scaleFactor
-          );
+        // For zoom in/out, use D3's scaleTo method which handles transforms correctly
+        svg.transition()
+          .duration(300)
+          .ease(d3.easeQuadOut)
+          .call(zoomRef.current.scaleTo, newScale, [centerX, centerY]);
       }
-
-      // Apply the transform using D3's zoom behavior with smooth transition
-      svg.transition()
-        .duration(300)
-        .ease(d3.easeQuadOut)
-        .call(zoomRef.current.transform, newTransform);
     };
 
     if (visible) {
