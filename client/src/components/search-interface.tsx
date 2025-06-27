@@ -86,7 +86,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
             Discover how artists connect through producers and songwriters
           </p>
 
-          <div className="relative w-96">
+          <div className="relative w-full max-w-4xl">
             <Input
               type="text"
               placeholder="Enter an artist name (e.g., Taylor Swift, Drake)"
@@ -117,14 +117,14 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
           showNetworkView ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
-        <div className="relative">
+        <div className="relative w-full max-w-4xl">
           <Input
             type="text"
             placeholder="Enter artist name (e.g., Taylor Swift, Drake)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={handleKeyPress}
-            className="w-96 pl-4 pr-12 py-3 bg-gray-900/90 backdrop-blur border-gray-700 text-white placeholder-gray-500"
+            className="w-full pl-4 pr-12 py-3 bg-gray-900/90 backdrop-blur border-gray-700 text-white placeholder-gray-500"
             disabled={isLoading}
           />
           <Button
