@@ -10,6 +10,7 @@ import { Search } from "lucide-react";
 interface SearchInterfaceProps {
   onNetworkData: (data: NetworkData) => void;
   showNetworkView: boolean;
+  onClearSearch?: () => void;
 }
 
 export default function SearchInterface({ onNetworkData, showNetworkView }: SearchInterfaceProps) {
