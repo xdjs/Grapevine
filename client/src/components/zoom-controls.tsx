@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Plus, Minus, RotateCcw, X } from "lucide-react";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 
 interface ZoomControlsProps {
   onZoomIn: () => void;
@@ -16,82 +16,73 @@ export default function ZoomControls({
   onClearAll,
 }: ZoomControlsProps) {
   const [isZooming, setIsZooming] = useState(false);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const zoomIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isMouseDownRef = useRef(false);
 
-  const debouncedZoom = useCallback((zoomFunction: () => void) => {
-    if (isZooming) return; // Prevent rapid actions
+  const startContinuousZoom = useCallback((zoomFunction: () => void) => {
+    if (zoomIntervalRef.current) return;
     
-    setIsZooming(true);
-    
-    // Clear any existing debounce timer
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-    
-    // Execute zoom function
+    // First zoom immediately
     zoomFunction();
     
-    // Set debounce delay to prevent rapid actions
-    debounceRef.current = setTimeout(() => {
-      setIsZooming(false);
-    }, 300); // 300ms debounce delay
-  }, [isZooming]);
-
-  const handleZoomIn = useCallback(() => {
-    console.log('ZoomControls: Debounced zoom in triggered');
-    debouncedZoom(onZoomIn);
-  }, [onZoomIn, debouncedZoom]);
-
-  const handleZoomOut = useCallback(() => {
-    console.log('ZoomControls: Debounced zoom out triggered');
-    debouncedZoom(onZoomOut);
-  }, [onZoomOut, debouncedZoom]);
-
-  const handleZoomReset = useCallback(() => {
-    console.log('ZoomControls: Debounced zoom reset triggered');
-    debouncedZoom(onZoomReset);
-  }, [onZoomReset, debouncedZoom]);
-
-  // Handle zoom completion events from network-visualizer
-  useEffect(() => {
-    const handleZoomComplete = (event: CustomEvent) => {
-      console.log('ZoomControls: Received zoom-complete event', event.detail);
-      // Reset the zooming state when transition is complete
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
+    // Then start continuous zooming
+    zoomIntervalRef.current = setInterval(() => {
+      if (isMouseDownRef.current) {
+        zoomFunction();
       }
-      setIsZooming(false);
-    };
-
-    window.addEventListener('zoom-complete', handleZoomComplete as EventListener);
-    
-    return () => {
-      window.removeEventListener('zoom-complete', handleZoomComplete as EventListener);
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
+    }, 100); // Zoom every 100ms while held
   }, []);
+
+  const stopContinuousZoom = useCallback(() => {
+    if (zoomIntervalRef.current) {
+      clearInterval(zoomIntervalRef.current);
+      zoomIntervalRef.current = null;
+    }
+    isMouseDownRef.current = false;
+    setIsZooming(false);
+  }, []);
+
+  const handleZoomInStart = useCallback(() => {
+    isMouseDownRef.current = true;
+    setIsZooming(true);
+    startContinuousZoom(onZoomIn);
+  }, [onZoomIn, startContinuousZoom]);
+
+  const handleZoomOutStart = useCallback(() => {
+    isMouseDownRef.current = true;
+    setIsZooming(true);
+    startContinuousZoom(onZoomOut);
+  }, [onZoomOut, startContinuousZoom]);
+
+  const handleZoomReset = () => {
+    setIsZooming(true);
+    onZoomReset();
+    setTimeout(() => setIsZooming(false), 500);
+  };
 
   return (
     <div className="fixed top-6 right-6 flex flex-col gap-2 opacity-100 transition-opacity duration-500 z-30">
       <Button
-        onClick={handleZoomIn}
+        onMouseDown={handleZoomInStart}
+        onMouseUp={stopContinuousZoom}
+        onMouseLeave={stopContinuousZoom}
         size="icon"
         variant="secondary"
         disabled={isZooming}
         className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 disabled:opacity-50"
-        title="Zoom In"
+        title="Zoom In (Hold to continuous zoom)"
       >
         <Plus className="w-5 h-5" />
       </Button>
       <Button
-        onClick={handleZoomOut}
+        onMouseDown={handleZoomOutStart}
+        onMouseUp={stopContinuousZoom}
+        onMouseLeave={stopContinuousZoom}
         size="icon"
         variant="secondary"
         disabled={isZooming}
         className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 disabled:opacity-50"
-        title="Zoom Out"
+        title="Zoom Out (Hold to continuous zoom)"
       >
         <Minus className="w-5 h-5" />
       </Button>

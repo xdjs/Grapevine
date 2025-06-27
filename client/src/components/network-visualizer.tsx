@@ -27,9 +27,6 @@ export default function NetworkVisualizer({
     const width = window.innerWidth;
     const height = window.innerHeight;
 
-    // Set initial viewBox for proper zoom functionality
-    svg.attr("viewBox", `0 0 ${width} ${height}`);
-
     // Clear existing content
     svg.selectAll("*").remove();
 
@@ -347,62 +344,33 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
-  // Apply zoom with proper scaling around center (no drift)
+  // Apply zoom using D3's zoom behavior
   const applyZoom = (scale: number) => {
-    if (!svgRef.current || !zoomRef.current) {
-      console.log('Missing refs for zoom operation');
-      return;
-    }
-    
-    console.log('Applying zoom with simulation management:', { scale });
-    
-    // Stop the simulation temporarily to prevent conflicts
-    if (simulationRef.current) {
-      simulationRef.current.stop();
-      console.log('NetworkVisualizer: Simulation stopped for zoom operation');
-    }
+    if (!svgRef.current || !zoomRef.current) return;
     
     const svg = d3.select(svgRef.current);
     const width = window.innerWidth;
     const height = window.innerHeight;
+    
+    // Get current transform or default to center
+    const currentTransform = d3.zoomTransform(svgRef.current);
+    
+    // Calculate center point for zoom
     const centerX = width / 2;
     const centerY = height / 2;
     
-    // Get current transform
-    const currentTransform = d3.zoomTransform(svgRef.current);
-    
-    // Calculate scale factor change
-    const scaleFactor = scale / currentTransform.k;
-    
-    // Create new transform that scales around the center
-    const newTransform = currentTransform
+    // Create new transform with the desired scale, keeping it centered
+    const newTransform = d3.zoomIdentity
       .translate(centerX, centerY)
-      .scale(scaleFactor)
+      .scale(scale)
       .translate(-centerX, -centerY);
     
-    // Apply transform using D3's zoom behavior with transition end handling
+    // Apply the transform with transition
     svg.transition()
       .duration(300)
-      .call(zoomRef.current.transform, newTransform)
-      .on('start', () => {
-        console.log('NetworkVisualizer: Zoom transition started');
-      })
-      .on('end', () => {
-        console.log('NetworkVisualizer: Zoom transition ended, restarting simulation');
-        // Restart simulation after zoom completes
-        if (simulationRef.current) {
-          simulationRef.current.alpha(0.1).restart();
-        }
-        // Signal that zoom operation is complete
-        const zoomCompleteEvent = new CustomEvent('zoom-complete', { 
-          detail: { scale, completed: true } 
-        });
-        console.log('NetworkVisualizer: Dispatching zoom-complete event', { scale });
-        window.dispatchEvent(zoomCompleteEvent);
-      });
+      .call(zoomRef.current.transform, newTransform);
     
     setCurrentZoom(scale);
-    onZoomChange({ k: scale, x: newTransform.x, y: newTransform.y });
   };
 
   // Handle zoom controls
@@ -413,57 +381,20 @@ export default function NetworkVisualizer({
 
       switch (action) {
         case "in":
-          const newZoomIn = Math.min(5, currentZoom * 1.2); // Proper zoom limits
+          const newZoomIn = Math.min(8, currentZoom * 1.5); // Cap at 8x zoom, more responsive
           console.log(`Zooming in to:`, newZoomIn);
-          if (newZoomIn !== currentZoom) { // Only zoom if within limits
-            applyZoom(newZoomIn);
-          }
+          applyZoom(newZoomIn);
           break;
           
         case "out":
-          const newZoomOut = Math.max(0.3, currentZoom / 1.2); // Proper zoom limits
+          const newZoomOut = Math.max(0.2, currentZoom / 1.5); // Min 0.2x zoom, more responsive
           console.log(`Zooming out to:`, newZoomOut);
-          if (newZoomOut !== currentZoom) { // Only zoom if within limits
-            applyZoom(newZoomOut);
-          }
+          applyZoom(newZoomOut);
           break;
           
         case "reset":
-          console.log(`Resetting zoom with simulation restart`);
-          // Stop simulation during reset
-          if (simulationRef.current) {
-            simulationRef.current.stop();
-          }
-          
-          setCurrentZoom(1);
-          if (svgRef.current && zoomRef.current) {
-            const svg = d3.select(svgRef.current);
-            
-            // Reset to identity transform (scale 1, no translation)
-            const resetTransform = d3.zoomIdentity;
-            
-            svg.transition()
-              .duration(300)
-              .call(zoomRef.current.transform, resetTransform)
-              .on('start', () => {
-                console.log('NetworkVisualizer: Zoom reset transition started');
-              })
-              .on('end', () => {
-                console.log('NetworkVisualizer: Zoom reset transition ended, restarting simulation');
-                // Restart simulation after reset
-                if (simulationRef.current) {
-                  simulationRef.current.alpha(0.1).restart();
-                }
-                // Signal that zoom reset operation is complete
-                const zoomCompleteEvent = new CustomEvent('zoom-complete', { 
-                  detail: { scale: 1, completed: true, type: 'reset' } 
-                });
-                console.log('NetworkVisualizer: Dispatching zoom-complete event for reset');
-                window.dispatchEvent(zoomCompleteEvent);
-              });
-            
-            onZoomChange({ k: 1, x: 0, y: 0 });
-          }
+          console.log(`Resetting zoom`);
+          applyZoom(1);
           break;
       }
     };
