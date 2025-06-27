@@ -10,13 +10,21 @@ import { Search } from "lucide-react";
 interface SearchInterfaceProps {
   onNetworkData: (data: NetworkData) => void;
   showNetworkView: boolean;
-  onClearSearch?: () => void;
+  clearSearch?: boolean;
 }
 
-export default function SearchInterface({ onNetworkData, showNetworkView }: SearchInterfaceProps) {
+export default function SearchInterface({ onNetworkData, showNetworkView, clearSearch }: SearchInterfaceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentSearch, setCurrentSearch] = useState("");
   const { toast } = useToast();
+
+  // Clear search field when clearSearch prop changes to true
+  useEffect(() => {
+    if (clearSearch) {
+      setSearchQuery("");
+      setCurrentSearch("");
+    }
+  }, [clearSearch]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["/api/network", currentSearch],

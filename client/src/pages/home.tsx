@@ -10,6 +10,7 @@ export default function Home() {
   const [networkData, setNetworkData] = useState<NetworkData | null>(null);
   const [showNetworkView, setShowNetworkView] = useState(false);
   const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
+  const [clearSearchField, setClearSearchField] = useState(false);
   const [filterState, setFilterState] = useState<FilterState>({
     showProducers: true,
     showSongwriters: true,
@@ -25,6 +26,9 @@ export default function Home() {
   const handleReset = () => {
     setNetworkData(null);
     setShowNetworkView(false);
+    setClearSearchField(true);
+    // Reset the clear flag after a brief delay
+    setTimeout(() => setClearSearchField(false), 100);
   };
 
   const handleZoomChange = (transform: { k: number; x: number; y: number }) => {
@@ -37,6 +41,7 @@ export default function Home() {
       <SearchInterface
         onNetworkData={handleNetworkData}
         showNetworkView={showNetworkView}
+        clearSearch={clearSearchField}
       />
 
       {/* Network Visualization */}
