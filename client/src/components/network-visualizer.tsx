@@ -41,15 +41,19 @@ export default function NetworkVisualizer({
     // Create network group
     const networkGroup = svg.append("g").attr("class", "network-group");
 
-    // Create zoom behavior
+    // Create zoom behavior for mouse/touch interaction only
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .on("zoom", (event) => {
-        const { transform } = event;
-        console.log(`Zoom event triggered with transform:`, transform);
-        networkGroup.attr("transform", transform);
-        onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
+        // Only respond to user-initiated zoom events, not programmatic ones
+        if (event.sourceEvent) {
+          const { transform } = event;
+          console.log(`User zoom event triggered with transform:`, transform);
+          networkGroup.attr("transform", transform);
+          setCurrentZoom(transform.k);
+          onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
+        }
       });
 
     svg.call(zoom);
@@ -345,11 +349,11 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
-  // Apply zoom using direct transform manipulation
+  // Apply zoom using direct transform manipulation without D3 zoom interference
   const applyZoom = (scale: number) => {
     if (!svgRef.current) return;
     
-    console.log(`Applying visual zoom with scale: ${scale}`);
+    console.log(`Applying persistent zoom with scale: ${scale}`);
     const svg = d3.select(svgRef.current);
     const networkGroup = svg.select(".network-group");
     
@@ -365,14 +369,27 @@ export default function NetworkVisualizer({
     const centerX = width / 2;
     const centerY = height / 2;
     
-    // Apply transform directly to the network group with smooth transition
+    // Stop any ongoing transitions to prevent conflicts
+    networkGroup.interrupt();
+    
+    // Apply transform directly to the network group
+    const transformString = `translate(${centerX}, ${centerY}) scale(${scale}) translate(${-centerX}, ${-centerY})`;
+    
     networkGroup
       .transition()
       .duration(200)
       .ease(d3.easeQuadOut)
-      .attr("transform", `translate(${centerX}, ${centerY}) scale(${scale}) translate(${-centerX}, ${-centerY})`)
+      .attr("transform", transformString)
       .on("end", () => {
-        console.log(`Visual zoom completed to scale: ${scale}`);
+        console.log(`Persistent zoom completed and locked at scale: ${scale}`);
+        // Update the D3 zoom transform to match our manual transform
+        if (zoomRef.current && svgRef.current) {
+          const newTransform = d3.zoomIdentity
+            .translate(centerX, centerY)
+            .scale(scale)
+            .translate(-centerX, -centerY);
+          zoomRef.current.transform(d3.select(svgRef.current), newTransform);
+        }
         onZoomChange({ k: scale, x: centerX * (1 - scale), y: centerY * (1 - scale) });
       });
   };
