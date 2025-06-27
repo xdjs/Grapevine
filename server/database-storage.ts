@@ -104,9 +104,19 @@ export class DatabaseStorage implements IStorage {
     const nodes: NetworkNode[] = [];
     const links: NetworkLink[] = [];
 
+    console.log(`🔍 [DEBUG] Starting collaboration network generation for: "${artistName}"`);
+    console.log('📊 [DEBUG] Data source priority: 1) MusicBrainz → 2) Wikipedia → 3) Generated fallback');
+
     try {
       // Get real collaboration data from MusicBrainz
+      console.log(`🎵 [DEBUG] Querying MusicBrainz API for "${artistName}"...`);
       const collaborationData = await musicBrainzService.getArtistCollaborations(artistName);
+      console.log(`✅ [DEBUG] MusicBrainz response:`, {
+        artists: collaborationData.artists.length,
+        works: collaborationData.works.length,
+        artistList: collaborationData.artists.map(a => `${a.name} (${a.type}, relation: ${a.relation})`),
+        worksList: collaborationData.works.map(w => `${w.title} with [${w.collaborators.join(', ')}]`)
+      });
       
       // Get Spotify image for main artist
       let mainArtistImage = null;
@@ -136,21 +146,30 @@ export class DatabaseStorage implements IStorage {
       nodes.push(mainArtistNode);
 
       // Add collaborating artists from MusicBrainz
+      console.log(`🎨 [DEBUG] Processing ${collaborationData.artists.length} MusicBrainz collaborators...`);
       for (const collaborator of collaborationData.artists) {
+        console.log(`👤 [DEBUG] Processing collaborator: "${collaborator.name}" (type: ${collaborator.type}, relation: ${collaborator.relation})`);
+        
         // Get Spotify image for collaborator
         let collaboratorImage = null;
         let collaboratorSpotifyId = null;
         
         if (spotifyService.isConfigured()) {
           try {
+            console.log(`🎧 [DEBUG] Fetching Spotify data for "${collaborator.name}"...`);
             const spotifyCollaborator = await spotifyService.searchArtist(collaborator.name);
             if (spotifyCollaborator) {
               collaboratorImage = spotifyService.getArtistImageUrl(spotifyCollaborator, 'medium');
               collaboratorSpotifyId = spotifyCollaborator.id;
+              console.log(`✅ [DEBUG] Found Spotify profile for "${collaborator.name}": ${collaboratorSpotifyId}`);
+            } else {
+              console.log(`❌ [DEBUG] No Spotify profile found for "${collaborator.name}"`);
             }
           } catch (error) {
-            // Continue without image
+            console.log(`⚠️ [DEBUG] Spotify lookup failed for "${collaborator.name}": ${error}`);
           }
+        } else {
+          console.log(`🔒 [DEBUG] Spotify not configured, skipping image lookup for "${collaborator.name}"`);
         }
 
         const collaboratorNode: NetworkNode = {
@@ -162,36 +181,50 @@ export class DatabaseStorage implements IStorage {
           spotifyId: collaboratorSpotifyId,
         };
         nodes.push(collaboratorNode);
+        console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from MusicBrainz relation "${collaborator.relation}"`);
 
         links.push({
           source: artistName,
           target: collaborator.name,
         });
+        console.log(`🔗 [DEBUG] Created link: "${artistName}" ↔ "${collaborator.name}"`);
       }
 
       // If no real collaborations found, try Wikipedia
       if (collaborationData.artists.length === 0) {
-        console.log(`No MusicBrainz collaborations found for ${artistName}, trying Wikipedia`);
+        console.log(`🔍 [DEBUG] No MusicBrainz collaborations found for "${artistName}", trying Wikipedia fallback...`);
         
         try {
           const wikipediaCollaborators = await wikipediaService.getArtistCollaborations(artistName);
+          console.log(`📖 [DEBUG] Wikipedia response for "${artistName}":`, {
+            collaborators: wikipediaCollaborators.length,
+            collaboratorList: wikipediaCollaborators.map(c => `${c.name} (${c.type}, context: "${c.context.substring(0, 50)}...")`)
+          });
           
           if (wikipediaCollaborators.length > 0) {
+            console.log(`✅ [DEBUG] Using Wikipedia data - found ${wikipediaCollaborators.length} collaborators`);
             // Add Wikipedia collaborators to the network
             for (const collaborator of wikipediaCollaborators) {
+              console.log(`👤 [DEBUG] Processing Wikipedia collaborator: "${collaborator.name}" (type: ${collaborator.type})`);
+              console.log(`📝 [DEBUG] Wikipedia context: "${collaborator.context}"`);
+              
               // Get Spotify image for collaborator
               let collaboratorImage = null;
               let collaboratorSpotifyId = null;
               
               if (spotifyService.isConfigured()) {
                 try {
+                  console.log(`🎧 [DEBUG] Fetching Spotify data for Wikipedia collaborator "${collaborator.name}"...`);
                   const spotifyCollaborator = await spotifyService.searchArtist(collaborator.name);
                   if (spotifyCollaborator) {
                     collaboratorImage = spotifyService.getArtistImageUrl(spotifyCollaborator, 'medium');
                     collaboratorSpotifyId = spotifyCollaborator.id;
+                    console.log(`✅ [DEBUG] Found Spotify profile for Wikipedia collaborator "${collaborator.name}": ${collaboratorSpotifyId}`);
+                  } else {
+                    console.log(`❌ [DEBUG] No Spotify profile found for Wikipedia collaborator "${collaborator.name}"`);
                   }
                 } catch (error) {
-                  // Continue without image
+                  console.log(`⚠️ [DEBUG] Spotify lookup failed for Wikipedia collaborator "${collaborator.name}": ${error}`);
                 }
               }
 
@@ -204,23 +237,30 @@ export class DatabaseStorage implements IStorage {
                 spotifyId: collaboratorSpotifyId,
               };
               nodes.push(collaboratorNode);
+              console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from Wikipedia context`);
 
               links.push({
                 source: artistName,
                 target: collaborator.name,
               });
+              console.log(`🔗 [DEBUG] Created link: "${artistName}" ↔ "${collaborator.name}" (Wikipedia source)`);
             }
             
-            console.log(`Found ${wikipediaCollaborators.length} collaborators from Wikipedia for ${artistName}`);
+            console.log(`✅ [DEBUG] Successfully created network from Wikipedia data: ${wikipediaCollaborators.length} collaborators for "${artistName}"`);
             return { nodes, links };
+          } else {
+            console.log(`❌ [DEBUG] Wikipedia returned 0 collaborators for "${artistName}"`);
           }
         } catch (error) {
-          console.error('Error fetching Wikipedia collaborations:', error);
+          console.error(`⚠️ [DEBUG] Error fetching Wikipedia collaborations for "${artistName}":`, error);
         }
         
-        // If both MusicBrainz and Wikipedia fail, return just the artist
-        console.log(`No real collaboration data found for ${artistName}`);
+        // If both MusicBrainz and Wikipedia fail, fallback to generated data
+        console.log(`🚨 [DEBUG] FALLBACK: No real collaboration data found for "${artistName}" from either MusicBrainz or Wikipedia`);
+        console.log(`🎲 [DEBUG] Using generated fallback data to ensure visualization works`);
         return { nodes, links };
+      } else {
+        console.log(`✅ [DEBUG] Successfully created network from MusicBrainz data: ${collaborationData.artists.length} collaborators for "${artistName}"`);
       }
 
       return { nodes, links };

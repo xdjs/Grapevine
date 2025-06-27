@@ -50,16 +50,23 @@ class MusicBrainzService {
 
   async searchArtist(artistName: string): Promise<MusicBrainzArtist | null> {
     try {
+      console.log(`🎵 [DEBUG] MusicBrainz searching for artist: "${artistName}"`);
       const searchQuery = encodeURIComponent(artistName);
       const endpoint = `/artist?query=artist:${searchQuery}&limit=1&fmt=json`;
       const result: MusicBrainzSearchResult = await this.makeRequest(endpoint);
       
       if (result.artists && result.artists.length > 0) {
-        return result.artists[0];
+        const artist = result.artists[0];
+        console.log(`✅ [DEBUG] MusicBrainz found artist: "${artist.name}" (ID: ${artist.id})`);
+        if (artist.disambiguation) {
+          console.log(`📝 [DEBUG] Artist disambiguation: "${artist.disambiguation}"`);
+        }
+        return artist;
       }
+      console.log(`❌ [DEBUG] MusicBrainz found no artists matching "${artistName}"`);
       return null;
     } catch (error) {
-      console.error('Error searching artist:', error);
+      console.error(`⚠️ [DEBUG] MusicBrainz search error for "${artistName}":`, error);
       return null;
     }
   }

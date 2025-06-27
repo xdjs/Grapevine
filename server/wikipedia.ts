@@ -84,6 +84,8 @@ class WikipediaService {
   extractCollaborators(artistName: string, wikipediaText: string): WikipediaCollaborator[] {
     const collaborators: WikipediaCollaborator[] = [];
     
+    console.log(`🔍 [DEBUG] Extracting collaborators from Wikipedia text for "${artistName}"`);
+    
     // Common patterns for finding collaborators in Wikipedia text
     const patterns = [
       // Producer patterns
@@ -101,6 +103,9 @@ class WikipediaService {
       /featuring\s+([A-Z][a-zA-Z\s]+?)(?:\s|,|\.|;)/g,
       /duet with\s+([A-Z][a-zA-Z\s]+?)(?:\s|,|\.|;)/g,
     ];
+    
+    console.log(`📋 [DEBUG] Searching text with ${patterns.length} regex patterns`);
+    
 
     const typePatterns = {
       producer: [/produc/i, /mix/i, /engineer/i],
@@ -110,14 +115,18 @@ class WikipediaService {
 
     patterns.forEach((pattern, index) => {
       let match;
+      let patternMatches = 0;
       while ((match = pattern.exec(wikipediaText)) !== null) {
+        patternMatches++;
         const name = match[1].trim();
+        console.log(`🎯 [DEBUG] Pattern ${index} matched: "${match[0]}" → extracted name: "${name}"`);
         
         // Skip if it's the same artist or too short/long
         if (name.toLowerCase() === artistName.toLowerCase() || 
             name.length < 3 || 
             name.length > 30 ||
             /\d/.test(name)) {
+          console.log(`❌ [DEBUG] Skipping "${name}" - invalid (same artist, too short/long, or contains numbers)`);
           continue;
         }
 
@@ -130,6 +139,7 @@ class WikipediaService {
         } else if (typePatterns.songwriter.some(p => p.test(context))) {
           type = 'songwriter';
         }
+        console.log(`🎭 [DEBUG] Categorized "${name}" as ${type} based on context: "${context}"`);
 
         // Check if already exists
         const existing = collaborators.find(c => c.name.toLowerCase() === name.toLowerCase());
@@ -139,7 +149,15 @@ class WikipediaService {
             type,
             context: match[0]
           });
+          console.log(`✅ [DEBUG] Added collaborator: "${name}" (${type})`);
+        } else {
+          console.log(`⚠️ [DEBUG] Duplicate collaborator "${name}" skipped`);
         }
+      }
+      if (patternMatches === 0) {
+        console.log(`❌ [DEBUG] Pattern ${index} found no matches in Wikipedia text`);
+      } else {
+        console.log(`✅ [DEBUG] Pattern ${index} found ${patternMatches} matches`);
       }
     });
 
@@ -159,23 +177,31 @@ class WikipediaService {
 
   async getArtistCollaborations(artistName: string): Promise<WikipediaCollaborator[]> {
     try {
+      console.log(`📖 [DEBUG] Wikipedia searching for artist: "${artistName}"`);
       // Search for the artist's Wikipedia page
       const pageTitle = await this.searchArtist(artistName);
       if (!pageTitle) {
-        console.log(`No Wikipedia page found for ${artistName}`);
+        console.log(`❌ [DEBUG] Wikipedia found no page for "${artistName}"`);
         return [];
       }
 
+      console.log(`✅ [DEBUG] Wikipedia found page: "${pageTitle}"`);
       // Get the page content
       const pageContent = await this.getArtistPage(pageTitle);
       if (!pageContent) {
-        console.log(`No Wikipedia content found for ${artistName}`);
+        console.log(`❌ [DEBUG] Wikipedia could not fetch content for page "${pageTitle}"`);
         return [];
       }
 
+      console.log(`📄 [DEBUG] Wikipedia page content length: ${pageContent.length} characters`);
+      console.log(`📝 [DEBUG] Wikipedia content preview: "${pageContent.substring(0, 200)}..."`);
+      
       // Extract collaborators from the content
       const collaborators = this.extractCollaborators(artistName, pageContent);
-      console.log(`Found ${collaborators.length} collaborators for ${artistName} from Wikipedia`);
+      console.log(`🔍 [DEBUG] Wikipedia extracted ${collaborators.length} collaborators from page`);
+      if (collaborators.length > 0) {
+        console.log(`👥 [DEBUG] Wikipedia collaborators found:`, collaborators.map(c => `${c.name} (${c.type})`));
+      }
       
       return collaborators;
     } catch (error) {
