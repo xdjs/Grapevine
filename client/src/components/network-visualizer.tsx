@@ -373,58 +373,65 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
-  // Handle zoom controls with persistent state
+  // Handle zoom controls with SVG viewBox manipulation (working approach)
   useEffect(() => {
     const handleZoomEvent = (event: CustomEvent) => {
       const { action } = event.detail;
 
-      if (!svgRef.current || !zoomRef.current) return;
+      if (!svgRef.current) {
+        console.log("SVG ref not available");
+        return;
+      }
 
       const svg = d3.select(svgRef.current);
+      const width = window.innerWidth;
+      const height = window.innerHeight;
       
-      // Get current transform state
-      const currentTransform = d3.zoomTransform(svg.node()!);
-      let newScale = currentTransform.k;
+      // Get current viewBox or use default
+      const currentViewBox = svg.attr('viewBox');
+      let currentScale = 1;
+      
+      if (currentViewBox) {
+        const viewBoxValues = currentViewBox.split(' ').map(Number);
+        const viewBoxWidth = viewBoxValues[2];
+        currentScale = width / viewBoxWidth;
+      }
+
+      let newScale = currentScale;
 
       switch (action) {
         case "in":
-          newScale = Math.min(5, currentTransform.k * 1.3);
+          newScale = Math.min(8, currentScale * 1.3);
           break;
         case "out":
-          newScale = Math.max(0.2, currentTransform.k / 1.3);
+          newScale = Math.max(0.2, currentScale / 1.3);
           break;
         case "reset":
           newScale = 1;
           break;
       }
 
-      console.log(`Zooming from ${currentTransform.k.toFixed(2)} to ${newScale.toFixed(2)}`);
+      console.log(`Zooming from ${currentScale.toFixed(2)} to ${newScale.toFixed(2)}`);
 
-      // Calculate new transform based on SVG center
-      const svgRect = svg.node()!.getBoundingClientRect();
-      const centerX = svgRect.width / 2;
-      const centerY = svgRect.height / 2;
-
-      let newTransform;
-      
-      if (action === "reset") {
-        newTransform = d3.zoomIdentity;
-      } else {
-        // Scale from center point
-        const scaleFactor = newScale / currentTransform.k;
-        const newX = centerX - (centerX - currentTransform.x) * scaleFactor;
-        const newY = centerY - (centerY - currentTransform.y) * scaleFactor;
+      // Apply zoom using viewBox manipulation
+      const applyZoom = (scale: number) => {
+        const newWidth = width / scale;
+        const newHeight = height / scale;
+        const offsetX = (width - newWidth) / 2;
+        const offsetY = (height - newHeight) / 2;
         
-        newTransform = d3.zoomIdentity
-          .translate(newX, newY)
-          .scale(newScale);
-      }
+        const newViewBox = `${offsetX} ${offsetY} ${newWidth} ${newHeight}`;
+        
+        svg.transition()
+          .duration(200)
+          .attr('viewBox', newViewBox);
+      };
 
-      // Apply the transform using D3's zoom behavior
-      svg.transition()
-        .duration(300)
-        .ease(d3.easeQuadOut)
-        .call(zoomRef.current.transform, newTransform);
+      applyZoom(newScale);
+      
+      // Update zoom state
+      setCurrentZoom(newScale);
+      onZoomChange({ k: newScale, x: 0, y: 0 });
     };
 
     if (visible) {
@@ -434,7 +441,7 @@ export default function NetworkVisualizer({
     return () => {
       window.removeEventListener("network-zoom", handleZoomEvent as EventListener);
     };
-  }, [visible]);
+  }, [visible, onZoomChange]);
 
   function getNodeVisibility(node: NetworkNode, filterState: FilterState): boolean {
     if (node.type === "producer") return filterState.showProducers;
