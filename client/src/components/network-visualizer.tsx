@@ -271,17 +271,16 @@ export default function NetworkVisualizer({
     }
 
     function openMusicNerdProfile(artistName: string) {
-      const searchQuery = encodeURIComponent(artistName);
-      
-      // Direct link to Music Nerd with artist search
-      const musicNerdUrl = `https://www.musicnerd.xyz/?q=${searchQuery}`;
+      // TODO: Replace with proper Music Nerd artist ID lookup
+      // For now, open Music Nerd main page without parameters
+      const musicNerdUrl = `https://www.musicnerd.xyz/`;
       
       // Open Music Nerd in a new tab
       const newWindow = window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
       
       // If popup blocked, provide fallback
       if (!newWindow) {
-        alert(`Popup blocked! Please visit Music Nerd manually to search for "${artistName}": https://www.musicnerd.xyz/`);
+        alert(`Popup blocked! Please visit Music Nerd manually: https://www.musicnerd.xyz/`);
       }
     }
 
