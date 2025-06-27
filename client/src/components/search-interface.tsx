@@ -89,7 +89,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
           <div className="relative w-full max-w-4xl">
             <Input
               type="text"
-              placeholder="Enter an artist name (e.g., Taylor Swift, Drake)"
+              placeholder="Enter an artist name (e.g., Taylor Swift, Drake, Billie Eilish, etc....)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -120,7 +120,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
         <div className="relative w-full max-w-4xl">
           <Input
             type="text"
-            placeholder="Enter artist name (e.g., Taylor Swift, Drake)"
+            placeholder="Enter artist name (e.g., Taylor Swift, Drake, Billie Eilish, etc....)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={handleKeyPress}
