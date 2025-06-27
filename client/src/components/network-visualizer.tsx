@@ -302,7 +302,7 @@ export default function NetworkVisualizer({
             const searchInputs = newWindow.document.querySelectorAll('input[type="text"], textarea, [contenteditable="true"]');
             if (searchInputs.length > 0) {
               const searchInput = searchInputs[0] as HTMLInputElement;
-              searchInput.value = `Tell me about ${artistName}`;
+              searchInput.value = artistName;
               searchInput.focus();
               
               // Try to trigger any submit or enter event
