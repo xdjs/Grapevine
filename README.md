@@ -171,7 +171,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Spotify** for artist images and metadata
 - **D3.js** community for visualization inspiration
 - **React** and **TypeScript** teams for excellent development tools
-- **Evie** and **Casey** for vibecoding the whole thing
 
 ## 📞 Support
 
@@ -184,4 +183,3 @@ If you encounter any issues or have questions:
 
 **Built with ❤️ for the music community**
 
-https://github.com/xdjs/MusicNerdResearch/wiki/Web-Map-Idea
