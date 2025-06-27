@@ -29,11 +29,12 @@ export default function FilterControls({
             onCheckedChange={(checked) =>
               handleFilterChange("showProducers", !!checked)
             }
-            className="data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500"
+            className="data-[state=checked]:border-[#8A2BE2]"
+            style={{ backgroundColor: filterState.showProducers ? '#8A2BE2' : 'transparent' }}
           />
           <Label htmlFor="showProducers" className="text-sm text-white cursor-pointer flex items-center gap-2">
             Producers
-            <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#8A2BE2' }}></div>
           </Label>
         </div>
 
@@ -44,11 +45,12 @@ export default function FilterControls({
             onCheckedChange={(checked) =>
               handleFilterChange("showSongwriters", !!checked)
             }
-            className="data-[state=checked]:bg-teal-500 data-[state=checked]:border-teal-500"
+            className="data-[state=checked]:border-[#00CED1]"
+            style={{ backgroundColor: filterState.showSongwriters ? '#00CED1' : 'transparent' }}
           />
           <Label htmlFor="showSongwriters" className="text-sm text-white cursor-pointer flex items-center gap-2">
             Songwriters
-            <div className="w-3 h-3 rounded-full bg-teal-500"></div>
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#00CED1' }}></div>
           </Label>
         </div>
 
@@ -59,11 +61,12 @@ export default function FilterControls({
             onCheckedChange={(checked) =>
               handleFilterChange("showArtists", !!checked)
             }
-            className="data-[state=checked]:bg-pink-500 data-[state=checked]:border-pink-500"
+            className="data-[state=checked]:border-[#FF69B4]"
+            style={{ backgroundColor: filterState.showArtists ? '#FF69B4' : 'transparent' }}
           />
           <Label htmlFor="showArtists" className="text-sm text-white cursor-pointer flex items-center gap-2">
             Artists
-            <div className="w-3 h-3 rounded-full bg-pink-500"></div>
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#FF69B4' }}></div>
           </Label>
         </div>
       </div>
