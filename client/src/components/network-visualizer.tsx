@@ -183,10 +183,10 @@ export default function NetworkVisualizer({
       .attr("r", (d) => d.size)
       .attr("fill", "transparent")
       .attr("stroke", (d) => {
-        if (d.type === 'artist') return 'hsl(330, 81%, 60%)';
-        if (d.type === 'producer') return 'hsl(271, 81%, 60%)';
-        if (d.type === 'songwriter') return 'hsl(173, 80%, 40%)';
-        return 'hsl(207, 90%, 54%)';
+        if (d.type === 'artist') return '#711F31';       // Claret
+        if (d.type === 'producer') return '#9E3845';     // Smoky Topaz  
+        if (d.type === 'songwriter') return '#E0AF3A';   // Meat Brown
+        return '#355367';  // Police Blue
       })
       .attr("stroke-width", 4)
       .style("cursor", "pointer")
@@ -198,10 +198,10 @@ export default function NetworkVisualizer({
       .on("mouseout", function(event, d) {
         d3.select(this)
           .attr("stroke", (d) => {
-            if (d.type === 'artist') return 'hsl(330, 81%, 60%)';
-            if (d.type === 'producer') return 'hsl(271, 81%, 60%)';
-            if (d.type === 'songwriter') return 'hsl(173, 80%, 40%)';
-            return 'hsl(207, 90%, 54%)';
+            if (d.type === 'artist') return '#711F31';       // Claret
+            if (d.type === 'producer') return '#9E3845';     // Smoky Topaz  
+            if (d.type === 'songwriter') return '#E0AF3A';   // Meat Brown
+            return '#355367';  // Police Blue
           })
           .attr("stroke-width", 4);
         hideTooltip();

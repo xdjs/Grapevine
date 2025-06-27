@@ -24,10 +24,10 @@
   --ring: hsl(240, 4.9%, 83.9%);
   --radius: 0.5rem;
   
-  /* Custom network colors */
-  --artist-color: hsl(330, 81%, 60%);
-  --producer-color: hsl(271, 81%, 60%);
-  --songwriter-color: hsl(173, 80%, 40%);
+  /* Custom network colors - Music Store Palette from musicnerd.xyz */
+  --artist-color: #711F31;        /* Claret */
+  --producer-color: #9E3845;      /* Smoky Topaz */
+  --songwriter-color: #E0AF3A;    /* Meat Brown */
 }
 
 .dark {
@@ -66,19 +66,19 @@
 @layer components {
   .node-artist { 
     fill: var(--artist-color);
-    stroke: hsl(330, 81%, 50%);
+    stroke: var(--artist-color);
     stroke-width: 3px;
   }
   
   .node-producer { 
     fill: var(--producer-color);
-    stroke: hsl(271, 81%, 50%);
+    stroke: var(--producer-color);
     stroke-width: 3px;
   }
   
   .node-songwriter { 
     fill: var(--songwriter-color);
-    stroke: hsl(173, 80%, 30%);
+    stroke: var(--songwriter-color);
     stroke-width: 3px;
   }
   

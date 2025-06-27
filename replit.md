@@ -173,6 +173,14 @@ Changelog:
 - Updated filter controls to match new color scheme
 - Added permanent stroke outlines to all nodes for better visibility
 
+### Music Store Color Palette Integration (June 27, 2025)
+- Applied authentic Music Store color palette inspired by musicnerd.xyz
+- Artists: Claret (#711F31) - Deep wine red representing main artists
+- Producers: Smoky Topaz (#9E3845) - Rich red-brown for music producers
+- Songwriters: Meat Brown (#E0AF3A) - Golden brown for songwriters
+- Updated all UI components including nodes, legend, and CSS variables
+- Professional music industry aesthetic with warm, sophisticated tones
+
 ## User Preferences
 
 ```
