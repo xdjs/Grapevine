@@ -183,7 +183,7 @@ export default function NetworkVisualizer({
       .attr("r", (d) => d.size)
       .attr("fill", "transparent")
       .attr("stroke", (d) => {
-        if (d.type === 'artist') return '#FF70CE';       // Hot Pink
+        if (d.type === 'artist') return '#FF0ACF';       // Magenta Pink
         if (d.type === 'producer') return '#AE53FF';     // Bright Purple  
         if (d.type === 'songwriter') return '#67D1F8';   // Light Blue
         return '#355367';  // Police Blue
@@ -198,7 +198,7 @@ export default function NetworkVisualizer({
       .on("mouseout", function(event, d) {
         d3.select(this)
           .attr("stroke", (d) => {
-            if (d.type === 'artist') return '#FF70CE';       // Hot Pink
+            if (d.type === 'artist') return '#FF0ACF';       // Magenta Pink
             if (d.type === 'producer') return '#AE53FF';     // Bright Purple  
             if (d.type === 'songwriter') return '#67D1F8';   // Light Blue
             return '#355367';  // Police Blue

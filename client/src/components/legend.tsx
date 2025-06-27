@@ -4,7 +4,7 @@ export default function Legend() {
       <h3 className="text-sm font-semibold text-gray-300 mb-3">Legend</h3>
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: '#FF70CE' }}></div>
+          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: '#FF0ACF' }}></div>
           <span className="text-sm text-white">Artists</span>
         </div>
         <div className="flex items-center gap-2">

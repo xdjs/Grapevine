@@ -61,12 +61,12 @@ export default function FilterControls({
             onCheckedChange={(checked) =>
               handleFilterChange("showArtists", !!checked)
             }
-            className="data-[state=checked]:border-[#FF70CE]"
-            style={{ backgroundColor: filterState.showArtists ? '#FF70CE' : 'transparent' }}
+            className="data-[state=checked]:border-[#FF0ACF]"
+            style={{ backgroundColor: filterState.showArtists ? '#FF0ACF' : 'transparent' }}
           />
           <Label htmlFor="showArtists" className="text-sm text-white cursor-pointer flex items-center gap-2">
             Artists
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#FF70CE' }}></div>
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#FF0ACF' }}></div>
           </Label>
         </div>
       </div>
