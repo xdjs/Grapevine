@@ -182,3 +182,5 @@ If you encounter any issues or have questions:
 ---
 
 **Built with ❤️ for the music community**
+
+https://github.com/xdjs/MusicNerdResearch/wiki/Web-Map-Idea
