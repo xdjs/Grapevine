@@ -345,39 +345,38 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
-  // Apply zoom using D3's zoom behavior
+  // Apply zoom using direct transform manipulation
   const applyZoom = (scale: number) => {
-    if (!svgRef.current || !zoomRef.current) return;
+    if (!svgRef.current) return;
     
     console.log(`Applying zoom with scale: ${scale}`);
     const svg = d3.select(svgRef.current);
+    const networkGroup = svg.select(".network-group");
+    
+    if (networkGroup.empty()) {
+      console.log("Network group not found");
+      return;
+    }
+    
     const width = window.innerWidth;
     const height = window.innerHeight;
     
-    // Get current transform
-    const currentTransform = d3.zoomTransform(svgRef.current);
-    console.log(`Current transform:`, currentTransform);
-    
-    // Calculate center point for zoom
+    // Calculate center-based transform
     const centerX = width / 2;
     const centerY = height / 2;
     
-    // For a simple center-based zoom, use the identity transform scaled from center
-    const newTransform = d3.zoomIdentity
-      .translate(centerX, centerY)
-      .scale(scale)
-      .translate(-centerX, -centerY);
+    // Apply transform directly to the network group
+    const transform = `translate(${centerX}, ${centerY}) scale(${scale}) translate(${-centerX}, ${-centerY})`;
     
-    console.log(`New transform:`, newTransform);
-    
-    // Apply the transform with smooth transition
-    svg.transition()
-      .duration(300)
+    networkGroup
+      .transition()
+      .duration(250)
       .ease(d3.easeQuadOut)
-      .call(zoomRef.current.transform, newTransform)
+      .attr("transform", transform)
       .on("end", () => {
-        console.log(`Zoom transition completed to scale: ${scale}`);
+        console.log(`Direct zoom completed to scale: ${scale}`);
         setCurrentZoom(scale);
+        onZoomChange({ k: scale, x: centerX * (1 - scale), y: centerY * (1 - scale) });
       });
   };
 
@@ -389,32 +388,20 @@ export default function NetworkVisualizer({
 
       switch (action) {
         case "in":
-          const newZoomIn = Math.min(5, currentZoom * 1.4); // Cap at 5x zoom
+          const newZoomIn = Math.min(5, currentZoom * 1.2); // Cap at 5x zoom
           console.log(`Zooming in to:`, newZoomIn);
           applyZoom(newZoomIn);
           break;
           
         case "out":
-          const newZoomOut = Math.max(0.3, currentZoom / 1.4); // Min 0.3x zoom
+          const newZoomOut = Math.max(0.3, currentZoom / 1.2); // Min 0.3x zoom
           console.log(`Zooming out to:`, newZoomOut);
           applyZoom(newZoomOut);
           break;
           
         case "reset":
           console.log(`Resetting zoom`);
-          // For reset, we want to go back to scale 1 and center the view
-          if (!svgRef.current || !zoomRef.current) return;
-          const svg = d3.select(svgRef.current);
-          const width = window.innerWidth;
-          const height = window.innerHeight;
-          const resetTransform = d3.zoomIdentity.translate(width / 2, height / 2).scale(1).translate(-width / 2, -height / 2);
-          
-          svg.transition()
-            .duration(500)
-            .ease(d3.easeQuadOut)
-            .call(zoomRef.current.transform, resetTransform);
-          
-          setCurrentZoom(1);
+          applyZoom(1);
           break;
       }
     };
