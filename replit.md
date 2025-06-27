@@ -173,13 +173,13 @@ Changelog:
 - Updated filter controls to match new color scheme
 - Added permanent stroke outlines to all nodes for better visibility
 
-### Music Store Color Palette Integration (June 27, 2025)
-- Applied authentic Music Store color palette inspired by musicnerd.xyz
-- Artists: Claret (#711F31) - Deep wine red representing main artists
-- Producers: Smoky Topaz (#9E3845) - Rich red-brown for music producers
-- Songwriters: Meat Brown (#E0AF3A) - Golden brown for songwriters
-- Updated all UI components including nodes, legend, and CSS variables
-- Professional music industry aesthetic with warm, sophisticated tones
+### Vibrant Color Palette Update (June 27, 2025)
+- Applied cohesive vibrant color palette based on user-provided pink and cyan colors
+- Artists: Hot Pink (#FF69B4) - Bright vibrant pink for main artists
+- Producers: Blue Violet Purple (#8A2BE2) - Harmonious purple bridging pink and cyan
+- Songwriters: Dark Turquoise (#00CED1) - Vibrant cyan-turquoise for songwriters
+- Updated all UI components including nodes, legend, CSS variables, and JavaScript color definitions
+- Modern, energetic aesthetic with high contrast and visual appeal for music collaboration networks
 
 ## User Preferences
 
