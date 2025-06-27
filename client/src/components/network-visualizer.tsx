@@ -349,42 +349,7 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
-  // Apply zoom using direct transform manipulation without D3 zoom interference
-  const applyZoom = (scale: number) => {
-    if (!svgRef.current) return;
-    
-    console.log(`Applying persistent zoom with scale: ${scale}`);
-    const svg = d3.select(svgRef.current);
-    const networkGroup = svg.select(".network-group");
-    
-    if (networkGroup.empty()) {
-      console.log("Network group not found");
-      return;
-    }
-    
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    
-    // Calculate center-based transform
-    const centerX = width / 2;
-    const centerY = height / 2;
-    
-    // Stop any ongoing transitions to prevent conflicts
-    networkGroup.interrupt();
-    
-    // Apply transform directly to the network group
-    const transformString = `translate(${centerX}, ${centerY}) scale(${scale}) translate(${-centerX}, ${-centerY})`;
-    
-    networkGroup
-      .transition()
-      .duration(200)
-      .ease(d3.easeQuadOut)
-      .attr("transform", transformString)
-      .on("end", () => {
-        console.log(`Persistent zoom completed and locked at scale: ${scale}`);
-        onZoomChange({ k: scale, x: centerX * (1 - scale), y: centerY * (1 - scale) });
-      });
-  };
+
 
   // Handle zoom controls with proper D3 zoom integration
   useEffect(() => {
@@ -418,14 +383,14 @@ export default function NetworkVisualizer({
 
       console.log(`Button zoom: ${currentZoom} → ${newScale}`);
 
-      // Use D3 zoom transform for smooth integration
+      // Use D3 zoom transform for consistent zoom behavior
       const newTransform = d3.zoomIdentity
         .translate(centerX, centerY)
         .scale(newScale)
         .translate(-centerX, -centerY);
 
       svg.transition()
-        .duration(200)
+        .duration(300)
         .call(zoomRef.current.transform, newTransform);
     };
 
