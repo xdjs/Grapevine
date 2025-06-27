@@ -347,7 +347,7 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
-  // Apply zoom with proper D3 simulation management and transition handling
+  // Apply zoom with proper scaling around center (no drift)
   const applyZoom = (scale: number) => {
     if (!svgRef.current || !zoomRef.current) {
       console.log('Missing refs for zoom operation');
@@ -368,16 +368,22 @@ export default function NetworkVisualizer({
     const centerX = width / 2;
     const centerY = height / 2;
     
-    // Create proper D3 zoom transform
-    const transform = d3.zoomIdentity
+    // Get current transform
+    const currentTransform = d3.zoomTransform(svgRef.current);
+    
+    // Calculate scale factor change
+    const scaleFactor = scale / currentTransform.k;
+    
+    // Create new transform that scales around the center
+    const newTransform = currentTransform
       .translate(centerX, centerY)
-      .scale(scale)
+      .scale(scaleFactor)
       .translate(-centerX, -centerY);
     
     // Apply transform using D3's zoom behavior with transition end handling
     svg.transition()
       .duration(300)
-      .call(zoomRef.current.transform, transform)
+      .call(zoomRef.current.transform, newTransform)
       .on('start', () => {
         console.log('NetworkVisualizer: Zoom transition started');
       })
@@ -396,7 +402,7 @@ export default function NetworkVisualizer({
       });
     
     setCurrentZoom(scale);
-    onZoomChange({ k: scale, x: transform.x, y: transform.y });
+    onZoomChange({ k: scale, x: newTransform.x, y: newTransform.y });
   };
 
   // Handle zoom controls
@@ -432,10 +438,8 @@ export default function NetworkVisualizer({
           setCurrentZoom(1);
           if (svgRef.current && zoomRef.current) {
             const svg = d3.select(svgRef.current);
-            const width = window.innerWidth;
-            const height = window.innerHeight;
             
-            // Reset to identity transform
+            // Reset to identity transform (scale 1, no translation)
             const resetTransform = d3.zoomIdentity;
             
             svg.transition()
