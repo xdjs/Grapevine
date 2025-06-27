@@ -357,19 +357,25 @@ export default function NetworkVisualizer({
       const svg = d3.select(svgRef.current);
       let newScale = currentZoom;
 
+      // Get the actual current zoom from D3 transform for accurate calculations
+      const actualCurrentZoom = d3.zoomTransform(svg.node()!).k;
+      console.log(`Action: ${action}, actualCurrentZoom: ${actualCurrentZoom}, reactCurrentZoom: ${currentZoom}`);
+
       switch (action) {
         case "in":
-          newScale = Math.min(5, currentZoom * 1.3); // Cap at 5x zoom
+          newScale = Math.min(5, actualCurrentZoom * 1.3); // Cap at 5x zoom
           break;
           
         case "out":
-          newScale = Math.max(0.2, currentZoom / 1.3); // Min 0.2x zoom
+          newScale = Math.max(0.2, actualCurrentZoom / 1.3); // Min 0.2x zoom
           break;
           
         case "reset":
           newScale = 1;
           break;
       }
+      
+      console.log(`Calculated newScale: ${newScale}`);
 
       // Get viewport center for zoom calculations
       const width = window.innerWidth;
@@ -383,10 +389,14 @@ export default function NetworkVisualizer({
         // For reset, go back to identity transform (centered, scale 1)
         newTransform = d3.zoomIdentity;
       } else {
-        // For zoom in/out, scale around the center point
-        newTransform = d3.zoomIdentity
+        // For zoom in/out, scale from current transform while maintaining center
+        const currentTransform = d3.zoomTransform(svg.node()!);
+        const scaleRatio = newScale / currentTransform.k;
+        
+        // Scale around the center of the viewport
+        newTransform = currentTransform
           .translate(centerX, centerY)
-          .scale(newScale)
+          .scale(scaleRatio)
           .translate(-centerX, -centerY);
       }
 
