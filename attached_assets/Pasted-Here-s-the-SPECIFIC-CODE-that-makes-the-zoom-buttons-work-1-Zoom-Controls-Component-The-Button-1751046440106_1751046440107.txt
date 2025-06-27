@@ -1,0 +1,123 @@
+Here's the SPECIFIC CODE that makes the zoom buttons work:
+
+1. Zoom Controls Component (The Buttons)
+// ZoomControls.jsx
+import { useState, useRef, useCallback } from "react";
+function ZoomControls({ onZoomIn, onZoomOut, onZoomReset, onClearAll }) {
+  const [isZooming, setIsZooming] = useState(false);
+  const zoomIntervalRef = useRef(null);
+  const isMouseDownRef = useRef(false);
+  // Continuous zoom while holding button
+  const startContinuousZoom = useCallback((zoomFunction) => {
+    if (zoomIntervalRef.current) return;
+    
+    zoomFunction(); // First zoom immediately
+    
+    // Then start continuous zooming
+    zoomIntervalRef.current = setInterval(() => {
+      if (isMouseDownRef.current) {
+        zoomFunction();
+      }
+    }, 100); // Zoom every 100ms while held
+  }, []);
+  const stopContinuousZoom = useCallback(() => {
+    if (zoomIntervalRef.current) {
+      clearInterval(zoomIntervalRef.current);
+      zoomIntervalRef.current = null;
+    }
+    isMouseDownRef.current = false;
+    setIsZooming(false);
+  }, []);
+  const handleZoomInStart = useCallback(() => {
+    isMouseDownRef.current = true;
+    setIsZooming(true);
+    startContinuousZoom(onZoomIn);
+  }, [onZoomIn, startContinuousZoom]);
+  const handleZoomOutStart = useCallback(() => {
+    isMouseDownRef.current = true;
+    setIsZooming(true);
+    startContinuousZoom(onZoomOut);
+  }, [onZoomOut, startContinuousZoom]);
+  return (
+    <div className="fixed top-6 right-6 flex flex-col gap-2">
+      <button
+        onMouseDown={handleZoomInStart}
+        onMouseUp={stopContinuousZoom}
+        onMouseLeave={stopContinuousZoom}
+        disabled={isZooming}
+      >
+        + {/* Zoom In */}
+      </button>
+      <button
+        onMouseDown={handleZoomOutStart}
+        onMouseUp={stopContinuousZoom}
+        onMouseLeave={stopContinuousZoom}
+        disabled={isZooming}
+      >
+        - {/* Zoom Out */}
+      </button>
+      <button onClick={onZoomReset}>
+        ↻ {/* Reset */}
+      </button>
+    </div>
+  );
+}
+2. Zoom Logic (The Actual Zooming)
+// In your main component
+const [currentZoom, setCurrentZoom] = useState(1);
+// SVG viewBox zoom function
+const applyZoom = (scale) => {
+  if (!svgRef.current) return;
+  
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  
+  // Calculate new viewBox dimensions
+  const newWidth = width / scale;
+  const newHeight = height / scale;
+  const offsetX = (width - newWidth) / 2;
+  const offsetY = (height - newHeight) / 2;
+  
+  // Apply smooth transition
+  const svg = d3.select(svgRef.current);
+  svg.transition()
+    .duration(200)
+    .attrTween('viewBox', () => {
+      const currentViewBox = svgRef.current?.getAttribute('viewBox') || `0 0 ${width} ${height}`;
+      const [cx, cy, cw, ch] = currentViewBox.split(' ').map(Number);
+      const interpolator = d3.interpolate([cx, cy, cw, ch], [offsetX, offsetY, newWidth, newHeight]);
+      return (t) => {
+        const [x, y, w, h] = interpolator(t);
+        return `${x} ${y} ${w} ${h}`;
+      };
+    });
+};
+// Handle zoom button clicks
+const handleZoomIn = () => {
+  const newZoom = Math.min(5, currentZoom * 1.2); // Cap at 5x
+  setCurrentZoom(newZoom);
+  applyZoom(newZoom);
+};
+const handleZoomOut = () => {
+  const newZoom = Math.max(0.2, currentZoom / 1.2); // Min 0.2x
+  setCurrentZoom(newZoom);
+  applyZoom(newZoom);
+};
+const handleZoomReset = () => {
+  setCurrentZoom(1);
+  applyZoom(1);
+};
+3. Connect Buttons to Zoom Logic
+// Usage in parent component
+<ZoomControls
+  onZoomIn={handleZoomIn}
+  onZoomOut={handleZoomOut}
+  onZoomReset={handleZoomReset}
+  onClearAll={handleClearAll}
+/>
+Key Features:
+Hold-to-zoom: Continuous zooming while holding button down
+Smooth transitions: 200ms D3.js animations
+Zoom limits: 0.2x to 5x zoom range
+SVG viewBox manipulation: Works with any SVG content
+This code will give you working zoom buttons for any SVG-based visualization.

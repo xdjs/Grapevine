@@ -373,65 +373,71 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
-  // Handle zoom controls with SVG viewBox manipulation (working approach)
+  // SVG viewBox zoom function (working implementation)
+  const applyZoom = (scale: number) => {
+    if (!svgRef.current) return;
+    
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    
+    // Calculate new viewBox dimensions
+    const newWidth = width / scale;
+    const newHeight = height / scale;
+    const offsetX = (width - newWidth) / 2;
+    const offsetY = (height - newHeight) / 2;
+    
+    // Apply smooth transition
+    const svg = d3.select(svgRef.current);
+    svg.transition()
+      .duration(200)
+      .attrTween('viewBox', () => {
+        const currentViewBox = svgRef.current?.getAttribute('viewBox') || `0 0 ${width} ${height}`;
+        const [cx, cy, cw, ch] = currentViewBox.split(' ').map(Number);
+        const interpolator = d3.interpolate([cx, cy, cw, ch], [offsetX, offsetY, newWidth, newHeight]);
+        return (t: number) => {
+          const [x, y, w, h] = interpolator(t);
+          return `${x} ${y} ${w} ${h}`;
+        };
+      });
+  };
+
+  // Handle zoom button clicks
+  const handleZoomIn = () => {
+    const newZoom = Math.min(5, currentZoom * 1.2); // Cap at 5x
+    setCurrentZoom(newZoom);
+    applyZoom(newZoom);
+    console.log(`Zooming from ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+  };
+
+  const handleZoomOut = () => {
+    const newZoom = Math.max(0.2, currentZoom / 1.2); // Min 0.2x
+    setCurrentZoom(newZoom);
+    applyZoom(newZoom);
+    console.log(`Zooming from ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+  };
+
+  const handleZoomReset = () => {
+    setCurrentZoom(1);
+    applyZoom(1);
+    console.log('Zoom reset to 1.00');
+  };
+
+  // Handle zoom controls with direct function calls
   useEffect(() => {
     const handleZoomEvent = (event: CustomEvent) => {
       const { action } = event.detail;
 
-      if (!svgRef.current) {
-        console.log("SVG ref not available");
-        return;
-      }
-
-      const svg = d3.select(svgRef.current);
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      
-      // Get current viewBox or use default
-      const currentViewBox = svg.attr('viewBox');
-      let currentScale = 1;
-      
-      if (currentViewBox) {
-        const viewBoxValues = currentViewBox.split(' ').map(Number);
-        const viewBoxWidth = viewBoxValues[2];
-        currentScale = width / viewBoxWidth;
-      }
-
-      let newScale = currentScale;
-
       switch (action) {
         case "in":
-          newScale = Math.min(8, currentScale * 1.3);
+          handleZoomIn();
           break;
         case "out":
-          newScale = Math.max(0.2, currentScale / 1.3);
+          handleZoomOut();
           break;
         case "reset":
-          newScale = 1;
+          handleZoomReset();
           break;
       }
-
-      console.log(`Zooming from ${currentScale.toFixed(2)} to ${newScale.toFixed(2)}`);
-
-      // Apply zoom using viewBox manipulation
-      const applyZoom = (scale: number) => {
-        const newWidth = width / scale;
-        const newHeight = height / scale;
-        const offsetX = (width - newWidth) / 2;
-        const offsetY = (height - newHeight) / 2;
-        
-        const newViewBox = `${offsetX} ${offsetY} ${newWidth} ${newHeight}`;
-        
-        svg.transition()
-          .duration(200)
-          .attr('viewBox', newViewBox);
-      };
-
-      applyZoom(newScale);
-      
-      // Update zoom state
-      setCurrentZoom(newScale);
-      onZoomChange({ k: newScale, x: 0, y: 0 });
     };
 
     if (visible) {
@@ -441,7 +447,7 @@ export default function NetworkVisualizer({
     return () => {
       window.removeEventListener("network-zoom", handleZoomEvent as EventListener);
     };
-  }, [visible, onZoomChange]);
+  }, [visible, currentZoom]);
 
   function getNodeVisibility(node: NetworkNode, filterState: FilterState): boolean {
     if (node.type === "producer") return filterState.showProducers;
