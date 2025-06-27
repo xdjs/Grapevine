@@ -4,6 +4,9 @@ export interface NetworkNode {
   type: 'artist' | 'producer' | 'songwriter';
   size: number;
   collaborations?: string[];
+  imageUrl?: string | null;
+  spotifyId?: string | null;
+  topCollaborators?: string[];
   x?: number;
   y?: number;
   fx?: number | null;

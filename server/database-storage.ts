@@ -174,6 +174,23 @@ export class DatabaseStorage implements IStorage {
           console.log(`🔒 [DEBUG] Spotify not configured, skipping image lookup for "${collaborator.name}"`);
         }
 
+        // Get second-degree collaborations for producers and songwriters
+        let secondDegreeCollaborators: any[] = [];
+        let topCollaborators: string[] = [];
+        
+        if (collaborator.type === 'producer' || collaborator.type === 'songwriter') {
+          console.log(`🌿 [DEBUG] Fetching second-degree collaborations for ${collaborator.type}: "${collaborator.name}"`);
+          try {
+            const secondDegreeCredits = await creditsExtractor.getComprehensiveCollaborators(collaborator.name);
+            // Limit to top 3-5 collaborators to avoid overcrowding
+            secondDegreeCollaborators = secondDegreeCredits.slice(0, 5);
+            topCollaborators = secondDegreeCredits.slice(0, 8).map(c => c.name);
+            console.log(`📊 [DEBUG] Found ${secondDegreeCollaborators.length} second-degree collaborators for "${collaborator.name}"`);
+          } catch (error) {
+            console.log(`⚠️ [DEBUG] Could not fetch second-degree collaborations for "${collaborator.name}": ${error}`);
+          }
+        }
+
         const collaboratorNode: NetworkNode = {
           id: collaborator.name,
           name: collaborator.name,
@@ -181,6 +198,7 @@ export class DatabaseStorage implements IStorage {
           size: 15,
           imageUrl: collaboratorImage,
           spotifyId: collaboratorSpotifyId,
+          topCollaborators: topCollaborators.length > 0 ? topCollaborators : undefined,
         };
         nodes.push(collaboratorNode);
         console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from ${collaborator.source} source`);
@@ -190,6 +208,32 @@ export class DatabaseStorage implements IStorage {
           target: collaborator.name,
         });
         console.log(`🔗 [DEBUG] Created link: "${artistName}" ↔ "${collaborator.name}"`);
+
+        // Add second-degree nodes and links for producers/songwriters
+        for (const secondDegreeCollab of secondDegreeCollaborators) {
+          // Skip if already exists to avoid duplicates
+          if (nodes.find(n => n.id === secondDegreeCollab.name)) {
+            console.log(`⏭️ [DEBUG] Skipping duplicate second-degree node: "${secondDegreeCollab.name}"`);
+            continue;
+          }
+
+          const secondDegreeNode: NetworkNode = {
+            id: secondDegreeCollab.name,
+            name: secondDegreeCollab.name,
+            type: secondDegreeCollab.type as 'artist' | 'producer' | 'songwriter',
+            size: 12, // Smaller size for second-degree connections
+            imageUrl: null,
+            spotifyId: null,
+          };
+          nodes.push(secondDegreeNode);
+          console.log(`🌿 [DEBUG] Added second-degree node: "${secondDegreeCollab.name}" (${secondDegreeCollab.type}) connected to "${collaborator.name}"`);
+
+          links.push({
+            source: collaborator.name,
+            target: secondDegreeCollab.name,
+          });
+          console.log(`🔗 [DEBUG] Created second-degree link: "${collaborator.name}" ↔ "${secondDegreeCollab.name}"`);
+        }
       }
 
       // Comprehensive collaborators already include all sources, so no additional fallback needed

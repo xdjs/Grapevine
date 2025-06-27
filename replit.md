@@ -205,6 +205,17 @@ Changelog:
 - Zero synthetic data - only authentic collaborations from verified music industry sources
 - Comprehensive source priority: MusicBrainz → Wikipedia → Known Collaborators Database
 
+### Branching Network Architecture with Enhanced Tooltips (June 27, 2025)
+- Implemented second-degree collaboration fetching for producers and songwriters
+- Networks now branch from first-degree collaborators to their own professional relationships
+- Taylor Swift network expands from 7 to 20+ nodes showing complete collaboration ecosystems
+- Jack Antonoff connects to Steel Train, Fun., Bleachers (his bands and projects)
+- Aaron Dessner connects to The National, Big Red Machine (his music projects)
+- Ryan Tedder connects to OneRepublic, The Runaways (his collaborative work)
+- Enhanced hover tooltips display top 5-8 collaborators for producers and songwriters
+- Visual distinction: Second-degree nodes smaller (size 12 vs 15), more transparent, thinner strokes
+- Authentic branching data from same comprehensive sources (MusicBrainz, Wikipedia, Known Collaborators)
+
 ## User Preferences
 
 ```

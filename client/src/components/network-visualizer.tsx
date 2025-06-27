@@ -164,14 +164,27 @@ export default function NetworkVisualizer({
 
     simulationRef.current = simulation;
 
-    // Create links
+    // Create links with visual distinction for second-degree connections
     const linkElements = networkGroup
       .selectAll(".link")
       .data(validLinks)
       .enter()
       .append("line")
       .attr("class", "link network-link")
-      .attr("stroke-width", 2);
+      .attr("stroke-width", (d) => {
+        // Check if either source or target is a second-degree node (size < 15)
+        const sourceNode = data.nodes.find(n => n.id === (typeof d.source === 'string' ? d.source : d.source.id));
+        const targetNode = data.nodes.find(n => n.id === (typeof d.target === 'string' ? d.target : d.target.id));
+        const isSecondDegree = (sourceNode && sourceNode.size < 15) || (targetNode && targetNode.size < 15);
+        return isSecondDegree ? 1 : 2; // Thinner lines for second-degree connections
+      })
+      .attr("opacity", (d) => {
+        // Check if either source or target is a second-degree node
+        const sourceNode = data.nodes.find(n => n.id === (typeof d.source === 'string' ? d.source : d.source.id));
+        const targetNode = data.nodes.find(n => n.id === (typeof d.target === 'string' ? d.target : d.target.id));
+        const isSecondDegree = (sourceNode && sourceNode.size < 15) || (targetNode && targetNode.size < 15);
+        return isSecondDegree ? 0.5 : 0.8; // More transparent for second-degree connections
+      });
 
     // Create nodes with direct styling
     const nodeElements = networkGroup
@@ -188,7 +201,8 @@ export default function NetworkVisualizer({
         if (d.type === 'songwriter') return '#67D1F8';   // Light Blue
         return '#355367';  // Police Blue
       })
-      .attr("stroke-width", 4)
+      .attr("stroke-width", (d) => d.size >= 15 ? 4 : 2) // Thinner strokes for second-degree nodes
+      .attr("opacity", (d) => d.size >= 15 ? 1 : 0.8)    // Slightly transparent for second-degree nodes
       .style("cursor", "pointer")
       .on("mouseover", function(event, d) {
         d3.select(this).attr("stroke", "white").attr("stroke-width", 6);
@@ -203,7 +217,8 @@ export default function NetworkVisualizer({
             if (d.type === 'songwriter') return '#67D1F8';   // Light Blue
             return '#355367';  // Police Blue
           })
-          .attr("stroke-width", 4);
+          .attr("stroke-width", (d) => d.size >= 15 ? 4 : 2)
+          .attr("opacity", (d) => d.size >= 15 ? 1 : 0.8);
         hideTooltip();
       })
       .on("click", function(event, d) {
@@ -248,13 +263,22 @@ export default function NetworkVisualizer({
     function showTooltip(event: MouseEvent, d: NetworkNode) {
       let content = `<strong>${d.name}</strong><br/>Type: ${d.type}`;
 
+      // Show top collaborators for producers and songwriters
+      if ((d.type === 'producer' || d.type === 'songwriter') && d.topCollaborators && d.topCollaborators.length > 0) {
+        content += `<br/><br/><strong>Top Collaborators:</strong><br/>`;
+        content += d.topCollaborators.slice(0, 5).map(name => `• ${name}`).join("<br/>");
+      }
+
+      // Legacy collaborations field for backwards compatibility
       if (d.collaborations && d.collaborations.length > 0) {
-        content += `<br/><br/><strong>Top Collaborations:</strong><br/>`;
+        content += `<br/><br/><strong>Collaborations:</strong><br/>`;
         content += d.collaborations.slice(0, 3).join("<br/>");
       }
 
       if (d.type === 'artist') {
         content += `<br/><br/><em>Click to search on Music Nerd</em>`;
+      } else if (d.type === 'producer' || d.type === 'songwriter') {
+        content += `<br/><br/><em>Hover to see collaborators</em>`;
       }
 
       tooltip.html(content).style("opacity", 1);
