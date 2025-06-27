@@ -46,19 +46,25 @@ export default function NetworkVisualizer({
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .filter((event) => {
-        // Only allow wheel events and programmatic zoom (no click/double-click zoom)
+        // Only allow wheel events and programmatic zoom (no drag panning)
+        // This prevents the tree from floating away when dragging on empty space
         return event.type === 'wheel' || !event.sourceEvent;
       })
       .on("zoom", (event) => {
-        // Respond to user scroll wheel and drag events AND programmatic zoom
+        // Respond to user scroll wheel and programmatic zoom only
         const { transform } = event;
         networkGroup.attr("transform", transform);
         setCurrentZoom(transform.k);
         onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
       });
 
+    // Apply zoom behavior but prevent background dragging
     svg.call(zoom);
     zoomRef.current = zoom;
+
+    // Add explicit prevention of background dragging
+    svg.on("mousedown.drag", null)
+       .on("touchstart.drag", null);
 
     // Find connected components for cluster positioning
     const findConnectedComponents = () => {
@@ -283,17 +289,23 @@ export default function NetworkVisualizer({
     }
 
     function dragstarted(event: d3.D3DragEvent<SVGCircleElement, NetworkNode, unknown>, d: NetworkNode) {
+      // Prevent event bubbling to avoid interfering with zoom behavior
+      event.sourceEvent.stopPropagation();
       if (!event.active) simulation.alphaTarget(0.3).restart();
       d.fx = d.x;
       d.fy = d.y;
     }
 
     function dragged(event: d3.D3DragEvent<SVGCircleElement, NetworkNode, unknown>, d: NetworkNode) {
+      // Prevent event bubbling to avoid interfering with zoom behavior
+      event.sourceEvent.stopPropagation();
       d.fx = event.x;
       d.fy = event.y;
     }
 
     function dragended(event: d3.D3DragEvent<SVGCircleElement, NetworkNode, unknown>, d: NetworkNode) {
+      // Prevent event bubbling to avoid interfering with zoom behavior
+      event.sourceEvent.stopPropagation();
       if (!event.active) simulation.alphaTarget(0);
       d.fx = null;
       d.fy = null;
