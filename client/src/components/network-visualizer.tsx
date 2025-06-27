@@ -183,7 +183,7 @@ export default function NetworkVisualizer({
       .attr("r", (d) => d.size)
       .attr("fill", "transparent")
       .attr("stroke", (d) => {
-        if (d.type === 'artist') return '#FF1493';       // Deep Pink
+        if (d.type === 'artist') return '#FF70CE';       // Hot Pink
         if (d.type === 'producer') return '#AE53FF';     // Bright Purple  
         if (d.type === 'songwriter') return '#67D1F8';   // Light Blue
         return '#355367';  // Police Blue
@@ -198,7 +198,7 @@ export default function NetworkVisualizer({
       .on("mouseout", function(event, d) {
         d3.select(this)
           .attr("stroke", (d) => {
-            if (d.type === 'artist') return '#FF1493';       // Deep Pink
+            if (d.type === 'artist') return '#FF70CE';       // Hot Pink
             if (d.type === 'producer') return '#AE53FF';     // Bright Purple  
             if (d.type === 'songwriter') return '#67D1F8';   // Light Blue
             return '#355367';  // Police Blue
@@ -335,48 +335,10 @@ export default function NetworkVisualizer({
       labelElements.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
     });
 
-    // Auto-center the network after simulation settles
-    const centerNetwork = () => {
-      if (!svgRef.current || !zoomRef.current) return;
-      
-      const svg = d3.select(svgRef.current);
-      const svgRect = svg.node()!.getBoundingClientRect();
-      const centerX = svgRect.width / 2;
-      const centerY = svgRect.height / 2;
-      
-      // Calculate the bounds of all nodes
-      const nodes = data.nodes;
-      if (nodes.length === 0) return;
-      
-      const xExtent = d3.extent(nodes, d => d.x || 0) as [number, number];
-      const yExtent = d3.extent(nodes, d => d.y || 0) as [number, number];
-      
-      const networkCenterX = (xExtent[0] + xExtent[1]) / 2;
-      const networkCenterY = (yExtent[0] + yExtent[1]) / 2;
-      
-      // Calculate translation to center the network
-      const translateX = centerX - networkCenterX;
-      const translateY = centerY - networkCenterY;
-      
-      const centerTransform = d3.zoomIdentity.translate(translateX, translateY);
-      
-      // Apply the centering transform with smooth transition
-      svg.transition()
-        .duration(800)
-        .ease(d3.easeQuadOut)
-        .call(zoomRef.current.transform, centerTransform);
-    };
-    
-    // Center the network after simulation has run for a bit
-    const centerTimer = setTimeout(() => {
-      centerNetwork();
-    }, 1500); // Wait 1.5 seconds for simulation to settle
-
     // Cleanup function
     return () => {
       tooltip.remove();
       simulation.stop();
-      clearTimeout(centerTimer);
     };
   }, [data, visible, onZoomChange]);
 
