@@ -45,6 +45,10 @@ export default function NetworkVisualizer({
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
+      .filter((event) => {
+        // Only allow wheel events and programmatic zoom (no click/double-click zoom)
+        return event.type === 'wheel' || !event.sourceEvent;
+      })
       .on("zoom", (event) => {
         // Respond to user scroll wheel and drag events AND programmatic zoom
         const { transform } = event;
@@ -359,7 +363,6 @@ export default function NetworkVisualizer({
 
       // Get the actual current zoom from D3 transform for accurate calculations
       const actualCurrentZoom = d3.zoomTransform(svg.node()!).k;
-      console.log(`Action: ${action}, actualCurrentZoom: ${actualCurrentZoom}, reactCurrentZoom: ${currentZoom}`);
 
       switch (action) {
         case "in":
@@ -374,8 +377,6 @@ export default function NetworkVisualizer({
           newScale = 1;
           break;
       }
-      
-      console.log(`Calculated newScale: ${newScale}`);
 
       // Get viewport center for zoom calculations
       const width = window.innerWidth;
@@ -389,14 +390,10 @@ export default function NetworkVisualizer({
         // For reset, go back to identity transform (centered, scale 1)
         newTransform = d3.zoomIdentity;
       } else {
-        // For zoom in/out, scale from current transform while maintaining center
-        const currentTransform = d3.zoomTransform(svg.node()!);
-        const scaleRatio = newScale / currentTransform.k;
-        
-        // Scale around the center of the viewport
-        newTransform = currentTransform
+        // For zoom in/out, create a new transform that scales around the center
+        newTransform = d3.zoomIdentity
           .translate(centerX, centerY)
-          .scale(scaleRatio)
+          .scale(newScale)
           .translate(-centerX, -centerY);
       }
 
