@@ -271,31 +271,49 @@ export default function NetworkVisualizer({
     }
 
     function openMusicNerdProfile(artistName: string) {
-      // Create a search-friendly URL for Music Nerd
+      // Create a search-friendly URL for Music Nerd with artist context
       const searchQuery = encodeURIComponent(artistName);
       
-      // Music Nerd uses a simple interface - we'll direct to their main page
-      // and let users search from there since they don't have a direct search URL structure
-      const musicNerdUrl = `https://www.musicnerd.xyz/`;
+      // Try Music Nerd with a search parameter (experimental)
+      // If Music Nerd doesn't support URL parameters, it will gracefully fall back to main page
+      const musicNerdUrl = `https://www.musicnerd.xyz/?q=${searchQuery}`;
       
       // Open Music Nerd in a new tab
       const newWindow = window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
       
-      // Try to focus on the search input if possible (this is a best effort)
+      // Alternative: If Music Nerd doesn't work, provide fallback options
+      if (!newWindow) {
+        // Fallback to other music discovery platforms if popup blocked
+        const alternatives = [
+          `https://musicbrainz.org/search?query=${searchQuery}&type=artist`,
+          `https://www.discogs.com/search/?q=${searchQuery}&type=artist`,
+          `https://www.allmusic.com/search/artists/${searchQuery}`
+        ];
+        
+        // Try the first alternative
+        window.open(alternatives[0], '_blank', 'noopener,noreferrer');
+      }
+      
+      // Try to enhance the Music Nerd experience if possible
       if (newWindow) {
         setTimeout(() => {
           try {
-            // This will only work if same-origin, but we'll try
-            const searchInput = newWindow.document.querySelector('input[type="text"], input[placeholder*="artist"]');
-            if (searchInput) {
-              (searchInput as HTMLInputElement).value = artistName;
-              (searchInput as HTMLInputElement).focus();
+            // Look for any text input or search interface
+            const searchInputs = newWindow.document.querySelectorAll('input[type="text"], textarea, [contenteditable="true"]');
+            if (searchInputs.length > 0) {
+              const searchInput = searchInputs[0] as HTMLInputElement;
+              searchInput.value = `Tell me about ${artistName}`;
+              searchInput.focus();
+              
+              // Try to trigger any submit or enter event
+              const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13 });
+              searchInput.dispatchEvent(enterEvent);
             }
           } catch (e) {
-            // Cross-origin restrictions will prevent this, but that's expected
-            console.log('Cross-origin restrictions prevent auto-filling search');
+            // Cross-origin restrictions are expected, this is a best-effort enhancement
+            console.log('Enhanced search not available due to cross-origin restrictions');
           }
-        }, 1000);
+        }, 1500);
       }
     }
 
