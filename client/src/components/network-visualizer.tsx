@@ -114,6 +114,9 @@ export default function NetworkVisualizer({
     const componentWidth = width / componentsPerRow;
     const componentHeight = height / Math.ceil(components.length / componentsPerRow);
     
+    // Find the main artist node (the one being searched) - it has the largest size
+    const mainArtistNode = data.nodes.find(node => node.size === 20 && node.type === 'artist');
+    
     components.forEach((component, index) => {
       const row = Math.floor(index / componentsPerRow);
       const col = index % componentsPerRow;
@@ -122,8 +125,14 @@ export default function NetworkVisualizer({
       
       component.forEach(node => {
         if (!node.x && !node.y) {
-          node.x = centerX + (Math.random() - 0.5) * 100;
-          node.y = centerY + (Math.random() - 0.5) * 100;
+          // If this is the main artist node, center it in the viewport
+          if (node === mainArtistNode) {
+            node.x = width / 2;
+            node.y = height / 2;
+          } else {
+            node.x = centerX + (Math.random() - 0.5) * 100;
+            node.y = centerY + (Math.random() - 0.5) * 100;
+          }
         }
       });
     });
@@ -368,13 +377,12 @@ export default function NetworkVisualizer({
   useEffect(() => {
     const handleZoomEvent = (event: CustomEvent) => {
       const { action } = event.detail;
-      console.log(`Zoom ${action} button clicked, current zoom: ${currentZoom}`);
 
       if (!svgRef.current || !zoomRef.current) return;
 
       const svg = d3.select(svgRef.current);
 
-      // Get the actual current transform from D3
+      // Get the actual current transform from D3 (this is the source of truth)
       const currentTransform = d3.zoomTransform(svg.node()!);
       const currentScale = currentTransform.k;
 
@@ -394,32 +402,27 @@ export default function NetworkVisualizer({
           break;
       }
 
-      console.log(`Zooming from ${currentScale} to ${newScale}`);
+      console.log(`Zooming from ${currentScale.toFixed(2)} to ${newScale.toFixed(2)}`);
 
-      // Get SVG center point in client coordinates
+      // Get SVG center point
       const svgRect = svg.node()!.getBoundingClientRect();
       const centerX = svgRect.width / 2;
       const centerY = svgRect.height / 2;
 
-      // Create new transform that scales around the center point
-      const scaleRatio = newScale / currentScale;
-      
-      const newTransform = d3.zoomIdentity
-        .translate(
-          centerX + (currentTransform.x - centerX) * scaleRatio,
-          centerY + (currentTransform.y - centerY) * scaleRatio
-        )
-        .scale(newScale);
-
-      // Apply the transform with smooth transition
-      svg.transition()
-        .duration(300)
-        .ease(d3.easeQuadOut)
-        .call(zoomRef.current.transform, newTransform)
-        .on("end", () => {
-          // Update the current zoom state after transition completes
-          setCurrentZoom(newScale);
-        });
+      if (action === "reset") {
+        // For reset, center everything
+        const newTransform = d3.zoomIdentity.scale(1);
+        svg.transition()
+          .duration(300)
+          .ease(d3.easeQuadOut)
+          .call(zoomRef.current.transform, newTransform);
+      } else {
+        // For zoom in/out, scale around the center
+        svg.transition()
+          .duration(300)
+          .ease(d3.easeQuadOut)
+          .call(zoomRef.current.scaleBy, newScale / currentScale);
+      }
     };
 
     if (visible) {
