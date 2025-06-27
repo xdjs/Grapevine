@@ -109,32 +109,84 @@ export default function NetworkVisualizer({
 
     const components = findConnectedComponents();
     
-    // Position components in a grid layout to prevent overlap
-    const componentsPerRow = Math.ceil(Math.sqrt(components.length));
-    const componentWidth = width / componentsPerRow;
-    const componentHeight = height / Math.ceil(components.length / componentsPerRow);
+    // Set up radial positioning similar to the example image
+    const centerX = width / 2;
+    const centerY = height / 2;
     
     // Find the main artist node (the one being searched) - it has the largest size
     const mainArtistNode = data.nodes.find(node => node.size === 20 && node.type === 'artist');
     
-    components.forEach((component, index) => {
-      const row = Math.floor(index / componentsPerRow);
-      const col = index % componentsPerRow;
-      const centerX = col * componentWidth + componentWidth / 2;
-      const centerY = row * componentHeight + componentHeight / 2;
-      
-      component.forEach(node => {
-        if (!node.x && !node.y) {
-          // If this is the main artist node, center it in the viewport
-          if (node === mainArtistNode) {
-            node.x = width / 2;
-            node.y = height / 2;
-          } else {
-            node.x = centerX + (Math.random() - 0.5) * 100;
-            node.y = centerY + (Math.random() - 0.5) * 100;
-          }
-        }
+    // Categorize nodes by their relationship to the main artist
+    const firstDegreeNodes = data.nodes.filter(node => 
+      node !== mainArtistNode && node.size >= 15
+    );
+    const secondDegreeNodes = data.nodes.filter(node => 
+      node.size < 15
+    );
+    
+    // Position main artist at center
+    if (mainArtistNode) {
+      mainArtistNode.x = centerX;
+      mainArtistNode.y = centerY;
+    }
+    
+    // Position first-degree collaborators in a circle around main artist
+    const firstDegreeRadius = Math.min(width, height) * 0.25;
+    firstDegreeNodes.forEach((node, index) => {
+      const angle = (index / firstDegreeNodes.length) * 2 * Math.PI;
+      node.x = centerX + Math.cos(angle) * firstDegreeRadius;
+      node.y = centerY + Math.sin(angle) * firstDegreeRadius;
+    });
+    
+    // Position second-degree nodes around their connected first-degree nodes
+    secondDegreeNodes.forEach(node => {
+      // Find which first-degree node this connects to
+      const connectedFirstDegree = validLinks.find(link => {
+        const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+        const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+        
+        return (sourceId === node.id && firstDegreeNodes.some(n => n.id === targetId)) ||
+               (targetId === node.id && firstDegreeNodes.some(n => n.id === sourceId));
       });
+      
+      if (connectedFirstDegree) {
+        const firstDegreeId = typeof connectedFirstDegree.source === 'string' ? 
+          connectedFirstDegree.source : connectedFirstDegree.source.id;
+        const targetFirstDegreeId = typeof connectedFirstDegree.target === 'string' ? 
+          connectedFirstDegree.target : connectedFirstDegree.target.id;
+        
+        const parentNode = firstDegreeNodes.find(n => 
+          n.id === firstDegreeId || n.id === targetFirstDegreeId
+        );
+        
+        if (parentNode && parentNode.x !== undefined && parentNode.y !== undefined) {
+          // Position around the parent node in a smaller circle
+          const siblingSecondDegree = secondDegreeNodes.filter(sn => {
+            return validLinks.some(l => {
+              const sId = typeof l.source === 'string' ? l.source : l.source.id;
+              const tId = typeof l.target === 'string' ? l.target : l.target.id;
+              return (sId === sn.id && (tId === parentNode.id)) ||
+                     (tId === sn.id && (sId === parentNode.id));
+            });
+          });
+          
+          const siblingIndex = siblingSecondDegree.indexOf(node);
+          const siblingCount = siblingSecondDegree.length;
+          const secondDegreeRadius = 60;
+          const angle = (siblingIndex / Math.max(siblingCount, 1)) * 2 * Math.PI;
+          
+          node.x = parentNode.x + Math.cos(angle) * secondDegreeRadius;
+          node.y = parentNode.y + Math.sin(angle) * secondDegreeRadius;
+        }
+      }
+      
+      // Fallback positioning if no connection found
+      if (!node.x || !node.y) {
+        const angle = Math.random() * 2 * Math.PI;
+        const radius = firstDegreeRadius + 80;
+        node.x = centerX + Math.cos(angle) * radius;
+        node.y = centerY + Math.sin(angle) * radius;
+      }
     });
 
     // Create boundary force to keep nodes within viewport
@@ -277,8 +329,6 @@ export default function NetworkVisualizer({
 
       if (d.type === 'artist') {
         content += `<br/><br/><em>Click to search on Music Nerd</em>`;
-      } else if (d.type === 'producer' || d.type === 'songwriter') {
-        content += `<br/><br/><em>Hover to see collaborators</em>`;
       }
 
       tooltip.html(content).style("opacity", 1);
