@@ -349,7 +349,7 @@ export default function NetworkVisualizer({
   const applyZoom = (scale: number) => {
     if (!svgRef.current) return;
     
-    console.log(`Applying zoom with scale: ${scale}`);
+    console.log(`Applying visual zoom with scale: ${scale}`);
     const svg = d3.select(svgRef.current);
     const networkGroup = svg.select(".network-group");
     
@@ -365,17 +365,14 @@ export default function NetworkVisualizer({
     const centerX = width / 2;
     const centerY = height / 2;
     
-    // Apply transform directly to the network group
-    const transform = `translate(${centerX}, ${centerY}) scale(${scale}) translate(${-centerX}, ${-centerY})`;
-    
+    // Apply transform directly to the network group with smooth transition
     networkGroup
       .transition()
-      .duration(250)
+      .duration(200)
       .ease(d3.easeQuadOut)
-      .attr("transform", transform)
+      .attr("transform", `translate(${centerX}, ${centerY}) scale(${scale}) translate(${-centerX}, ${-centerY})`)
       .on("end", () => {
-        console.log(`Direct zoom completed to scale: ${scale}`);
-        setCurrentZoom(scale);
+        console.log(`Visual zoom completed to scale: ${scale}`);
         onZoomChange({ k: scale, x: centerX * (1 - scale), y: centerY * (1 - scale) });
       });
   };
@@ -384,23 +381,26 @@ export default function NetworkVisualizer({
   useEffect(() => {
     const handleZoomEvent = (event: CustomEvent) => {
       const { action } = event.detail;
-      console.log(`Zoom ${action} button clicked`);
+      console.log(`Zoom ${action} button clicked, current zoom: ${currentZoom}`);
 
       switch (action) {
         case "in":
-          const newZoomIn = Math.min(5, currentZoom * 1.2); // Cap at 5x zoom
-          console.log(`Zooming in to:`, newZoomIn);
+          const newZoomIn = Math.min(5, currentZoom * 1.3); // Cap at 5x zoom
+          console.log(`Zooming in from ${currentZoom} to:`, newZoomIn);
+          setCurrentZoom(newZoomIn);
           applyZoom(newZoomIn);
           break;
           
         case "out":
-          const newZoomOut = Math.max(0.3, currentZoom / 1.2); // Min 0.3x zoom
-          console.log(`Zooming out to:`, newZoomOut);
+          const newZoomOut = Math.max(0.2, currentZoom / 1.3); // Min 0.2x zoom
+          console.log(`Zooming out from ${currentZoom} to:`, newZoomOut);
+          setCurrentZoom(newZoomOut);
           applyZoom(newZoomOut);
           break;
           
         case "reset":
-          console.log(`Resetting zoom`);
+          console.log(`Resetting zoom from ${currentZoom} to 1`);
+          setCurrentZoom(1);
           applyZoom(1);
           break;
       }
