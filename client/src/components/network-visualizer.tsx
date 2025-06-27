@@ -352,22 +352,28 @@ export default function NetworkVisualizer({
     const width = window.innerWidth;
     const height = window.innerHeight;
     
-    // Get current transform or default to center
+    // Get current transform
     const currentTransform = d3.zoomTransform(svgRef.current);
     
     // Calculate center point for zoom
     const centerX = width / 2;
     const centerY = height / 2;
     
-    // Create new transform with the desired scale, keeping it centered
-    const newTransform = d3.zoomIdentity
-      .translate(centerX, centerY)
-      .scale(scale)
-      .translate(-centerX, -centerY);
+    // Calculate the new transform that scales around the center point
+    // This maintains the current center position while changing scale
+    const k0 = currentTransform.k;
+    const k1 = scale;
     
-    // Apply the transform with transition
+    // Calculate the new translation to keep the center point fixed
+    const x = centerX - (centerX - currentTransform.x) * (k1 / k0);
+    const y = centerY - (centerY - currentTransform.y) * (k1 / k0);
+    
+    const newTransform = d3.zoomIdentity.translate(x, y).scale(k1);
+    
+    // Apply the transform with smooth transition
     svg.transition()
-      .duration(300)
+      .duration(250)
+      .ease(d3.easeQuadOut)
       .call(zoomRef.current.transform, newTransform);
     
     setCurrentZoom(scale);
@@ -381,20 +387,32 @@ export default function NetworkVisualizer({
 
       switch (action) {
         case "in":
-          const newZoomIn = Math.min(8, currentZoom * 1.5); // Cap at 8x zoom, more responsive
+          const newZoomIn = Math.min(5, currentZoom * 1.4); // Cap at 5x zoom
           console.log(`Zooming in to:`, newZoomIn);
           applyZoom(newZoomIn);
           break;
           
         case "out":
-          const newZoomOut = Math.max(0.2, currentZoom / 1.5); // Min 0.2x zoom, more responsive
+          const newZoomOut = Math.max(0.3, currentZoom / 1.4); // Min 0.3x zoom
           console.log(`Zooming out to:`, newZoomOut);
           applyZoom(newZoomOut);
           break;
           
         case "reset":
           console.log(`Resetting zoom`);
-          applyZoom(1);
+          // For reset, we want to go back to scale 1 and center the view
+          if (!svgRef.current || !zoomRef.current) return;
+          const svg = d3.select(svgRef.current);
+          const width = window.innerWidth;
+          const height = window.innerHeight;
+          const resetTransform = d3.zoomIdentity.translate(width / 2, height / 2).scale(1).translate(-width / 2, -height / 2);
+          
+          svg.transition()
+            .duration(500)
+            .ease(d3.easeQuadOut)
+            .call(zoomRef.current.transform, resetTransform);
+          
+          setCurrentZoom(1);
           break;
       }
     };
