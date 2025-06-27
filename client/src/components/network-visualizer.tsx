@@ -270,18 +270,33 @@ export default function NetworkVisualizer({
       tooltip.style("opacity", 0);
     }
 
-    function openMusicNerdProfile(artistName: string) {
-      // MusicNerd.xyz appears to be a conversational AI interface
-      // Try passing artist name as query parameter for potential auto-search
-      const searchQuery = encodeURIComponent(artistName);
-      const musicNerdUrl = `https://www.musicnerd.xyz/?artist=${searchQuery}`;
+    async function openMusicNerdProfile(artistName: string) {
+      // Music Nerd appears to focus on web3/blockchain artists
+      // For mainstream artists like Taylor Swift, they may not have dedicated pages
       
-      // Open Music Nerd in a new tab
-      const newWindow = window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
+      // Try to determine if this is a mainstream artist that likely won't be on Music Nerd
+      const mainStreamArtists = [
+        'taylor swift', 'drake', 'ariana grande', 'billie eilish', 'ed sheeran',
+        'justin bieber', 'the weeknd', 'post malone', 'olivia rodrigo', 'doja cat',
+        'harry styles', 'adele', 'beyonce', 'kanye west', 'eminem'
+      ];
       
-      // If popup blocked, provide fallback
-      if (!newWindow) {
-        alert(`Popup blocked! Please visit Music Nerd manually to search for "${artistName}": https://www.musicnerd.xyz/`);
+      const isMainstream = mainStreamArtists.includes(artistName.toLowerCase());
+      
+      if (isMainstream) {
+        // For mainstream artists, offer better alternatives
+        const alternatives = [
+          { name: 'MusicBrainz', url: `https://musicbrainz.org/search?query=${encodeURIComponent(artistName)}&type=artist` },
+          { name: 'AllMusic', url: `https://www.allmusic.com/search/artists/${encodeURIComponent(artistName)}` },
+          { name: 'Music Nerd', url: 'https://www.musicnerd.xyz/' }
+        ];
+        
+        // Open MusicBrainz as the best option for mainstream artists
+        window.open(alternatives[0].url, '_blank', 'noopener,noreferrer');
+      } else {
+        // For indie/web3 artists, try Music Nerd
+        const musicNerdUrl = `https://www.musicnerd.xyz/?search=${encodeURIComponent(artistName)}`;
+        window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
       }
     }
 
