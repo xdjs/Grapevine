@@ -270,62 +270,18 @@ export default function NetworkVisualizer({
       tooltip.style("opacity", 0);
     }
 
-    async function openMusicNerdProfile(artistName: string) {
+    function openMusicNerdProfile(artistName: string) {
       const searchQuery = encodeURIComponent(artistName);
       
-      // First try to get MusicBrainz ID for direct linking
-      try {
-        const mbResponse = await fetch(`https://musicbrainz.org/ws/2/artist/?query=artist:"${artistName}"&fmt=json&limit=1`, {
-          headers: {
-            'User-Agent': 'MusicCollaborationVisualizer/1.0'
-          }
-        });
-        
-        if (mbResponse.ok) {
-          const mbData = await mbResponse.json();
-          if (mbData.artists && mbData.artists.length > 0) {
-            const artistId = mbData.artists[0].id;
-            // Open direct MusicBrainz artist page
-            window.open(`https://musicbrainz.org/artist/${artistId}`, '_blank', 'noopener,noreferrer');
-            return;
-          }
-        }
-      } catch (error) {
-        console.log('MusicBrainz lookup failed, using fallback');
-      }
+      // Direct link to Music Nerd with artist search
+      const musicNerdUrl = `https://www.musicnerd.xyz/?q=${searchQuery}`;
       
-      // Fallback options with better music discovery platforms
-      const musicPlatforms = [
-        {
-          name: 'MusicBrainz',
-          url: `https://musicbrainz.org/search?query=${searchQuery}&type=artist`,
-          description: 'Comprehensive music database'
-        },
-        {
-          name: 'Music Nerd',
-          url: `https://www.musicnerd.xyz/?q=${searchQuery}`,
-          description: 'AI music assistant'
-        },
-        {
-          name: 'AllMusic',
-          url: `https://www.allmusic.com/search/artists/${searchQuery}`,
-          description: 'Professional music guide'
-        },
-        {
-          name: 'Discogs',
-          url: `https://www.discogs.com/search/?q=${searchQuery}&type=artist`,
-          description: 'Music marketplace and database'
-        }
-      ];
+      // Open Music Nerd in a new tab
+      const newWindow = window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
       
-      // Try opening the best option first
-      const primaryUrl = musicPlatforms[0].url;
-      const newWindow = window.open(primaryUrl, '_blank', 'noopener,noreferrer');
-      
-      // If popup blocked, show user options
+      // If popup blocked, provide fallback
       if (!newWindow) {
-        const platformList = musicPlatforms.map(p => `• ${p.name}: ${p.description}`).join('\n');
-        alert(`Popup blocked! You can search for "${artistName}" on these platforms:\n\n${platformList}`);
+        alert(`Popup blocked! Please visit Music Nerd manually to search for "${artistName}": https://www.musicnerd.xyz/`);
       }
     }
 
