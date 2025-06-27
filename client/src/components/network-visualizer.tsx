@@ -47,6 +47,7 @@ export default function NetworkVisualizer({
       .scaleExtent([0.2, 8])
       .on("zoom", (event) => {
         const { transform } = event;
+        console.log(`Zoom event triggered with transform:`, transform);
         networkGroup.attr("transform", transform);
         onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
       });
@@ -348,35 +349,36 @@ export default function NetworkVisualizer({
   const applyZoom = (scale: number) => {
     if (!svgRef.current || !zoomRef.current) return;
     
+    console.log(`Applying zoom with scale: ${scale}`);
     const svg = d3.select(svgRef.current);
     const width = window.innerWidth;
     const height = window.innerHeight;
     
     // Get current transform
     const currentTransform = d3.zoomTransform(svgRef.current);
+    console.log(`Current transform:`, currentTransform);
     
     // Calculate center point for zoom
     const centerX = width / 2;
     const centerY = height / 2;
     
-    // Calculate the new transform that scales around the center point
-    // This maintains the current center position while changing scale
-    const k0 = currentTransform.k;
-    const k1 = scale;
+    // For a simple center-based zoom, use the identity transform scaled from center
+    const newTransform = d3.zoomIdentity
+      .translate(centerX, centerY)
+      .scale(scale)
+      .translate(-centerX, -centerY);
     
-    // Calculate the new translation to keep the center point fixed
-    const x = centerX - (centerX - currentTransform.x) * (k1 / k0);
-    const y = centerY - (centerY - currentTransform.y) * (k1 / k0);
-    
-    const newTransform = d3.zoomIdentity.translate(x, y).scale(k1);
+    console.log(`New transform:`, newTransform);
     
     // Apply the transform with smooth transition
     svg.transition()
-      .duration(250)
+      .duration(300)
       .ease(d3.easeQuadOut)
-      .call(zoomRef.current.transform, newTransform);
-    
-    setCurrentZoom(scale);
+      .call(zoomRef.current.transform, newTransform)
+      .on("end", () => {
+        console.log(`Zoom transition completed to scale: ${scale}`);
+        setCurrentZoom(scale);
+      });
   };
 
   // Handle zoom controls
