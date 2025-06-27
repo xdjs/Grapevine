@@ -183,9 +183,9 @@ export default function NetworkVisualizer({
       .attr("r", (d) => d.size)
       .attr("fill", "transparent")
       .attr("stroke", (d) => {
-        if (d.type === 'artist') return '#FF69B4';       // Hot Pink
-        if (d.type === 'producer') return '#8A2BE2';     // Blue Violet Purple  
-        if (d.type === 'songwriter') return '#00CED1';   // Dark Turquoise
+        if (d.type === 'artist') return '#E199F9';       // Light Pink
+        if (d.type === 'producer') return '#AE53FF';     // Bright Purple  
+        if (d.type === 'songwriter') return '#67D1F8';   // Light Blue
         return '#355367';  // Police Blue
       })
       .attr("stroke-width", 4)
@@ -198,9 +198,9 @@ export default function NetworkVisualizer({
       .on("mouseout", function(event, d) {
         d3.select(this)
           .attr("stroke", (d) => {
-            if (d.type === 'artist') return '#FF69B4';       // Hot Pink
-            if (d.type === 'producer') return '#8A2BE2';     // Blue Violet Purple  
-            if (d.type === 'songwriter') return '#00CED1';   // Dark Turquoise
+            if (d.type === 'artist') return '#E199F9';       // Light Pink
+            if (d.type === 'producer') return '#AE53FF';     // Bright Purple  
+            if (d.type === 'songwriter') return '#67D1F8';   // Light Blue
             return '#355367';  // Police Blue
           })
           .attr("stroke-width", 4);
