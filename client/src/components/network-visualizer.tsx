@@ -46,9 +46,9 @@ export default function NetworkVisualizer({
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .filter((event) => {
-        // Only allow wheel events and programmatic zoom (no drag panning)
+        // Only allow wheel events and programmatic zoom (no drag panning or clicks)
         // This prevents the tree from floating away when dragging on empty space
-        return event.type === 'wheel' || !event.sourceEvent;
+        return event.type === 'wheel' || (!event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown');
       })
       .on("zoom", (event) => {
         // Respond to user scroll wheel and programmatic zoom only
@@ -58,13 +58,15 @@ export default function NetworkVisualizer({
         onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
       });
 
-    // Apply zoom behavior but prevent background dragging
+    // Apply zoom behavior but prevent background dragging and clicking
     svg.call(zoom);
     zoomRef.current = zoom;
 
-    // Add explicit prevention of background dragging
+    // Add explicit prevention of background interactions
     svg.on("mousedown.drag", null)
-       .on("touchstart.drag", null);
+       .on("touchstart.drag", null)
+       .on("click.zoom", null)
+       .on("dblclick.zoom", null);
 
     // Find connected components for cluster positioning
     const findConnectedComponents = () => {
@@ -390,28 +392,41 @@ export default function NetworkVisualizer({
           break;
       }
 
-      // Get viewport center for zoom calculations
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      const centerX = width / 2;
-      const centerY = height / 2;
+      // Get the current transform to preserve position during zoom
+      const currentTransform = d3.zoomTransform(svg.node()!);
+      
+      // Get SVG dimensions for center calculation
+      const svgRect = svg.node()!.getBoundingClientRect();
+      const centerX = svgRect.width / 2;
+      const centerY = svgRect.height / 2;
 
       let newTransform;
 
       if (action === "reset") {
-        // For reset, go back to identity transform (centered, scale 1)
-        newTransform = d3.zoomIdentity;
+        // For reset, center the view at scale 1
+        newTransform = d3.zoomIdentity
+          .translate(centerX, centerY)
+          .scale(1)
+          .translate(-centerX, -centerY);
       } else {
-        // For zoom in/out, create a new transform that scales around the center
+        // For zoom in/out, scale around the visual center point
+        // Calculate the scale factor
+        const scaleFactor = newScale / currentTransform.k;
+        
+        // Apply the scale around the center point
         newTransform = d3.zoomIdentity
           .translate(centerX, centerY)
           .scale(newScale)
-          .translate(-centerX, -centerY);
+          .translate(
+            (currentTransform.x - centerX) / scaleFactor,
+            (currentTransform.y - centerY) / scaleFactor
+          );
       }
 
-      // Apply the transform using D3's zoom behavior
+      // Apply the transform using D3's zoom behavior with smooth transition
       svg.transition()
         .duration(300)
+        .ease(d3.easeQuadOut)
         .call(zoomRef.current.transform, newTransform);
     };
 
