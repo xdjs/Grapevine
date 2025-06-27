@@ -41,17 +41,17 @@ export default function NetworkVisualizer({
     // Create network group
     const networkGroup = svg.append("g").attr("class", "network-group");
 
-    // Create zoom behavior for mouse/touch interaction only
+    // Create zoom behavior for mouse/touch interaction
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .on("zoom", (event) => {
-        // Only respond to user-initiated zoom events, not programmatic ones
+        // Respond to user scroll wheel and drag events
         if (event.sourceEvent) {
           const { transform } = event;
-          console.log(`User zoom event triggered with transform:`, transform);
+          console.log(`User zoom/pan: scale=${transform.k.toFixed(2)}, x=${transform.x.toFixed(0)}, y=${transform.y.toFixed(0)}`);
           networkGroup.attr("transform", transform);
-          // Don't update currentZoom here to avoid conflicts with button zoom
+          setCurrentZoom(transform.k);
           onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
         }
       });
@@ -386,45 +386,47 @@ export default function NetworkVisualizer({
       });
   };
 
-  // Handle zoom controls
+  // Handle zoom controls with proper D3 zoom integration
   useEffect(() => {
     const handleZoomEvent = (event: CustomEvent) => {
       const { action } = event.detail;
       console.log(`Zoom ${action} button clicked, current zoom: ${currentZoom}`);
 
-      // Temporarily disable D3 zoom during button operations
-      if (svgRef.current && zoomRef.current) {
-        d3.select(svgRef.current).on('.zoom', null);
-      }
+      if (!svgRef.current || !zoomRef.current) return;
+
+      const svg = d3.select(svgRef.current);
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const centerX = width / 2;
+      const centerY = height / 2;
+
+      let newScale = currentZoom;
 
       switch (action) {
         case "in":
-          const newZoomIn = Math.min(5, currentZoom * 1.3); // Cap at 5x zoom
-          console.log(`Zooming in from ${currentZoom} to:`, newZoomIn);
-          setCurrentZoom(newZoomIn);
-          applyZoom(newZoomIn);
+          newScale = Math.min(5, currentZoom * 1.3); // Cap at 5x zoom
           break;
           
         case "out":
-          const newZoomOut = Math.max(0.2, currentZoom / 1.3); // Min 0.2x zoom
-          console.log(`Zooming out from ${currentZoom} to:`, newZoomOut);
-          setCurrentZoom(newZoomOut);
-          applyZoom(newZoomOut);
+          newScale = Math.max(0.2, currentZoom / 1.3); // Min 0.2x zoom
           break;
           
         case "reset":
-          console.log(`Resetting zoom from ${currentZoom} to 1`);
-          setCurrentZoom(1);
-          applyZoom(1);
+          newScale = 1;
           break;
       }
 
-      // Re-enable D3 zoom after a delay
-      setTimeout(() => {
-        if (svgRef.current && zoomRef.current) {
-          d3.select(svgRef.current).call(zoomRef.current);
-        }
-      }, 300);
+      console.log(`Button zoom: ${currentZoom} → ${newScale}`);
+
+      // Use D3 zoom transform for smooth integration
+      const newTransform = d3.zoomIdentity
+        .translate(centerX, centerY)
+        .scale(newScale)
+        .translate(-centerX, -centerY);
+
+      svg.transition()
+        .duration(200)
+        .call(zoomRef.current.transform, newTransform);
     };
 
     if (visible) {
