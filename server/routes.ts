@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { musicNerdLookup } from "./musicnerd-artist-lookup";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -34,6 +35,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(artist);
     } catch (error) {
       console.error("Error searching artist:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get MusicNerd profile URL for an artist
+  app.get("/api/musicnerd-url/:artistName", async (req, res) => {
+    try {
+      const artistName = req.params.artistName;
+      const musicNerdArtist = await musicNerdLookup.findArtistByName(artistName);
+      
+      if (musicNerdArtist) {
+        const profileUrl = musicNerdLookup.generateProfileUrl(musicNerdArtist.id);
+        res.json({ 
+          found: true,
+          artistId: musicNerdArtist.id,
+          profileUrl,
+          artistName: musicNerdArtist.name
+        });
+      } else {
+        // If artist not found in MusicNerd database, fallback to base URL
+        res.json({ 
+          found: false,
+          profileUrl: "https://music-nerd-git-staging-musicnerd.vercel.app/",
+          artistName
+        });
+      }
+    } catch (error) {
+      console.error("Error looking up MusicNerd artist:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

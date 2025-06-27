@@ -270,18 +270,34 @@ export default function NetworkVisualizer({
       tooltip.style("opacity", 0);
     }
 
-    function openMusicNerdProfile(artistName: string) {
-      // MusicNerd.xyz appears to be a conversational AI interface
-      // Try passing artist name as query parameter for potential auto-search
-      const searchQuery = encodeURIComponent(artistName);
-      const musicNerdUrl = `https://www.musicnerd.xyz/?artist=${searchQuery}`;
-      
-      // Open Music Nerd in a new tab
-      const newWindow = window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
-      
-      // If popup blocked, provide fallback
-      if (!newWindow) {
-        alert(`Popup blocked! Please visit Music Nerd manually to search for "${artistName}": https://www.musicnerd.xyz/`);
+    async function openMusicNerdProfile(artistName: string) {
+      try {
+        // Fetch the MusicNerd URL for this artist
+        const response = await fetch(`/api/musicnerd-url/${encodeURIComponent(artistName)}`);
+        const data = await response.json();
+        
+        console.log(`🎵 MusicNerd lookup for "${artistName}":`, data);
+        
+        // Open the MusicNerd profile URL
+        const newWindow = window.open(data.profileUrl, '_blank', 'noopener,noreferrer');
+        
+        // If popup blocked, provide fallback
+        if (!newWindow) {
+          if (data.found) {
+            alert(`Popup blocked! Please visit MusicNerd manually: ${data.profileUrl}`);
+          } else {
+            alert(`Popup blocked! Artist "${artistName}" not found in MusicNerd database. Please visit: https://music-nerd-git-staging-musicnerd.vercel.app/`);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching MusicNerd URL:', error);
+        // Fallback to main MusicNerd page
+        const fallbackUrl = 'https://music-nerd-git-staging-musicnerd.vercel.app/';
+        const newWindow = window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+        
+        if (!newWindow) {
+          alert(`Popup blocked! Please visit MusicNerd manually: ${fallbackUrl}`);
+        }
       }
     }
 

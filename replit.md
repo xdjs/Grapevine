@@ -187,6 +187,15 @@ Changelog:
 - Updated all UI components including nodes, legend, CSS variables, and JavaScript color definitions
 - Modern, energetic aesthetic with high contrast and visual appeal for music collaboration networks
 
+### MusicNerd Database Integration (June 27, 2025)
+- Successfully connected to MusicNerd's Supabase database containing 41,918 artists
+- Implemented artist lookup service to find exact artist IDs in MusicNerd's database
+- Added API endpoint `/api/musicnerd-url/:artistName` for real-time artist URL generation
+- Artist nodes now link directly to specific MusicNerd profiles using format: `https://music-nerd-git-staging-musicnerd.vercel.app/artist/{artistId}`
+- Comprehensive artist matching with exact name and partial search fallbacks
+- Real artist data includes: name, bio, social links (Spotify, Instagram, YouTube, Twitter)
+- Console logging shows successful lookups with artist IDs and profile URLs
+
 ## User Preferences
 
 ```
