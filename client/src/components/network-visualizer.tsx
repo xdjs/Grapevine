@@ -373,18 +373,20 @@ export default function NetworkVisualizer({
       if (!svgRef.current || !zoomRef.current) return;
 
       const svg = d3.select(svgRef.current);
-      let newScale = currentZoom;
 
-      // Get the actual current zoom from D3 transform for accurate calculations
-      const actualCurrentZoom = d3.zoomTransform(svg.node()!).k;
+      // Get the actual current transform from D3
+      const currentTransform = d3.zoomTransform(svg.node()!);
+      const currentScale = currentTransform.k;
+
+      let newScale = currentScale;
 
       switch (action) {
         case "in":
-          newScale = Math.min(5, actualCurrentZoom * 1.3); // Cap at 5x zoom
+          newScale = Math.min(5, currentScale * 1.3); // Cap at 5x zoom
           break;
           
         case "out":
-          newScale = Math.max(0.2, actualCurrentZoom / 1.3); // Min 0.2x zoom
+          newScale = Math.max(0.2, currentScale / 1.3); // Min 0.2x zoom
           break;
           
         case "reset":
@@ -392,24 +394,28 @@ export default function NetworkVisualizer({
           break;
       }
 
-      // Get SVG dimensions for center point calculation
+      console.log(`Zooming from ${currentScale} to ${newScale}`);
+
+      // Get SVG center point in client coordinates
       const svgRect = svg.node()!.getBoundingClientRect();
       const centerX = svgRect.width / 2;
       const centerY = svgRect.height / 2;
 
-      if (action === "reset") {
-        // For reset, use D3's scaleTo method to reset to scale 1 at center
-        svg.transition()
-          .duration(300)
-          .ease(d3.easeQuadOut)
-          .call(zoomRef.current.scaleTo, 1, [centerX, centerY]);
-      } else {
-        // For zoom in/out, use D3's scaleTo method which handles transforms correctly
-        svg.transition()
-          .duration(300)
-          .ease(d3.easeQuadOut)
-          .call(zoomRef.current.scaleTo, newScale, [centerX, centerY]);
-      }
+      // Create new transform that scales around the center point
+      const scaleRatio = newScale / currentScale;
+      
+      const newTransform = d3.zoomIdentity
+        .translate(
+          centerX + (currentTransform.x - centerX) * scaleRatio,
+          centerY + (currentTransform.y - centerY) * scaleRatio
+        )
+        .scale(newScale);
+
+      // Apply the transform with smooth transition
+      svg.transition()
+        .duration(300)
+        .ease(d3.easeQuadOut)
+        .call(zoomRef.current.transform, newTransform);
     };
 
     if (visible) {
