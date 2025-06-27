@@ -46,14 +46,11 @@ export default function NetworkVisualizer({
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .on("zoom", (event) => {
-        // Respond to user scroll wheel and drag events
-        if (event.sourceEvent) {
-          const { transform } = event;
-          console.log(`User zoom/pan: scale=${transform.k.toFixed(2)}, x=${transform.x.toFixed(0)}, y=${transform.y.toFixed(0)}`);
-          networkGroup.attr("transform", transform);
-          setCurrentZoom(transform.k);
-          onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
-        }
+        // Respond to user scroll wheel and drag events AND programmatic zoom
+        const { transform } = event;
+        networkGroup.attr("transform", transform);
+        setCurrentZoom(transform.k);
+        onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
       });
 
     svg.call(zoom);
@@ -374,19 +371,23 @@ export default function NetworkVisualizer({
           break;
       }
 
-      console.log(`Button zoom: ${currentZoom} → ${newScale}`);
+      // Get viewport center for zoom calculations
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const centerX = width / 2;
+      const centerY = height / 2;
 
       let newTransform;
 
       if (action === "reset") {
-        // For reset, center everything
+        // For reset, go back to identity transform (centered, scale 1)
         newTransform = d3.zoomIdentity;
       } else {
-        // For zoom in/out, scale from current position
-        const currentTransform = d3.zoomTransform(svg.node()!);
-        const scaleRatio = newScale / currentTransform.k;
-        
-        newTransform = currentTransform.scale(scaleRatio);
+        // For zoom in/out, scale around the center point
+        newTransform = d3.zoomIdentity
+          .translate(centerX, centerY)
+          .scale(newScale)
+          .translate(-centerX, -centerY);
       }
 
       // Apply the transform using D3's zoom behavior
