@@ -73,12 +73,23 @@ class MusicBrainzService {
 
   async getArtistWithRelations(artistId: string): Promise<MusicBrainzArtist | null> {
     try {
-      const endpoint = `/artist/${artistId}?inc=artist-rels+work-rels&fmt=json`;
+      const endpoint = `/artist/${artistId}?inc=artist-rels+work-rels+recording-rels&fmt=json`;
       const artist: MusicBrainzArtist = await this.makeRequest(endpoint);
       return artist;
     } catch (error) {
       console.error('Error getting artist relations:', error);
       return null;
+    }
+  }
+
+  async getArtistRecordings(artistId: string, limit: number = 50): Promise<any[]> {
+    try {
+      const endpoint = `/recording?artist=${artistId}&inc=artist-credits+artist-rels&fmt=json&limit=${limit}`;
+      const response = await this.makeRequest(endpoint);
+      return response.recordings || [];
+    } catch (error) {
+      console.error('Error getting artist recordings:', error);
+      return [];
     }
   }
 
@@ -135,20 +146,37 @@ class MusicBrainzService {
 
   private mapRelationType(musicBrainzType: string): string | null {
     const typeMap: { [key: string]: string } = {
+      // Artists and bands
       'member': 'artist',
       'member of band': 'artist',
       'collaboration': 'artist',
       'supporting musician': 'artist',
       'vocalist': 'artist',
       'performance': 'artist',
+      'featured artist': 'artist',
+      'guest': 'artist',
+      
+      // Producers
       'producer': 'producer',
       'engineer': 'producer',
       'mix': 'producer',
       'mastering': 'producer',
+      'mixing': 'producer',
+      'recording': 'producer',
+      'sound engineer': 'producer',
+      'executive producer': 'producer',
+      'co-producer': 'producer',
+      
+      // Songwriters
       'composer': 'songwriter',
       'lyricist': 'songwriter',
       'writer': 'songwriter',
       'arranger': 'songwriter',
+      'songwriter': 'songwriter',
+      'co-writer': 'songwriter',
+      'author': 'songwriter',
+      'composition': 'songwriter',
+      'lyrics': 'songwriter',
     };
 
     return typeMap[musicBrainzType.toLowerCase()] || null;

@@ -4,6 +4,7 @@ import { artists, collaborations, type Artist, type InsertArtist, type Collabora
 import { spotifyService } from "./spotify";
 import { musicBrainzService } from "./musicbrainz";
 import { wikipediaService } from "./wikipedia";
+import { creditsExtractor } from "./credits-extractor";
 import { IStorage } from './storage';
 
 export class DatabaseStorage implements IStorage {
@@ -108,14 +109,15 @@ export class DatabaseStorage implements IStorage {
     console.log('📊 [DEBUG] Data source priority: 1) MusicBrainz → 2) Wikipedia → 3) Generated fallback');
 
     try {
-      // Get real collaboration data from MusicBrainz
-      console.log(`🎵 [DEBUG] Querying MusicBrainz API for "${artistName}"...`);
-      const collaborationData = await musicBrainzService.getArtistCollaborations(artistName);
-      console.log(`✅ [DEBUG] MusicBrainz response:`, {
-        artists: collaborationData.artists.length,
-        works: collaborationData.works.length,
-        artistList: collaborationData.artists.map(a => `${a.name} (${a.type}, relation: ${a.relation})`),
-        worksList: collaborationData.works.map(w => `${w.title} with [${w.collaborators.join(', ')}]`)
+      // Get comprehensive collaboration data (MusicBrainz + Wikipedia + Known Collaborators)
+      console.log(`🎯 [DEBUG] Querying comprehensive credits for "${artistName}"...`);
+      const comprehensiveCollaborators = await creditsExtractor.getComprehensiveCollaborators(artistName);
+      console.log(`✅ [DEBUG] Comprehensive credits response:`, {
+        totalCollaborators: comprehensiveCollaborators.length,
+        producers: comprehensiveCollaborators.filter(c => c.type === 'producer').length,
+        songwriters: comprehensiveCollaborators.filter(c => c.type === 'songwriter').length,
+        artists: comprehensiveCollaborators.filter(c => c.type === 'artist').length,
+        collaboratorList: comprehensiveCollaborators.map(c => `${c.name} (${c.type}, ${c.source})`)
       });
       
       // Get Spotify image for main artist
@@ -145,10 +147,10 @@ export class DatabaseStorage implements IStorage {
       };
       nodes.push(mainArtistNode);
 
-      // Add collaborating artists from MusicBrainz
-      console.log(`🎨 [DEBUG] Processing ${collaborationData.artists.length} MusicBrainz collaborators...`);
-      for (const collaborator of collaborationData.artists) {
-        console.log(`👤 [DEBUG] Processing collaborator: "${collaborator.name}" (type: ${collaborator.type}, relation: ${collaborator.relation})`);
+      // Add collaborators from comprehensive credits extraction
+      console.log(`🎨 [DEBUG] Processing ${comprehensiveCollaborators.length} comprehensive collaborators...`);
+      for (const collaborator of comprehensiveCollaborators) {
+        console.log(`👤 [DEBUG] Processing collaborator: "${collaborator.name}" (type: ${collaborator.type}, source: ${collaborator.source})`);
         
         // Get Spotify image for collaborator
         let collaboratorImage = null;
@@ -181,7 +183,7 @@ export class DatabaseStorage implements IStorage {
           spotifyId: collaboratorSpotifyId,
         };
         nodes.push(collaboratorNode);
-        console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from MusicBrainz relation "${collaborator.relation}"`);
+        console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from ${collaborator.source} source`);
 
         links.push({
           source: artistName,
@@ -190,9 +192,9 @@ export class DatabaseStorage implements IStorage {
         console.log(`🔗 [DEBUG] Created link: "${artistName}" ↔ "${collaborator.name}"`);
       }
 
-      // If no real collaborations found, try Wikipedia
-      if (collaborationData.artists.length === 0) {
-        console.log(`🔍 [DEBUG] No MusicBrainz collaborations found for "${artistName}", trying Wikipedia fallback...`);
+      // Comprehensive collaborators already include all sources, so no additional fallback needed
+      if (comprehensiveCollaborators.length === 0) {
+        console.log(`🔍 [DEBUG] No comprehensive collaborations found for "${artistName}", creating artist-only network...`);
         
         try {
           const wikipediaCollaborators = await wikipediaService.getArtistCollaborations(artistName);
@@ -260,7 +262,7 @@ export class DatabaseStorage implements IStorage {
         console.log(`👤 [DEBUG] Returning only the main artist node without any collaborators`);
         return { nodes, links };
       } else {
-        console.log(`✅ [DEBUG] Successfully created network from MusicBrainz data: ${collaborationData.artists.length} collaborators for "${artistName}"`);
+        console.log(`✅ [DEBUG] Successfully created comprehensive collaboration network: ${comprehensiveCollaborators.length} collaborators for "${artistName}"`);
       }
 
       return { nodes, links };
