@@ -255,9 +255,9 @@ export class DatabaseStorage implements IStorage {
           console.error(`⚠️ [DEBUG] Error fetching Wikipedia collaborations for "${artistName}":`, error);
         }
         
-        // If both MusicBrainz and Wikipedia fail, fallback to generated data
-        console.log(`🚨 [DEBUG] FALLBACK: No real collaboration data found for "${artistName}" from either MusicBrainz or Wikipedia`);
-        console.log(`🎲 [DEBUG] Using generated fallback data to ensure visualization works`);
+        // If both MusicBrainz and Wikipedia fail, return only the main artist
+        console.log(`🚨 [DEBUG] No real collaboration data found for "${artistName}" from either MusicBrainz or Wikipedia`);
+        console.log(`👤 [DEBUG] Returning only the main artist node without any collaborators`);
         return { nodes, links };
       } else {
         console.log(`✅ [DEBUG] Successfully created network from MusicBrainz data: ${collaborationData.artists.length} collaborators for "${artistName}"`);

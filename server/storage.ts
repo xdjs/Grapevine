@@ -415,16 +415,16 @@ export class MemStorage implements IStorage {
           console.error('Error fetching Wikipedia collaborations:', error);
         }
         
-        // If both MusicBrainz and Wikipedia fail, fall back to generated data only as last resort
-        console.log(`No real collaboration data found for ${artistName}, falling back to generated data`);
-        return this.generateDynamicNetworkWithImages(artistName);
+        // If both MusicBrainz and Wikipedia fail, return only the main artist
+        console.log(`No real collaboration data found for ${artistName}, returning only main artist`);
+        return { nodes, links };
       }
 
       return { nodes, links };
     } catch (error) {
       console.error('Error generating real collaboration network:', error);
-      // Fall back to generated network
-      return this.generateDynamicNetworkWithImages(artistName);
+      // Return just the main artist if everything fails
+      return { nodes, links };
     }
   }
 

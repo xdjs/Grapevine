@@ -54,7 +54,7 @@ Now integrates with multiple authentic sources for comprehensive collaboration d
 - **MusicBrainz API**: Primary source for artist collaboration relationships
 - **Wikipedia API**: Secondary source for collaboration data when MusicBrainz lacks information
 - **Spotify Web API**: Provides artist profile images and additional metadata
-- **Intelligent Fallback**: Three-tier system (MusicBrainz → Wikipedia → Generated) for maximum data coverage
+- **Intelligent Fallback**: Two-tier system (MusicBrainz → Wikipedia) with authentic data only
 - **Rate Limiting**: Proper API throttling for sustainable data access
 
 ## Data Flow
@@ -165,6 +165,12 @@ Changelog:
 - Added proper API rate limiting for sustainable data access
 - Networks now display actual music industry collaborations from multiple authoritative sources
 - Enhanced collaboration extraction with natural language processing for Wikipedia content
+
+### Authentic Data Only Policy (June 27, 2025)
+- Removed all generated/synthetic collaboration data fallbacks
+- When no real collaboration data exists from MusicBrainz or Wikipedia, only the main artist node is displayed
+- Ensures complete data authenticity and prevents misleading artificial connections
+- Comprehensive debugging system shows exact data sources and extraction process
 
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals
