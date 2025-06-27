@@ -270,50 +270,62 @@ export default function NetworkVisualizer({
       tooltip.style("opacity", 0);
     }
 
-    function openMusicNerdProfile(artistName: string) {
-      // Create a search-friendly URL for Music Nerd with artist context
+    async function openMusicNerdProfile(artistName: string) {
       const searchQuery = encodeURIComponent(artistName);
       
-      // Try Music Nerd with a search parameter (experimental)
-      // If Music Nerd doesn't support URL parameters, it will gracefully fall back to main page
-      const musicNerdUrl = `https://www.musicnerd.xyz/?q=${searchQuery}`;
-      
-      // Open Music Nerd in a new tab
-      const newWindow = window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
-      
-      // Alternative: If Music Nerd doesn't work, provide fallback options
-      if (!newWindow) {
-        // Fallback to other music discovery platforms if popup blocked
-        const alternatives = [
-          `https://musicbrainz.org/search?query=${searchQuery}&type=artist`,
-          `https://www.discogs.com/search/?q=${searchQuery}&type=artist`,
-          `https://www.allmusic.com/search/artists/${searchQuery}`
-        ];
+      // First try to get MusicBrainz ID for direct linking
+      try {
+        const mbResponse = await fetch(`https://musicbrainz.org/ws/2/artist/?query=artist:"${artistName}"&fmt=json&limit=1`, {
+          headers: {
+            'User-Agent': 'MusicCollaborationVisualizer/1.0'
+          }
+        });
         
-        // Try the first alternative
-        window.open(alternatives[0], '_blank', 'noopener,noreferrer');
+        if (mbResponse.ok) {
+          const mbData = await mbResponse.json();
+          if (mbData.artists && mbData.artists.length > 0) {
+            const artistId = mbData.artists[0].id;
+            // Open direct MusicBrainz artist page
+            window.open(`https://musicbrainz.org/artist/${artistId}`, '_blank', 'noopener,noreferrer');
+            return;
+          }
+        }
+      } catch (error) {
+        console.log('MusicBrainz lookup failed, using fallback');
       }
       
-      // Try to enhance the Music Nerd experience if possible
-      if (newWindow) {
-        setTimeout(() => {
-          try {
-            // Look for any text input or search interface
-            const searchInputs = newWindow.document.querySelectorAll('input[type="text"], textarea, [contenteditable="true"]');
-            if (searchInputs.length > 0) {
-              const searchInput = searchInputs[0] as HTMLInputElement;
-              searchInput.value = `Tell me about ${artistName}`;
-              searchInput.focus();
-              
-              // Try to trigger any submit or enter event
-              const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13 });
-              searchInput.dispatchEvent(enterEvent);
-            }
-          } catch (e) {
-            // Cross-origin restrictions are expected, this is a best-effort enhancement
-            console.log('Enhanced search not available due to cross-origin restrictions');
-          }
-        }, 1500);
+      // Fallback options with better music discovery platforms
+      const musicPlatforms = [
+        {
+          name: 'MusicBrainz',
+          url: `https://musicbrainz.org/search?query=${searchQuery}&type=artist`,
+          description: 'Comprehensive music database'
+        },
+        {
+          name: 'Music Nerd',
+          url: `https://www.musicnerd.xyz/?q=${searchQuery}`,
+          description: 'AI music assistant'
+        },
+        {
+          name: 'AllMusic',
+          url: `https://www.allmusic.com/search/artists/${searchQuery}`,
+          description: 'Professional music guide'
+        },
+        {
+          name: 'Discogs',
+          url: `https://www.discogs.com/search/?q=${searchQuery}&type=artist`,
+          description: 'Music marketplace and database'
+        }
+      ];
+      
+      // Try opening the best option first
+      const primaryUrl = musicPlatforms[0].url;
+      const newWindow = window.open(primaryUrl, '_blank', 'noopener,noreferrer');
+      
+      // If popup blocked, show user options
+      if (!newWindow) {
+        const platformList = musicPlatforms.map(p => `• ${p.name}: ${p.description}`).join('\n');
+        alert(`Popup blocked! You can search for "${artistName}" on these platforms:\n\n${platformList}`);
       }
     }
 
