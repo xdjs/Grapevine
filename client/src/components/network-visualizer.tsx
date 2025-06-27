@@ -373,18 +373,17 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
-  // Handle zoom controls with direct SVG manipulation
+  // Handle zoom controls with persistent state
   useEffect(() => {
     const handleZoomEvent = (event: CustomEvent) => {
       const { action } = event.detail;
 
-      if (!svgRef.current) return;
+      if (!svgRef.current || !zoomRef.current) return;
 
       const svg = d3.select(svgRef.current);
-      const networkGroup = svg.select(".network-group");
-
-      // Get current transform from the network group
-      let currentTransform = d3.zoomTransform(svg.node()!);
+      
+      // Get current transform state
+      const currentTransform = d3.zoomTransform(svg.node()!);
       let newScale = currentTransform.k;
 
       switch (action) {
@@ -401,7 +400,7 @@ export default function NetworkVisualizer({
 
       console.log(`Zooming from ${currentTransform.k.toFixed(2)} to ${newScale.toFixed(2)}`);
 
-      // Get SVG center point for scaling
+      // Calculate new transform based on SVG center
       const svgRect = svg.node()!.getBoundingClientRect();
       const centerX = svgRect.width / 2;
       const centerY = svgRect.height / 2;
@@ -409,31 +408,23 @@ export default function NetworkVisualizer({
       let newTransform;
       
       if (action === "reset") {
-        // Reset to center with scale 1
         newTransform = d3.zoomIdentity;
       } else {
-        // Scale around center point
+        // Scale from center point
         const scaleFactor = newScale / currentTransform.k;
+        const newX = centerX - (centerX - currentTransform.x) * scaleFactor;
+        const newY = centerY - (centerY - currentTransform.y) * scaleFactor;
+        
         newTransform = d3.zoomIdentity
-          .translate(centerX, centerY)
-          .scale(newScale)
-          .translate(
-            (currentTransform.x - centerX) / scaleFactor,
-            (currentTransform.y - centerY) / scaleFactor
-          );
+          .translate(newX, newY)
+          .scale(newScale);
       }
 
-      // Apply transform directly to network group with transition
-      networkGroup
-        .transition()
+      // Apply the transform using D3's zoom behavior
+      svg.transition()
         .duration(300)
         .ease(d3.easeQuadOut)
-        .attr("transform", newTransform.toString());
-
-      // Update the zoom behavior's internal transform state
-      if (zoomRef.current) {
-        svg.call(zoomRef.current.transform, newTransform);
-      }
+        .call(zoomRef.current.transform, newTransform);
     };
 
     if (visible) {

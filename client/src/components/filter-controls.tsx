@@ -29,12 +29,12 @@ export default function FilterControls({
             onCheckedChange={(checked) =>
               handleFilterChange("showProducers", !!checked)
             }
-            className="data-[state=checked]:border-[#8A2BE2]"
-            style={{ backgroundColor: filterState.showProducers ? '#8A2BE2' : 'transparent' }}
+            className="data-[state=checked]:border-[#B190E2]"
+            style={{ backgroundColor: filterState.showProducers ? '#B190E2' : 'transparent' }}
           />
           <Label htmlFor="showProducers" className="text-sm text-white cursor-pointer flex items-center gap-2">
             Producers
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#8A2BE2' }}></div>
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#B190E2' }}></div>
           </Label>
         </div>
 
@@ -45,12 +45,12 @@ export default function FilterControls({
             onCheckedChange={(checked) =>
               handleFilterChange("showSongwriters", !!checked)
             }
-            className="data-[state=checked]:border-[#00CED1]"
-            style={{ backgroundColor: filterState.showSongwriters ? '#00CED1' : 'transparent' }}
+            className="data-[state=checked]:border-[#67D1F8]"
+            style={{ backgroundColor: filterState.showSongwriters ? '#67D1F8' : 'transparent' }}
           />
           <Label htmlFor="showSongwriters" className="text-sm text-white cursor-pointer flex items-center gap-2">
             Songwriters
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#00CED1' }}></div>
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#67D1F8' }}></div>
           </Label>
         </div>
 
@@ -61,12 +61,12 @@ export default function FilterControls({
             onCheckedChange={(checked) =>
               handleFilterChange("showArtists", !!checked)
             }
-            className="data-[state=checked]:border-[#FF69B4]"
-            style={{ backgroundColor: filterState.showArtists ? '#FF69B4' : 'transparent' }}
+            className="data-[state=checked]:border-[#E199F9]"
+            style={{ backgroundColor: filterState.showArtists ? '#E199F9' : 'transparent' }}
           />
           <Label htmlFor="showArtists" className="text-sm text-white cursor-pointer flex items-center gap-2">
             Artists
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#FF69B4' }}></div>
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#E199F9' }}></div>
           </Label>
         </div>
       </div>

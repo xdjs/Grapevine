@@ -4,15 +4,15 @@ export default function Legend() {
       <h3 className="text-sm font-semibold text-gray-300 mb-3">Legend</h3>
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: '#FF69B4' }}></div>
+          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: '#E199F9' }}></div>
           <span className="text-sm text-white">Artists</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: '#8A2BE2' }}></div>
+          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: '#B190E2' }}></div>
           <span className="text-sm text-white">Producers</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: '#00CED1' }}></div>
+          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: '#67D1F8' }}></div>
           <span className="text-sm text-white">Songwriters</span>
         </div>
       </div>

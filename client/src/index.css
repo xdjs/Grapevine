@@ -24,10 +24,10 @@
   --ring: hsl(240, 4.9%, 83.9%);
   --radius: 0.5rem;
   
-  /* Custom network colors - Vibrant cohesive palette */
-  --artist-color: #FF69B4;        /* Hot Pink */
-  --producer-color: #8A2BE2;      /* Blue Violet Purple */
-  --songwriter-color: #00CED1;    /* Dark Turquoise */
+  /* Custom network colors - Light pastel palette */
+  --artist-color: #E199F9;        /* Light Pink */
+  --producer-color: #B190E2;      /* Light Purple */
+  --songwriter-color: #67D1F8;    /* Light Blue */
 }
 
 .dark {
