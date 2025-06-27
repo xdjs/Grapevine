@@ -29,12 +29,12 @@ export default function FilterControls({
             onCheckedChange={(checked) =>
               handleFilterChange("showProducers", !!checked)
             }
-            className="data-[state=checked]:border-[#B190E2]"
-            style={{ backgroundColor: filterState.showProducers ? '#B190E2' : 'transparent' }}
+            className="data-[state=checked]:border-[#AE53FF]"
+            style={{ backgroundColor: filterState.showProducers ? '#AE53FF' : 'transparent' }}
           />
           <Label htmlFor="showProducers" className="text-sm text-white cursor-pointer flex items-center gap-2">
             Producers
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#B190E2' }}></div>
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#AE53FF' }}></div>
           </Label>
         </div>
 

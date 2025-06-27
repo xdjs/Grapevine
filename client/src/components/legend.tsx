@@ -8,7 +8,7 @@ export default function Legend() {
           <span className="text-sm text-white">Artists</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: '#B190E2' }}></div>
+          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: '#AE53FF' }}></div>
           <span className="text-sm text-white">Producers</span>
         </div>
         <div className="flex items-center gap-2">
