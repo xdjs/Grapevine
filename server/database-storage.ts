@@ -181,11 +181,14 @@ export class DatabaseStorage implements IStorage {
         if (collaborator.type === 'producer' || collaborator.type === 'songwriter') {
           console.log(`🌿 [DEBUG] Fetching second-degree collaborations for ${collaborator.type}: "${collaborator.name}"`);
           try {
-            const secondDegreeCredits = await creditsExtractor.getComprehensiveCollaborators(collaborator.name);
-            // Limit to top 3-5 collaborators to avoid overcrowding
-            secondDegreeCollaborators = secondDegreeCredits.slice(0, 5);
-            topCollaborators = secondDegreeCredits.slice(0, 8).map(c => c.name);
-            console.log(`📊 [DEBUG] Found ${secondDegreeCollaborators.length} second-degree collaborators for "${collaborator.name}"`);
+            const allSecondDegreeCredits = await creditsExtractor.getComprehensiveCollaborators(collaborator.name);
+            // Filter to only include artists, not other producers or songwriters
+            const artistCollaborators = allSecondDegreeCredits.filter(c => c.type === 'artist');
+            
+            // Limit to top 3-5 artist collaborators to avoid overcrowding
+            secondDegreeCollaborators = artistCollaborators.slice(0, 5);
+            topCollaborators = artistCollaborators.slice(0, 8).map(c => c.name);
+            console.log(`📊 [DEBUG] Found ${secondDegreeCollaborators.length} artist collaborators for "${collaborator.name}" (filtered from ${allSecondDegreeCredits.length} total)`);
           } catch (error) {
             console.log(`⚠️ [DEBUG] Could not fetch second-degree collaborations for "${collaborator.name}": ${error}`);
           }

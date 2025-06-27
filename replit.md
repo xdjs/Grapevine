@@ -208,6 +208,8 @@ Changelog:
 ### Branching Network Architecture with Enhanced Tooltips (June 27, 2025)
 - Implemented second-degree collaboration fetching for producers and songwriters
 - Networks now branch from first-degree collaborators to their own professional relationships
+- **Artist-Only Branching**: Producers and songwriters only connect to artists, never to other producers/songwriters
+- Enhanced filtering ensures top collaborators lists only include artists for clean network topology
 - Taylor Swift network expands from 7 to 20+ nodes showing complete collaboration ecosystems
 - Jack Antonoff connects to Steel Train, Fun., Bleachers (his bands and projects)
 - Aaron Dessner connects to The National, Big Red Machine (his music projects)
