@@ -415,7 +415,11 @@ export default function NetworkVisualizer({
       svg.transition()
         .duration(300)
         .ease(d3.easeQuadOut)
-        .call(zoomRef.current.transform, newTransform);
+        .call(zoomRef.current.transform, newTransform)
+        .on("end", () => {
+          // Update the current zoom state after transition completes
+          setCurrentZoom(newScale);
+        });
     };
 
     if (visible) {
@@ -425,7 +429,7 @@ export default function NetworkVisualizer({
     return () => {
       window.removeEventListener("network-zoom", handleZoomEvent as EventListener);
     };
-  }, [visible, currentZoom]);
+  }, [visible]);
 
   function getNodeVisibility(node: NetworkNode, filterState: FilterState): boolean {
     if (node.type === "producer") return filterState.showProducers;
