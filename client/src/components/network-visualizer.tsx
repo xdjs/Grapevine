@@ -373,7 +373,7 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
-  // Handle zoom controls with proper D3 zoom integration
+  // Handle zoom controls with manual transform calculations
   useEffect(() => {
     const handleZoomEvent = (event: CustomEvent) => {
       const { action } = event.detail;
@@ -409,20 +409,30 @@ export default function NetworkVisualizer({
       const centerX = svgRect.width / 2;
       const centerY = svgRect.height / 2;
 
+      let newTransform;
+
       if (action === "reset") {
-        // For reset, center everything
-        const newTransform = d3.zoomIdentity.scale(1);
-        svg.transition()
-          .duration(300)
-          .ease(d3.easeQuadOut)
-          .call(zoomRef.current.transform, newTransform);
+        // For reset, go back to identity transform (centered at origin)
+        newTransform = d3.zoomIdentity;
       } else {
-        // For zoom in/out, scale around the center
-        svg.transition()
-          .duration(300)
-          .ease(d3.easeQuadOut)
-          .call(zoomRef.current.scaleBy, newScale / currentScale);
+        // For zoom in/out, calculate new transform that keeps content centered
+        // Calculate the scale factor difference
+        const scaleFactor = newScale / currentScale;
+        
+        // Calculate new translation to keep the center point fixed
+        const newX = centerX - (centerX - currentTransform.x) * scaleFactor;
+        const newY = centerY - (centerY - currentTransform.y) * scaleFactor;
+        
+        newTransform = d3.zoomIdentity
+          .translate(newX, newY)
+          .scale(newScale);
       }
+
+      // Apply the transform with smooth transition
+      svg.transition()
+        .duration(300)
+        .ease(d3.easeQuadOut)
+        .call(zoomRef.current.transform, newTransform);
     };
 
     if (visible) {
