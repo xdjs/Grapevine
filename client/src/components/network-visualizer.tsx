@@ -19,7 +19,6 @@ export default function NetworkVisualizer({
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
   const [currentZoom, setCurrentZoom] = useState(1);
-  const [manualZoomActive, setManualZoomActive] = useState(false);
 
   useEffect(() => {
     if (!svgRef.current || !data || !visible) return;
@@ -47,12 +46,12 @@ export default function NetworkVisualizer({
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .on("zoom", (event) => {
-        // Only respond to user-initiated zoom events when manual zoom is not active
-        if (event.sourceEvent && !manualZoomActive) {
+        // Only respond to user-initiated zoom events, not programmatic ones
+        if (event.sourceEvent) {
           const { transform } = event;
           console.log(`User zoom event triggered with transform:`, transform);
           networkGroup.attr("transform", transform);
-          setCurrentZoom(transform.k);
+          // Don't update currentZoom here to avoid conflicts with button zoom
           onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
         }
       });
@@ -393,8 +392,10 @@ export default function NetworkVisualizer({
       const { action } = event.detail;
       console.log(`Zoom ${action} button clicked, current zoom: ${currentZoom}`);
 
-      // Set manual zoom active to prevent D3 zoom interference
-      setManualZoomActive(true);
+      // Temporarily disable D3 zoom during button operations
+      if (svgRef.current && zoomRef.current) {
+        d3.select(svgRef.current).on('.zoom', null);
+      }
 
       switch (action) {
         case "in":
@@ -420,8 +421,10 @@ export default function NetworkVisualizer({
 
       // Re-enable D3 zoom after a delay
       setTimeout(() => {
-        setManualZoomActive(false);
-      }, 500);
+        if (svgRef.current && zoomRef.current) {
+          d3.select(svgRef.current).call(zoomRef.current);
+        }
+      }, 300);
     };
 
     if (visible) {
