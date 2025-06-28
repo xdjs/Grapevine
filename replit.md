@@ -181,7 +181,8 @@ Changelog:
 - Network generation and visualization unchanged - only enhanced linking functionality
 - Successfully implemented artist ID lookup in both real collaboration and mock data paths
 - Fixed popup blocker issues by using programmatic link creation instead of window.open
-- Confirmed working with test cases: Taylor Swift, Billie Eilish, Ed Sheeran, Ariana Grande
+- Comprehensive artist coverage: All artists in the network now have unique MusicNerd artist IDs
+- Complete artist mapping includes: Taylor Swift, Billie Eilish, Ed Sheeran, Ariana Grande, Lorde, Lana Del Rey, Bon Iver, The Weeknd, Drake, Future, Lil Wayne, Rihanna, Ashe, Selena Gomez, Justin Bieber, Laufey, Tyler The Creator, Kali Uchis, Clairo, Benny Blanco, Skrillex
 
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals
