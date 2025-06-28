@@ -2,6 +2,7 @@ import { artists, collaborations, type Artist, type InsertArtist, type Collabora
 import { spotifyService } from "./spotify";
 import { musicBrainzService } from "./musicbrainz";
 import { wikipediaService } from "./wikipedia";
+import { musicNerdService } from "./musicnerd-service";
 
 export interface IStorage {
   // Artist methods
@@ -321,6 +322,16 @@ export class MemStorage implements IStorage {
         }
       }
 
+      // Get MusicNerd artist ID for main artist
+      console.log(`🔍 [DEBUG] Looking up MusicNerd artist ID for main artist: "${artistName}"`);
+      let mainArtistMusicNerdId = null;
+      try {
+        mainArtistMusicNerdId = await musicNerdService.getArtistId(artistName);
+        console.log(`✅ [DEBUG] MusicNerd artist ID for "${artistName}": ${mainArtistMusicNerdId}`);
+      } catch (error) {
+        console.log(`❌ [DEBUG] Could not fetch MusicNerd ID for ${artistName}:`, error);
+      }
+
       // Create main artist node
       const mainArtistNode: NetworkNode = {
         id: artistName,
@@ -329,6 +340,7 @@ export class MemStorage implements IStorage {
         size: 20,
         imageUrl: mainArtistImage,
         spotifyId: mainArtistSpotifyId,
+        artistId: mainArtistMusicNerdId,
       };
       nodes.push(mainArtistNode);
 
@@ -350,6 +362,16 @@ export class MemStorage implements IStorage {
           }
         }
 
+        // Get MusicNerd artist ID for collaborators who are artists
+        let collaboratorMusicNerdId = null;
+        if (collaborator.type === 'artist') {
+          try {
+            collaboratorMusicNerdId = await musicNerdService.getArtistId(collaborator.name);
+          } catch (error) {
+            console.log(`Could not fetch MusicNerd ID for ${collaborator.name}`);
+          }
+        }
+
         const collaboratorNode: NetworkNode = {
           id: collaborator.name,
           name: collaborator.name,
@@ -357,6 +379,7 @@ export class MemStorage implements IStorage {
           size: 15,
           imageUrl: collaboratorImage,
           spotifyId: collaboratorSpotifyId,
+          artistId: collaboratorMusicNerdId,
         };
         nodes.push(collaboratorNode);
 
@@ -392,6 +415,16 @@ export class MemStorage implements IStorage {
                 }
               }
 
+              // Get MusicNerd artist ID for Wikipedia collaborators who are artists
+              let collaboratorMusicNerdId = null;
+              if (collaborator.type === 'artist') {
+                try {
+                  collaboratorMusicNerdId = await musicNerdService.getArtistId(collaborator.name);
+                } catch (error) {
+                  console.log(`Could not fetch MusicNerd ID for ${collaborator.name}`);
+                }
+              }
+
               const collaboratorNode: NetworkNode = {
                 id: collaborator.name,
                 name: collaborator.name,
@@ -399,6 +432,7 @@ export class MemStorage implements IStorage {
                 size: 15,
                 imageUrl: collaboratorImage,
                 spotifyId: collaboratorSpotifyId,
+                artistId: collaboratorMusicNerdId,
               };
               nodes.push(collaboratorNode);
 
@@ -439,12 +473,23 @@ export class MemStorage implements IStorage {
     const links: NetworkLink[] = [];
     const nodeMap = new Map<string, NetworkNode>();
 
+    // Get MusicNerd artist ID for main artist (mock data path)
+    console.log(`🔍 [DEBUG] Looking up MusicNerd artist ID for main artist (mock path): "${mainArtist.name}"`);
+    let mainArtistMusicNerdId = null;
+    try {
+      mainArtistMusicNerdId = await musicNerdService.getArtistId(mainArtist.name);
+      console.log(`✅ [DEBUG] MusicNerd artist ID for "${mainArtist.name}" (mock path): ${mainArtistMusicNerdId}`);
+    } catch (error) {
+      console.log(`❌ [DEBUG] Could not fetch MusicNerd ID for ${mainArtist.name} (mock path):`, error);
+    }
+
     // Add main artist node
     const mainArtistNode: NetworkNode = {
       id: mainArtist.name,
       name: mainArtist.name,
       type: 'artist',
       size: 20,
+      artistId: mainArtistMusicNerdId,
     };
     nodes.push(mainArtistNode);
     nodeMap.set(mainArtist.name, mainArtistNode);
@@ -462,11 +507,23 @@ export class MemStorage implements IStorage {
 
       // Add collaborator node
       if (!nodeMap.has(collaborator.name)) {
+        // Get MusicNerd artist ID for collaborators who are artists (mock data path)
+        let collaboratorMusicNerdId = null;
+        if (collaborator.type === 'artist') {
+          try {
+            collaboratorMusicNerdId = await musicNerdService.getArtistId(collaborator.name);
+            console.log(`✅ [DEBUG] MusicNerd artist ID for collaborator "${collaborator.name}" (mock path): ${collaboratorMusicNerdId}`);
+          } catch (error) {
+            console.log(`❌ [DEBUG] Could not fetch MusicNerd ID for collaborator ${collaborator.name} (mock path):`, error);
+          }
+        }
+
         const collaboratorNode: NetworkNode = {
           id: collaborator.name,
           name: collaborator.name,
           type: collaborator.type as 'artist' | 'producer' | 'songwriter',
           size: collaborator.type === 'artist' ? 12 : 15,
+          artistId: collaboratorMusicNerdId,
         };
         nodes.push(collaboratorNode);
         nodeMap.set(collaborator.name, collaboratorNode);
@@ -490,11 +547,23 @@ export class MemStorage implements IStorage {
           
           // Add other artist as node if not already added
           if (!nodeMap.has(other.name)) {
+            // Get MusicNerd artist ID for other artists (mock data path)
+            let otherArtistMusicNerdId = null;
+            if (other.type === 'artist') {
+              try {
+                otherArtistMusicNerdId = await musicNerdService.getArtistId(other.name);
+                console.log(`✅ [DEBUG] MusicNerd artist ID for other artist "${other.name}" (mock path): ${otherArtistMusicNerdId}`);
+              } catch (error) {
+                console.log(`❌ [DEBUG] Could not fetch MusicNerd ID for other artist ${other.name} (mock path):`, error);
+              }
+            }
+
             const otherNode: NetworkNode = {
               id: other.name,
               name: other.name,
               type: other.type as 'artist' | 'producer' | 'songwriter',
               size: 10,
+              artistId: otherArtistMusicNerdId,
             };
             nodes.push(otherNode);
             nodeMap.set(other.name, otherNode);
