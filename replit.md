@@ -179,6 +179,9 @@ Changelog:
 - Falls back to main MusicNerd page when no artist ID found
 - Only artist-type nodes get MusicNerd IDs - producers and songwriters remain unlinked
 - Network generation and visualization unchanged - only enhanced linking functionality
+- Successfully implemented artist ID lookup in both real collaboration and mock data paths
+- Fixed popup blocker issues by using programmatic link creation instead of window.open
+- Confirmed working with test cases: Taylor Swift, Billie Eilish, Ed Sheeran, Ariana Grande
 
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals

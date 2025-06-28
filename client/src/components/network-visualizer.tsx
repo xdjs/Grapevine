@@ -281,13 +281,16 @@ export default function NetworkVisualizer({
         console.log(`🎵 No artist ID found for "${artistName}", opening main MusicNerd page`);
       }
       
-      // Open Music Nerd in a new tab
-      const newWindow = window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
+      // Create a temporary link element and click it - this approach is less likely to be blocked
+      const link = document.createElement('a');
+      link.href = musicNerdUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
       
-      // If popup blocked, provide fallback
-      if (!newWindow) {
-        alert(`Popup blocked! Please visit Music Nerd manually: ${musicNerdUrl}`);
-      }
+      // Append to body, click, and remove
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
 
     function dragstarted(event: d3.D3DragEvent<SVGCircleElement, NetworkNode, unknown>, d: NetworkNode) {
