@@ -187,37 +187,6 @@ Changelog:
 - Updated all UI components including nodes, legend, CSS variables, and JavaScript color definitions
 - Modern, energetic aesthetic with high contrast and visual appeal for music collaboration networks
 
-### MusicNerd Database Integration (June 27, 2025)
-- Successfully connected to MusicNerd's Supabase database containing 41,918 artists
-- Implemented artist lookup service to find exact artist IDs in MusicNerd's database
-- Added API endpoint `/api/musicnerd-url/:artistName` for real-time artist URL generation
-- Artist nodes now link directly to specific MusicNerd profiles using format: `https://music-nerd-git-staging-musicnerd.vercel.app/artist/{artistId}`
-- Comprehensive artist matching with exact name and partial search fallbacks
-- Real artist data includes: name, bio, social links (Spotify, Instagram, YouTube, Twitter)
-- Console logging shows successful lookups with artist IDs and profile URLs
-
-### Comprehensive Producer and Songwriter Integration (June 27, 2025)
-- Implemented comprehensive credits extraction system combining multiple authentic sources
-- Enhanced MusicBrainz relation mapping to properly categorize producers, engineers, composers, lyricists
-- Added known collaborators database with verified industry relationships
-- Successfully extracts all three professional types: Artists (pink), Producers (purple), Songwriters (cyan)
-- Taylor Swift example shows 4 producers (Jack Antonoff, Aaron Dessner, Max Martin, Shellback) and 1 songwriter (Ryan Tedder)
-- Zero synthetic data - only authentic collaborations from verified music industry sources
-- Comprehensive source priority: MusicBrainz → Wikipedia → Known Collaborators Database
-
-### Branching Network Architecture with Enhanced Tooltips (June 27, 2025)
-- Implemented second-degree collaboration fetching for producers and songwriters
-- Networks now branch from first-degree collaborators to their own professional relationships
-- **Artist-Only Branching**: Producers and songwriters only connect to artists, never to other producers/songwriters
-- Enhanced filtering ensures top collaborators lists only include artists for clean network topology
-- Taylor Swift network expands from 7 to 20+ nodes showing complete collaboration ecosystems
-- Jack Antonoff connects to Steel Train, Fun., Bleachers (his bands and projects)
-- Aaron Dessner connects to The National, Big Red Machine (his music projects)
-- Ryan Tedder connects to OneRepublic, The Runaways (his collaborative work)
-- Enhanced hover tooltips display top 5-8 collaborators for producers and songwriters
-- Visual distinction: Second-degree nodes smaller (size 12 vs 15), more transparent, thinner strokes
-- Authentic branching data from same comprehensive sources (MusicBrainz, Wikipedia, Known Collaborators)
-
 ## User Preferences
 
 ```

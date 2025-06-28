@@ -109,84 +109,32 @@ export default function NetworkVisualizer({
 
     const components = findConnectedComponents();
     
-    // Set up radial positioning similar to the example image
-    const centerX = width / 2;
-    const centerY = height / 2;
+    // Position components in a grid layout to prevent overlap
+    const componentsPerRow = Math.ceil(Math.sqrt(components.length));
+    const componentWidth = width / componentsPerRow;
+    const componentHeight = height / Math.ceil(components.length / componentsPerRow);
     
     // Find the main artist node (the one being searched) - it has the largest size
     const mainArtistNode = data.nodes.find(node => node.size === 20 && node.type === 'artist');
     
-    // Categorize nodes by their relationship to the main artist
-    const firstDegreeNodes = data.nodes.filter(node => 
-      node !== mainArtistNode && node.size >= 15
-    );
-    const secondDegreeNodes = data.nodes.filter(node => 
-      node.size < 15
-    );
-    
-    // Position main artist at center
-    if (mainArtistNode) {
-      mainArtistNode.x = centerX;
-      mainArtistNode.y = centerY;
-    }
-    
-    // Position first-degree collaborators in a circle around main artist
-    const firstDegreeRadius = Math.min(width, height) * 0.25;
-    firstDegreeNodes.forEach((node, index) => {
-      const angle = (index / firstDegreeNodes.length) * 2 * Math.PI;
-      node.x = centerX + Math.cos(angle) * firstDegreeRadius;
-      node.y = centerY + Math.sin(angle) * firstDegreeRadius;
-    });
-    
-    // Position second-degree nodes around their connected first-degree nodes
-    secondDegreeNodes.forEach(node => {
-      // Find which first-degree node this connects to
-      const connectedFirstDegree = validLinks.find(link => {
-        const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-        const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-        
-        return (sourceId === node.id && firstDegreeNodes.some(n => n.id === targetId)) ||
-               (targetId === node.id && firstDegreeNodes.some(n => n.id === sourceId));
-      });
+    components.forEach((component, index) => {
+      const row = Math.floor(index / componentsPerRow);
+      const col = index % componentsPerRow;
+      const centerX = col * componentWidth + componentWidth / 2;
+      const centerY = row * componentHeight + componentHeight / 2;
       
-      if (connectedFirstDegree) {
-        const firstDegreeId = typeof connectedFirstDegree.source === 'string' ? 
-          connectedFirstDegree.source : connectedFirstDegree.source.id;
-        const targetFirstDegreeId = typeof connectedFirstDegree.target === 'string' ? 
-          connectedFirstDegree.target : connectedFirstDegree.target.id;
-        
-        const parentNode = firstDegreeNodes.find(n => 
-          n.id === firstDegreeId || n.id === targetFirstDegreeId
-        );
-        
-        if (parentNode && parentNode.x !== undefined && parentNode.y !== undefined) {
-          // Position around the parent node in a smaller circle
-          const siblingSecondDegree = secondDegreeNodes.filter(sn => {
-            return validLinks.some(l => {
-              const sId = typeof l.source === 'string' ? l.source : l.source.id;
-              const tId = typeof l.target === 'string' ? l.target : l.target.id;
-              return (sId === sn.id && (tId === parentNode.id)) ||
-                     (tId === sn.id && (sId === parentNode.id));
-            });
-          });
-          
-          const siblingIndex = siblingSecondDegree.indexOf(node);
-          const siblingCount = siblingSecondDegree.length;
-          const secondDegreeRadius = 60;
-          const angle = (siblingIndex / Math.max(siblingCount, 1)) * 2 * Math.PI;
-          
-          node.x = parentNode.x + Math.cos(angle) * secondDegreeRadius;
-          node.y = parentNode.y + Math.sin(angle) * secondDegreeRadius;
+      component.forEach(node => {
+        if (!node.x && !node.y) {
+          // If this is the main artist node, center it in the viewport
+          if (node === mainArtistNode) {
+            node.x = width / 2;
+            node.y = height / 2;
+          } else {
+            node.x = centerX + (Math.random() - 0.5) * 100;
+            node.y = centerY + (Math.random() - 0.5) * 100;
+          }
         }
-      }
-      
-      // Fallback positioning if no connection found
-      if (!node.x || !node.y) {
-        const angle = Math.random() * 2 * Math.PI;
-        const radius = firstDegreeRadius + 80;
-        node.x = centerX + Math.cos(angle) * radius;
-        node.y = centerY + Math.sin(angle) * radius;
-      }
+      });
     });
 
     // Create boundary force to keep nodes within viewport
@@ -216,27 +164,14 @@ export default function NetworkVisualizer({
 
     simulationRef.current = simulation;
 
-    // Create links with visual distinction for second-degree connections
+    // Create links
     const linkElements = networkGroup
       .selectAll(".link")
       .data(validLinks)
       .enter()
       .append("line")
       .attr("class", "link network-link")
-      .attr("stroke-width", (d) => {
-        // Check if either source or target is a second-degree node (size < 15)
-        const sourceNode = data.nodes.find(n => n.id === (typeof d.source === 'string' ? d.source : d.source.id));
-        const targetNode = data.nodes.find(n => n.id === (typeof d.target === 'string' ? d.target : d.target.id));
-        const isSecondDegree = (sourceNode && sourceNode.size < 15) || (targetNode && targetNode.size < 15);
-        return isSecondDegree ? 1 : 2; // Thinner lines for second-degree connections
-      })
-      .attr("opacity", (d) => {
-        // Check if either source or target is a second-degree node
-        const sourceNode = data.nodes.find(n => n.id === (typeof d.source === 'string' ? d.source : d.source.id));
-        const targetNode = data.nodes.find(n => n.id === (typeof d.target === 'string' ? d.target : d.target.id));
-        const isSecondDegree = (sourceNode && sourceNode.size < 15) || (targetNode && targetNode.size < 15);
-        return isSecondDegree ? 0.5 : 0.8; // More transparent for second-degree connections
-      });
+      .attr("stroke-width", 2);
 
     // Create nodes with direct styling
     const nodeElements = networkGroup
@@ -253,8 +188,7 @@ export default function NetworkVisualizer({
         if (d.type === 'songwriter') return '#67D1F8';   // Light Blue
         return '#355367';  // Police Blue
       })
-      .attr("stroke-width", (d) => d.size >= 15 ? 4 : 2) // Thinner strokes for second-degree nodes
-      .attr("opacity", (d) => d.size >= 15 ? 1 : 0.8)    // Slightly transparent for second-degree nodes
+      .attr("stroke-width", 4)
       .style("cursor", "pointer")
       .on("mouseover", function(event, d) {
         d3.select(this).attr("stroke", "white").attr("stroke-width", 6);
@@ -269,8 +203,7 @@ export default function NetworkVisualizer({
             if (d.type === 'songwriter') return '#67D1F8';   // Light Blue
             return '#355367';  // Police Blue
           })
-          .attr("stroke-width", (d) => d.size >= 15 ? 4 : 2)
-          .attr("opacity", (d) => d.size >= 15 ? 1 : 0.8);
+          .attr("stroke-width", 4);
         hideTooltip();
       })
       .on("click", function(event, d) {
@@ -315,15 +248,8 @@ export default function NetworkVisualizer({
     function showTooltip(event: MouseEvent, d: NetworkNode) {
       let content = `<strong>${d.name}</strong><br/>Type: ${d.type}`;
 
-      // Show top collaborators for producers and songwriters
-      if ((d.type === 'producer' || d.type === 'songwriter') && d.topCollaborators && d.topCollaborators.length > 0) {
-        content += `<br/><br/><strong>Top Collaborators:</strong><br/>`;
-        content += d.topCollaborators.slice(0, 5).map(name => `• ${name}`).join("<br/>");
-      }
-
-      // Legacy collaborations field for backwards compatibility
       if (d.collaborations && d.collaborations.length > 0) {
-        content += `<br/><br/><strong>Collaborations:</strong><br/>`;
+        content += `<br/><br/><strong>Top Collaborations:</strong><br/>`;
         content += d.collaborations.slice(0, 3).join("<br/>");
       }
 
@@ -345,33 +271,32 @@ export default function NetworkVisualizer({
     }
 
     async function openMusicNerdProfile(artistName: string) {
-      try {
-        // Fetch the MusicNerd URL for this artist
-        const response = await fetch(`/api/musicnerd-url/${encodeURIComponent(artistName)}`);
-        const data = await response.json();
+      // Music Nerd appears to focus on web3/blockchain artists
+      // For mainstream artists like Taylor Swift, they may not have dedicated pages
+      
+      // Try to determine if this is a mainstream artist that likely won't be on Music Nerd
+      const mainStreamArtists = [
+        'taylor swift', 'drake', 'ariana grande', 'billie eilish', 'ed sheeran',
+        'justin bieber', 'the weeknd', 'post malone', 'olivia rodrigo', 'doja cat',
+        'harry styles', 'adele', 'beyonce', 'kanye west', 'eminem'
+      ];
+      
+      const isMainstream = mainStreamArtists.includes(artistName.toLowerCase());
+      
+      if (isMainstream) {
+        // For mainstream artists, offer better alternatives
+        const alternatives = [
+          { name: 'MusicBrainz', url: `https://musicbrainz.org/search?query=${encodeURIComponent(artistName)}&type=artist` },
+          { name: 'AllMusic', url: `https://www.allmusic.com/search/artists/${encodeURIComponent(artistName)}` },
+          { name: 'Music Nerd', url: 'https://www.musicnerd.xyz/' }
+        ];
         
-        console.log(`🎵 MusicNerd lookup for "${artistName}":`, data);
-        
-        // Open the MusicNerd profile URL
-        const newWindow = window.open(data.profileUrl, '_blank', 'noopener,noreferrer');
-        
-        // If popup blocked, provide fallback
-        if (!newWindow) {
-          if (data.found) {
-            alert(`Popup blocked! Please visit MusicNerd manually: ${data.profileUrl}`);
-          } else {
-            alert(`Popup blocked! Artist "${artistName}" not found in MusicNerd database. Please visit: https://music-nerd-git-staging-musicnerd.vercel.app/`);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching MusicNerd URL:', error);
-        // Fallback to main MusicNerd page
-        const fallbackUrl = 'https://music-nerd-git-staging-musicnerd.vercel.app/';
-        const newWindow = window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
-        
-        if (!newWindow) {
-          alert(`Popup blocked! Please visit MusicNerd manually: ${fallbackUrl}`);
-        }
+        // Open MusicBrainz as the best option for mainstream artists
+        window.open(alternatives[0].url, '_blank', 'noopener,noreferrer');
+      } else {
+        // For indie/web3 artists, try Music Nerd
+        const musicNerdUrl = `https://www.musicnerd.xyz/?search=${encodeURIComponent(artistName)}`;
+        window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
       }
     }
 
