@@ -172,6 +172,14 @@ Changelog:
 - Ensures complete data authenticity and prevents misleading artificial connections
 - Comprehensive debugging system shows exact data sources and extraction process
 
+### MusicNerd Supabase Integration (June 28, 2025)
+- Integrated Supabase database connection via CONNECTION_STRING secret
+- Added artist ID lookup for direct linking to specific MusicNerd artist pages
+- Artist nodes (pink circles) now link to `https://music-nerd-git-staging-musicnerd.vercel.app/artist/{artistId}` when ID available
+- Falls back to main MusicNerd page when no artist ID found
+- Only artist-type nodes get MusicNerd IDs - producers and songwriters remain unlinked
+- Network generation and visualization unchanged - only enhanced linking functionality
+
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals
 - Artists: Pink (#ec4899), Producers: Purple (#a855f7), Songwriters: Teal (#14b8a6)

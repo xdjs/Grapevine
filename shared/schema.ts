@@ -39,6 +39,7 @@ export const networkNodeSchema = z.object({
   collaborations: z.array(z.string()).optional(),
   imageUrl: z.string().nullable().optional(),
   spotifyId: z.string().nullable().optional(),
+  artistId: z.string().nullable().optional(), // MusicNerd artist ID for linking
 });
 
 export const networkLinkSchema = z.object({

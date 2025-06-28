@@ -4,6 +4,7 @@ import { artists, collaborations, type Artist, type InsertArtist, type Collabora
 import { spotifyService } from "./spotify";
 import { musicBrainzService } from "./musicbrainz";
 import { wikipediaService } from "./wikipedia";
+import { musicNerdService } from "./musicnerd-service";
 import { IStorage } from './storage';
 
 export class DatabaseStorage implements IStorage {
@@ -134,6 +135,14 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
+      // Get MusicNerd artist ID for main artist
+      let mainArtistMusicNerdId = null;
+      try {
+        mainArtistMusicNerdId = await musicNerdService.getArtistId(artistName);
+      } catch (error) {
+        console.log(`Could not fetch MusicNerd ID for ${artistName}`);
+      }
+
       // Create main artist node
       const mainArtistNode: NetworkNode = {
         id: artistName,
@@ -142,6 +151,7 @@ export class DatabaseStorage implements IStorage {
         size: 20,
         imageUrl: mainArtistImage,
         spotifyId: mainArtistSpotifyId,
+        artistId: mainArtistMusicNerdId,
       };
       nodes.push(mainArtistNode);
 
@@ -172,6 +182,16 @@ export class DatabaseStorage implements IStorage {
           console.log(`🔒 [DEBUG] Spotify not configured, skipping image lookup for "${collaborator.name}"`);
         }
 
+        // Get MusicNerd artist ID for collaborators who are artists
+        let collaboratorMusicNerdId = null;
+        if (collaborator.type === 'artist') {
+          try {
+            collaboratorMusicNerdId = await musicNerdService.getArtistId(collaborator.name);
+          } catch (error) {
+            console.log(`Could not fetch MusicNerd ID for ${collaborator.name}`);
+          }
+        }
+
         const collaboratorNode: NetworkNode = {
           id: collaborator.name,
           name: collaborator.name,
@@ -179,6 +199,7 @@ export class DatabaseStorage implements IStorage {
           size: 15,
           imageUrl: collaboratorImage,
           spotifyId: collaboratorSpotifyId,
+          artistId: collaboratorMusicNerdId,
         };
         nodes.push(collaboratorNode);
         console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from MusicBrainz relation "${collaborator.relation}"`);
@@ -228,6 +249,16 @@ export class DatabaseStorage implements IStorage {
                 }
               }
 
+              // Get MusicNerd artist ID for Wikipedia collaborators who are artists
+              let collaboratorMusicNerdId = null;
+              if (collaborator.type === 'artist') {
+                try {
+                  collaboratorMusicNerdId = await musicNerdService.getArtistId(collaborator.name);
+                } catch (error) {
+                  console.log(`Could not fetch MusicNerd ID for ${collaborator.name}`);
+                }
+              }
+
               const collaboratorNode: NetworkNode = {
                 id: collaborator.name,
                 name: collaborator.name,
@@ -235,6 +266,7 @@ export class DatabaseStorage implements IStorage {
                 size: 15,
                 imageUrl: collaboratorImage,
                 spotifyId: collaboratorSpotifyId,
+                artistId: collaboratorMusicNerdId,
               };
               nodes.push(collaboratorNode);
               console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from Wikipedia context`);

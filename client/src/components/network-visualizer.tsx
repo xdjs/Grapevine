@@ -210,7 +210,7 @@ export default function NetworkVisualizer({
         event.stopPropagation();
         // Only open Music Nerd for artists, not producers or songwriters
         if (d.type === 'artist') {
-          openMusicNerdProfile(d.name);
+          openMusicNerdProfile(d.name, d.artistId);
         }
       })
       .call(
@@ -270,9 +270,16 @@ export default function NetworkVisualizer({
       tooltip.style("opacity", 0);
     }
 
-    async function openMusicNerdProfile(artistName: string) {
-      // Link all artists to Music Nerd staging environment
-      const musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/`;
+    async function openMusicNerdProfile(artistName: string, artistId?: string | null) {
+      // Use artist ID if available, otherwise go to main page
+      let musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/`;
+      
+      if (artistId) {
+        musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${artistId}`;
+        console.log(`🎵 Opening MusicNerd artist page for "${artistName}": ${musicNerdUrl}`);
+      } else {
+        console.log(`🎵 No artist ID found for "${artistName}", opening main MusicNerd page`);
+      }
       
       // Open Music Nerd in a new tab
       const newWindow = window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
