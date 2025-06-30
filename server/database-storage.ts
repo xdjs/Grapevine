@@ -111,7 +111,9 @@ export class DatabaseStorage implements IStorage {
     try {
       // Get real collaboration data from MusicBrainz
       console.log(`🎵 [DEBUG] Querying MusicBrainz API for "${artistName}"...`);
+      console.log(`🔍 [DEBUG] About to call musicBrainzService.getArtistCollaborations for main artist: ${artistName}`);
       const collaborationData = await musicBrainzService.getArtistCollaborations(artistName);
+      console.log(`🔍 [DEBUG] Completed musicBrainzService.getArtistCollaborations for main artist: ${artistName}`);
       console.log(`✅ [DEBUG] MusicBrainz response:`, {
         artists: collaborationData.artists.length,
         works: collaborationData.works.length,

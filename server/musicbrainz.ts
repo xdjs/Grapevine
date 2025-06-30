@@ -131,7 +131,7 @@ class MusicBrainzService {
 
   async getArtistRecordings(artistId: string): Promise<any[]> {
     try {
-      const endpoint = `/recording?artist=${artistId}&inc=artist-credits+work-rels&fmt=json&limit=50`;
+      const endpoint = `/recording?artist=${artistId}&inc=artist-credits+artist-rels+work-rels&fmt=json&limit=50`;
       const result = await this.makeRequest(endpoint);
       return result.recordings || [];
     } catch (error) {
@@ -176,13 +176,18 @@ class MusicBrainzService {
 
       console.log(`🔍 [DEBUG] Found ${detailedArtist.relations.length} relations for ${artistName}`);
 
-      // Process artist relations
-      for (const relation of detailedArtist.relations) {
-        console.log(`🔍 [DEBUG] Relation type: ${relation.type}, target: ${relation["target-type"]}`);
+      // Process artist relations (limit to prevent infinite loops)
+      const maxRelationsToProcess = 100; // Limit relations processing to prevent timeout
+      const relationsToProcess = detailedArtist.relations.slice(0, maxRelationsToProcess);
+      
+      for (const relation of relationsToProcess) {
+        // Only log first 10 relations to avoid log spam
+        if (relationsToProcess.indexOf(relation) < 10) {
+          console.log(`🔍 [DEBUG] Relation type: ${relation.type}, target: ${relation["target-type"]}`);
+        }
         
         if (relation["target-type"] === "artist" && relation.artist) {
           const relationType = this.mapRelationType(relation.type);
-          console.log(`🔍 [DEBUG] Mapping "${relation.type}" to "${relationType}"`);
           
           if (relationType && !processedArtists.has(relation.artist.name)) {
             collaboratingArtists.push({
@@ -192,8 +197,6 @@ class MusicBrainzService {
             });
             processedArtists.add(relation.artist.name);
             console.log(`🤝 [DEBUG] Found ${relationType}: ${relation.artist.name} (${relation.type})`);
-          } else if (!relationType) {
-            console.log(`❌ [DEBUG] Unmapped relation type: ${relation.type}`);
           }
         }
 
@@ -204,15 +207,48 @@ class MusicBrainzService {
           });
         }
       }
+      
+      if (detailedArtist.relations.length > maxRelationsToProcess) {
+        console.log(`⚠️ [DEBUG] Limited relation processing to ${maxRelationsToProcess} out of ${detailedArtist.relations.length} total relations`);
+      }
+
+      console.log(`🔄 [DEBUG] Finished processing ${detailedArtist.relations.length} relations, found ${collaboratingArtists.length} collaborators`);
+      console.log(`🔄 [DEBUG] About to start recordings analysis for ${artistName}...`);
 
       // Get recordings to find producers and songwriters
       console.log(`🎵 [DEBUG] Fetching recordings for ${artistName} to find producers/songwriters`);
-      await this.rateLimitDelay();
-      const recordings = await this.getArtistRecordings(artist.id);
-      console.log(`🎵 [DEBUG] Found ${recordings.length} recordings for ${artistName}`);
+      try {
+        await this.rateLimitDelay();
+        const recordings = await this.getArtistRecordings(artist.id);
+        console.log(`🎵 [DEBUG] Found ${recordings.length} recordings for ${artistName}`);
 
       // Process recordings to extract production credits
       for (const recording of recordings.slice(0, 10)) { // Limit to first 10 recordings to avoid rate limits
+        console.log(`🎵 [DEBUG] Processing recording: "${recording.title}" for ${artistName}`);
+        
+        // Check recording relations for producers/engineers
+        if (recording.relations && recording.relations.length > 0) {
+          console.log(`🔍 [DEBUG] Found ${recording.relations.length} relations in recording "${recording.title}"`);
+          for (const relation of recording.relations) {
+            if (relation.artist && relation.artist.name !== artistName) {
+              const collaboratorName = relation.artist.name;
+              if (!processedArtists.has(collaboratorName)) {
+                const relationType = this.mapRelationType(relation.type);
+                if (relationType) {
+                  collaboratingArtists.push({
+                    name: collaboratorName,
+                    type: relationType,
+                    relation: `recording ${relation.type}`
+                  });
+                  processedArtists.add(collaboratorName);
+                  console.log(`🎵 [DEBUG] Found recording relation: ${collaboratorName} (${relationType}) - ${relation.type}`);
+                }
+              }
+            }
+          }
+        }
+        
+        // Check artist credits (existing logic)
         if (recording['artist-credit'] && recording['artist-credit'].length > 0) {
           for (const credit of recording['artist-credit']) {
             if (credit.artist && credit.artist.name !== artistName) {
@@ -245,7 +281,16 @@ class MusicBrainzService {
                     'mike will made-it', 'j. cole', 'tay keith', 'cubeatz', 'illangelo',
                     'ronny j', 'cardo', 'pvlace', 'da internz', 'ovy on the drums',
                     'david guetta', 'will.i.am', 'afrojack', 'steve aoki', 'deadmau5',
-                    'aviici', 'martin garrix', 'the chainsmokers', 'marshmello', 'tiësto'
+                    'avicii', 'martin garrix', 'the chainsmokers', 'marshmello', 'tiësto',
+                    // Post Malone collaborators specifically
+                    'louis bell', 'tank god', 'frank dukes', 'brian lee', 'adam feeney',
+                    'matt dragstrem', 'billy walsh', 'kaan gunesberk', 'carter lang',
+                    'cashmere cat', 'dre moon', 'charlie handsome', 'joe london',
+                    'swae lee', 'ty dolla sign', 'quavo', '21 savage', 'dj mustard',
+                    // Additional common producers
+                    'hit-boy', 'lex luger', 'southside', 'tm88', 'metro thuggin',
+                    'wheezy', 'cubeatz', 'tay keith', 'ronny j', 'pierre bourne',
+                    'london on da track', 'mike will made-it', 'zaytoven', 'young thug'
                   ];
                   
                   const knownSongwriters = [
@@ -301,10 +346,15 @@ class MusicBrainzService {
         }
       }
 
-      // Process work relations for detailed songwriter/producer credits
-      for (const work of collaborativeWorks.slice(0, 5)) { // Limit to avoid rate limits
-        // This would require additional API calls to get work details
-        // For now, we'll rely on the artist relations and recording credits
+        // Process work relations for detailed songwriter/producer credits
+        for (const work of collaborativeWorks.slice(0, 5)) { // Limit to avoid rate limits
+          // This would require additional API calls to get work details
+          // For now, we'll rely on the artist relations and recording credits
+        }
+
+        console.log(`✅ [DEBUG] Recordings analysis completed for ${artistName}`);
+      } catch (recordingsError) {
+        console.error(`❌ [DEBUG] Error in recordings analysis for ${artistName}:`, recordingsError);
       }
 
       console.log(`✅ [DEBUG] Total collaborators found for ${artistName}: ${collaboratingArtists.length}`);
