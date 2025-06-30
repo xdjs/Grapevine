@@ -6,6 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 import { fetchNetworkData } from "@/lib/network-data";
 import { NetworkData } from "@/types/network";
 import { Search } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface SearchInterfaceProps {
   onNetworkData: (data: NetworkData) => void;
@@ -13,9 +15,17 @@ interface SearchInterfaceProps {
   clearSearch?: boolean;
 }
 
+interface ArtistOption {
+  id: string;
+  name: string;
+  bio?: string;
+}
+
 export default function SearchInterface({ onNetworkData, showNetworkView, clearSearch }: SearchInterfaceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentSearch, setCurrentSearch] = useState("");
+  const [artistOptions, setArtistOptions] = useState<ArtistOption[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
   const { toast } = useToast();
 
   // Clear search field when clearSearch prop changes to true
@@ -23,8 +33,34 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
     if (clearSearch) {
       setSearchQuery("");
       setCurrentSearch("");
+      setArtistOptions([]);
+      setShowDropdown(false);
     }
   }, [clearSearch]);
+
+  // Fetch artist options when user types
+  useEffect(() => {
+    const fetchArtistOptions = async () => {
+      if (searchQuery.trim().length > 2) {
+        try {
+          const response = await fetch(`/api/artist-options/${encodeURIComponent(searchQuery.trim())}`);
+          const data = await response.json();
+          setArtistOptions(data.options || []);
+          setShowDropdown((data.options || []).length > 0);
+        } catch (error) {
+          console.error('Error fetching artist options:', error);
+          setArtistOptions([]);
+          setShowDropdown(false);
+        }
+      } else {
+        setArtistOptions([]);
+        setShowDropdown(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchArtistOptions, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["/api/network", currentSearch],
@@ -50,8 +86,8 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
     }
   }, [error, toast]);
 
-  const handleSearch = () => {
-    const query = searchQuery.trim();
+  const handleSearch = (artistName?: string) => {
+    const query = artistName || searchQuery.trim();
     if (!query) {
       toast({
         title: "Please enter an artist name",
@@ -60,7 +96,14 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
       return;
     }
     setCurrentSearch(query);
+    setShowDropdown(false);
+    setArtistOptions([]);
   };
+
+  const handleArtistSelect = (artist: ArtistOption) => {
+    setSearchQuery(artist.name);
+    handleSearch(artist.name);
+  };;
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
@@ -97,7 +140,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               disabled={isLoading}
             />
             <Button
-              onClick={handleSearch}
+              onClick={() => handleSearch()}
               className="absolute right-2 top-2 bottom-2 px-4 bg-blue-600 hover:bg-blue-700"
               disabled={isLoading}
             >
@@ -107,6 +150,32 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                 <Search className="w-4 h-4" />
               )}
             </Button>
+            
+            {/* Artist Options Dropdown */}
+            {showDropdown && artistOptions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-80 overflow-hidden">
+                <ScrollArea className="max-h-80">
+                  <div className="p-2">
+                    {artistOptions.map((artist) => (
+                      <Card
+                        key={artist.id}
+                        className="mb-2 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-gray-600"
+                        onClick={() => handleArtistSelect(artist)}
+                      >
+                        <CardHeader className="pb-2 pt-3 px-4">
+                          <CardTitle className="text-sm text-white">{artist.name}</CardTitle>
+                          {artist.bio && (
+                            <CardDescription className="text-xs text-gray-400 line-clamp-2">
+                              {artist.bio}
+                            </CardDescription>
+                          )}
+                        </CardHeader>
+                      </Card>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -128,7 +197,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
             disabled={isLoading}
           />
           <Button
-            onClick={handleSearch}
+            onClick={() => handleSearch()}
             className="absolute right-1 top-1/2 transform -translate-y-1/2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-sm"
             disabled={isLoading}
             size="sm"
@@ -139,6 +208,32 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               <Search className="w-4 h-4" />
             )}
           </Button>
+          
+          {/* Artist Options Dropdown for Top Search */}
+          {showDropdown && artistOptions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-80 overflow-hidden">
+              <ScrollArea className="max-h-80">
+                <div className="p-2">
+                  {artistOptions.map((artist) => (
+                    <Card
+                      key={artist.id}
+                      className="mb-2 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-gray-600"
+                      onClick={() => handleArtistSelect(artist)}
+                    >
+                      <CardHeader className="pb-2 pt-3 px-4">
+                        <CardTitle className="text-sm text-white">{artist.name}</CardTitle>
+                        {artist.bio && (
+                          <CardDescription className="text-xs text-gray-400 line-clamp-2">
+                            {artist.bio}
+                          </CardDescription>
+                        )}
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
         </div>
       </div>
     </>
