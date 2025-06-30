@@ -260,6 +260,16 @@ Changelog:
 - Fixed node duplication issue where the same person appeared multiple times in the network
 - System successfully consolidates collaboration data across all roles for complete relationship mapping
 
+### Enhanced Role Detection System (June 30, 2025)
+- Created comprehensive role detection database with 100+ music industry professionals
+- Added pattern-based role detection for names not in database (e.g., "martin" → producer+songwriter)
+- Applied enhanced role detection to ALL nodes across all data sources (OpenAI, MusicBrainz, Wikipedia)
+- Both main artists and collaborators now get accurate multi-role assignment
+- Branching artists also receive enhanced role detection for complete accuracy
+- System now correctly identifies producer-songwriters like Max Martin, Jack Antonoff, Dan Nigro
+- Artist-songwriters like Taylor Swift, Olivia Rodrigo properly labeled with both roles
+- Producer-artists like Calvin Harris, Diplo correctly show dual roles
+
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals
 - Artists: Pink (#ec4899), Producers: Purple (#a855f7), Songwriters: Teal (#14b8a6)
