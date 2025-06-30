@@ -157,9 +157,18 @@ export class DatabaseStorage implements IStorage {
       };
       nodes.push(mainArtistNode);
 
-      // Add collaborating artists from MusicBrainz
+      // Add collaborating artists from MusicBrainz - limit to top 5 producers and songwriters for performance
       console.log(`🎨 [DEBUG] Processing ${collaborationData.artists.length} MusicBrainz collaborators...`);
-      for (const collaborator of collaborationData.artists) {
+      
+      // Separate collaborators by type and limit producers/songwriters to top 5 each
+      const artists = collaborationData.artists.filter(c => c.type === 'artist');
+      const producers = collaborationData.artists.filter(c => c.type === 'producer').slice(0, 5);
+      const songwriters = collaborationData.artists.filter(c => c.type === 'songwriter').slice(0, 5);
+      
+      const limitedCollaborators = [...artists, ...producers, ...songwriters];
+      console.log(`⚡ [DEBUG] Limited to ${limitedCollaborators.length} collaborators (${producers.length} producers, ${songwriters.length} songwriters, ${artists.length} artists)`);
+      
+      for (const collaborator of limitedCollaborators) {
         console.log(`👤 [DEBUG] Processing collaborator: "${collaborator.name}" (type: ${collaborator.type}, relation: ${collaborator.relation})`);
         
         // Get Spotify image for collaborator
