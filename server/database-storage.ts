@@ -9,9 +9,22 @@ import { musicNerdService } from "./musicnerd-service";
 import { IStorage } from './storage';
 
 export class DatabaseStorage implements IStorage {
+  private db = db!;
+
   constructor() {
     if (!isDatabaseAvailable()) {
       throw new Error('Database connection not available');
+    }
+    this.ensureWebMapDataColumn();
+  }
+
+  private async ensureWebMapDataColumn(): Promise<void> {
+    try {
+      // Add webMapData column if it doesn't exist
+      await this.db.execute(sql`ALTER TABLE artists ADD COLUMN IF NOT EXISTS web_map_data JSONB`);
+      console.log('✅ [DEBUG] Ensured web_map_data column exists in artists table');
+    } catch (error) {
+      console.log('⚠️ [DEBUG] Column may already exist or error occurred:', error);
     }
   }
 
