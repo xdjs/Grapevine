@@ -63,10 +63,12 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
     return () => clearTimeout(debounceTimer);
   }, [searchQuery]);
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, isFetching } = useQuery({
     queryKey: ["/api/network", currentSearch],
     queryFn: () => fetchNetworkData(currentSearch),
     enabled: !!currentSearch,
+    staleTime: 5 * 60 * 1000, // 5 minutes - cached data is fresh for 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes
   });
 
   // Update network data when query succeeds
@@ -76,12 +78,14 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
     }
   }, [data, onNetworkData]);
 
-  // Handle loading state changes
+  // Handle loading state changes - only show loading for actual network requests, not cached data
   useEffect(() => {
     if (onLoadingChange) {
-      onLoadingChange(isLoading);
+      // Show loading only when fetching and we don't have existing data for this search
+      const shouldShowLoading = isFetching && !data?.cached;
+      onLoadingChange(shouldShowLoading);
     }
-  }, [isLoading, onLoadingChange]);
+  }, [isFetching, data?.cached, onLoadingChange]);
 
   // Show error toast when query fails
   useEffect(() => {

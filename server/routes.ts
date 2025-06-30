@@ -8,10 +8,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/network/:artistName", async (req, res) => {
     try {
       const artistName = req.params.artistName;
+      
+      // Check if data is cached first
+      let isCached = false;
+      if ('getArtistByName' in storage) {
+        const cachedArtist = await storage.getArtistByName(artistName);
+        if (cachedArtist && 'webMapData' in cachedArtist && cachedArtist.webMapData) {
+          isCached = true;
+        }
+      }
+      
       const networkData = await storage.getNetworkData(artistName);
       
-      // Since we generate dynamic networks for unknown artists, this should never be null
-      res.json(networkData);
+      // Include cache status in response
+      res.json({
+        ...networkData,
+        cached: isCached
+      });
     } catch (error) {
       console.error("Error fetching network data:", error);
       res.status(500).json({ message: "Internal server error" });

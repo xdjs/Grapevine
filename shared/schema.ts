@@ -52,6 +52,7 @@ export const networkLinkSchema = z.object({
 export const networkDataSchema = z.object({
   nodes: z.array(networkNodeSchema),
   links: z.array(networkLinkSchema),
+  cached: z.boolean().optional(),
 });
 
 export type NetworkNode = z.infer<typeof networkNodeSchema>;
