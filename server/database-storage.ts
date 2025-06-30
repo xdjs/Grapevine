@@ -40,9 +40,7 @@ export class DatabaseStorage implements IStorage {
         .select({
           id: artists.id,
           name: artists.name,
-          webMapData: artists.webMapData,
-          imageUrl: artists.imageUrl,
-          spotifyId: artists.spotifyId
+          webMapData: sql`webmapdata`
         })
         .from(artists)
         .where(eq(artists.name, name))
@@ -668,15 +666,17 @@ export class DatabaseStorage implements IStorage {
       
       if (existingArtist) {
         // Update existing artist with webMapData
-        await db
-          .update(artists)
-          .set({ webMapData: networkData })
-          .where(eq(artists.name, artistName));
+        // Update existing artist with webmapdata using raw SQL since schema doesn't match MusicNerd DB
+        await db.execute(sql`
+          UPDATE artists 
+          SET webmapdata = ${JSON.stringify(networkData)}::jsonb 
+          WHERE name = ${artistName}
+        `);
         console.log(`✅ [DEBUG] Updated webMapData cache for existing artist "${artistName}"`);
       } else {
-        // Create new artist entry with webMapData using raw SQL since schema doesn't match MusicNerd DB
+        // Create new artist entry with webmapdata using raw SQL since schema doesn't match MusicNerd DB
         await db.execute(sql`
-          INSERT INTO artists (name, "webMapData") 
+          INSERT INTO artists (name, webmapdata) 
           VALUES (${artistName}, ${JSON.stringify(networkData)}::jsonb)
         `);
         console.log(`✅ [DEBUG] Created new artist "${artistName}" with webMapData cache`);
