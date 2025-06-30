@@ -465,22 +465,33 @@ export class MemStorage implements IStorage {
   }
 
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
-    // Always use real collaboration data from MusicBrainz instead of mock data
+    // For demo artists with rich mock data, use mock network to show comprehensive producer/songwriter examples
+    const demoArtists = ['Taylor Swift', 'Drake', 'Billie Eilish', 'Ed Sheeran'];
+    
+    if (demoArtists.includes(artistName)) {
+      console.log(`🎵 [DEBUG] Using enhanced demo data for "${artistName}" to showcase producer/songwriter networks`);
+      const mainArtist = await this.getArtistByName(artistName);
+      if (mainArtist) {
+        return this.generateEnhancedDemoNetwork(mainArtist);
+      }
+    }
+    
+    // For all other artists, use real collaboration data from MusicBrainz
     console.log(`🎵 [DEBUG] Using real collaboration data path for "${artistName}"`);
     return this.generateRealCollaborationNetwork(artistName);
+  }
 
+  private async generateEnhancedDemoNetwork(mainArtist: Artist): Promise<NetworkData> {
     const nodes: NetworkNode[] = [];
     const links: NetworkLink[] = [];
     const nodeMap = new Map<string, NetworkNode>();
 
-    // Get MusicNerd artist ID for main artist (mock data path)
-    console.log(`🔍 [DEBUG] Looking up MusicNerd artist ID for main artist (mock path): "${mainArtist.name}"`);
+    // Get MusicNerd artist ID for main artist 
     let mainArtistMusicNerdId = null;
     try {
       mainArtistMusicNerdId = await musicNerdService.getArtistId(mainArtist.name);
-      console.log(`✅ [DEBUG] MusicNerd artist ID for "${mainArtist.name}" (mock path): ${mainArtistMusicNerdId}`);
     } catch (error) {
-      console.log(`❌ [DEBUG] Could not fetch MusicNerd ID for ${mainArtist.name} (mock path):`, error);
+      console.log(`Could not fetch MusicNerd ID for ${mainArtist.name}`);
     }
 
     // Add main artist node
@@ -494,27 +505,19 @@ export class MemStorage implements IStorage {
     nodes.push(mainArtistNode);
     nodeMap.set(mainArtist.name, mainArtistNode);
 
-    // Get collaborations for the main artist
+    // Get collaborations for the main artist from mock data
     const collaborations = await this.getCollaborationsByArtist(mainArtist.id);
     
     for (const collaboration of collaborations) {
-      const collaboratorId = collaboration.fromArtistId === mainArtist.id 
-        ? collaboration.toArtistId 
-        : collaboration.fromArtistId;
-      
-      const collaborator = await this.getArtist(collaboratorId);
-      if (!collaborator) continue;
-
-      // Add collaborator node
-      if (!nodeMap.has(collaborator.name)) {
-        // Get MusicNerd artist ID for collaborators who are artists (mock data path)
+      const collaborator = await this.getArtist(collaboration.toArtistId);
+      if (collaborator && !nodeMap.has(collaborator.name)) {
+        // Get MusicNerd artist ID for collaborators who are artists
         let collaboratorMusicNerdId = null;
         if (collaborator.type === 'artist') {
           try {
             collaboratorMusicNerdId = await musicNerdService.getArtistId(collaborator.name);
-            console.log(`✅ [DEBUG] MusicNerd artist ID for collaborator "${collaborator.name}" (mock path): ${collaboratorMusicNerdId}`);
           } catch (error) {
-            console.log(`❌ [DEBUG] Could not fetch MusicNerd ID for collaborator ${collaborator.name} (mock path):`, error);
+            console.log(`Could not fetch MusicNerd ID for ${collaborator.name}`);
           }
         }
 
@@ -522,39 +525,48 @@ export class MemStorage implements IStorage {
           id: collaborator.name,
           name: collaborator.name,
           type: collaborator.type as 'artist' | 'producer' | 'songwriter',
-          size: collaborator.type === 'artist' ? 12 : 15,
+          size: 15,
           artistId: collaboratorMusicNerdId,
         };
         nodes.push(collaboratorNode);
         nodeMap.set(collaborator.name, collaboratorNode);
+
+        links.push({
+          source: mainArtist.name,
+          target: collaborator.name,
+        });
       }
+    }
 
-      // Add link between main artist and collaborator
-      links.push({
-        source: mainArtist.name,
-        target: collaborator.name,
-      });
-
-      // Get collaborator's other collaborations to show their top 3
-      const collaboratorCollaborations = await this.getCollaborationsByArtist(collaborator.id);
-      const topCollaborations: string[] = [];
-      
-      for (const collab of collaboratorCollaborations.slice(0, 3)) {
-        const otherId = collab.fromArtistId === collaborator.id ? collab.toArtistId : collab.fromArtistId;
-        const other = await this.getArtist(otherId);
-        if (other && other.name !== mainArtist.name) {
-          topCollaborations.push(other.name);
-          
-          // Add other artist as node if not already added
-          if (!nodeMap.has(other.name)) {
-            // Get MusicNerd artist ID for other artists (mock data path)
-            let otherArtistMusicNerdId = null;
+    // Add secondary connections (collaborator-to-collaborator relationships)
+    for (const collaboration of collaborations) {
+      const collaborator = await this.getArtist(collaboration.toArtistId);
+      if (collaborator) {
+        const secondaryCollaborations = await this.getCollaborationsByArtist(collaborator.id);
+        
+        for (const secondaryCollab of secondaryCollaborations) {
+          const other = await this.getArtist(secondaryCollab.toArtistId);
+          if (other && other.name !== mainArtist.name && nodeMap.has(other.name)) {
+            // Add link between collaborators if both are in the network
+            const existingLink = links.find(link => 
+              (link.source === collaborator.name && link.target === other.name) ||
+              (link.source === other.name && link.target === collaborator.name)
+            );
+            
+            if (!existingLink) {
+              links.push({
+                source: collaborator.name,
+                target: other.name,
+              });
+            }
+          } else if (other && other.name !== mainArtist.name && !nodeMap.has(other.name)) {
+            // Add new collaborator node if not already in network
+            let otherMusicNerdId = null;
             if (other.type === 'artist') {
               try {
-                otherArtistMusicNerdId = await musicNerdService.getArtistId(other.name);
-                console.log(`✅ [DEBUG] MusicNerd artist ID for other artist "${other.name}" (mock path): ${otherArtistMusicNerdId}`);
+                otherMusicNerdId = await musicNerdService.getArtistId(other.name);
               } catch (error) {
-                console.log(`❌ [DEBUG] Could not fetch MusicNerd ID for other artist ${other.name} (mock path):`, error);
+                console.log(`Could not fetch MusicNerd ID for ${other.name}`);
               }
             }
 
@@ -563,27 +575,28 @@ export class MemStorage implements IStorage {
               name: other.name,
               type: other.type as 'artist' | 'producer' | 'songwriter',
               size: 10,
-              artistId: otherArtistMusicNerdId,
+              artistId: otherMusicNerdId,
             };
             nodes.push(otherNode);
             nodeMap.set(other.name, otherNode);
+
+            links.push({
+              source: collaborator.name,
+              target: other.name,
+            });
           }
-
-          // Add link between collaborator and other artist
-          links.push({
-            source: collaborator.name,
-            target: other.name,
-          });
         }
-      }
-
-      // Add collaborations list to the collaborator node
-      const collaboratorNode = nodeMap.get(collaborator.name);
-      if (collaboratorNode) {
-        collaboratorNode.collaborations = [mainArtist.name, ...topCollaborations].slice(0, 3);
       }
     }
 
+    return { nodes, links };
+  }
+
+  private getOldPath(): NetworkData {
+    const nodes: NetworkNode[] = [];
+    const links: NetworkLink[] = [];
+    
+    // Simple fallback network for compatibility
     return { nodes, links };
   }
 }

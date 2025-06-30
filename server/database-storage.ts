@@ -304,6 +304,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
+    // For demo artists with rich mock data, use real MusicBrainz to showcase enhanced producer/songwriter extraction
+    const enhancedMusicBrainzArtists = ['Post Malone', 'The Weeknd', 'Ariana Grande', 'Billie Eilish', 'Taylor Swift', 'Drake'];
+    
+    if (enhancedMusicBrainzArtists.includes(artistName)) {
+      console.log(`🎵 [DEBUG] Using enhanced MusicBrainz data for "${artistName}" to showcase deep producer/songwriter networks`);
+      return this.generateRealCollaborationNetwork(artistName);
+    }
+    
     const mainArtist = await this.getArtistByName(artistName);
     if (!mainArtist) {
       // Try to get real collaboration data from external APIs
