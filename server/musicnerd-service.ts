@@ -20,69 +20,17 @@ class MusicNerdService {
         return;
       }
 
-      console.log(`🔧 [DEBUG] Raw CONNECTION_STRING format detected: ${connectionString.substring(0, 20)}...`);
+      console.log(`🔧 [DEBUG] CONNECTION_STRING provided - using direct PostgreSQL connection`);
 
-      // Parse the connection string to extract URL and key
-      let supabaseUrl: string;
-      let supabaseKey: string;
-
-      // Check if it's a direct Supabase URL format
-      if (connectionString.includes('supabase.co') && connectionString.startsWith('http')) {
-        // Direct Supabase URL format: https://project.supabase.co
-        const url = new URL(connectionString);
-        supabaseUrl = `${url.protocol}//${url.hostname}`;
-        
-        // Try to get API key from query params, or use a default anon key pattern
-        supabaseKey = url.searchParams.get('apikey') || 
-                     url.searchParams.get('key') || 
-                     url.password || 
-                     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'; // Common anon key prefix
-      } else if (connectionString.includes('postgresql://') || connectionString.includes('postgres://')) {
-        // PostgreSQL connection string - extract host for Supabase URL
-        const match = connectionString.match(/postgres(?:ql)?:\/\/[^@]+@([^:\/]+)/);
-        if (match && match[1].includes('supabase')) {
-          const host = match[1].split('.')[0]; // Extract project ID
-          supabaseUrl = `https://${host}.supabase.co`;
-          
-          // Try to extract API key from query parameters in the connection string
-          const apiKeyMatch = connectionString.match(/[?&]apikey=([^&]+)/);
-          if (apiKeyMatch) {
-            supabaseKey = apiKeyMatch[1];
-            console.log(`🔧 [DEBUG] Extracted API key from PostgreSQL connection string`);
-          } else {
-            // Use a common pattern for anon key if not provided
-            console.log('📝 [DEBUG] No API key found in connection string, trying to proceed with host-based connection...');
-            console.log(`🔧 [DEBUG] Extracted project URL: ${supabaseUrl}`);
-            
-            // Try with common Supabase anon key pattern for the extracted project
-            const projectId = host.split('-')[2]; // Extract from aws-0-us-west-1
-            
-            // We'll try to connect using a REST API approach instead
-            console.log(`🔧 [DEBUG] Attempting to use REST API approach for project: ${projectId}`);
-            
-            // Instead of using Supabase client, we'll use direct REST API calls
-            this.supabaseUrl = supabaseUrl;
-            this.useRestApi = true;
-            this.isAvailable = true;
-            console.log('🎵 MusicNerd service initialized with REST API fallback');
-            return;
-          }
-        } else {
-          console.log('CONNECTION_STRING appears to be PostgreSQL but not Supabase. Expected Supabase connection string.');
-          return;
-        }
+      // For any PostgreSQL connection string, we'll use direct pg connection
+      if (connectionString.includes('postgresql://') || connectionString.includes('postgres://')) {
+        this.isAvailable = true;
+        console.log('🎵 MusicNerd service initialized with direct PostgreSQL connection');
+        return;
       } else {
-        console.log('Could not parse CONNECTION_STRING. Expected Supabase URL format: https://project.supabase.co or https://project.supabase.co?apikey=key');
+        console.log('CONNECTION_STRING format not recognized. Expected PostgreSQL connection string.');
         return;
       }
-
-      console.log(`🔧 [DEBUG] Initializing Supabase connection:`);
-      console.log(`🔧 [DEBUG] - URL: ${supabaseUrl}`);
-      console.log(`🔧 [DEBUG] - Key length: ${supabaseKey.length} characters`);
-      
-      this.supabase = createClient(supabaseUrl, supabaseKey);
-      this.isAvailable = true;
-      console.log('🎵 MusicNerd service initialized successfully');
     } catch (error) {
       console.error('Error initializing MusicNerd service:', error);
     }
@@ -184,32 +132,41 @@ class MusicNerdService {
           const schemaResult = await client.query(schemaQuery);
           console.log(`🔍 [DEBUG] Artists table columns:`, schemaResult.rows.map(r => r.column_name));
           
-          // Query the artists table directly - try exact match first, then fuzzy match
-          let query = 'SELECT * FROM artists WHERE LOWER(name) = LOWER($1) LIMIT 1';
+          // First get all potential matches case-insensitively to see what's available
+          let query = 'SELECT * FROM artists WHERE LOWER(name) = LOWER($1)';
+          console.log(`🔍 [DEBUG] Executing search query: ${query} with parameter: "${artistName}"`);
           let result = await client.query(query, [artistName]);
+          console.log(`🔍 [DEBUG] Found ${result.rows.length} potential matches for "${artistName}"`);
           
-          // If no exact match, try fuzzy match but prioritize names starting with the search term
-          if (result.rows.length === 0) {
-            query = 'SELECT * FROM artists WHERE LOWER(name) LIKE LOWER($1) ORDER BY CASE WHEN LOWER(name) LIKE LOWER($2) THEN 1 ELSE 2 END LIMIT 1';
-            result = await client.query(query, [`%${artistName}%`, `${artistName}%`]);
+          if (result.rows.length > 0) {
+            // Log all matches to see what we have
+            console.log(`🔍 [DEBUG] All matches:`, result.rows.map(r => `"${r.name}" (${r.id})`));
+            
+            // Look for exact case match first
+            const exactMatch = result.rows.find(row => row.name === artistName);
+            if (exactMatch) {
+              console.log(`✅ [DEBUG] Found exact case match: "${exactMatch.name}" (${exactMatch.id})`);
+              // Use only the exact match
+              result = { ...result, rows: [exactMatch] };
+            } else {
+              console.log(`🔍 [DEBUG] No exact case match found among ${result.rows.length} case-insensitive matches`);
+              // Keep the first case-insensitive match for further processing
+              result = { ...result, rows: [result.rows[0]] };
+            }
           }
           
           await client.end();
           
           if (result.rows.length > 0) {
             const artist = result.rows[0];
-            console.log(`🔍 [DEBUG] Database search for "${artistName}" matched artist: "${artist.name}" (ID: ${artist.id})`);
+            console.log(`🔍 [DEBUG] Selected artist: "${artist.name}" (ID: ${artist.id})`);
             
-            // Check if this is a good match - if the names are very different, skip it
-            const searchLower = artistName.toLowerCase();
-            const foundLower = artist.name.toLowerCase();
-            
-            // Only use the match if it's a reasonable similarity
-            if (foundLower.includes(searchLower) || searchLower.includes(foundLower) || foundLower === searchLower) {
-              console.log(`✅ [DEBUG] Found real MusicNerd artist ID for "${artistName}": ${artist.id}`);
+            // Check if this is an exact match
+            if (artist.name === artistName) {
+              console.log(`✅ [DEBUG] Found exact case match for "${artistName}": ${artist.id}`);
               return artist.id;
             } else {
-              console.log(`❌ [DEBUG] Artist name mismatch: searched "${artistName}" but found "${artist.name}" - skipping`);
+              console.log(`⚠️ [DEBUG] Case differs: searched "${artistName}" but found "${artist.name}" - rejecting to avoid confusion`);
               return null;
             }
           } else {
