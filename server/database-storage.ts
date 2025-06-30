@@ -240,8 +240,22 @@ export class DatabaseStorage implements IStorage {
                   const branchingArtist = collaboratorNode.collaborations![i];
                   
                   // Check if this branching artist is already in our main node map
-                  if (!nodeMap.has(branchingArtist)) {
-                    const branchingNode: NetworkNode = {
+                  let branchingNode = nodeMap.get(branchingArtist);
+                  
+                  if (branchingNode) {
+                    // Person already exists - add artist role if not already present
+                    if (!branchingNode.types) {
+                      branchingNode.types = [branchingNode.type];
+                    }
+                    if (!branchingNode.types.includes('artist')) {
+                      branchingNode.types.push('artist');
+                      console.log(`🎭 [DEBUG] Added artist role to existing branching node ${branchingArtist} (now has ${branchingNode.types.length} roles)`);
+                    }
+                    // Ensure primary type remains as first one for compatibility
+                    branchingNode.type = branchingNode.types[0];
+                  } else {
+                    // Create new branching node
+                    branchingNode = {
                       id: branchingArtist,
                       name: branchingArtist,
                       type: 'artist',
@@ -447,8 +461,29 @@ export class DatabaseStorage implements IStorage {
               }
               
               for (const branchingArtist of branchingArtists) {
-                // Check if this artist is already in the network
-                if (!nodeMap.has(branchingArtist)) {
+                // Check if this artist is already in the network (multi-role support)
+                let branchingNode = nodeMap.get(branchingArtist);
+                
+                if (branchingNode) {
+                  // Person already exists - add artist role if not already present
+                  if (!branchingNode.types) {
+                    branchingNode.types = [branchingNode.type];
+                  }
+                  if (!branchingNode.types.includes('artist')) {
+                    branchingNode.types.push('artist');
+                    console.log(`🎭 [DEBUG] Added artist role to existing branching node ${branchingArtist} (now has ${branchingNode.types.length} roles)`);
+                  }
+                  // Update collaborations list
+                  if (!branchingNode.collaborations) {
+                    branchingNode.collaborations = [];
+                  }
+                  if (!branchingNode.collaborations.includes(collaborator.name)) {
+                    branchingNode.collaborations.push(collaborator.name);
+                  }
+                  // Ensure primary type remains as first one for compatibility
+                  branchingNode.type = branchingNode.types[0];
+                } else {
+                  // Create new branching node
                   console.log(`🌟 [DEBUG] Adding branching artist "${branchingArtist}" connected to ${collaborator.type} "${collaborator.name}"`);
                   
                   // Try to get MusicNerd ID for the branching artist
@@ -459,7 +494,7 @@ export class DatabaseStorage implements IStorage {
                     console.log(`Could not fetch MusicNerd ID for branching artist ${branchingArtist}`);
                   }
                   
-                  const branchingNode: NetworkNode = {
+                  branchingNode = {
                     id: branchingArtist,
                     name: branchingArtist,
                     type: 'artist',
@@ -471,14 +506,14 @@ export class DatabaseStorage implements IStorage {
                     collaborations: [collaborator.name], // Show connection to the producer/songwriter
                   };
                   nodeMap.set(branchingArtist, branchingNode);
-                  
-                  // Create link between producer/songwriter and branching artist
-                  links.push({
-                    source: collaborator.name,
-                    target: branchingArtist,
-                  });
-                  console.log(`🔗 [DEBUG] Created branching link: "${collaborator.name}" ↔ "${branchingArtist}"`);
                 }
+                
+                // Create link between producer/songwriter and branching artist
+                links.push({
+                  source: collaborator.name,
+                  target: branchingArtist,
+                });
+                console.log(`🔗 [DEBUG] Created branching link: "${collaborator.name}" ↔ "${branchingArtist}"`);
               }
             }
             
