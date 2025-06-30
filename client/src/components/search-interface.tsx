@@ -13,6 +13,7 @@ interface SearchInterfaceProps {
   onNetworkData: (data: NetworkData) => void;
   showNetworkView: boolean;
   clearSearch?: boolean;
+  onLoadingChange?: (loading: boolean) => void;
 }
 
 interface ArtistOption {
@@ -21,7 +22,7 @@ interface ArtistOption {
   bio?: string;
 }
 
-export default function SearchInterface({ onNetworkData, showNetworkView, clearSearch }: SearchInterfaceProps) {
+export default function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange }: SearchInterfaceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentSearch, setCurrentSearch] = useState("");
   const [artistOptions, setArtistOptions] = useState<ArtistOption[]>([]);
@@ -74,6 +75,13 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
       onNetworkData(data);
     }
   }, [data, onNetworkData]);
+
+  // Handle loading state changes
+  useEffect(() => {
+    if (onLoadingChange) {
+      onLoadingChange(isLoading);
+    }
+  }, [isLoading, onLoadingChange]);
 
   // Show error toast when query fails
   useEffect(() => {
