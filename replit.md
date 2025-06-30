@@ -257,10 +257,10 @@ Changelog:
 - Prevents incomplete networks by guaranteeing every producer/songwriter connects to their known major collaborators
 
 ### Focused Producer/Songwriter Selection (June 30, 2025)
-- Limited producers and songwriters to 2 each for cleaner, more focused networks
+- Limited producers and songwriters to 3 each for comprehensive yet focused networks
 - Added filtering to only include major producers/songwriters who have worked with big artists
 - Curated list of 25 top-tier collaborators: Max Martin, Jack Antonoff, Benny Blanco, Finneas, Aaron Dessner, etc.
-- Reduced branching connections to 2 per producer/songwriter for optimal network clarity
+- Set branching connections to 3 per producer/songwriter for optimal network depth
 - Eliminates lesser-known collaborators to focus on the most influential music industry relationships
 - Networks now display only the most prolific and successful producer/songwriter collaborations
 

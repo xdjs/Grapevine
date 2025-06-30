@@ -197,16 +197,16 @@ export class DatabaseStorage implements IStorage {
         'hit-boy', 'mike will made-it', 'mustard', 'london on da track', 'wheezy'
       ]);
       
-      // Separate collaborators by type and limit to top 2 major producers/songwriters each
+      // Separate collaborators by type and limit to top 3 major producers/songwriters each
       const artists = collaborationData.artists.filter(c => c.type === 'artist');
       const producers = collaborationData.artists
         .filter(c => c.type === 'producer')
         .filter(c => majorProducerSongwriters.has(c.name.toLowerCase()))
-        .slice(0, 2); // Reduced from 5 to 2, only major producers
+        .slice(0, 3); // Changed from 2 to 3, only major producers
       const songwriters = collaborationData.artists
         .filter(c => c.type === 'songwriter') 
         .filter(c => majorProducerSongwriters.has(c.name.toLowerCase()))
-        .slice(0, 2); // Reduced from 5 to 2, only major songwriters
+        .slice(0, 3); // Changed from 2 to 3, only major songwriters
       
       const limitedCollaborators = [...artists, ...producers, ...songwriters];
       console.log(`⚡ [DEBUG] Limited to ${limitedCollaborators.length} collaborators (${producers.length} producers, ${songwriters.length} songwriters, ${artists.length} artists)`);
@@ -319,8 +319,8 @@ export class DatabaseStorage implements IStorage {
               console.log(`✅ [DEBUG] Found ${topCollaborators.length} authentic collaborations for "${collaborator.name}":`, topCollaborators);
               
               // Add branching artist nodes to the network for style discovery
-              // Limit branching to 2 for cleaner networks, focusing on major collaborators
-              const maxBranchingNodes = 2; // Reduced to 2 for both songwriters and producers
+              // Show 3 branching connections for comprehensive but clean networks
+              const maxBranchingNodes = 3; // Increased to 3 for both songwriters and producers
               
               // Sort artists by popularity, prioritizing well-known collaborators
               const branchingArtists = artistCollaborators
@@ -485,8 +485,8 @@ export class DatabaseStorage implements IStorage {
             
             topCollaborators = [artistName, ...fallbackCollaborators];
             
-            // Create branching nodes for fallback collaborators - limit to 2 for cleaner networks
-            const maxBranchingNodes = 2;
+            // Create branching nodes for fallback collaborators - show 3 for comprehensive networks
+            const maxBranchingNodes = 3;
             const branchingArtists = fallbackCollaborators
               .sort((a, b) => {
                 const popularityA = popularityMap.get(a.toLowerCase()) || 0;
