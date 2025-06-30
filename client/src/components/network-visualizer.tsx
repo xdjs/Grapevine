@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
+import ArtistSelectionModal from "./artist-selection-modal";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -19,6 +20,8 @@ export default function NetworkVisualizer({
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
   const [currentZoom, setCurrentZoom] = useState(1);
+  const [showArtistModal, setShowArtistModal] = useState(false);
+  const [selectedArtistName, setSelectedArtistName] = useState("");
 
   useEffect(() => {
     if (!svgRef.current || !data || !visible) return;
@@ -271,6 +274,28 @@ export default function NetworkVisualizer({
     }
 
     async function openMusicNerdProfile(artistName: string, artistId?: string | null) {
+      // If no specific artist ID provided, check for multiple options
+      if (!artistId) {
+        try {
+          const response = await fetch(`/api/artist-options/${encodeURIComponent(artistName)}`);
+          const data = await response.json();
+          
+          if (data.options && data.options.length > 1) {
+            // Multiple artists found - show selection modal
+            console.log(`🎵 Multiple artists found for "${artistName}", showing selection modal`);
+            setSelectedArtistName(artistName);
+            setShowArtistModal(true);
+            return;
+          } else if (data.options && data.options.length === 1) {
+            // Single artist found - use its ID
+            artistId = data.options[0].id;
+            console.log(`🎵 Single artist found for "${artistName}": ${artistId}`);
+          }
+        } catch (error) {
+          console.error(`Error fetching artist options for "${artistName}":`, error);
+        }
+      }
+      
       // Use artist ID if available, otherwise go to main page
       let musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/`;
       
@@ -416,6 +441,21 @@ export default function NetworkVisualizer({
     console.log('Zoom reset to 1.00');
   };
 
+  const handleArtistSelection = (artistId: string) => {
+    // Open the specific artist page with the selected ID
+    const musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${artistId}`;
+    console.log(`🎵 Opening selected artist page: ${musicNerdUrl}`);
+    
+    const link = document.createElement('a');
+    link.href = musicNerdUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Handle zoom controls with direct function calls
   useEffect(() => {
     const handleZoomEvent = (event: CustomEvent) => {
@@ -457,6 +497,13 @@ export default function NetworkVisualizer({
       }`}
     >
       <svg ref={svgRef} className="w-full h-full" />
+      
+      <ArtistSelectionModal
+        isOpen={showArtistModal}
+        onClose={() => setShowArtistModal(false)}
+        artistName={selectedArtistName}
+        onSelectArtist={handleArtistSelection}
+      />
     </div>
   );
 }
