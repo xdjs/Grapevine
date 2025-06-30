@@ -233,6 +233,51 @@ export class DatabaseStorage implements IStorage {
 
         // For producers and songwriters, fetch their authentic collaboration history from MusicBrainz
         let topCollaborators: string[] = [];
+        
+        // Define popularity rankings for major artists (higher = more popular)
+        const popularityMap = new Map<string, number>([
+          // Tier 1: Global superstars (100+)
+          ['taylor swift', 150], ['beyoncé', 145], ['rihanna', 140], ['lady gaga', 135], 
+          ['ariana grande', 130], ['justin bieber', 125], ['billie eilish', 120], ['drake', 115], 
+          ['the weeknd', 110], ['dua lipa', 105], ['olivia rodrigo', 102], ['harry styles', 100],
+          
+          // Tier 2: Major stars (75-99)
+          ['ed sheeran', 95], ['bruno mars', 90], ['justin timberlake', 85], ['selena gomez', 80], 
+          ['miley cyrus', 78], ['katy perry', 76], ['sia', 75], ['adele', 90], ['sam smith', 75],
+          
+          // Tier 3: Well-known artists (50-74)
+          ['post malone', 70], ['lorde', 68], ['charli xcx', 65], ['lana del rey', 62], 
+          ['the 1975', 60], ['troye sivan', 58], ['halsey', 55], ['shawn mendes', 52], ['camila cabello', 50],
+          
+          // Tier 4: Rising/established artists (25-49)
+          ['doja cat', 45], ['lizzo', 42], ['sza', 40], ['bad bunny', 38], ['rosé', 35], 
+          ['lisa', 32], ['jennie', 30], ['jisoo', 28], ['clairo', 25], ['phoebe bridgers', 22],
+          
+          // Electronic/Dance (specialized popularity)
+          ['calvin harris', 65], ['david guetta', 60], ['diplo', 55], ['skrillex', 50], 
+          ['marshmello', 45], ['zedd', 40], ['disclosure', 35], ['flume', 30],
+          
+          // Hip-Hop/R&B established (high popularity)
+          ['kendrick lamar', 95], ['j. cole', 85], ['travis scott', 80], ['kanye west', 75], 
+          ['childish gambino', 70], ['frank ocean', 68], ['tyler, the creator', 65],
+          
+          // Rock/Alternative established
+          ['imagine dragons', 70], ['coldplay', 85], ['arctic monkeys', 60], ['radiohead', 55],
+          
+          // K-Pop (specialized but high)
+          ['bts', 120], ['blackpink', 90], ['twice', 60], ['stray kids', 45],
+          
+          // Major Producers (get special priority in cross-connections)
+          ['max martin', 80], ['dr. dre', 85], ['timbaland', 82], ['pharrell williams', 88], 
+          ['rick rubin', 75], ['jack antonoff', 78], ['benny blanco', 72], ['finneas', 70],
+          ['andrew watt', 68], ['metro boomin', 65], ['mike will made-it', 60], ['mustard', 58],
+          ['hit-boy', 55], ['london on da track', 52], ['wheezy', 50], ['pierre bourne', 48],
+          
+          // Major Songwriters (get special priority)
+          ['diane warren', 85], ['ryan tedder', 82], ['sia', 78], ['julia michaels', 70],
+          ['justin tranter', 68], ['charlie puth', 65], ['ed sheeran', 95] // Ed Sheeran is both artist and songwriter
+        ]);
+        
         if (collaborator.type === 'producer' || collaborator.type === 'songwriter') {
           try {
             console.log(`🔍 [DEBUG] Fetching authentic collaborations for ${collaborator.type} "${collaborator.name}"`);
@@ -261,50 +306,6 @@ export class DatabaseStorage implements IStorage {
               // Add branching artist nodes to the network for style discovery
               // For songwriters and producers, show more collaborating artists for deeper webs
               const maxBranchingNodes = collaborator.type === 'songwriter' ? 4 : 3; // Increased from 3:2 to 4:3
-              
-              // Define popularity rankings for major artists (higher = more popular)
-              const popularityMap = new Map<string, number>([
-                // Tier 1: Global superstars (100+)
-                ['taylor swift', 150], ['beyoncé', 145], ['rihanna', 140], ['lady gaga', 135], 
-                ['ariana grande', 130], ['justin bieber', 125], ['billie eilish', 120], ['drake', 115], 
-                ['the weeknd', 110], ['dua lipa', 105], ['olivia rodrigo', 102], ['harry styles', 100],
-                
-                // Tier 2: Major stars (75-99)
-                ['ed sheeran', 95], ['bruno mars', 90], ['justin timberlake', 85], ['selena gomez', 80], 
-                ['miley cyrus', 78], ['katy perry', 76], ['sia', 75], ['adele', 90], ['sam smith', 75],
-                
-                // Tier 3: Well-known artists (50-74)
-                ['post malone', 70], ['lorde', 68], ['charli xcx', 65], ['lana del rey', 62], 
-                ['the 1975', 60], ['troye sivan', 58], ['halsey', 55], ['shawn mendes', 52], ['camila cabello', 50],
-                
-                // Tier 4: Rising/established artists (25-49)
-                ['doja cat', 45], ['lizzo', 42], ['sza', 40], ['bad bunny', 38], ['rosé', 35], 
-                ['lisa', 32], ['jennie', 30], ['jisoo', 28], ['clairo', 25], ['phoebe bridgers', 22],
-                
-                // Electronic/Dance (specialized popularity)
-                ['calvin harris', 65], ['david guetta', 60], ['diplo', 55], ['skrillex', 50], 
-                ['marshmello', 45], ['zedd', 40], ['disclosure', 35], ['flume', 30],
-                
-                // Hip-Hop/R&B established (high popularity)
-                ['kendrick lamar', 95], ['j. cole', 85], ['travis scott', 80], ['kanye west', 75], 
-                ['childish gambino', 70], ['frank ocean', 68], ['tyler, the creator', 65],
-                
-                // Rock/Alternative established
-                ['imagine dragons', 70], ['coldplay', 85], ['arctic monkeys', 60], ['radiohead', 55],
-                
-                // K-Pop (specialized but high)
-                ['bts', 120], ['blackpink', 90], ['twice', 60], ['stray kids', 45],
-                
-                // Major Producers (get special priority in cross-connections)
-                ['max martin', 80], ['dr. dre', 85], ['timbaland', 82], ['pharrell williams', 88], 
-                ['rick rubin', 75], ['jack antonoff', 78], ['benny blanco', 72], ['finneas', 70],
-                ['andrew watt', 68], ['metro boomin', 65], ['mike will made-it', 60], ['mustard', 58],
-                ['hit-boy', 55], ['london on da track', 52], ['wheezy', 50], ['pierre bourne', 48],
-                
-                // Major Songwriters (get special priority)
-                ['diane warren', 85], ['ryan tedder', 82], ['sia', 78], ['julia michaels', 70],
-                ['justin tranter', 68], ['charlie puth', 65], ['ed sheeran', 95] // Ed Sheeran is both artist and songwriter
-              ]);
               
               // Sort artists by popularity, prioritizing well-known collaborators
               const branchingArtists = artistCollaborators
@@ -425,12 +426,95 @@ export class DatabaseStorage implements IStorage {
             }
           } catch (error) {
             console.log(`❌ [DEBUG] Error fetching collaborations for "${collaborator.name}":`, error);
-            // Fallback to current network collaborators
-            const networkCollaborators = collaborationData.artists
-              .filter(c => c.name !== collaborator.name && c.name !== artistName)
-              .map(c => c.name);
-            topCollaborators = [artistName, ...networkCollaborators.slice(0, 2)];
-            console.log(`🔄 [DEBUG] Using network fallback for "${collaborator.name}":`, topCollaborators);
+            
+            // Enhanced fallback: use known major collaborators for popular producers/songwriters
+            let fallbackCollaborators: string[] = [];
+            const collaboratorNameLower = collaborator.name.toLowerCase();
+            
+            // Major producer/songwriter known collaborations
+            const knownCollaborations = new Map<string, string[]>([
+              ['max martin', ['taylor swift', 'ariana grande', 'the weeknd', 'dua lipa', 'britney spears', 'backstreet boys']],
+              ['jack antonoff', ['taylor swift', 'lorde', 'lana del rey', 'clairo', 'bleachers', 'fun.']],
+              ['benny blanco', ['ed sheeran', 'justin bieber', 'halsey', 'khalid', 'rihanna', 'katy perry']],
+              ['finneas', ['billie eilish', 'selena gomez', 'camila cabello', 'tove lo', 'ashe', 'john legend']],
+              ['aaron dessner', ['taylor swift', 'phoebe bridgers', 'bon iver', 'sharon van etten', 'the national']],
+              ['andrew watt', ['post malone', 'ozzy osbourne', 'miley cyrus', 'justin bieber', 'pearl jam']],
+              ['metro boomin', ['future', '21 savage', 'travis scott', 'drake', 'the weeknd', 'post malone']],
+              ['timbaland', ['justin timberlake', 'missy elliott', 'aaliyah', 'nelly furtado', 'madonna']],
+              ['pharrell williams', ['daft punk', 'robin thicke', 'ed sheeran', 'ariana grande', 'justin timberlake']],
+              ['ryan tedder', ['adele', 'taylor swift', 'ed sheeran', 'onerepublic', 'beyoncé', 'u2']],
+              ['sia', ['david guetta', 'flo rida', 'beyoncé', 'rihanna', 'britney spears', 'katy perry']],
+              ['julia michaels', ['justin bieber', 'selena gomez', 'gwen stefani', 'ed sheeran', 'dua lipa']],
+              ['justin tranter', ['justin bieber', 'selena gomez', 'julia michaels', 'dnce', 'imagine dragons']],
+              ['shellback', ['taylor swift', 'pink', 'britney spears', 'ariana grande', 'the weeknd']],
+              ['ali payami', ['taylor swift', 'the weeknd', 'dua lipa', 'ellie goulding', 'tove lo']],
+              ['patrik berger', ['taylor swift', 'madonna', 'ace of base', 'britney spears', 'robyn']],
+              ['charlie puth', ['wiz khalifa', 'meghan trainor', 'jason derulo', 'maroon 5', 'selena gomez']],
+              ['diane warren', ['aerosmith', 'celine dion', 'whitney houston', 'lady gaga', 'pink']]
+            ]);
+            
+            // Look for known collaborations
+            knownCollaborations.forEach((collaborators, producer) => {
+              if (collaboratorNameLower.includes(producer)) {
+                fallbackCollaborators = collaborators.filter(c => c !== artistName.toLowerCase());
+                console.log(`🎯 [DEBUG] Using known collaborations for "${collaborator.name}":`, fallbackCollaborators);
+              }
+            });
+            
+            // If no known collaborations found, use network fallback
+            if (fallbackCollaborators.length === 0) {
+              const networkCollaborators = collaborationData.artists
+                .filter(c => c.name !== collaborator.name && c.name !== artistName)
+                .map(c => c.name);
+              fallbackCollaborators = networkCollaborators.slice(0, 2);
+              console.log(`🔄 [DEBUG] Using network fallback for "${collaborator.name}":`, fallbackCollaborators);
+            }
+            
+            topCollaborators = [artistName, ...fallbackCollaborators];
+            
+            // Create branching nodes for fallback collaborators
+            const maxBranchingNodes = collaborator.type === 'songwriter' ? 4 : 3;
+            const branchingArtists = fallbackCollaborators
+              .sort((a, b) => {
+                const popularityA = popularityMap.get(a.toLowerCase()) || 0;
+                const popularityB = popularityMap.get(b.toLowerCase()) || 0;
+                return popularityB - popularityA;
+              })
+              .slice(0, maxBranchingNodes);
+              
+            console.log(`🎨 [DEBUG] Creating ${branchingArtists.length} fallback branching connections for ${collaborator.type} "${collaborator.name}"`);
+            
+            for (const branchingArtist of branchingArtists) {
+              const existingNode = nodes.find(node => node.name === branchingArtist);
+              if (!existingNode) {
+                console.log(`🌟 [DEBUG] Adding fallback branching artist "${branchingArtist}" connected to ${collaborator.type} "${collaborator.name}"`);
+                
+                let branchingArtistId: string | null = null;
+                try {
+                  branchingArtistId = await musicNerdService.getArtistId(branchingArtist);
+                } catch (error) {
+                  console.log(`Could not fetch MusicNerd ID for fallback artist ${branchingArtist}`);
+                }
+                
+                const branchingNode: NetworkNode = {
+                  id: branchingArtist,
+                  name: branchingArtist,
+                  type: 'artist',
+                  size: 12,
+                  imageUrl: null,
+                  spotifyId: null,
+                  artistId: branchingArtistId,
+                  collaborations: [collaborator.name],
+                };
+                nodes.push(branchingNode);
+                
+                links.push({
+                  source: collaborator.name,
+                  target: branchingArtist,
+                });
+                console.log(`🔗 [DEBUG] Created fallback branching link: "${collaborator.name}" ↔ "${branchingArtist}"`);
+              }
+            }
           }
         }
 
