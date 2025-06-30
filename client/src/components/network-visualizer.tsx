@@ -482,13 +482,13 @@ export default function NetworkVisualizer({
     // Hide/show nodes based on filter state
     svg.selectAll(".node").style("display", function () {
       const d = d3.select(this).datum() as NetworkNode;
-      return isNodeVisible(d) ? "block" : "none";
+      return isNodeVisible(d) ? null : "none";
     });
 
     // Hide/show labels based on filter state
     svg.selectAll(".label").style("display", function () {
       const d = d3.select(this).datum() as NetworkNode;
-      return isNodeVisible(d) ? "block" : "none";
+      return isNodeVisible(d) ? null : "none";
     });
 
     // Hide/show links based on whether both connected nodes are visible
@@ -500,7 +500,7 @@ export default function NetworkVisualizer({
       const sourceVisible = isNodeVisible(source);
       const targetVisible = isNodeVisible(target);
       
-      return sourceVisible && targetVisible ? "block" : "none";
+      return sourceVisible && targetVisible ? null : "none";
     });
   }, [filterState, visible]);
 
