@@ -24,6 +24,22 @@ export default function FilterControls({
       <div className="space-y-3">
         <div className="flex items-center gap-3">
           <Checkbox
+            id="showArtists"
+            checked={filterState.showArtists}
+            onCheckedChange={(checked) =>
+              handleFilterChange("showArtists", !!checked)
+            }
+            className="data-[state=checked]:border-[#FF0ACF]"
+            style={{ backgroundColor: filterState.showArtists ? '#FF0ACF' : 'transparent' }}
+          />
+          <Label htmlFor="showArtists" className="text-sm text-white cursor-pointer flex items-center gap-2">
+            Artists
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#FF0ACF' }}></div>
+          </Label>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Checkbox
             id="showProducers"
             checked={filterState.showProducers}
             onCheckedChange={(checked) =>
@@ -51,22 +67,6 @@ export default function FilterControls({
           <Label htmlFor="showSongwriters" className="text-sm text-white cursor-pointer flex items-center gap-2">
             Songwriters
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#67D1F8' }}></div>
-          </Label>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Checkbox
-            id="showArtists"
-            checked={filterState.showArtists}
-            onCheckedChange={(checked) =>
-              handleFilterChange("showArtists", !!checked)
-            }
-            className="data-[state=checked]:border-[#FF0ACF]"
-            style={{ backgroundColor: filterState.showArtists ? '#FF0ACF' : 'transparent' }}
-          />
-          <Label htmlFor="showArtists" className="text-sm text-white cursor-pointer flex items-center gap-2">
-            Artists
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#FF0ACF' }}></div>
           </Label>
         </div>
       </div>
