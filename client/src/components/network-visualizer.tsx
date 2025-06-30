@@ -184,7 +184,10 @@ export default function NetworkVisualizer({
       .append("circle")
       .attr("class", (d) => `node network-node node-${d.type}`)
       .attr("r", (d) => d.size)
-      .attr("fill", "transparent")
+      .attr("fill", (d) => {
+        if (d.type === 'artist') return '#FF0ACF';       // Solid Magenta Pink for artists
+        return "transparent";                             // Transparent for producers/songwriters
+      })
       .attr("stroke", (d) => {
         if (d.type === 'artist') return '#FF0ACF';       // Magenta Pink
         if (d.type === 'producer') return '#AE53FF';     // Bright Purple  
