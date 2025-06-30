@@ -188,10 +188,25 @@ export class DatabaseStorage implements IStorage {
       // Add collaborating artists from MusicBrainz - limit to top 5 producers and songwriters for performance
       console.log(`🎨 [DEBUG] Processing ${collaborationData.artists.length} MusicBrainz collaborators...`);
       
-      // Separate collaborators by type and limit producers/songwriters to top 5 each
+      // Filter to only include major producers and songwriters who have worked with big artists
+      const majorProducerSongwriters = new Set([
+        'max martin', 'jack antonoff', 'benny blanco', 'finneas', 'aaron dessner', 
+        'andrew watt', 'metro boomin', 'timbaland', 'pharrell williams', 'ryan tedder',
+        'sia', 'julia michaels', 'justin tranter', 'charlie puth', 'diane warren',
+        'dr. dre', 'rick rubin', 'shellback', 'ali payami', 'patrik berger',
+        'hit-boy', 'mike will made-it', 'mustard', 'london on da track', 'wheezy'
+      ]);
+      
+      // Separate collaborators by type and limit to top 2 major producers/songwriters each
       const artists = collaborationData.artists.filter(c => c.type === 'artist');
-      const producers = collaborationData.artists.filter(c => c.type === 'producer').slice(0, 5);
-      const songwriters = collaborationData.artists.filter(c => c.type === 'songwriter').slice(0, 5);
+      const producers = collaborationData.artists
+        .filter(c => c.type === 'producer')
+        .filter(c => majorProducerSongwriters.has(c.name.toLowerCase()))
+        .slice(0, 2); // Reduced from 5 to 2, only major producers
+      const songwriters = collaborationData.artists
+        .filter(c => c.type === 'songwriter') 
+        .filter(c => majorProducerSongwriters.has(c.name.toLowerCase()))
+        .slice(0, 2); // Reduced from 5 to 2, only major songwriters
       
       const limitedCollaborators = [...artists, ...producers, ...songwriters];
       console.log(`⚡ [DEBUG] Limited to ${limitedCollaborators.length} collaborators (${producers.length} producers, ${songwriters.length} songwriters, ${artists.length} artists)`);
@@ -304,8 +319,8 @@ export class DatabaseStorage implements IStorage {
               console.log(`✅ [DEBUG] Found ${topCollaborators.length} authentic collaborations for "${collaborator.name}":`, topCollaborators);
               
               // Add branching artist nodes to the network for style discovery
-              // For songwriters and producers, show more collaborating artists for deeper webs
-              const maxBranchingNodes = collaborator.type === 'songwriter' ? 4 : 3; // Increased from 3:2 to 4:3
+              // Limit branching to 2 for cleaner networks, focusing on major collaborators
+              const maxBranchingNodes = 2; // Reduced to 2 for both songwriters and producers
               
               // Sort artists by popularity, prioritizing well-known collaborators
               const branchingArtists = artistCollaborators
@@ -431,26 +446,24 @@ export class DatabaseStorage implements IStorage {
             let fallbackCollaborators: string[] = [];
             const collaboratorNameLower = collaborator.name.toLowerCase();
             
-            // Major producer/songwriter known collaborations
+            // Major producer/songwriter known collaborations - only include the most prolific ones
             const knownCollaborations = new Map<string, string[]>([
-              ['max martin', ['taylor swift', 'ariana grande', 'the weeknd', 'dua lipa', 'britney spears', 'backstreet boys']],
-              ['jack antonoff', ['taylor swift', 'lorde', 'lana del rey', 'clairo', 'bleachers', 'fun.']],
-              ['benny blanco', ['ed sheeran', 'justin bieber', 'halsey', 'khalid', 'rihanna', 'katy perry']],
-              ['finneas', ['billie eilish', 'selena gomez', 'camila cabello', 'tove lo', 'ashe', 'john legend']],
-              ['aaron dessner', ['taylor swift', 'phoebe bridgers', 'bon iver', 'sharon van etten', 'the national']],
-              ['andrew watt', ['post malone', 'ozzy osbourne', 'miley cyrus', 'justin bieber', 'pearl jam']],
-              ['metro boomin', ['future', '21 savage', 'travis scott', 'drake', 'the weeknd', 'post malone']],
-              ['timbaland', ['justin timberlake', 'missy elliott', 'aaliyah', 'nelly furtado', 'madonna']],
-              ['pharrell williams', ['daft punk', 'robin thicke', 'ed sheeran', 'ariana grande', 'justin timberlake']],
-              ['ryan tedder', ['adele', 'taylor swift', 'ed sheeran', 'onerepublic', 'beyoncé', 'u2']],
-              ['sia', ['david guetta', 'flo rida', 'beyoncé', 'rihanna', 'britney spears', 'katy perry']],
-              ['julia michaels', ['justin bieber', 'selena gomez', 'gwen stefani', 'ed sheeran', 'dua lipa']],
-              ['justin tranter', ['justin bieber', 'selena gomez', 'julia michaels', 'dnce', 'imagine dragons']],
-              ['shellback', ['taylor swift', 'pink', 'britney spears', 'ariana grande', 'the weeknd']],
-              ['ali payami', ['taylor swift', 'the weeknd', 'dua lipa', 'ellie goulding', 'tove lo']],
-              ['patrik berger', ['taylor swift', 'madonna', 'ace of base', 'britney spears', 'robyn']],
-              ['charlie puth', ['wiz khalifa', 'meghan trainor', 'jason derulo', 'maroon 5', 'selena gomez']],
-              ['diane warren', ['aerosmith', 'celine dion', 'whitney houston', 'lady gaga', 'pink']]
+              ['max martin', ['taylor swift', 'ariana grande', 'the weeknd', 'dua lipa', 'britney spears']],
+              ['jack antonoff', ['taylor swift', 'lorde', 'lana del rey', 'clairo', 'bleachers']],
+              ['benny blanco', ['ed sheeran', 'justin bieber', 'halsey', 'rihanna', 'katy perry']],
+              ['finneas', ['billie eilish', 'selena gomez', 'camila cabello', 'tove lo']],
+              ['aaron dessner', ['taylor swift', 'phoebe bridgers', 'bon iver', 'the national']],
+              ['andrew watt', ['post malone', 'ozzy osbourne', 'miley cyrus', 'justin bieber']],
+              ['metro boomin', ['future', '21 savage', 'travis scott', 'drake', 'the weeknd']],
+              ['timbaland', ['justin timberlake', 'missy elliott', 'aaliyah', 'nelly furtado']],
+              ['pharrell williams', ['daft punk', 'robin thicke', 'ed sheeran', 'ariana grande']],
+              ['ryan tedder', ['adele', 'taylor swift', 'ed sheeran', 'onerepublic', 'beyoncé']],
+              ['sia', ['david guetta', 'flo rida', 'beyoncé', 'rihanna', 'britney spears']],
+              ['julia michaels', ['justin bieber', 'selena gomez', 'gwen stefani', 'ed sheeran']],
+              ['shellback', ['taylor swift', 'pink', 'britney spears', 'ariana grande']],
+              ['ali payami', ['taylor swift', 'the weeknd', 'dua lipa', 'ellie goulding']],
+              ['charlie puth', ['wiz khalifa', 'meghan trainor', 'jason derulo', 'maroon 5']],
+              ['diane warren', ['aerosmith', 'celine dion', 'whitney houston', 'lady gaga']]
             ]);
             
             // Look for known collaborations
@@ -472,8 +485,8 @@ export class DatabaseStorage implements IStorage {
             
             topCollaborators = [artistName, ...fallbackCollaborators];
             
-            // Create branching nodes for fallback collaborators
-            const maxBranchingNodes = collaborator.type === 'songwriter' ? 4 : 3;
+            // Create branching nodes for fallback collaborators - limit to 2 for cleaner networks
+            const maxBranchingNodes = 2;
             const branchingArtists = fallbackCollaborators
               .sort((a, b) => {
                 const popularityA = popularityMap.get(a.toLowerCase()) || 0;

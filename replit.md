@@ -256,6 +256,14 @@ Changelog:
 - System prioritizes authentic MusicBrainz data first, then uses verified collaboration history as fallback
 - Prevents incomplete networks by guaranteeing every producer/songwriter connects to their known major collaborators
 
+### Focused Producer/Songwriter Selection (June 30, 2025)
+- Limited producers and songwriters to 2 each for cleaner, more focused networks
+- Added filtering to only include major producers/songwriters who have worked with big artists
+- Curated list of 25 top-tier collaborators: Max Martin, Jack Antonoff, Benny Blanco, Finneas, Aaron Dessner, etc.
+- Reduced branching connections to 2 per producer/songwriter for optimal network clarity
+- Eliminates lesser-known collaborators to focus on the most influential music industry relationships
+- Networks now display only the most prolific and successful producer/songwriter collaborations
+
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals
 - Artists: Pink (#ec4899), Producers: Purple (#a855f7), Songwriters: Teal (#14b8a6)
