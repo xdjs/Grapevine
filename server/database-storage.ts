@@ -40,7 +40,7 @@ export class DatabaseStorage implements IStorage {
         .select({
           id: artists.id,
           name: artists.name,
-          webmapdata: artists.webMapData
+          webmapdata: artists.webmapdata
         })
         .from(artists)
         .where(eq(artists.name, name))
@@ -55,7 +55,7 @@ export class DatabaseStorage implements IStorage {
           type: 'artist' as const,
           imageUrl: null,
           spotifyId: null,
-          webMapData: artist.webmapdata // Map webmapdata to webMapData for type compatibility
+          webmapdata: artist.webmapdata
         };
       }
       return undefined;
@@ -695,9 +695,9 @@ export class DatabaseStorage implements IStorage {
     console.log(`💾 [DEBUG] Checking for cached webmapdata for "${artistName}"`);
     const cachedArtist = await this.getArtistByName(artistName);
     
-    if (cachedArtist?.webMapData) {
+    if (cachedArtist?.webmapdata) {
       console.log(`✅ [DEBUG] Found cached webmapdata for "${artistName}" - using cached data`);
-      return cachedArtist.webMapData as NetworkData;
+      return cachedArtist.webmapdata as NetworkData;
     }
     
     console.log(`🆕 [DEBUG] No cached data found for "${artistName}" - generating new network data`);

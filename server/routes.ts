@@ -13,7 +13,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let isCached = false;
       if ('getArtistByName' in storage) {
         const cachedArtist = await storage.getArtistByName(artistName);
-        if (cachedArtist && 'webMapData' in cachedArtist && cachedArtist.webMapData) {
+        if (cachedArtist && 'webmapdata' in cachedArtist && cachedArtist.webmapdata) {
           isCached = true;
         }
       }
