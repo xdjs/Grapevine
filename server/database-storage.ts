@@ -103,6 +103,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   private async generateRealCollaborationNetwork(artistName: string): Promise<NetworkData> {
+    // First, check if we have cached webMapData for this artist
+    console.log(`💾 [DEBUG] Checking for cached webMapData for "${artistName}"`);
+    const cachedArtist = await this.getArtistByName(artistName);
+    
+    if (cachedArtist?.webMapData) {
+      console.log(`✅ [DEBUG] Found cached webMapData for "${artistName}" - using cached data`);
+      return cachedArtist.webMapData as NetworkData;
+    }
+    
+    console.log(`🆕 [DEBUG] No cached data found for "${artistName}" - generating new network data`);
     const nodes: NetworkNode[] = [];
     const links: NetworkLink[] = [];
 
@@ -234,7 +244,12 @@ export class DatabaseStorage implements IStorage {
             }
 
             console.log(`✅ [DEBUG] Successfully created network from OpenAI data: ${openAIData.artists.length} collaborators for "${artistName}"`);
-            return { nodes, links };
+            
+            // Cache the generated network data
+            const networkData = { nodes, links };
+            await this.cacheNetworkData(artistName, networkData);
+            
+            return networkData;
           }
         } catch (error) {
           console.error(`❌ [DEBUG] OpenAI API error for "${artistName}":`, error);
@@ -550,7 +565,12 @@ export class DatabaseStorage implements IStorage {
             }
             
             console.log(`✅ [DEBUG] Successfully created network from Wikipedia data: ${wikipediaCollaborators.length} collaborators for "${artistName}"`);
-            return { nodes, links };
+            
+            // Cache the generated network data
+            const networkData = { nodes, links };
+            await this.cacheNetworkData(artistName, networkData);
+            
+            return networkData;
           } else {
             console.log(`❌ [DEBUG] Wikipedia returned 0 collaborators for "${artistName}"`);
           }
@@ -609,16 +629,59 @@ export class DatabaseStorage implements IStorage {
           console.log(`👤 [DEBUG] Returning only the main artist node without any collaborators`);
         }
         
-        return { nodes, links };
+        // Cache the generated network data
+        const networkData = { nodes, links };
+        await this.cacheNetworkData(artistName, networkData);
+        return networkData;
       } else {
         console.log(`✅ [DEBUG] Successfully created network from MusicBrainz data: ${collaborationData.artists.length} collaborators for "${artistName}"`);
       }
 
-      return { nodes, links };
+      // Cache the generated network data
+      const networkData = { nodes, links };
+      await this.cacheNetworkData(artistName, networkData);
+      return networkData;
     } catch (error) {
       console.error('Error generating real collaboration network:', error);
       // Return just the main artist if everything fails
-      return { nodes, links };
+      const networkData = { nodes, links };
+      await this.cacheNetworkData(artistName, networkData);
+      return networkData;
+    }
+  }
+
+  private async cacheNetworkData(artistName: string, networkData: NetworkData): Promise<void> {
+    if (!db) {
+      console.log(`⚠️ [DEBUG] Database not available - skipping cache for "${artistName}"`);
+      return;
+    }
+
+    try {
+      console.log(`💾 [DEBUG] Caching webMapData for "${artistName}"`);
+      
+      // Check if artist already exists in database
+      const existingArtist = await this.getArtistByName(artistName);
+      
+      if (existingArtist) {
+        // Update existing artist with webMapData
+        await db
+          .update(artists)
+          .set({ webMapData: networkData })
+          .where(eq(artists.name, artistName));
+        console.log(`✅ [DEBUG] Updated webMapData cache for existing artist "${artistName}"`);
+      } else {
+        // Create new artist entry with webMapData
+        await db
+          .insert(artists)
+          .values({
+            name: artistName,
+            type: 'artist',
+            webMapData: networkData
+          });
+        console.log(`✅ [DEBUG] Created new artist "${artistName}" with webMapData cache`);
+      }
+    } catch (error) {
+      console.error(`❌ [DEBUG] Error caching webMapData for "${artistName}":`, error);
     }
   }
 

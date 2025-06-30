@@ -250,6 +250,21 @@ Changelog:
 - Comprehensive error handling with intelligent fallback to MusicBrainz when OpenAI is unavailable
 - Fixed TypeScript variable scope issues and type safety for seamless integration
 
+### Supabase Caching System Integration (June 30, 2025)
+- Added webMapData jsonb column to artists table for caching network visualization data
+- Implemented intelligent caching system to check for existing network data before generating new results
+- Cache-first approach: system checks webMapData before calling OpenAI or other external APIs
+- Network data automatically cached after generation to improve performance on subsequent searches
+- Database queries optimized to include webMapData field for fast retrieval
+- Caching works for all artists, preserving complete network structures with nodes and links
+- Significant performance improvement: cached results load instantly vs 7+ seconds for fresh generation
+
+### Enhanced Tooltip System (June 30, 2025)
+- Updated producer and songwriter tooltips to display "Top Collaborations:" with their collaborating artists
+- Tooltips now show the exact top 3 artists each producer/songwriter has worked with
+- Enhanced collaboration data stored in node structure for instant tooltip display
+- Tooltip format matches user-requested design showing artist names in clean list format
+
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals
 - Artists: Pink (#ec4899), Producers: Purple (#a855f7), Songwriters: Teal (#14b8a6)
