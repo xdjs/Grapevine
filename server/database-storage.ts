@@ -2,6 +2,7 @@ import { eq, and } from 'drizzle-orm';
 import { db, isDatabaseAvailable } from './supabase';
 import { artists, collaborations, type Artist, type InsertArtist, type Collaboration, type InsertCollaboration, type NetworkData, type NetworkNode, type NetworkLink } from "@shared/schema";
 import { spotifyService } from "./spotify";
+import { openAIService } from "./openai-service";
 import { musicBrainzService } from "./musicbrainz";
 import { wikipediaService } from "./wikipedia";
 import { musicNerdService } from "./musicnerd-service";
@@ -106,10 +107,123 @@ export class DatabaseStorage implements IStorage {
     const links: NetworkLink[] = [];
 
     console.log(`🔍 [DEBUG] Starting collaboration network generation for: "${artistName}"`);
-    console.log('📊 [DEBUG] Data source priority: 1) MusicBrainz → 2) Wikipedia → 3) Generated fallback');
+    console.log('📊 [DEBUG] Data source priority: 1) OpenAI → 2) MusicBrainz → 3) Wikipedia → 4) Known collaborations fallback');
 
     try {
-      // Get real collaboration data from MusicBrainz
+      // First try OpenAI for collaboration data
+      if (openAIService.isServiceAvailable()) {
+        console.log(`🤖 [DEBUG] Querying OpenAI API for "${artistName}"...`);
+        console.log(`🔍 [DEBUG] About to call openAIService.getArtistCollaborations for main artist: ${artistName}`);
+        
+        try {
+          const openAIData = await openAIService.getArtistCollaborations(artistName);
+          console.log(`✅ [DEBUG] OpenAI response:`, {
+            collaborators: openAIData.artists.length,
+            collaboratorList: openAIData.artists.map(a => `${a.name} (${a.type}, top collaborators: ${a.topCollaborators.length})`)
+          });
+
+          if (openAIData.artists.length > 0) {
+            // Process OpenAI data to create network nodes
+            for (const collaborator of openAIData.artists) {
+              // Get image from Spotify if available
+              let imageUrl: string | null = null;
+              let spotifyId: string | null = null;
+              if (spotifyService.isConfigured()) {
+                try {
+                  const spotifyArtist = await spotifyService.searchArtist(collaborator.name);
+                  if (spotifyArtist) {
+                    imageUrl = spotifyService.getArtistImageUrl(spotifyArtist, 'medium');
+                    spotifyId = spotifyArtist.id;
+                  }
+                } catch (error) {
+                  console.log(`🔒 [DEBUG] Spotify search failed for "${collaborator.name}"`);
+                }
+              }
+
+              const collaboratorNode: NetworkNode = {
+                id: collaborator.name,
+                name: collaborator.name,
+                type: collaborator.type,
+                size: collaborator.type === 'artist' ? 20 : 15,
+                imageUrl,
+                spotifyId,
+              };
+
+              // Get MusicNerd artist ID for the collaborator
+              let musicNerdUrl = 'https://music-nerd-git-staging-musicnerd.vercel.app';
+              try {
+                const artistId = await musicNerdService.getArtistId(collaborator.name);
+                if (artistId) {
+                  musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${artistId}`;
+                  console.log(`✅ [DEBUG] Found MusicNerd ID for ${collaborator.name}: ${artistId}`);
+                }
+              } catch (error) {
+                console.log(`📭 [DEBUG] No MusicNerd ID found for ${collaborator.name}`);
+              }
+
+              collaboratorNode.musicNerdUrl = musicNerdUrl;
+              nodes.push(collaboratorNode);
+              links.push({
+                source: mainArtistNode.id,
+                target: collaboratorNode.id,
+              });
+
+              // Add branching connections for the top collaborators
+              const maxBranching = collaborator.type === 'songwriter' ? 3 : 2;
+              const branchingCount = Math.min(collaborator.topCollaborators.length, maxBranching);
+              
+              for (let i = 0; i < branchingCount; i++) {
+                const branchingArtist = collaborator.topCollaborators[i];
+                
+                const branchingNode: NetworkNode = {
+                  id: branchingArtist,
+                  name: branchingArtist,
+                  type: 'artist',
+                  size: 15,
+                };
+
+                // Get MusicNerd ID for branching artist
+                let branchingMusicNerdUrl = 'https://music-nerd-git-staging-musicnerd.vercel.app';
+                try {
+                  const branchingArtistId = await musicNerdService.getArtistId(branchingArtist);
+                  if (branchingArtistId) {
+                    branchingMusicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${branchingArtistId}`;
+                  }
+                } catch (error) {
+                  console.log(`📭 [DEBUG] No MusicNerd ID found for branching artist ${branchingArtist}`);
+                }
+
+                branchingNode.musicNerdUrl = branchingMusicNerdUrl;
+                
+                // Check if we already have this artist node
+                if (!nodes.find(n => n.id === branchingArtist)) {
+                  nodes.push(branchingNode);
+                }
+                
+                // Create link between collaborator and their top collaborator
+                links.push({
+                  source: collaborator.name,
+                  target: branchingArtist,
+                });
+
+                console.log(`🌟 [DEBUG] Added branching artist "${branchingArtist}" connected to ${collaborator.type} "${collaborator.name}"`);
+              }
+
+              console.log(`➕ [DEBUG] Added ${collaborator.type}: ${collaborator.name} from OpenAI with ${branchingCount} branching connections`);
+            }
+
+            console.log(`✅ [DEBUG] Successfully created network from OpenAI data: ${openAIData.artists.length} collaborators for "${artistName}"`);
+            return { nodes, links };
+          }
+        } catch (error) {
+          console.error(`❌ [DEBUG] OpenAI API error for "${artistName}":`, error);
+          console.log('🔄 [DEBUG] Falling back to MusicBrainz...');
+        }
+      } else {
+        console.log('⚠️ [DEBUG] OpenAI service not available, falling back to MusicBrainz...');
+      }
+
+      // Fallback to MusicBrainz if OpenAI fails or isn't available
       console.log(`🎵 [DEBUG] Querying MusicBrainz API for "${artistName}"...`);
       console.log(`🔍 [DEBUG] About to call musicBrainzService.getArtistCollaborations for main artist: ${artistName}`);
       const collaborationData = await musicBrainzService.getArtistCollaborations(artistName);
