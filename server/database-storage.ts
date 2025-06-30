@@ -200,20 +200,33 @@ export class DatabaseStorage implements IStorage {
           try {
             console.log(`🔍 [DEBUG] Fetching authentic collaborations for ${collaborator.type} "${collaborator.name}"`);
             const producerCollaborations = await musicBrainzService.getArtistCollaborations(collaborator.name);
+            
+            // Collect all types of collaborators: artists, other producers, and songwriters
+            const allCollaborators: string[] = [];
+            
             if (producerCollaborations && producerCollaborations.artists.length > 0) {
-              const authenticCollaborators = producerCollaborations.artists
-                .filter(c => c.name !== collaborator.name)
-                .slice(0, 3)
+              // Add artist collaborators (the actual musicians they work with)
+              const artistCollaborators = producerCollaborations.artists
+                .filter(c => c.name !== collaborator.name && c.type === 'artist')
                 .map(c => c.name);
-              topCollaborators = authenticCollaborators;
-              console.log(`✅ [DEBUG] Found ${authenticCollaborators.length} authentic collaborations for "${collaborator.name}":`, topCollaborators);
-            } else {
-              // Fallback to current network collaborators only if no authentic data exists
-              const networkCollaborators = collaborationData.artists
-                .filter(c => c.name !== collaborator.name && c.name !== artistName)
+              allCollaborators.push(...artistCollaborators);
+              
+              // Add other producers/songwriters they collaborate with
+              const otherProducers = producerCollaborations.artists
+                .filter(c => c.name !== collaborator.name && (c.type === 'producer' || c.type === 'songwriter'))
                 .map(c => c.name);
-              topCollaborators = [artistName, ...networkCollaborators.slice(0, 2)];
-              console.log(`⚠️ [DEBUG] No authentic collaborations found for "${collaborator.name}", using network fallback:`, topCollaborators);
+              allCollaborators.push(...otherProducers);
+              
+              // Take top 3 most relevant collaborators
+              topCollaborators = [...new Set(allCollaborators)].slice(0, 3);
+              console.log(`✅ [DEBUG] Found ${topCollaborators.length} authentic collaborations for "${collaborator.name}":`, topCollaborators);
+            }
+            
+            // If still not enough collaborators, add the main artist as a primary collaborator
+            if (topCollaborators.length < 3) {
+              topCollaborators = [artistName, ...topCollaborators];
+              topCollaborators = [...new Set(topCollaborators)].slice(0, 3);
+              console.log(`📝 [DEBUG] Enhanced collaborations for "${collaborator.name}" with main artist:`, topCollaborators);
             }
           } catch (error) {
             console.log(`❌ [DEBUG] Error fetching collaborations for "${collaborator.name}":`, error);
