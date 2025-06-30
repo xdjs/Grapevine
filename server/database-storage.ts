@@ -167,6 +167,7 @@ export class DatabaseStorage implements IStorage {
                 size: 15,
                 imageUrl,
                 spotifyId,
+                collaborations: collaborator.topCollaborators || [], // Add the top collaborators list
               };
 
               // Get MusicNerd artist ID for the collaborator

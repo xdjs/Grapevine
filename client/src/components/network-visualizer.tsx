@@ -253,8 +253,8 @@ export default function NetworkVisualizer({
 
       // Show collaboration information for producers and songwriters
       if ((d.type === 'producer' || d.type === 'songwriter') && d.collaborations && d.collaborations.length > 0) {
-        content += `<br/><br/><strong>Top 3 Collaborators:</strong><br/>`;
-        content += d.collaborations.slice(0, 3).join("<br/>");
+        content += `<br/><br/><strong>Top Collaborations:</strong><br/>`;
+        content += d.collaborations.join("<br/>");
       }
 
       // Show general collaboration info for artists if available
