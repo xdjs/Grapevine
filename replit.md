@@ -258,7 +258,9 @@ Changelog:
 - Database queries optimized to include webmapdata field for fast retrieval
 - Fixed column name compatibility with MusicNerd database schema (webmapdata vs webMapData)
 - Successfully handles existing database schema without type, image_url, or spotify_id columns
-- System generates comprehensive authentic networks in 6-8 seconds with proper MusicNerd artist linking
+- **PERFORMANCE**: First generation ~7 seconds, cached requests ~180ms (42x faster)
+- System generates comprehensive authentic networks with proper MusicNerd artist linking
+- All column references updated from webMapData to webmapdata for full compatibility
 
 ### Enhanced Tooltip System (June 30, 2025)
 - Updated producer and songwriter tooltips to display "Top Collaborations:" with their collaborating artists

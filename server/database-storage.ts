@@ -40,7 +40,7 @@ export class DatabaseStorage implements IStorage {
         .select({
           id: artists.id,
           name: artists.name,
-          webMapData: sql`webmapdata`
+          webmapdata: artists.webMapData
         })
         .from(artists)
         .where(eq(artists.name, name))
@@ -50,9 +50,13 @@ export class DatabaseStorage implements IStorage {
       if (artist) {
         // Add default type field since MusicNerd database doesn't have it
         return {
-          ...artist,
-          type: 'artist' as const
-        } as Artist;
+          id: artist.id,
+          name: artist.name,
+          type: 'artist' as const,
+          imageUrl: null,
+          spotifyId: null,
+          webMapData: artist.webmapdata // Map webmapdata to webMapData for type compatibility
+        };
       }
       return undefined;
     } catch (error) {
@@ -659,7 +663,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     try {
-      console.log(`💾 [DEBUG] Caching webMapData for "${artistName}"`);
+      console.log(`💾 [DEBUG] Caching webmapdata for "${artistName}"`);
       
       // Check if artist already exists in database
       const existingArtist = await this.getArtistByName(artistName);
@@ -672,27 +676,27 @@ export class DatabaseStorage implements IStorage {
           SET webmapdata = ${JSON.stringify(networkData)}::jsonb 
           WHERE name = ${artistName}
         `);
-        console.log(`✅ [DEBUG] Updated webMapData cache for existing artist "${artistName}"`);
+        console.log(`✅ [DEBUG] Updated webmapdata cache for existing artist "${artistName}"`);
       } else {
         // Create new artist entry with webmapdata using raw SQL since schema doesn't match MusicNerd DB
         await db.execute(sql`
           INSERT INTO artists (name, webmapdata) 
           VALUES (${artistName}, ${JSON.stringify(networkData)}::jsonb)
         `);
-        console.log(`✅ [DEBUG] Created new artist "${artistName}" with webMapData cache`);
+        console.log(`✅ [DEBUG] Created new artist "${artistName}" with webmapdata cache`);
       }
     } catch (error) {
-      console.error(`❌ [DEBUG] Error caching webMapData for "${artistName}":`, error);
+      console.error(`❌ [DEBUG] Error caching webmapdata for "${artistName}":`, error);
     }
   }
 
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
-    // First, check if we have cached webMapData for this artist (applies to ALL artists)
-    console.log(`💾 [DEBUG] Checking for cached webMapData for "${artistName}"`);
+    // First, check if we have cached webmapdata for this artist (applies to ALL artists)
+    console.log(`💾 [DEBUG] Checking for cached webmapdata for "${artistName}"`);
     const cachedArtist = await this.getArtistByName(artistName);
     
     if (cachedArtist?.webMapData) {
-      console.log(`✅ [DEBUG] Found cached webMapData for "${artistName}" - using cached data`);
+      console.log(`✅ [DEBUG] Found cached webmapdata for "${artistName}" - using cached data`);
       return cachedArtist.webMapData as NetworkData;
     }
     
