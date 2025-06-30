@@ -189,7 +189,7 @@ export class DatabaseStorage implements IStorage {
               });
 
               // Add branching connections for the top collaborators
-              const maxBranching = collaborator.type === 'songwriter' ? 3 : 2;
+              const maxBranching = 3; // Both producers and songwriters get 3 top collaborator connections
               const branchingCount = Math.min(collaborator.topCollaborators.length, maxBranching);
               
               for (let i = 0; i < branchingCount; i++) {

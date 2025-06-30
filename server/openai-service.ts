@@ -38,7 +38,7 @@ class OpenAIService {
     console.log(`🤖 [DEBUG] Querying OpenAI for collaborations with "${artistName}"`);
 
     try {
-      const prompt = `Generate a list of producers and songwriters who have collaborated with artist ${artistName}. Their top collaborators (biggest artists they have worked with) should be listed.
+      const prompt = `Generate a list of producers and songwriters who have collaborated with artist ${artistName}. For each producer and songwriter, include their top 3 collaborating artists (biggest artists they have worked with).
 
 Please respond with JSON in this exact format:
 {
@@ -56,7 +56,7 @@ Please respond with JSON in this exact format:
   ]
 }
 
-Focus on real, verified collaborations from the music industry. Include up to 5 producers and 5 songwriters who have actually worked with ${artistName}.`;
+Focus on real, verified collaborations from the music industry. Include up to 5 producers and 5 songwriters who have actually worked with ${artistName}. Each producer and songwriter should have exactly 3 top collaborating artists listed.`;
 
       const response = await this.openai!.chat.completions.create({
         model: "gpt-4o",

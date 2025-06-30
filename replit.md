@@ -242,8 +242,10 @@ Changelog:
 - Integrated OpenAI API as the primary data source for music collaboration networks
 - Updated data source priority: 1) OpenAI → 2) MusicBrainz → 3) Wikipedia → 4) Known collaborations fallback
 - OpenAI generates authentic producer and songwriter collaborations using GPT-4o model
-- System prompts OpenAI with: "Generate a list of producers and songwriters who have collaborated with artist X. Their top collaborators (biggest artists they have worked with) should be listed."
+- System prompts OpenAI with: "Generate a list of producers and songwriters who have collaborated with artist X. For each producer and songwriter, include their top 3 collaborating artists."
 - Successfully extracts 5 producers and 5 songwriters with their top 3 collaborating artists for enhanced music discovery
+- Enhanced producer branching: producers now get up to 3 top collaborator connections (previously limited to 2)
+- Both producers and songwriters display equal branching networks showing authentic industry relationships
 - Maintains all existing features: MusicNerd artist page linking, Spotify images, and branching connections
 - Comprehensive error handling with intelligent fallback to MusicBrainz when OpenAI is unavailable
 - Fixed TypeScript variable scope issues and type safety for seamless integration
