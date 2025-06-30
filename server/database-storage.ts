@@ -222,9 +222,16 @@ export class DatabaseStorage implements IStorage {
               console.log(`✅ [DEBUG] Found ${topCollaborators.length} authentic collaborations for "${collaborator.name}":`, topCollaborators);
               
               // Add branching artist nodes to the network for style discovery
+              // For songwriters and producers, show their top 3 collaborating artists
+              const maxBranchingNodes = collaborator.type === 'songwriter' ? 3 : 2;
               const branchingArtists = artistCollaborators
                 .filter(artistName => artistName !== collaborator.name)
-                .slice(0, 2); // Limit to 2 to avoid network clutter
+                .slice(0, maxBranchingNodes);
+              
+              console.log(`🎨 [DEBUG] Creating ${branchingArtists.length} branching connections for ${collaborator.type} "${collaborator.name}"`);
+              if (branchingArtists.length > 0 && collaborator.type === 'songwriter') {
+                console.log(`📝 [DEBUG] Songwriter "${collaborator.name}" branching to artists:`, branchingArtists);
+              }
               
               for (const branchingArtist of branchingArtists) {
                 // Check if this artist is already in the network

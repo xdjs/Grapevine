@@ -401,6 +401,11 @@ class MusicBrainzService {
       'co-writer': 'songwriter',
       'additional songwriter': 'songwriter',
       'librettist': 'songwriter',
+      'music': 'songwriter',
+      'lyrics': 'songwriter',
+      'composition': 'songwriter',
+      'writing': 'songwriter',
+      'song writing': 'songwriter',
     };
 
     return typeMap[musicBrainzType.toLowerCase()] || null;

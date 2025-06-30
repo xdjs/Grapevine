@@ -203,6 +203,15 @@ Changelog:
 - Real-time debugging shows detailed collaboration extraction process with authentic MusicBrainz data
 - No synthetic data fallbacks - only verified music industry relationships from MusicBrainz database
 
+### Enhanced Branching Network with Songwriter Support (June 30, 2025)
+- Implemented comprehensive branching network where producers and songwriters connect to other artists they collaborate with
+- Songwriters now show up to 3 branching artist connections for enhanced style discovery
+- Producers show up to 2 branching connections to prevent network overcrowding  
+- Enhanced songwriter detection with additional relation types: music, lyrics, composition, writing, song writing
+- Added authentic collaboration data display showing producer/songwriter's top collaborating artists
+- Branching nodes connect to MusicNerd artist pages when available, otherwise link to main MusicNerd site
+- System successfully creates complex multi-tier networks: Main Artist → Producer/Songwriter → Their Other Artists
+
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals
 - Artists: Pink (#ec4899), Producers: Purple (#a855f7), Songwriters: Teal (#14b8a6)
