@@ -416,14 +416,36 @@ export class MemStorage implements IStorage {
           }
         }
 
-        // For producers and songwriters, gather their top collaborators from the main network
+        // For producers and songwriters, fetch their authentic collaboration history from MusicBrainz
         let topCollaborators: string[] = [];
         if (collaborator.type === 'producer' || collaborator.type === 'songwriter') {
-          const allCollaborators = collaborationData.artists
-            .filter(c => c.name !== collaborator.name && c.name !== artistName)
-            .map(c => c.name);
-          topCollaborators = [artistName, ...allCollaborators.slice(0, 2)]; // Main artist + top 2 others
-          console.log(`🤝 [DEBUG] Created collaborations for ${collaborator.type} "${collaborator.name}":`, topCollaborators);
+          try {
+            console.log(`🔍 [DEBUG] Fetching authentic collaborations for ${collaborator.type} "${collaborator.name}"`);
+            const producerCollaborations = await musicBrainzService.getArtistCollaborations(collaborator.name);
+            if (producerCollaborations && producerCollaborations.artists.length > 0) {
+              const authenticCollaborators = producerCollaborations.artists
+                .filter(c => c.name !== collaborator.name)
+                .slice(0, 3)
+                .map(c => c.name);
+              topCollaborators = authenticCollaborators;
+              console.log(`✅ [DEBUG] Found ${authenticCollaborators.length} authentic collaborations for "${collaborator.name}":`, topCollaborators);
+            } else {
+              // Fallback to current network collaborators only if no authentic data exists
+              const networkCollaborators = collaborationData.artists
+                .filter(c => c.name !== collaborator.name && c.name !== artistName)
+                .map(c => c.name);
+              topCollaborators = [artistName, ...networkCollaborators.slice(0, 2)];
+              console.log(`⚠️ [DEBUG] No authentic collaborations found for "${collaborator.name}", using network fallback:`, topCollaborators);
+            }
+          } catch (error) {
+            console.log(`❌ [DEBUG] Error fetching collaborations for "${collaborator.name}":`, error);
+            // Fallback to current network collaborators
+            const networkCollaborators = collaborationData.artists
+              .filter(c => c.name !== collaborator.name && c.name !== artistName)
+              .map(c => c.name);
+            topCollaborators = [artistName, ...networkCollaborators.slice(0, 2)];
+            console.log(`🔄 [DEBUG] Using network fallback for "${collaborator.name}":`, topCollaborators);
+          }
         }
 
         const collaboratorNode: NetworkNode = {
