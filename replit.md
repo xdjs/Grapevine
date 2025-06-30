@@ -250,6 +250,16 @@ Changelog:
 - Comprehensive error handling with intelligent fallback to MusicBrainz when OpenAI is unavailable
 - Fixed TypeScript variable scope issues and type safety for seamless integration
 
+### Multi-Role Node Consolidation (June 30, 2025)
+- Implemented comprehensive multi-role support for people with multiple industry roles
+- Backend now merges people appearing in multiple roles (artist + songwriter, producer + songwriter) into single nodes
+- Enhanced schema to support `types` array alongside primary `type` for backward compatibility
+- Main artists who also work as songwriters/producers (like Olivia Rodrigo) now appear as single multi-role nodes
+- Frontend displays multi-colored segmented circles for people with multiple roles
+- Enhanced tooltips show all roles (e.g., "artist + songwriter" instead of separate entries)
+- Fixed node duplication issue where the same person appeared multiple times in the network
+- System successfully consolidates collaboration data across all roles for complete relationship mapping
+
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals
 - Artists: Pink (#ec4899), Producers: Purple (#a855f7), Songwriters: Teal (#14b8a6)

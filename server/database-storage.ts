@@ -103,10 +103,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   private async generateRealCollaborationNetwork(artistName: string): Promise<NetworkData> {
-    const nodes: NetworkNode[] = [];
     const links: NetworkLink[] = [];
 
-    // Create main artist node first
+    // Initialize node map with main artist - we'll merge roles as we find them
+    const nodeMap = new Map<string, NetworkNode>();
+    
+    // Get MusicNerd URL for main artist
     let musicNerdUrl = 'https://music-nerd-git-staging-musicnerd.vercel.app';
     try {
       const artistId = await musicNerdService.getArtistId(artistName);
@@ -117,6 +119,7 @@ export class DatabaseStorage implements IStorage {
       console.log(`📭 [DEBUG] No MusicNerd ID found for main artist ${artistName}`);
     }
 
+    // Create main artist node
     const mainArtistNode: NetworkNode = {
       id: artistName,
       name: artistName,
@@ -125,7 +128,7 @@ export class DatabaseStorage implements IStorage {
       size: 25,
       musicNerdUrl,
     };
-    nodes.push(mainArtistNode);
+    nodeMap.set(artistName, mainArtistNode);
 
     console.log(`🔍 [DEBUG] Starting collaboration network generation for: "${artistName}"`);
     console.log('📊 [DEBUG] Data source priority: 1) OpenAI → 2) MusicBrainz → 3) Wikipedia → 4) Known collaborations fallback');
@@ -144,11 +147,9 @@ export class DatabaseStorage implements IStorage {
           });
 
           if (openAIData.artists.length > 0) {
-            // Process OpenAI data to create network nodes with multi-role support
-            const nodeMap = new Map<string, NetworkNode>();
-            
+            // Process OpenAI data and merge with main artist node map
             for (const collaborator of openAIData.artists) {
-              // Check if we already have a node for this person
+              // Check if we already have a node for this person (including main artist)
               let collaboratorNode = nodeMap.get(collaborator.name);
               
               if (collaboratorNode) {
@@ -160,8 +161,17 @@ export class DatabaseStorage implements IStorage {
                   collaboratorNode.types.push(collaborator.type);
                   console.log(`🎭 [DEBUG] Added ${collaborator.type} role to existing ${collaborator.name} node (now has ${collaboratorNode.types.length} roles)`);
                 }
-                // Update primary type to the first one (for backward compatibility)
+                // Keep primary type as the first one (for backward compatibility)
                 collaboratorNode.type = collaboratorNode.types[0];
+                
+                // Skip further processing since this person already exists
+                // Merge top collaborators from all roles
+                if (collaborator.topCollaborators && collaborator.topCollaborators.length > 0) {
+                  const existingCollaborators = collaboratorNode.collaborations || [];
+                  const newCollaborators = collaborator.topCollaborators.filter(c => !existingCollaborators.includes(c));
+                  collaboratorNode.collaborations = [...existingCollaborators, ...newCollaborators];
+                }
+                continue; // Skip creating new node since we're updating existing one
               } else {
                 // Create new node for this person
                 
@@ -207,70 +217,70 @@ export class DatabaseStorage implements IStorage {
                 nodeMap.set(collaborator.name, collaboratorNode);
               }
 
-              // Merge top collaborators from all roles
-              if (collaborator.topCollaborators && collaborator.topCollaborators.length > 0) {
-                const existingCollaborators = collaboratorNode.collaborations || [];
-                const newCollaborators = collaborator.topCollaborators.filter(c => !existingCollaborators.includes(c));
-                collaboratorNode.collaborations = [...existingCollaborators, ...newCollaborators];
               }
-            }
 
-            // Convert map to arrays and create links
-            const collaboratorNodes = Array.from(nodeMap.values());
-            for (const collaboratorNode of collaboratorNodes) {
-              nodes.push(collaboratorNode);
-              links.push({
-                source: mainArtistNode.id,
-                target: collaboratorNode.id,
-              });
-
-              // Add branching connections for the top collaborators
-              const maxBranching = 3;
-              const branchingCount = Math.min(collaboratorNode.collaborations?.length || 0, maxBranching);
-              
-              for (let i = 0; i < branchingCount; i++) {
-                const branchingArtist = collaboratorNode.collaborations![i];
-                
-                const branchingNode: NetworkNode = {
-                  id: branchingArtist,
-                  name: branchingArtist,
-                  type: 'artist',
-                  types: ['artist'],
-                  size: 15,
-                };
-
-                // Get MusicNerd ID for branching artist
-                let branchingMusicNerdUrl = 'https://music-nerd-git-staging-musicnerd.vercel.app';
-                try {
-                  const branchingArtistId = await musicNerdService.getArtistId(branchingArtist);
-                  if (branchingArtistId) {
-                    branchingMusicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${branchingArtistId}`;
-                  }
-                } catch (error) {
-                  console.log(`📭 [DEBUG] No MusicNerd ID found for branching artist ${branchingArtist}`);
-                }
-
-                branchingNode.musicNerdUrl = branchingMusicNerdUrl;
-                
-                // Check if we already have this artist node
-                if (!nodes.find(n => n.id === branchingArtist)) {
-                  nodes.push(branchingNode);
-                }
-                
-                // Create link between collaborator and their top collaborator
+            // Process all nodes to create links and branching connections
+            const allNodes = Array.from(nodeMap.values());
+            const mainNode = nodeMap.get(artistName)!;
+            
+            for (const collaboratorNode of allNodes) {
+              // Skip self-processing for the main artist
+              if (collaboratorNode.name !== artistName) {
+                // Create main connection to collaborator
                 links.push({
-                  source: collaboratorNode.name,
-                  target: branchingArtist,
+                  source: mainNode.id,
+                  target: collaboratorNode.id,
                 });
 
-                console.log(`🌟 [DEBUG] Added branching artist "${branchingArtist}" connected to multi-role "${collaboratorNode.name}"`);
-              }
+                // Add branching connections for the top collaborators
+                const maxBranching = 3;
+                const branchingCount = Math.min(collaboratorNode.collaborations?.length || 0, maxBranching);
+                
+                for (let i = 0; i < branchingCount; i++) {
+                  const branchingArtist = collaboratorNode.collaborations![i];
+                  
+                  // Check if this branching artist is already in our main node map
+                  if (!nodeMap.has(branchingArtist)) {
+                    const branchingNode: NetworkNode = {
+                      id: branchingArtist,
+                      name: branchingArtist,
+                      type: 'artist',
+                      types: ['artist'],
+                      size: 15,
+                    };
 
-              const rolesList = collaboratorNode.types?.join(' + ') || collaboratorNode.type;
-              console.log(`➕ [DEBUG] Added ${rolesList}: ${collaboratorNode.name} from OpenAI with ${branchingCount} branching connections`);
+                    // Get MusicNerd ID for branching artist
+                    let branchingMusicNerdUrl = 'https://music-nerd-git-staging-musicnerd.vercel.app';
+                    try {
+                      const branchingArtistId = await musicNerdService.getArtistId(branchingArtist);
+                      if (branchingArtistId) {
+                        branchingMusicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${branchingArtistId}`;
+                      }
+                    } catch (error) {
+                      console.log(`📭 [DEBUG] No MusicNerd ID found for branching artist ${branchingArtist}`);
+                    }
+
+                    branchingNode.musicNerdUrl = branchingMusicNerdUrl;
+                    nodeMap.set(branchingArtist, branchingNode);
+                  }
+                  
+                  // Create link between collaborator and their top collaborator
+                  links.push({
+                    source: collaboratorNode.name,
+                    target: branchingArtist,
+                  });
+
+                  console.log(`🌟 [DEBUG] Added branching artist "${branchingArtist}" connected to multi-role "${collaboratorNode.name}"`);
+                }
+
+                const rolesList = collaboratorNode.types?.join(' + ') || collaboratorNode.type;
+                console.log(`➕ [DEBUG] Added ${rolesList}: ${collaboratorNode.name} from OpenAI with ${branchingCount} branching connections`);
+              }
             }
 
-            console.log(`✅ [DEBUG] Successfully created network from OpenAI data: ${openAIData.artists.length} collaborators for "${artistName}"`);
+            // Final node array from consolidated map
+            const nodes = Array.from(nodeMap.values());
+            console.log(`✅ [DEBUG] Successfully created network from OpenAI data: ${nodes.length} total nodes (including main artist) for "${artistName}"`);
             return { nodes, links };
           }
         } catch (error) {
@@ -346,6 +356,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       // Update main artist node with additional data
+      const mainArtistNode = nodeMap.get(artistName)!;
       mainArtistNode.imageUrl = mainArtistImage;
       mainArtistNode.spotifyId = mainArtistSpotifyId;
       mainArtistNode.artistId = mainArtistMusicNerdId;
@@ -437,8 +448,7 @@ export class DatabaseStorage implements IStorage {
               
               for (const branchingArtist of branchingArtists) {
                 // Check if this artist is already in the network
-                const existingNode = nodes.find(node => node.name === branchingArtist);
-                if (!existingNode) {
+                if (!nodeMap.has(branchingArtist)) {
                   console.log(`🌟 [DEBUG] Adding branching artist "${branchingArtist}" connected to ${collaborator.type} "${collaborator.name}"`);
                   
                   // Try to get MusicNerd ID for the branching artist
@@ -453,13 +463,14 @@ export class DatabaseStorage implements IStorage {
                     id: branchingArtist,
                     name: branchingArtist,
                     type: 'artist',
+                    types: ['artist'],
                     size: 12, // Smaller size for branching nodes
                     imageUrl: null,
                     spotifyId: null,
                     artistId: branchingArtistId,
                     collaborations: [collaborator.name], // Show connection to the producer/songwriter
                   };
-                  nodes.push(branchingNode);
+                  nodeMap.set(branchingArtist, branchingNode);
                   
                   // Create link between producer/songwriter and branching artist
                   links.push({
@@ -488,17 +499,39 @@ export class DatabaseStorage implements IStorage {
           }
         }
 
-        const collaboratorNode: NetworkNode = {
-          id: collaborator.name,
-          name: collaborator.name,
-          type: collaborator.type as 'artist' | 'producer' | 'songwriter',
-          size: 15,
-          imageUrl: collaboratorImage,
-          spotifyId: collaboratorSpotifyId,
-          artistId: collaboratorMusicNerdId,
-          collaborations: topCollaborators.length > 0 ? topCollaborators : undefined,
-        };
-        nodes.push(collaboratorNode);
+        // Check if we already have this person (for multi-role support)
+        let collaboratorNode = nodeMap.get(collaborator.name);
+        
+        if (collaboratorNode) {
+          // Person already exists - add the new role to their types array
+          if (!collaboratorNode.types) {
+            collaboratorNode.types = [collaboratorNode.type];
+          }
+          if (!collaboratorNode.types.includes(collaborator.type as 'artist' | 'producer' | 'songwriter')) {
+            collaboratorNode.types.push(collaborator.type as 'artist' | 'producer' | 'songwriter');
+            console.log(`🎭 [DEBUG] Added ${collaborator.type} role to existing ${collaborator.name} node (now has ${collaboratorNode.types.length} roles)`);
+          }
+          // Update collaborations list
+          if (topCollaborators.length > 0) {
+            const existingCollabs = collaboratorNode.collaborations || [];
+            const newCollabs = topCollaborators.filter(c => !existingCollabs.includes(c));
+            collaboratorNode.collaborations = [...existingCollabs, ...newCollabs];
+          }
+        } else {
+          // Create new node for this person
+          collaboratorNode = {
+            id: collaborator.name,
+            name: collaborator.name,
+            type: collaborator.type as 'artist' | 'producer' | 'songwriter',
+            types: [collaborator.type as 'artist' | 'producer' | 'songwriter'],
+            size: 15,
+            imageUrl: collaboratorImage,
+            spotifyId: collaboratorSpotifyId,
+            artistId: collaboratorMusicNerdId,
+            collaborations: topCollaborators.length > 0 ? topCollaborators : undefined,
+          };
+          nodeMap.set(collaborator.name, collaboratorNode);
+        }
         console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from MusicBrainz relation "${collaborator.relation}"`);
 
         links.push({
@@ -566,17 +599,39 @@ export class DatabaseStorage implements IStorage {
                 topCollaborators = [artistName, ...otherCollaborators];
               }
 
-              const collaboratorNode: NetworkNode = {
-                id: collaborator.name,
-                name: collaborator.name,
-                type: collaborator.type as 'artist' | 'producer' | 'songwriter',
-                size: 15,
-                imageUrl: collaboratorImage,
-                spotifyId: collaboratorSpotifyId,
-                artistId: collaboratorMusicNerdId,
-                collaborations: topCollaborators.length > 0 ? topCollaborators : undefined,
-              };
-              nodes.push(collaboratorNode);
+              // Check if we already have this person (for multi-role support)
+              let collaboratorNode = nodeMap.get(collaborator.name);
+              
+              if (collaboratorNode) {
+                // Person already exists - add the new role to their types array
+                if (!collaboratorNode.types) {
+                  collaboratorNode.types = [collaboratorNode.type];
+                }
+                if (!collaboratorNode.types.includes(collaborator.type as 'artist' | 'producer' | 'songwriter')) {
+                  collaboratorNode.types.push(collaborator.type as 'artist' | 'producer' | 'songwriter');
+                  console.log(`🎭 [DEBUG] Added ${collaborator.type} role to existing ${collaborator.name} node (now has ${collaboratorNode.types.length} roles)`);
+                }
+                // Update collaborations list
+                if (topCollaborators.length > 0) {
+                  const existingCollabs = collaboratorNode.collaborations || [];
+                  const newCollabs = topCollaborators.filter(c => !existingCollabs.includes(c));
+                  collaboratorNode.collaborations = [...existingCollabs, ...newCollabs];
+                }
+              } else {
+                // Create new node for this person
+                collaboratorNode = {
+                  id: collaborator.name,
+                  name: collaborator.name,
+                  type: collaborator.type as 'artist' | 'producer' | 'songwriter',
+                  types: [collaborator.type as 'artist' | 'producer' | 'songwriter'],
+                  size: 15,
+                  imageUrl: collaboratorImage,
+                  spotifyId: collaboratorSpotifyId,
+                  artistId: collaboratorMusicNerdId,
+                  collaborations: topCollaborators.length > 0 ? topCollaborators : undefined,
+                };
+                nodeMap.set(collaborator.name, collaboratorNode);
+              }
               console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from Wikipedia context`);
 
               links.push({
@@ -587,6 +642,8 @@ export class DatabaseStorage implements IStorage {
             }
             
             console.log(`✅ [DEBUG] Successfully created network from Wikipedia data: ${wikipediaCollaborators.length} collaborators for "${artistName}"`);
+            // Final node array from consolidated map
+            const nodes = Array.from(nodeMap.values());
             return { nodes, links };
           } else {
             console.log(`❌ [DEBUG] Wikipedia returned 0 collaborators for "${artistName}"`);
@@ -614,27 +671,43 @@ export class DatabaseStorage implements IStorage {
           const fallbackArtists = knownCollaborations[artistNameLower];
           
           for (const collab of fallbackArtists) {
-            const collaboratorNode: NetworkNode = {
-              id: collab.name,
-              name: collab.name,
-              type: collab.type,
-              size: 15,
-            };
+            // Check if we already have this person (for multi-role support)
+            let collaboratorNode = nodeMap.get(collab.name);
             
-            // Get MusicNerd artist ID for the collaborator
-            let musicNerdUrl = 'https://music-nerd-git-staging-musicnerd.vercel.app';
-            try {
-              const artistId = await musicNerdService.getArtistId(collab.name);
-              if (artistId) {
-                musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${artistId}`;
-                console.log(`✅ [DEBUG] Found MusicNerd ID for ${collab.name}: ${artistId}`);
+            if (collaboratorNode) {
+              // Person already exists - add the new role to their types array
+              if (!collaboratorNode.types) {
+                collaboratorNode.types = [collaboratorNode.type];
               }
-            } catch (error) {
-              console.log(`📭 [DEBUG] No MusicNerd ID found for ${collab.name}`);
+              if (!collaboratorNode.types.includes(collab.type)) {
+                collaboratorNode.types.push(collab.type);
+                console.log(`🎭 [DEBUG] Added ${collab.type} role to existing ${collab.name} node (now has ${collaboratorNode.types.length} roles)`);
+              }
+            } else {
+              // Create new node for this person
+              collaboratorNode = {
+                id: collab.name,
+                name: collab.name,
+                type: collab.type,
+                types: [collab.type],
+                size: 15,
+              };
+              
+              // Get MusicNerd artist ID for the collaborator
+              let musicNerdUrl = 'https://music-nerd-git-staging-musicnerd.vercel.app';
+              try {
+                const artistId = await musicNerdService.getArtistId(collab.name);
+                if (artistId) {
+                  musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${artistId}`;
+                  console.log(`✅ [DEBUG] Found MusicNerd ID for ${collab.name}: ${artistId}`);
+                }
+              } catch (error) {
+                console.log(`📭 [DEBUG] No MusicNerd ID found for ${collab.name}`);
+              }
+              
+              collaboratorNode.musicNerdUrl = musicNerdUrl;
+              nodeMap.set(collab.name, collaboratorNode);
             }
-            
-            collaboratorNode.musicNerdUrl = musicNerdUrl;
-            nodes.push(collaboratorNode);
             links.push({
               source: mainArtistNode.id,
               target: collaboratorNode.id,
@@ -646,15 +719,20 @@ export class DatabaseStorage implements IStorage {
           console.log(`👤 [DEBUG] Returning only the main artist node without any collaborators`);
         }
         
+        // Final node array from consolidated map
+        const nodes = Array.from(nodeMap.values());
         return { nodes, links };
       } else {
         console.log(`✅ [DEBUG] Successfully created network from MusicBrainz data: ${collaborationData.artists.length} collaborators for "${artistName}"`);
       }
 
+      // Final node array from consolidated map
+      const nodes = Array.from(nodeMap.values());
       return { nodes, links };
     } catch (error) {
       console.error('Error generating real collaboration network:', error);
       // Return just the main artist if everything fails
+      const nodes = Array.from(nodeMap.values());
       return { nodes, links };
     }
   }
