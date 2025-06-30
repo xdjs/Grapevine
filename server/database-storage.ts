@@ -261,13 +261,58 @@ export class DatabaseStorage implements IStorage {
               // Add branching artist nodes to the network for style discovery
               // For songwriters and producers, show their top 3 collaborating artists
               const maxBranchingNodes = collaborator.type === 'songwriter' ? 3 : 2;
+              
+              // Define popularity rankings for major artists (higher = more popular)
+              const popularityMap = new Map<string, number>([
+                // Tier 1: Global superstars (100+)
+                ['taylor swift', 150], ['beyoncé', 145], ['rihanna', 140], ['lady gaga', 135], 
+                ['ariana grande', 130], ['justin bieber', 125], ['billie eilish', 120], ['drake', 115], 
+                ['the weeknd', 110], ['dua lipa', 105], ['olivia rodrigo', 102], ['harry styles', 100],
+                
+                // Tier 2: Major stars (75-99)
+                ['ed sheeran', 95], ['bruno mars', 90], ['justin timberlake', 85], ['selena gomez', 80], 
+                ['miley cyrus', 78], ['katy perry', 76], ['sia', 75], ['adele', 90], ['sam smith', 75],
+                
+                // Tier 3: Well-known artists (50-74)
+                ['post malone', 70], ['lorde', 68], ['charli xcx', 65], ['lana del rey', 62], 
+                ['the 1975', 60], ['troye sivan', 58], ['halsey', 55], ['shawn mendes', 52], ['camila cabello', 50],
+                
+                // Tier 4: Rising/established artists (25-49)
+                ['doja cat', 45], ['lizzo', 42], ['sza', 40], ['bad bunny', 38], ['rosé', 35], 
+                ['lisa', 32], ['jennie', 30], ['jisoo', 28], ['clairo', 25], ['phoebe bridgers', 22],
+                
+                // Electronic/Dance (specialized popularity)
+                ['calvin harris', 65], ['david guetta', 60], ['diplo', 55], ['skrillex', 50], 
+                ['marshmello', 45], ['zedd', 40], ['disclosure', 35], ['flume', 30],
+                
+                // Hip-Hop/R&B established (high popularity)
+                ['kendrick lamar', 95], ['j. cole', 85], ['travis scott', 80], ['kanye west', 75], 
+                ['childish gambino', 70], ['frank ocean', 68], ['tyler, the creator', 65],
+                
+                // Rock/Alternative established
+                ['imagine dragons', 70], ['coldplay', 85], ['arctic monkeys', 60], ['radiohead', 55],
+                
+                // K-Pop (specialized but high)
+                ['bts', 120], ['blackpink', 90], ['twice', 60], ['stray kids', 45]
+              ]);
+              
+              // Sort artists by popularity, prioritizing well-known collaborators
               const branchingArtists = artistCollaborators
                 .filter(artistName => artistName !== collaborator.name)
+                .sort((a, b) => {
+                  const popularityA = popularityMap.get(a.toLowerCase()) || 0;
+                  const popularityB = popularityMap.get(b.toLowerCase()) || 0;
+                  return popularityB - popularityA; // Sort descending (most popular first)
+                })
                 .slice(0, maxBranchingNodes);
               
               console.log(`🎨 [DEBUG] Creating ${branchingArtists.length} branching connections for ${collaborator.type} "${collaborator.name}"`);
-              if (branchingArtists.length > 0 && collaborator.type === 'songwriter') {
-                console.log(`📝 [DEBUG] Songwriter "${collaborator.name}" branching to artists:`, branchingArtists);
+              if (branchingArtists.length > 0) {
+                const popularityInfo = branchingArtists.map(artist => {
+                  const popularity = popularityMap.get(artist.toLowerCase()) || 0;
+                  return `${artist} (${popularity})`;
+                });
+                console.log(`📝 [DEBUG] ${collaborator.type} "${collaborator.name}" branching to popular artists:`, popularityInfo);
               }
               
               for (const branchingArtist of branchingArtists) {
@@ -457,18 +502,15 @@ export class DatabaseStorage implements IStorage {
             };
             
             // Get MusicNerd artist ID for the collaborator
-            let musicNerdUrl = 'https://music-nerd-git-staging-musicnerd.vercel.app';
             try {
               const artistId = await musicNerdService.getArtistId(collab.name);
               if (artistId) {
-                musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${artistId}`;
+                collaboratorNode.artistId = artistId;
                 console.log(`✅ [DEBUG] Found MusicNerd ID for ${collab.name}: ${artistId}`);
               }
             } catch (error) {
               console.log(`📭 [DEBUG] No MusicNerd ID found for ${collab.name}`);
             }
-            
-            collaboratorNode.musicNerdUrl = musicNerdUrl;
             nodes.push(collaboratorNode);
             links.push({
               source: mainArtistNode.id,
