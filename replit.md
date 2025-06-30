@@ -220,6 +220,15 @@ Changelog:
 - System processes fewer API requests, reducing MusicBrainz rate limiting issues
 - Preserves network quality while dramatically improving user experience
 
+### Enhanced Songwriter Detection via Work Relationships (June 30, 2025)
+- Implemented comprehensive songwriter detection through MusicBrainz work relationship analysis
+- Successfully extracting songwriter collaborations from work credits: Ed Sheeran, Sia, Labrinth, benny blanco
+- Added case-insensitive artist matching to fix search issues (e.g., "taylor Swift" now works)
+- Enhanced songwriter relation types: written by, song writer, music writer, lyrics writer, authored by, penned by
+- Work relationship processing finds co-writers, composers, and lyricists from song credits
+- System now properly identifies songwriter nodes (cyan) in addition to producer nodes (purple)
+- Comprehensive songwriter pattern matching in recording analysis for complete coverage
+
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals
 - Artists: Pink (#ec4899), Producers: Purple (#a855f7), Songwriters: Teal (#14b8a6)

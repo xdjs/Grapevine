@@ -161,12 +161,15 @@ class MusicNerdService {
             const artist = result.rows[0];
             console.log(`🔍 [DEBUG] Selected artist: "${artist.name}" (ID: ${artist.id})`);
             
-            // Check if this is an exact match
+            // Check if this is an exact match or acceptable case-insensitive match
             if (artist.name === artistName) {
               console.log(`✅ [DEBUG] Found exact case match for "${artistName}": ${artist.id}`);
               return artist.id;
+            } else if (artist.name.toLowerCase() === artistName.toLowerCase()) {
+              console.log(`✅ [DEBUG] Found acceptable case-insensitive match: "${artistName}" → "${artist.name}": ${artist.id}`);
+              return artist.id;
             } else {
-              console.log(`⚠️ [DEBUG] Case differs: searched "${artistName}" but found "${artist.name}" - rejecting to avoid confusion`);
+              console.log(`⚠️ [DEBUG] Name mismatch: searched "${artistName}" but found "${artist.name}" - rejecting`);
               return null;
             }
           } else {

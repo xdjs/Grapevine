@@ -72,10 +72,20 @@ class MusicBrainzService {
             console.log(`🔍 [DEBUG] Result ${index + 1}: "${artist.name}" (${artist.id}) ${artist.disambiguation ? `[${artist.disambiguation}]` : ''}`);
           });
           
-          // Look for exact name match first
-          const exactMatch = result.artists.find(artist => artist.name === artistName);
+          // Look for exact name match first (case-sensitive)
+          let exactMatch = result.artists.find(artist => artist.name === artistName);
           if (exactMatch) {
             console.log(`✅ [DEBUG] Found exact match: "${exactMatch.name}" (ID: ${exactMatch.id})`);
+            if (exactMatch.disambiguation) {
+              console.log(`📝 [DEBUG] Artist disambiguation: "${exactMatch.disambiguation}"`);
+            }
+            return exactMatch;
+          }
+          
+          // If no exact match, try case-insensitive match
+          exactMatch = result.artists.find(artist => artist.name.toLowerCase() === artistName.toLowerCase());
+          if (exactMatch) {
+            console.log(`✅ [DEBUG] Found case-insensitive match: "${artistName}" → "${exactMatch.name}" (ID: ${exactMatch.id})`);
             if (exactMatch.disambiguation) {
               console.log(`📝 [DEBUG] Artist disambiguation: "${exactMatch.disambiguation}"`);
             }
@@ -201,6 +211,35 @@ class MusicBrainzService {
         }
 
         if (relation["target-type"] === "work" && relation.work) {
+          // Check if this is a songwriter relationship (composer, lyricist, etc.)
+          if (relation.type && ['composer', 'lyricist', 'writer', 'arranger'].includes(relation.type.toLowerCase())) {
+            // This indicates the main artist is a songwriter for this work
+            // Look for other songwriters associated with this work
+            try {
+              const workDetails = await this.getWorkDetails(relation.work.id);
+              if (workDetails && workDetails.relations) {
+                for (const workRelation of workDetails.relations) {
+                  if (workRelation["target-type"] === "artist" && workRelation.artist && 
+                      workRelation.artist.name !== artistName &&
+                      ['composer', 'lyricist', 'writer', 'arranger'].includes(workRelation.type?.toLowerCase() || '')) {
+                    
+                    if (!processedArtists.has(workRelation.artist.name)) {
+                      collaboratingArtists.push({
+                        name: workRelation.artist.name,
+                        type: 'songwriter',
+                        relation: `work ${workRelation.type}`
+                      });
+                      processedArtists.add(workRelation.artist.name);
+                      console.log(`✍️ [DEBUG] Found songwriter from work: ${workRelation.artist.name} (${workRelation.type})`);
+                    }
+                  }
+                }
+              }
+            } catch (workError) {
+              console.log(`⚠️ [DEBUG] Could not fetch work details for "${relation.work.title}":`, workError);
+            }
+          }
+          
           collaborativeWorks.push({
             title: relation.work.title,
             collaborators: [artistName]
@@ -313,7 +352,8 @@ class MusicBrainzService {
                   
                   const songwriterPatterns = [
                     'wrote', 'writer', 'songwriter', 'composed', 'lyrics', 'pen',
-                    'words', 'music', 'melody'
+                    'words', 'music', 'melody', 'written', 'composition', 'lyricist',
+                    'author', 'co-write', 'co-writer', 'penned', 'crafted'
                   ];
                   
                   if (knownProducers.some(producer => collaboratorNameLower.includes(producer))) {
@@ -406,6 +446,12 @@ class MusicBrainzService {
       'composition': 'songwriter',
       'writing': 'songwriter',
       'song writing': 'songwriter',
+      'written by': 'songwriter',
+      'song writer': 'songwriter',
+      'music writer': 'songwriter',
+      'lyrics writer': 'songwriter',
+      'authored by': 'songwriter',
+      'penned by': 'songwriter',
     };
 
     return typeMap[musicBrainzType.toLowerCase()] || null;
