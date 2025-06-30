@@ -173,16 +173,16 @@ Changelog:
 - Comprehensive debugging system shows exact data sources and extraction process
 
 ### MusicNerd Supabase Integration (June 28, 2025)
-- Integrated Supabase database connection via CONNECTION_STRING secret
-- Added artist ID lookup for direct linking to specific MusicNerd artist pages
+- Integrated Supabase database connection via CONNECTION_STRING secret using direct PostgreSQL connection
+- Added artist ID lookup for direct linking to specific MusicNerd artist pages using real database queries
 - Artist nodes (pink circles) now link to `https://music-nerd-git-staging-musicnerd.vercel.app/artist/{artistId}` when ID available
 - Falls back to main MusicNerd page when no artist ID found
 - Only artist-type nodes get MusicNerd IDs - producers and songwriters remain unlinked
-- Network generation and visualization unchanged - only enhanced linking functionality
-- Successfully implemented artist ID lookup in both real collaboration and mock data paths
-- Fixed popup blocker issues by using programmatic link creation instead of window.open
-- Comprehensive artist coverage: All artists in the network now have unique MusicNerd artist IDs
-- Complete artist mapping includes: Taylor Swift, Billie Eilish, Ed Sheeran, Ariana Grande, Lorde, Lana Del Rey, Bon Iver, The Weeknd, Drake, Future, Lil Wayne, Rihanna, Ashe, Selena Gomez, Justin Bieber, Laufey, Tyler The Creator, Kali Uchis, Clairo, Benny Blanco, Skrillex
+- Implemented precise artist matching: exact name match first, then validated fuzzy matching
+- Fixed artist mismatching issue where wrong artists' pages were opening (e.g., "Griff" finding "Patty Griffin")
+- Database queries now reject poor name matches to ensure accurate artist linking
+- Successfully queries real Supabase artists table with proper name validation
+- All artist IDs retrieved are authentic from MusicNerd database - no mock or generated IDs used
 
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals

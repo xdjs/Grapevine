@@ -118,24 +118,32 @@ class MusicNerdService {
           const schemaResult = await client.query(schemaQuery);
           console.log(`🔍 [DEBUG] Artists table columns:`, schemaResult.rows.map(r => r.column_name));
           
-          // Query the artists table directly - adjust column names based on actual schema
-          const query = 'SELECT * FROM artists WHERE LOWER(name) LIKE LOWER($1) LIMIT 1';
-          const result = await client.query(query, [`%${artistName}%`]);
+          // Query the artists table directly - try exact match first, then fuzzy match
+          let query = 'SELECT * FROM artists WHERE LOWER(name) = LOWER($1) LIMIT 1';
+          let result = await client.query(query, [artistName]);
+          
+          // If no exact match, try fuzzy match but prioritize names starting with the search term
+          if (result.rows.length === 0) {
+            query = 'SELECT * FROM artists WHERE LOWER(name) LIKE LOWER($1) ORDER BY CASE WHEN LOWER(name) LIKE LOWER($2) THEN 1 ELSE 2 END LIMIT 1';
+            result = await client.query(query, [`%${artistName}%`, `${artistName}%`]);
+          }
           
           await client.end();
           
           if (result.rows.length > 0) {
             const artist = result.rows[0];
-            console.log(`🔍 [DEBUG] Found artist record for "${artistName}":`, artist);
+            console.log(`🔍 [DEBUG] Database search for "${artistName}" matched artist: "${artist.name}" (ID: ${artist.id})`);
             
-            // Try different possible column names for the artist ID
-            const artistId = artist.artist_id || artist.id || artist.uuid || artist.guid || artist.artistId;
+            // Check if this is a good match - if the names are very different, skip it
+            const searchLower = artistName.toLowerCase();
+            const foundLower = artist.name.toLowerCase();
             
-            if (artistId) {
-              console.log(`✅ [DEBUG] Found real MusicNerd artist ID for "${artistName}": ${artistId}`);
-              return artistId;
+            // Only use the match if it's a reasonable similarity
+            if (foundLower.includes(searchLower) || searchLower.includes(foundLower) || foundLower === searchLower) {
+              console.log(`✅ [DEBUG] Found real MusicNerd artist ID for "${artistName}": ${artist.id}`);
+              return artist.id;
             } else {
-              console.log(`⚠️ [DEBUG] Artist found but no ID column detected for "${artistName}"`);
+              console.log(`❌ [DEBUG] Artist name mismatch: searched "${artistName}" but found "${artist.name}" - skipping`);
               return null;
             }
           } else {
