@@ -176,49 +176,109 @@ export default function NetworkVisualizer({
       .attr("class", "link network-link")
       .attr("stroke-width", 2);
 
-    // Create nodes with direct styling
+    // Create nodes with multi-role support
     const nodeElements = networkGroup
       .selectAll(".node")
       .data(data.nodes)
       .enter()
-      .append("circle")
-      .attr("class", (d) => `node network-node node-${d.type}`)
-      .attr("r", (d) => d.size)
-      .attr("fill", "transparent")
-      .attr("stroke", (d) => {
-        if (d.type === 'artist') return '#FF0ACF';       // Magenta Pink
-        if (d.type === 'producer') return '#AE53FF';     // Bright Purple  
-        if (d.type === 'songwriter') return '#67D1F8';   // Light Blue
-        return '#355367';  // Police Blue
-      })
-      .attr("stroke-width", 4)
-      .style("cursor", "pointer")
+      .append("g")
+      .attr("class", (d) => `node-group network-node node-${d.type}`)
+      .style("cursor", "pointer");
+
+    // Add circles for each node - single color for single role, multi-colored for multiple roles
+    nodeElements.each(function(d) {
+      const group = d3.select(this);
+      const roles = d.types || [d.type];
+      
+      if (roles.length === 1) {
+        // Single role - simple circle
+        group.append("circle")
+          .attr("r", d.size)
+          .attr("fill", "transparent")
+          .attr("stroke", () => {
+            if (roles[0] === 'artist') return '#FF0ACF';       // Magenta Pink
+            if (roles[0] === 'producer') return '#AE53FF';     // Bright Purple  
+            if (roles[0] === 'songwriter') return '#67D1F8';   // Light Blue
+            return '#355367';  // Police Blue
+          })
+          .attr("stroke-width", 4);
+      } else {
+        // Multiple roles - create segmented circle
+        const angleStep = (2 * Math.PI) / roles.length;
+        
+        roles.forEach((role, index) => {
+          const startAngle = index * angleStep;
+          const endAngle = (index + 1) * angleStep;
+          
+          // Create arc path for each role
+          const arcPath = d3.arc()
+            .innerRadius(d.size - 4)
+            .outerRadius(d.size)
+            .startAngle(startAngle)
+            .endAngle(endAngle);
+          
+          group.append("path")
+            .attr("d", arcPath)
+            .attr("fill", () => {
+              if (role === 'artist') return '#FF0ACF';       // Magenta Pink
+              if (role === 'producer') return '#AE53FF';     // Bright Purple  
+              if (role === 'songwriter') return '#67D1F8';   // Light Blue
+              return '#355367';  // Police Blue
+            })
+            .attr("stroke", "white")
+            .attr("stroke-width", 1);
+        });
+        
+        // Add inner circle for better visibility
+        group.append("circle")
+          .attr("r", d.size - 4)
+          .attr("fill", "transparent")
+          .attr("stroke", "white")
+          .attr("stroke-width", 2);
+      }
+    })
       .on("mouseover", function(event, d) {
-        d3.select(this).attr("stroke", "white").attr("stroke-width", 6);
+        // Highlight the entire node group
+        d3.select(this).selectAll("circle, path")
+          .attr("stroke", "white")
+          .attr("stroke-width", 3);
         showTooltip(event, d);
       })
       .on("mousemove", moveTooltip)
       .on("mouseout", function(event, d) {
-        d3.select(this)
-          .attr("stroke", (d) => {
-            if (d.type === 'artist') return '#FF0ACF';       // Magenta Pink
-            if (d.type === 'producer') return '#AE53FF';     // Bright Purple  
-            if (d.type === 'songwriter') return '#67D1F8';   // Light Blue
-            return '#355367';  // Police Blue
-          })
-          .attr("stroke-width", 4);
+        // Reset the stroke colors for the entire node group
+        const group = d3.select(this);
+        const roles = d.types || [d.type];
+        
+        if (roles.length === 1) {
+          group.select("circle")
+            .attr("stroke", () => {
+              if (roles[0] === 'artist') return '#FF0ACF';
+              if (roles[0] === 'producer') return '#AE53FF';
+              if (roles[0] === 'songwriter') return '#67D1F8';
+              return '#355367';
+            })
+            .attr("stroke-width", 4);
+        } else {
+          group.selectAll("path")
+            .attr("stroke", "white")
+            .attr("stroke-width", 1);
+          group.select("circle")
+            .attr("stroke", "white")
+            .attr("stroke-width", 2);
+        }
         hideTooltip();
       })
       .on("click", function(event, d) {
         event.stopPropagation();
-        // Only open Music Nerd for artists, not producers or songwriters
-        if (d.type === 'artist') {
+        // Open Music Nerd for any node that has an artist role
+        if (d.type === 'artist' || (d.types && d.types.includes('artist'))) {
           openMusicNerdProfile(d.name, d.artistId);
         }
       })
       .call(
         d3
-          .drag<SVGCircleElement, NetworkNode>()
+          .drag<SVGGElement, NetworkNode>()
           .on("start", dragstarted)
           .on("drag", dragged)
           .on("end", dragended)
@@ -249,21 +309,25 @@ export default function NetworkVisualizer({
       .style("opacity", 0);
 
     function showTooltip(event: MouseEvent, d: NetworkNode) {
-      let content = `<strong>${d.name}</strong><br/>Type: ${d.type}`;
+      const roles = d.types || [d.type];
+      const roleDisplay = roles.length > 1 ? roles.join(' + ') : roles[0];
+      
+      let content = `<strong>${d.name}</strong><br/>Role${roles.length > 1 ? 's' : ''}: ${roleDisplay}`;
 
       // Show collaboration information for producers and songwriters
-      if ((d.type === 'producer' || d.type === 'songwriter') && d.collaborations && d.collaborations.length > 0) {
+      const hasProducerRole = roles.includes('producer') || roles.includes('songwriter');
+      if (hasProducerRole && d.collaborations && d.collaborations.length > 0) {
         content += `<br/><br/><strong>Top Collaborations:</strong><br/>`;
         content += d.collaborations.join("<br/>");
       }
 
       // Show general collaboration info for artists if available
-      if (d.type === 'artist' && d.collaborations && d.collaborations.length > 0) {
+      if (roles.includes('artist') && d.collaborations && d.collaborations.length > 0) {
         content += `<br/><br/><strong>Recent Collaborations:</strong><br/>`;
         content += d.collaborations.slice(0, 3).join("<br/>");
       }
 
-      if (d.type === 'artist') {
+      if (roles.includes('artist')) {
         content += `<br/><br/><em>Click to search on Music Nerd</em>`;
       }
 
@@ -325,7 +389,7 @@ export default function NetworkVisualizer({
       document.body.removeChild(link);
     }
 
-    function dragstarted(event: d3.D3DragEvent<SVGCircleElement, NetworkNode, unknown>, d: NetworkNode) {
+    function dragstarted(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
       // Prevent event bubbling to avoid interfering with zoom behavior
       event.sourceEvent.stopPropagation();
       if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -333,14 +397,14 @@ export default function NetworkVisualizer({
       d.fy = d.y;
     }
 
-    function dragged(event: d3.D3DragEvent<SVGCircleElement, NetworkNode, unknown>, d: NetworkNode) {
+    function dragged(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
       // Prevent event bubbling to avoid interfering with zoom behavior
       event.sourceEvent.stopPropagation();
       d.fx = event.x;
       d.fy = event.y;
     }
 
-    function dragended(event: d3.D3DragEvent<SVGCircleElement, NetworkNode, unknown>, d: NetworkNode) {
+    function dragended(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
       // Prevent event bubbling to avoid interfering with zoom behavior
       event.sourceEvent.stopPropagation();
       if (!event.active) simulation.alphaTarget(0);
@@ -356,7 +420,7 @@ export default function NetworkVisualizer({
         .attr("x2", (d) => (d.target as NetworkNode).x!)
         .attr("y2", (d) => (d.target as NetworkNode).y!);
 
-      nodeElements.attr("cx", (d) => d.x!).attr("cy", (d) => d.y!);
+      nodeElements.attr("transform", (d) => `translate(${d.x!}, ${d.y!})`);
 
       labelElements.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
     });
