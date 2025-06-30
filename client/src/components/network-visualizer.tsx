@@ -432,34 +432,75 @@ export default function NetworkVisualizer({
     };
   }, [data, visible, onZoomChange]);
 
+  // Helper function to check if a node should be visible based on filter state
+  // For multi-role nodes, they are visible if ANY of their roles should be shown
+  const isNodeVisible = (node: NetworkNode, filterState: FilterState): boolean => {
+    if (!node.types || node.types.length === 0) {
+      // Fallback to single type if types array is not available
+      if (node.type === "producer" && !filterState.showProducers) return false;
+      if (node.type === "songwriter" && !filterState.showSongwriters) return false;
+      if (node.type === "artist" && !filterState.showArtists) return false;
+      return true;
+    }
+    
+    // Check if any of the node's roles should be visible
+    for (const role of node.types) {
+      if (role === "producer" && filterState.showProducers) return true;
+      if (role === "songwriter" && filterState.showSongwriters) return true;
+      if (role === "artist" && filterState.showArtists) return true;
+    }
+    
+    return false;
+  };
+
   // Update visibility based on filter state
   useEffect(() => {
     if (!svgRef.current || !visible) return;
 
     const svg = d3.select(svgRef.current);
 
-    svg.selectAll(".node").style("opacity", function () {
+    // Helper function to check if a node should be visible based on filter state
+    // For multi-role nodes, they are visible if ANY of their roles should be shown
+    const isNodeVisible = (node: NetworkNode): boolean => {
+      if (node.types && node.types.length > 0) {
+        // Check if any of the node's roles should be visible
+        for (const role of node.types) {
+          if (role === "producer" && filterState.showProducers) return true;
+          if (role === "songwriter" && filterState.showSongwriters) return true;
+          if (role === "artist" && filterState.showArtists) return true;
+        }
+        return false;
+      } else {
+        // Fallback to single type if types array is not available
+        if (node.type === "producer" && !filterState.showProducers) return false;
+        if (node.type === "songwriter" && !filterState.showSongwriters) return false;
+        if (node.type === "artist" && !filterState.showArtists) return false;
+        return true;
+      }
+    };
+
+    // Hide/show nodes based on filter state
+    svg.selectAll(".node").style("display", function () {
       const d = d3.select(this).datum() as NetworkNode;
-      if (d.type === "producer" && !filterState.showProducers) return 0;
-      if (d.type === "songwriter" && !filterState.showSongwriters) return 0;
-      if (d.type === "artist" && !filterState.showArtists) return 0;
-      return 1;
+      return isNodeVisible(d) ? "block" : "none";
     });
 
-    svg.selectAll(".link").style("opacity", function () {
+    // Hide/show labels based on filter state
+    svg.selectAll(".label").style("display", function () {
+      const d = d3.select(this).datum() as NetworkNode;
+      return isNodeVisible(d) ? "block" : "none";
+    });
+
+    // Hide/show links based on whether both connected nodes are visible
+    svg.selectAll(".link").style("display", function () {
       const d = d3.select(this).datum() as NetworkLink;
       const source = d.source as NetworkNode;
       const target = d.target as NetworkNode;
       
-      const sourceVisible = getNodeVisibility(source, filterState);
-      const targetVisible = getNodeVisibility(target, filterState);
+      const sourceVisible = isNodeVisible(source);
+      const targetVisible = isNodeVisible(target);
       
-      return sourceVisible && targetVisible ? 0.6 : 0;
-    });
-
-    svg.selectAll(".label").style("opacity", function () {
-      const d = d3.select(this).datum() as NetworkNode;
-      return getNodeVisibility(d, filterState) ? 1 : 0;
+      return sourceVisible && targetVisible ? "block" : "none";
     });
   }, [filterState, visible]);
 

@@ -2,6 +2,7 @@ export interface NetworkNode {
   id: string;
   name: string;
   type: 'artist' | 'producer' | 'songwriter';
+  types?: ('artist' | 'producer' | 'songwriter')[];
   size: number;
   collaborations?: string[];
   x?: number;
