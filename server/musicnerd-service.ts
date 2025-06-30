@@ -118,23 +118,11 @@ class MusicNerdService {
           const schemaResult = await client.query(schemaQuery);
           console.log(`🔍 [DEBUG] Artists table columns:`, schemaResult.rows.map(r => r.column_name));
           
-          // Query the artists table directly - try exact CASE-SENSITIVE match first
-          let query = 'SELECT * FROM artists WHERE name = $1 LIMIT 1';
+          // Query the artists table directly - try exact match first, then fuzzy match
+          let query = 'SELECT * FROM artists WHERE LOWER(name) = LOWER($1) LIMIT 1';
           let result = await client.query(query, [artistName]);
           
-          // If no exact case-sensitive match, try case-insensitive exact match
-          if (result.rows.length === 0) {
-            query = 'SELECT * FROM artists WHERE LOWER(name) = LOWER($1) LIMIT 1';
-            result = await client.query(query, [artistName]);
-          }
-          
-          // If still no match, try case-sensitive fuzzy match
-          if (result.rows.length === 0) {
-            query = 'SELECT * FROM artists WHERE name LIKE $1 ORDER BY CASE WHEN name LIKE $2 THEN 1 ELSE 2 END LIMIT 1';
-            result = await client.query(query, [`%${artistName}%`, `${artistName}%`]);
-          }
-          
-          // If still no match, try case-insensitive fuzzy match as last resort
+          // If no exact match, try fuzzy match but prioritize names starting with the search term
           if (result.rows.length === 0) {
             query = 'SELECT * FROM artists WHERE LOWER(name) LIKE LOWER($1) ORDER BY CASE WHEN LOWER(name) LIKE LOWER($2) THEN 1 ELSE 2 END LIMIT 1';
             result = await client.query(query, [`%${artistName}%`, `${artistName}%`]);
