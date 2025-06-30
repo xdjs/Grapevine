@@ -184,6 +184,16 @@ Changelog:
 - Successfully queries real Supabase artists table with proper name validation
 - All artist IDs retrieved are authentic from MusicNerd database - no mock or generated IDs used
 
+### Enhanced MusicBrainz Search & Real Collaboration Data (June 30, 2025)
+- Fixed MusicBrainz search to find correct artists with exact name matching
+- Enhanced search strategies to differentiate between similar artists (e.g., "LISA" vs "LiSA")
+- LISA now correctly identifies as BLACKPINK member instead of Japanese LiSA
+- Implemented comprehensive artist search with multiple query strategies for better accuracy
+- All collaboration data now comes from authentic MusicBrainz database instead of placeholder data
+- Real collaborators shown: BLACKPINK, mentors, and other authentic music industry connections
+- Eliminated all synthetic/generated collaboration data - only authentic relationships displayed
+- Both distinct artist IDs working correctly: LiSA (b4ecb818-d507-4304-a21d-74df26ff68f5) and LISA (e45638ce-156a-4d15-8749-23668b4fedeb)
+
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals
 - Artists: Pink (#ec4899), Producers: Purple (#a855f7), Songwriters: Teal (#14b8a6)

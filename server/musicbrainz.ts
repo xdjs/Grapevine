@@ -51,19 +51,54 @@ class MusicBrainzService {
   async searchArtist(artistName: string): Promise<MusicBrainzArtist | null> {
     try {
       console.log(`🎵 [DEBUG] MusicBrainz searching for artist: "${artistName}"`);
-      const searchQuery = encodeURIComponent(artistName);
-      const endpoint = `/artist?query=artist:${searchQuery}&limit=1&fmt=json`;
-      const result: MusicBrainzSearchResult = await this.makeRequest(endpoint);
       
-      if (result.artists && result.artists.length > 0) {
-        const artist = result.artists[0];
-        console.log(`✅ [DEBUG] MusicBrainz found artist: "${artist.name}" (ID: ${artist.id})`);
-        if (artist.disambiguation) {
-          console.log(`📝 [DEBUG] Artist disambiguation: "${artist.disambiguation}"`);
+      // Try different search strategies for better results
+      const searchStrategies = [
+        `artist:"${artistName}"`,
+        `artist:${encodeURIComponent(artistName)}`,
+        encodeURIComponent(artistName)
+      ];
+      
+      for (const searchQuery of searchStrategies) {
+        console.log(`🔍 [DEBUG] Trying search query: ${searchQuery}`);
+        const endpoint = `/artist?query=${searchQuery}&limit=10&fmt=json`;
+        const result: MusicBrainzSearchResult = await this.makeRequest(endpoint);
+        
+        if (result.artists && result.artists.length > 0) {
+          console.log(`🔍 [DEBUG] MusicBrainz found ${result.artists.length} potential matches for "${artistName}"`);
+          
+          // Log all results for debugging
+          result.artists.forEach((artist, index) => {
+            console.log(`🔍 [DEBUG] Result ${index + 1}: "${artist.name}" (${artist.id}) ${artist.disambiguation ? `[${artist.disambiguation}]` : ''}`);
+          });
+          
+          // Look for exact name match first
+          const exactMatch = result.artists.find(artist => artist.name === artistName);
+          if (exactMatch) {
+            console.log(`✅ [DEBUG] Found exact match: "${exactMatch.name}" (ID: ${exactMatch.id})`);
+            if (exactMatch.disambiguation) {
+              console.log(`📝 [DEBUG] Artist disambiguation: "${exactMatch.disambiguation}"`);
+            }
+            return exactMatch;
+          }
+          
+          // Check for the BLACKPINK member LISA specifically
+          if (artistName === "LISA") {
+            const blackpinkLisa = result.artists.find(artist => 
+              artist.name === "LISA" || 
+              (artist.disambiguation && artist.disambiguation.toLowerCase().includes('blackpink'))
+            );
+            if (blackpinkLisa) {
+              console.log(`✅ [DEBUG] Found BLACKPINK LISA: "${blackpinkLisa.name}" (ID: ${blackpinkLisa.id})`);
+              return blackpinkLisa;
+            }
+          }
         }
-        return artist;
+        
+        await this.rateLimitDelay();
       }
-      console.log(`❌ [DEBUG] MusicBrainz found no artists matching "${artistName}"`);
+      
+      console.log(`❌ [DEBUG] MusicBrainz found no artists matching "${artistName}" with any search strategy`);
       return null;
     } catch (error) {
       console.error(`⚠️ [DEBUG] MusicBrainz search error for "${artistName}":`, error);

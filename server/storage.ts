@@ -304,7 +304,9 @@ export class MemStorage implements IStorage {
 
     try {
       // Get real collaboration data from MusicBrainz
+      console.log(`🎵 [DEBUG] Fetching MusicBrainz collaboration data for "${artistName}"`);
       const collaborationData = await musicBrainzService.getArtistCollaborations(artistName);
+      console.log(`🎵 [DEBUG] MusicBrainz returned ${collaborationData.artists.length} artist collaborators and ${collaborationData.works.length} works for "${artistName}"`);
       
       // Get Spotify image for main artist
       let mainArtistImage = null;
@@ -463,11 +465,9 @@ export class MemStorage implements IStorage {
   }
 
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
-    const mainArtist = await this.getArtistByName(artistName);
-    if (!mainArtist) {
-      // Try to get real collaboration data from MusicBrainz first
-      return this.generateRealCollaborationNetwork(artistName);
-    }
+    // Always use real collaboration data from MusicBrainz instead of mock data
+    console.log(`🎵 [DEBUG] Using real collaboration data path for "${artistName}"`);
+    return this.generateRealCollaborationNetwork(artistName);
 
     const nodes: NetworkNode[] = [];
     const links: NetworkLink[] = [];
