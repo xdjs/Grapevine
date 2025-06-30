@@ -106,6 +106,26 @@ export class DatabaseStorage implements IStorage {
     const nodes: NetworkNode[] = [];
     const links: NetworkLink[] = [];
 
+    // Create main artist node first
+    let musicNerdUrl = 'https://music-nerd-git-staging-musicnerd.vercel.app';
+    try {
+      const artistId = await musicNerdService.getArtistId(artistName);
+      if (artistId) {
+        musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${artistId}`;
+      }
+    } catch (error) {
+      console.log(`📭 [DEBUG] No MusicNerd ID found for main artist ${artistName}`);
+    }
+
+    const mainArtistNode: NetworkNode = {
+      id: artistName,
+      name: artistName,
+      type: 'artist',
+      size: 25,
+      musicNerdUrl,
+    };
+    nodes.push(mainArtistNode);
+
     console.log(`🔍 [DEBUG] Starting collaboration network generation for: "${artistName}"`);
     console.log('📊 [DEBUG] Data source priority: 1) OpenAI → 2) MusicBrainz → 3) Wikipedia → 4) Known collaborations fallback');
 
@@ -144,7 +164,7 @@ export class DatabaseStorage implements IStorage {
                 id: collaborator.name,
                 name: collaborator.name,
                 type: collaborator.type,
-                size: collaborator.type === 'artist' ? 20 : 15,
+                size: 15,
                 imageUrl,
                 spotifyId,
               };
@@ -287,17 +307,10 @@ export class DatabaseStorage implements IStorage {
         console.log(`Could not fetch MusicNerd ID for ${artistName}`);
       }
 
-      // Create main artist node
-      const mainArtistNode: NetworkNode = {
-        id: artistName,
-        name: artistName,
-        type: 'artist',
-        size: 20,
-        imageUrl: mainArtistImage,
-        spotifyId: mainArtistSpotifyId,
-        artistId: mainArtistMusicNerdId,
-      };
-      nodes.push(mainArtistNode);
+      // Update main artist node with additional data
+      mainArtistNode.imageUrl = mainArtistImage;
+      mainArtistNode.spotifyId = mainArtistSpotifyId;
+      mainArtistNode.artistId = mainArtistMusicNerdId;
 
       // Add collaborating artists from MusicBrainz - limit to top 5 producers and songwriters for performance
       console.log(`🎨 [DEBUG] Processing ${collaborationData.artists.length} MusicBrainz collaborators...`);
