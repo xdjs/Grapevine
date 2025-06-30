@@ -259,8 +259,8 @@ export class DatabaseStorage implements IStorage {
               console.log(`✅ [DEBUG] Found ${topCollaborators.length} authentic collaborations for "${collaborator.name}":`, topCollaborators);
               
               // Add branching artist nodes to the network for style discovery
-              // For songwriters and producers, show their top 3 collaborating artists
-              const maxBranchingNodes = collaborator.type === 'songwriter' ? 3 : 2;
+              // For songwriters and producers, show more collaborating artists for deeper webs
+              const maxBranchingNodes = collaborator.type === 'songwriter' ? 4 : 3; // Increased from 3:2 to 4:3
               
               // Define popularity rankings for major artists (higher = more popular)
               const popularityMap = new Map<string, number>([
@@ -293,7 +293,17 @@ export class DatabaseStorage implements IStorage {
                 ['imagine dragons', 70], ['coldplay', 85], ['arctic monkeys', 60], ['radiohead', 55],
                 
                 // K-Pop (specialized but high)
-                ['bts', 120], ['blackpink', 90], ['twice', 60], ['stray kids', 45]
+                ['bts', 120], ['blackpink', 90], ['twice', 60], ['stray kids', 45],
+                
+                // Major Producers (get special priority in cross-connections)
+                ['max martin', 80], ['dr. dre', 85], ['timbaland', 82], ['pharrell williams', 88], 
+                ['rick rubin', 75], ['jack antonoff', 78], ['benny blanco', 72], ['finneas', 70],
+                ['andrew watt', 68], ['metro boomin', 65], ['mike will made-it', 60], ['mustard', 58],
+                ['hit-boy', 55], ['london on da track', 52], ['wheezy', 50], ['pierre bourne', 48],
+                
+                // Major Songwriters (get special priority)
+                ['diane warren', 85], ['ryan tedder', 82], ['sia', 78], ['julia michaels', 70],
+                ['justin tranter', 68], ['charlie puth', 65], ['ed sheeran', 95] // Ed Sheeran is both artist and songwriter
               ]);
               
               // Sort artists by popularity, prioritizing well-known collaborators
@@ -347,6 +357,62 @@ export class DatabaseStorage implements IStorage {
                     target: branchingArtist,
                   });
                   console.log(`🔗 [DEBUG] Created branching link: "${collaborator.name}" ↔ "${branchingArtist}"`);
+                  
+                  // For producers/songwriters, try to find other popular producers who also work with this branching artist
+                  // This creates cross-connections that make the web more in-depth
+                  if ((collaborator.type === 'producer' || collaborator.type === 'songwriter') && branchingArtists.length < maxBranchingNodes) {
+                    try {
+                      console.log(`🔍 [DEBUG] Looking for other producers who worked with "${branchingArtist}"`);
+                      const branchingArtistCollabs = await musicBrainzService.getArtistCollaborations(branchingArtist);
+                      
+                      if (branchingArtistCollabs && branchingArtistCollabs.artists.length > 0) {
+                        // Find other popular producers/songwriters who worked with this artist
+                        const otherProducers = branchingArtistCollabs.artists
+                          .filter(c => c.type === 'producer' || c.type === 'songwriter')
+                          .filter(c => c.name !== collaborator.name) // Not the current producer
+                          .filter(c => !nodes.some(node => node.name === c.name)) // Not already in network
+                          .sort((a, b) => {
+                            const popularityA = popularityMap.get(a.name.toLowerCase()) || 0;
+                            const popularityB = popularityMap.get(b.name.toLowerCase()) || 0;
+                            return popularityB - popularityA;
+                          })
+                          .slice(0, 1); // Add just 1 cross-connection producer to avoid overcrowding
+                        
+                        for (const crossProducer of otherProducers) {
+                          console.log(`🌐 [DEBUG] Adding cross-connection producer "${crossProducer.name}" who also worked with "${branchingArtist}"`);
+                          
+                          // Try to get MusicNerd ID for the cross-connection producer
+                          let crossProducerArtistId: string | null = null;
+                          try {
+                            crossProducerArtistId = await musicNerdService.getArtistId(crossProducer.name);
+                          } catch (error) {
+                            console.log(`Could not fetch MusicNerd ID for cross-producer ${crossProducer.name}`);
+                          }
+                          
+                          const crossProducerNode: NetworkNode = {
+                            id: crossProducer.name,
+                            name: crossProducer.name,
+                            type: crossProducer.type as 'producer' | 'songwriter',
+                            size: 10, // Smaller size for cross-connection nodes
+                            imageUrl: null,
+                            spotifyId: null,
+                            artistId: crossProducerArtistId,
+                            collaborations: [branchingArtist], // Show connection to the shared artist
+                          };
+                          nodes.push(crossProducerNode);
+                          
+                          // Create link between cross-producer and the shared artist
+                          links.push({
+                            source: crossProducer.name,
+                            target: branchingArtist,
+                          });
+                          console.log(`🔗 [DEBUG] Created cross-connection: "${crossProducer.name}" ↔ "${branchingArtist}"`);
+                        }
+                      }
+                    } catch (error: any) {
+                      console.log(`⚠️ [DEBUG] Could not find cross-connections for "${branchingArtist}"`, error?.message || 'Unknown error');
+                    }
+                  }
                 }
               }
             }

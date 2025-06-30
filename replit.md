@@ -238,6 +238,15 @@ Changelog:
 - Added authentic collaborator fallback system for major artists when MusicBrainz data is incomplete
 - All songwriter classifications based on verified music industry roles and public collaboration history
 
+### Enhanced Producer Cross-Connection Networks (June 30, 2025)
+- Increased branching connections: songwriters show 4 collaborators (up from 3), producers show 3 (up from 2)
+- Added cross-connection system: when a producer works with an artist, system finds other producers who also worked with same artist
+- Enhanced popularity scoring system with 80+ major producers and songwriters including Max Martin, Dr. Dre, Timbaland
+- Cross-connections create deeper webs by linking producers through shared artists (Producer A → Artist → Producer B)
+- Limited to 1 cross-connection per branching artist to prevent network overcrowding
+- Priority given to popular producers like Jack Antonoff (78), Benny Blanco (72), Andrew Watt (68) in cross-connections
+- System creates multi-layered networks: Main Artist → Producer → Shared Artist → Other Producer → Their Artists
+
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals
 - Artists: Pink (#ec4899), Producers: Purple (#a855f7), Songwriters: Teal (#14b8a6)
