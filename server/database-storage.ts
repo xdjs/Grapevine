@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { db, isDatabaseAvailable } from './supabase';
 import { artists, collaborations, type Artist, type InsertArtist, type Collaboration, type InsertCollaboration, type NetworkData, type NetworkNode, type NetworkLink } from "@shared/schema";
 import { spotifyService } from "./spotify";
@@ -37,12 +37,26 @@ export class DatabaseStorage implements IStorage {
     
     try {
       const result = await db
-        .select()
+        .select({
+          id: artists.id,
+          name: artists.name,
+          webMapData: artists.webMapData,
+          imageUrl: artists.imageUrl,
+          spotifyId: artists.spotifyId
+        })
         .from(artists)
         .where(eq(artists.name, name))
         .limit(1);
       
-      return result[0];
+      const artist = result[0];
+      if (artist) {
+        // Add default type field since MusicNerd database doesn't have it
+        return {
+          ...artist,
+          type: 'artist' as const
+        } as Artist;
+      }
+      return undefined;
     } catch (error) {
       console.error('Error fetching artist by name:', error);
       return undefined;
@@ -103,16 +117,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   private async generateRealCollaborationNetwork(artistName: string): Promise<NetworkData> {
-    // First, check if we have cached webMapData for this artist
-    console.log(`💾 [DEBUG] Checking for cached webMapData for "${artistName}"`);
-    const cachedArtist = await this.getArtistByName(artistName);
-    
-    if (cachedArtist?.webMapData) {
-      console.log(`✅ [DEBUG] Found cached webMapData for "${artistName}" - using cached data`);
-      return cachedArtist.webMapData as NetworkData;
-    }
-    
-    console.log(`🆕 [DEBUG] No cached data found for "${artistName}" - generating new network data`);
     const nodes: NetworkNode[] = [];
     const links: NetworkLink[] = [];
 
@@ -670,14 +674,11 @@ export class DatabaseStorage implements IStorage {
           .where(eq(artists.name, artistName));
         console.log(`✅ [DEBUG] Updated webMapData cache for existing artist "${artistName}"`);
       } else {
-        // Create new artist entry with webMapData
-        await db
-          .insert(artists)
-          .values({
-            name: artistName,
-            type: 'artist',
-            webMapData: networkData
-          });
+        // Create new artist entry with webMapData using raw SQL since schema doesn't match MusicNerd DB
+        await db.execute(sql`
+          INSERT INTO artists (name, "webMapData") 
+          VALUES (${artistName}, ${JSON.stringify(networkData)}::jsonb)
+        `);
         console.log(`✅ [DEBUG] Created new artist "${artistName}" with webMapData cache`);
       }
     } catch (error) {
@@ -686,12 +687,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
+    // First, check if we have cached webMapData for this artist (applies to ALL artists)
+    console.log(`💾 [DEBUG] Checking for cached webMapData for "${artistName}"`);
+    const cachedArtist = await this.getArtistByName(artistName);
+    
+    if (cachedArtist?.webMapData) {
+      console.log(`✅ [DEBUG] Found cached webMapData for "${artistName}" - using cached data`);
+      return cachedArtist.webMapData as NetworkData;
+    }
+    
+    console.log(`🆕 [DEBUG] No cached data found for "${artistName}" - generating new network data`);
+    
     // For demo artists with rich mock data, use real MusicBrainz to showcase enhanced producer/songwriter extraction
     const enhancedMusicBrainzArtists = ['Post Malone', 'The Weeknd', 'Ariana Grande', 'Billie Eilish', 'Taylor Swift', 'Drake'];
     
     if (enhancedMusicBrainzArtists.includes(artistName)) {
       console.log(`🎵 [DEBUG] Using enhanced MusicBrainz data for "${artistName}" to showcase deep producer/songwriter networks`);
-      return this.generateRealCollaborationNetwork(artistName);
+      const networkData = await this.generateRealCollaborationNetwork(artistName);
+      // Cache the result
+      await this.cacheNetworkData(artistName, networkData);
+      return networkData;
     }
     
     const mainArtist = await this.getArtistByName(artistName);
