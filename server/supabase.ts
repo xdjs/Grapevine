@@ -10,10 +10,10 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY || 'your-anon-or-service-role-
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Database connection for Drizzle
-const connectionString = process.env.DATABASE_URL;
+const connectionString = process.env.DATABASE_URL || process.env.CONNECTION_STRING;
 
 if (!connectionString) {
-  console.warn('DATABASE_URL not provided. Using in-memory storage.');
+  console.warn('DATABASE_URL or CONNECTION_STRING not provided. Using in-memory storage.');
 }
 
 // Create database connection
