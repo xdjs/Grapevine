@@ -480,7 +480,7 @@ export default function NetworkVisualizer({
     };
 
     // Hide/show nodes based on filter state
-    svg.selectAll(".node").style("display", function () {
+    svg.selectAll(".node-group").style("display", function () {
       const d = d3.select(this).datum() as NetworkNode;
       return isNodeVisible(d) ? null : "none";
     });
