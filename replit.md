@@ -194,6 +194,15 @@ Changelog:
 - Eliminated all synthetic/generated collaboration data - only authentic relationships displayed
 - Both distinct artist IDs working correctly: LiSA (b4ecb818-d507-4304-a21d-74df26ff68f5) and LISA (e45638ce-156a-4d15-8749-23668b4fedeb)
 
+### Deep MusicBrainz Producer & Songwriter Integration (June 30, 2025)
+- Enhanced MusicBrainz to extract comprehensive producer and songwriter credits from recordings and works
+- Added detailed relation processing: analyzing 200+ relations per artist for complete collaboration networks
+- Implemented recording credit extraction: processing 50+ recordings to find production teams
+- Expanded relation type mapping to include recording engineers, mix engineers, co-producers, lyricists, and co-writers
+- Successfully extracting authentic collaborators like Andrew Watt (producer), Young Thug (artist), Metro Boomin (producer)
+- Real-time debugging shows detailed collaboration extraction process with authentic MusicBrainz data
+- No synthetic data fallbacks - only verified music industry relationships from MusicBrainz database
+
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals
 - Artists: Pink (#ec4899), Producers: Purple (#a855f7), Songwriters: Teal (#14b8a6)
