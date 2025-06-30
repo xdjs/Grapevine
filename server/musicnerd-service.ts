@@ -113,17 +113,31 @@ class MusicNerdService {
           
           await client.connect();
           
-          // Query the artists table directly
-          const query = 'SELECT artist_id, id, name FROM artists WHERE LOWER(name) LIKE LOWER($1) LIMIT 1';
+          // First, check the table schema to see what columns exist
+          const schemaQuery = 'SELECT column_name FROM information_schema.columns WHERE table_name = \'artists\' LIMIT 10';
+          const schemaResult = await client.query(schemaQuery);
+          console.log(`🔍 [DEBUG] Artists table columns:`, schemaResult.rows.map(r => r.column_name));
+          
+          // Query the artists table directly - adjust column names based on actual schema
+          const query = 'SELECT * FROM artists WHERE LOWER(name) LIKE LOWER($1) LIMIT 1';
           const result = await client.query(query, [`%${artistName}%`]);
           
           await client.end();
           
           if (result.rows.length > 0) {
             const artist = result.rows[0];
-            const artistId = artist.artist_id || artist.id;
-            console.log(`✅ [DEBUG] Found real MusicNerd artist ID for "${artistName}": ${artistId}`);
-            return artistId;
+            console.log(`🔍 [DEBUG] Found artist record for "${artistName}":`, artist);
+            
+            // Try different possible column names for the artist ID
+            const artistId = artist.artist_id || artist.id || artist.uuid || artist.guid || artist.artistId;
+            
+            if (artistId) {
+              console.log(`✅ [DEBUG] Found real MusicNerd artist ID for "${artistName}": ${artistId}`);
+              return artistId;
+            } else {
+              console.log(`⚠️ [DEBUG] Artist found but no ID column detected for "${artistName}"`);
+              return null;
+            }
           } else {
             console.log(`📭 [DEBUG] No match found for "${artistName}" in MusicNerd database`);
           }
