@@ -239,23 +239,50 @@ class MusicBrainzService {
                     'andrew watt', 'metro boomin', 'timbaland', 'pharrell williams',
                     'dr. dre', 'kanye west', 'rick rubin', 'max martin', 'jack antonoff',
                     'aaron dessner', 'diplo', 'skrillex', 'calvin harris', 'zedd',
-                    'the neptunes', 'daft punk', 'disclosure', 'flume'
+                    'the neptunes', 'daft punk', 'disclosure', 'flume', 'benny blanco',
+                    'finneas', 'mustard', 'lex luger', 'zaytoven', 'noah shebib',
+                    'frank dukes', 'southside', 'wheezy', 'pierre bourne', 'london on da track',
+                    'mike will made-it', 'j. cole', 'tay keith', 'cubeatz', 'illangelo',
+                    'ronny j', 'cardo', 'pvlace', 'da internz', 'ovy on the drums',
+                    'david guetta', 'will.i.am', 'afrojack', 'steve aoki', 'deadmau5',
+                    'aviici', 'martin garrix', 'the chainsmokers', 'marshmello', 'tiësto'
                   ];
                   
                   const knownSongwriters = [
                     'diane warren', 'linda perry', 'ryan tedder', 'sia', 'ed sheeran',
                     'taylor swift', 'john mayer', 'alicia keys', 'john legend',
-                    'carole king', 'paul mccartney', 'john lennon'
+                    'carole king', 'paul mccartney', 'john lennon', 'charlie puth',
+                    'julia michaels', 'justin tranter', 'mattman & robin', 'shellback',
+                    'benjamin levin', 'cashmere cat', 'the weeknd', 'frank ocean',
+                    'solange', 'lorde', 'halsey', 'billie eilish', 'olivia rodrigo'
                   ];
                   
                   const collaboratorNameLower = collaboratorName.toLowerCase();
                   console.log(`🔍 [DEBUG] Checking producer/songwriter status for: "${collaboratorNameLower}"`);
+                  
+                  // Pattern-based detection for common producer/songwriter indicators
+                  const producerPatterns = [
+                    'beats', 'beatz', 'producer', 'made', 'da track', 'on da', 'the beat',
+                    'muzik', 'sounds', 'records', 'tha', 'lil ', 'big ', 'young ', 'j. '
+                  ];
+                  
+                  const songwriterPatterns = [
+                    'wrote', 'writer', 'songwriter', 'composed', 'lyrics', 'pen',
+                    'words', 'music', 'melody'
+                  ];
+                  
                   if (knownProducers.some(producer => collaboratorNameLower.includes(producer))) {
                     type = 'producer';
                     console.log(`✅ [DEBUG] Matched as producer: "${collaboratorNameLower}"`);
                   } else if (knownSongwriters.some(songwriter => collaboratorNameLower.includes(songwriter))) {
                     type = 'songwriter';
                     console.log(`✅ [DEBUG] Matched as songwriter: "${collaboratorNameLower}"`);
+                  } else if (producerPatterns.some(pattern => collaboratorNameLower.includes(pattern))) {
+                    type = 'producer';
+                    console.log(`✅ [DEBUG] Matched as producer by pattern: "${collaboratorNameLower}"`);
+                  } else if (songwriterPatterns.some(pattern => collaboratorNameLower.includes(pattern))) {
+                    type = 'songwriter';
+                    console.log(`✅ [DEBUG] Matched as songwriter by pattern: "${collaboratorNameLower}"`);
                   } else {
                     console.log(`❌ [DEBUG] No producer/songwriter match for: "${collaboratorNameLower}"`);
                   }
