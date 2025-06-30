@@ -199,6 +199,7 @@ export class DatabaseStorage implements IStorage {
             .filter(c => c.name !== collaborator.name && c.name !== artistName)
             .map(c => c.name);
           topCollaborators = [artistName, ...allCollaborators.slice(0, 2)]; // Main artist + top 2 others
+          console.log(`🤝 [DEBUG] Created collaborations for ${collaborator.type} "${collaborator.name}":`, topCollaborators);
         }
 
         const collaboratorNode: NetworkNode = {

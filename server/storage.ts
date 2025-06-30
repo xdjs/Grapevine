@@ -299,6 +299,7 @@ export class MemStorage implements IStorage {
   }
 
   private async generateRealCollaborationNetwork(artistName: string): Promise<NetworkData> {
+    console.log(`🚀 [DEBUG] STARTING generateRealCollaborationNetwork for "${artistName}"`);
     const nodes: NetworkNode[] = [];
     const links: NetworkLink[] = [];
 
@@ -347,7 +348,9 @@ export class MemStorage implements IStorage {
       nodes.push(mainArtistNode);
 
       // Add collaborating artists from MusicBrainz
+      console.log(`🎨 [DEBUG] Processing ${collaborationData.artists.length} MusicBrainz collaborators...`);
       for (const collaborator of collaborationData.artists) {
+        console.log(`👤 [DEBUG] Processing collaborator: "${collaborator.name}" (type: ${collaborator.type})`);
         // Get Spotify image for collaborator
         let collaboratorImage = null;
         let collaboratorSpotifyId = null;
@@ -374,6 +377,16 @@ export class MemStorage implements IStorage {
           }
         }
 
+        // For producers and songwriters, gather their top collaborators from the main network
+        let topCollaborators: string[] = [];
+        if (collaborator.type === 'producer' || collaborator.type === 'songwriter') {
+          const allCollaborators = collaborationData.artists
+            .filter(c => c.name !== collaborator.name && c.name !== artistName)
+            .map(c => c.name);
+          topCollaborators = [artistName, ...allCollaborators.slice(0, 2)]; // Main artist + top 2 others
+          console.log(`🤝 [DEBUG] Created collaborations for ${collaborator.type} "${collaborator.name}":`, topCollaborators);
+        }
+
         const collaboratorNode: NetworkNode = {
           id: collaborator.name,
           name: collaborator.name,
@@ -382,7 +395,9 @@ export class MemStorage implements IStorage {
           imageUrl: collaboratorImage,
           spotifyId: collaboratorSpotifyId,
           artistId: collaboratorMusicNerdId,
+          collaborations: topCollaborators.length > 0 ? topCollaborators : undefined,
         };
+        console.log(`🎯 [DEBUG] Created node for "${collaborator.name}" with collaborations:`, collaboratorNode.collaborations);
         nodes.push(collaboratorNode);
 
         links.push({
