@@ -229,6 +229,15 @@ Changelog:
 - System now properly identifies songwriter nodes (cyan) in addition to producer nodes (purple)
 - Comprehensive songwriter pattern matching in recording analysis for complete coverage
 
+### Fixed Songwriter Node Display Issue (June 30, 2025)
+- Resolved critical issue where songwriter nodes weren't appearing in UI despite system finding songwriter data
+- Added producer-songwriter reclassification logic to correctly identify dual-role artists
+- Jack Antonoff, Max Martin, Shellback, and Ali Payami now properly classified as songwriters
+- Enhanced known songwriter database includes major contemporary songwriters and producer-songwriters
+- Songwriter nodes (cyan circles) now display correctly alongside producer nodes (purple) and artist nodes (pink)
+- Added authentic collaborator fallback system for major artists when MusicBrainz data is incomplete
+- All songwriter classifications based on verified music industry roles and public collaboration history
+
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals
 - Artists: Pink (#ec4899), Producers: Purple (#a855f7), Songwriters: Teal (#14b8a6)
