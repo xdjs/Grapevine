@@ -9,22 +9,9 @@ import { musicNerdService } from "./musicnerd-service";
 import { IStorage } from './storage';
 
 export class DatabaseStorage implements IStorage {
-  private db = db!;
-
   constructor() {
     if (!isDatabaseAvailable()) {
       throw new Error('Database connection not available');
-    }
-    this.ensureWebMapDataColumn();
-  }
-
-  private async ensureWebMapDataColumn(): Promise<void> {
-    try {
-      // Add webMapData column if it doesn't exist
-      await this.db.execute(sql`ALTER TABLE artists ADD COLUMN IF NOT EXISTS web_map_data JSONB`);
-      console.log('✅ [DEBUG] Ensured web_map_data column exists in artists table');
-    } catch (error) {
-      console.log('⚠️ [DEBUG] Column may already exist or error occurred:', error);
     }
   }
 
@@ -636,57 +623,57 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
-    console.log(`🔍 [DEBUG] Checking for cached network data for "${artistName}"`);
+    // For demo artists with rich mock data, use real MusicBrainz to showcase enhanced producer/songwriter extraction
+    const enhancedMusicBrainzArtists = ['Post Malone', 'The Weeknd', 'Ariana Grande', 'Billie Eilish', 'Taylor Swift', 'Drake'];
     
-    // First check if we have cached data for this artist
-    const existingArtist = await this.getArtistByName(artistName);
-    if (existingArtist && existingArtist.webMapData) {
-      console.log(`✅ [DEBUG] Found cached network data for "${artistName}"`);
-      return existingArtist.webMapData as NetworkData;
+    if (enhancedMusicBrainzArtists.includes(artistName)) {
+      console.log(`🎵 [DEBUG] Using enhanced MusicBrainz data for "${artistName}" to showcase deep producer/songwriter networks`);
+      return this.generateRealCollaborationNetwork(artistName);
     }
     
-    console.log(`🎵 [DEBUG] No cached data found, generating new network data for "${artistName}"`);
-    const networkData = await this.generateRealCollaborationNetwork(artistName);
-    
-    // Cache the generated network data
-    if (networkData) {
-      await this.cacheNetworkData(artistName, networkData);
+    const mainArtist = await this.getArtistByName(artistName);
+    if (!mainArtist) {
+      // Try to get real collaboration data from external APIs
+      return this.generateRealCollaborationNetwork(artistName);
     }
-    
-    return networkData;
-  }
 
-  private async cacheNetworkData(artistName: string, networkData: NetworkData): Promise<void> {
-    try {
-      console.log(`💾 [DEBUG] Caching network data for "${artistName}"`);
-      
-      // Check if artist already exists in database
-      const existingArtist = await this.getArtistByName(artistName);
-      
-      if (existingArtist) {
-        // Update existing artist with webMapData
-        await this.db.update(artists)
-          .set({ webMapData: networkData })
-          .where(eq(artists.name, artistName));
-        console.log(`✅ [DEBUG] Updated cached data for existing artist "${artistName}"`);
-      } else {
-        // Create new artist record with the main artist data and cached network data
-        const mainArtistNode = networkData.nodes.find(node => node.name === artistName);
-        if (mainArtistNode) {
-          const insertArtist = {
-            name: artistName,
-            type: mainArtistNode.type,
-            imageUrl: mainArtistNode.imageUrl || null,
-            spotifyId: mainArtistNode.spotifyId || null,
-            webMapData: networkData
-          };
-          
-          await this.createArtist(insertArtist);
-          console.log(`✅ [DEBUG] Created new artist record with cached data for "${artistName}"`);
-        }
+    // Artist exists in database, build network from stored data
+    const nodes: NetworkNode[] = [];
+    const links: NetworkLink[] = [];
+    
+    const mainArtistNode: NetworkNode = {
+      id: mainArtist.name,
+      name: mainArtist.name,
+      type: mainArtist.type as 'artist' | 'producer' | 'songwriter',
+      size: 20,
+      imageUrl: mainArtist.imageUrl,
+      spotifyId: mainArtist.spotifyId,
+    };
+    nodes.push(mainArtistNode);
+
+    // Get collaborations from database
+    const artistCollaborations = await this.getCollaborationsByArtist(mainArtist.id);
+    
+    for (const collab of artistCollaborations) {
+      const collaborator = await this.getArtist(collab.toArtistId);
+      if (collaborator) {
+        const collaboratorNode: NetworkNode = {
+          id: collaborator.name,
+          name: collaborator.name,
+          type: collaborator.type as 'artist' | 'producer' | 'songwriter',
+          size: 15,
+          imageUrl: collaborator.imageUrl,
+          spotifyId: collaborator.spotifyId,
+        };
+        nodes.push(collaboratorNode);
+
+        links.push({
+          source: mainArtist.name,
+          target: collaborator.name,
+        });
       }
-    } catch (error) {
-      console.error(`❌ [DEBUG] Error caching network data for "${artistName}":`, error);
     }
+
+    return { nodes, links };
   }
 }

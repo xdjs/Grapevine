@@ -8,7 +8,6 @@ export const artists = pgTable("artists", {
   type: text("type").notNull(), // 'artist', 'producer', 'songwriter'
   imageUrl: text("image_url"),
   spotifyId: text("spotify_id"),
-  webMapData: jsonb("web_map_data"), // Cached network data
 });
 
 export const collaborations = pgTable("collaborations", {
