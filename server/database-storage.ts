@@ -217,15 +217,55 @@ export class DatabaseStorage implements IStorage {
                 .map(c => c.name);
               allCollaborators.push(...otherProducers);
               
-              // Take top 3 most relevant collaborators
-              topCollaborators = [...new Set(allCollaborators)].slice(0, 3);
+              // Take top 3 most relevant collaborators for tooltip
+              topCollaborators = Array.from(new Set(allCollaborators)).slice(0, 3);
               console.log(`✅ [DEBUG] Found ${topCollaborators.length} authentic collaborations for "${collaborator.name}":`, topCollaborators);
+              
+              // Add branching artist nodes to the network for style discovery
+              const branchingArtists = artistCollaborators
+                .filter(artistName => artistName !== collaborator.name)
+                .slice(0, 2); // Limit to 2 to avoid network clutter
+              
+              for (const branchingArtist of branchingArtists) {
+                // Check if this artist is already in the network
+                const existingNode = nodes.find(node => node.name === branchingArtist);
+                if (!existingNode) {
+                  console.log(`🌟 [DEBUG] Adding branching artist "${branchingArtist}" connected to ${collaborator.type} "${collaborator.name}"`);
+                  
+                  // Try to get MusicNerd ID for the branching artist
+                  let branchingArtistId: string | null = null;
+                  try {
+                    branchingArtistId = await musicNerdService.getArtistId(branchingArtist);
+                  } catch (error) {
+                    console.log(`Could not fetch MusicNerd ID for branching artist ${branchingArtist}`);
+                  }
+                  
+                  const branchingNode: NetworkNode = {
+                    id: branchingArtist,
+                    name: branchingArtist,
+                    type: 'artist',
+                    size: 12, // Smaller size for branching nodes
+                    imageUrl: null,
+                    spotifyId: null,
+                    artistId: branchingArtistId,
+                    collaborations: [collaborator.name], // Show connection to the producer/songwriter
+                  };
+                  nodes.push(branchingNode);
+                  
+                  // Create link between producer/songwriter and branching artist
+                  links.push({
+                    source: collaborator.name,
+                    target: branchingArtist,
+                  });
+                  console.log(`🔗 [DEBUG] Created branching link: "${collaborator.name}" ↔ "${branchingArtist}"`);
+                }
+              }
             }
             
             // If still not enough collaborators, add the main artist as a primary collaborator
             if (topCollaborators.length < 3) {
               topCollaborators = [artistName, ...topCollaborators];
-              topCollaborators = [...new Set(topCollaborators)].slice(0, 3);
+              topCollaborators = Array.from(new Set(topCollaborators)).slice(0, 3);
               console.log(`📝 [DEBUG] Enhanced collaborations for "${collaborator.name}" with main artist:`, topCollaborators);
             }
           } catch (error) {
