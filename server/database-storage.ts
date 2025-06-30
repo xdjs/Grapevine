@@ -192,6 +192,15 @@ export class DatabaseStorage implements IStorage {
           }
         }
 
+        // For producers and songwriters, gather their top collaborators from the main network
+        let topCollaborators: string[] = [];
+        if (collaborator.type === 'producer' || collaborator.type === 'songwriter') {
+          const allCollaborators = collaborationData.artists
+            .filter(c => c.name !== collaborator.name && c.name !== artistName)
+            .map(c => c.name);
+          topCollaborators = [artistName, ...allCollaborators.slice(0, 2)]; // Main artist + top 2 others
+        }
+
         const collaboratorNode: NetworkNode = {
           id: collaborator.name,
           name: collaborator.name,
@@ -200,6 +209,7 @@ export class DatabaseStorage implements IStorage {
           imageUrl: collaboratorImage,
           spotifyId: collaboratorSpotifyId,
           artistId: collaboratorMusicNerdId,
+          collaborations: topCollaborators.length > 0 ? topCollaborators : undefined,
         };
         nodes.push(collaboratorNode);
         console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from MusicBrainz relation "${collaborator.relation}"`);
@@ -259,14 +269,25 @@ export class DatabaseStorage implements IStorage {
                 }
               }
 
+              // For Wikipedia producers and songwriters, create collaboration list
+              let topCollaborators: string[] = [];
+              if (collaborator.type === 'producer' || collaborator.type === 'songwriter') {
+                const otherCollaborators = wikipediaCollaborators
+                  .filter(c => c.name !== collaborator.name && c.name !== artistName)
+                  .slice(0, 2)
+                  .map(c => c.name);
+                topCollaborators = [artistName, ...otherCollaborators];
+              }
+
               const collaboratorNode: NetworkNode = {
                 id: collaborator.name,
                 name: collaborator.name,
-                type: collaborator.type,
+                type: collaborator.type as 'artist' | 'producer' | 'songwriter',
                 size: 15,
                 imageUrl: collaboratorImage,
                 spotifyId: collaboratorSpotifyId,
                 artistId: collaboratorMusicNerdId,
+                collaborations: topCollaborators.length > 0 ? topCollaborators : undefined,
               };
               nodes.push(collaboratorNode);
               console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from Wikipedia context`);

@@ -251,8 +251,15 @@ export default function NetworkVisualizer({
     function showTooltip(event: MouseEvent, d: NetworkNode) {
       let content = `<strong>${d.name}</strong><br/>Type: ${d.type}`;
 
-      if (d.collaborations && d.collaborations.length > 0) {
-        content += `<br/><br/><strong>Top Collaborations:</strong><br/>`;
+      // Show collaboration information for producers and songwriters
+      if ((d.type === 'producer' || d.type === 'songwriter') && d.collaborations && d.collaborations.length > 0) {
+        content += `<br/><br/><strong>Top 3 Collaborators:</strong><br/>`;
+        content += d.collaborations.slice(0, 3).join("<br/>");
+      }
+
+      // Show general collaboration info for artists if available
+      if (d.type === 'artist' && d.collaborations && d.collaborations.length > 0) {
+        content += `<br/><br/><strong>Recent Collaborations:</strong><br/>`;
         content += d.collaborations.slice(0, 3).join("<br/>");
       }
 

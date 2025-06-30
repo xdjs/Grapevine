@@ -216,27 +216,58 @@ class MusicBrainzService {
         if (recording['artist-credit'] && recording['artist-credit'].length > 0) {
           for (const credit of recording['artist-credit']) {
             if (credit.artist && credit.artist.name !== artistName) {
-              const artistName = credit.artist.name;
-              if (!processedArtists.has(artistName)) {
-                // Try to determine role from artist credit
+              const collaboratorName = credit.artist.name;
+              if (!processedArtists.has(collaboratorName)) {
+                // Try to determine role from artist credit and known producer/songwriter names
                 const joinPhrase = credit.joinphrase || '';
                 let type = 'artist';
                 
+                // Check for production-related keywords in join phrase
                 if (joinPhrase.toLowerCase().includes('produced') || 
-                    joinPhrase.toLowerCase().includes('producer')) {
+                    joinPhrase.toLowerCase().includes('producer') ||
+                    joinPhrase.toLowerCase().includes('mixed') ||
+                    joinPhrase.toLowerCase().includes('engineered')) {
                   type = 'producer';
                 } else if (joinPhrase.toLowerCase().includes('wrote') || 
-                           joinPhrase.toLowerCase().includes('written')) {
+                           joinPhrase.toLowerCase().includes('written') ||
+                           joinPhrase.toLowerCase().includes('composed') ||
+                           joinPhrase.toLowerCase().includes('lyrics')) {
                   type = 'songwriter';
+                } else {
+                  // Use context-based identification for known producer/songwriter names
+                  const knownProducers = [
+                    'andrew watt', 'metro boomin', 'timbaland', 'pharrell williams',
+                    'dr. dre', 'kanye west', 'rick rubin', 'max martin', 'jack antonoff',
+                    'aaron dessner', 'diplo', 'skrillex', 'calvin harris', 'zedd',
+                    'the neptunes', 'daft punk', 'disclosure', 'flume'
+                  ];
+                  
+                  const knownSongwriters = [
+                    'diane warren', 'linda perry', 'ryan tedder', 'sia', 'ed sheeran',
+                    'taylor swift', 'john mayer', 'alicia keys', 'john legend',
+                    'carole king', 'paul mccartney', 'john lennon'
+                  ];
+                  
+                  const collaboratorNameLower = collaboratorName.toLowerCase();
+                  console.log(`🔍 [DEBUG] Checking producer/songwriter status for: "${collaboratorNameLower}"`);
+                  if (knownProducers.some(producer => collaboratorNameLower.includes(producer))) {
+                    type = 'producer';
+                    console.log(`✅ [DEBUG] Matched as producer: "${collaboratorNameLower}"`);
+                  } else if (knownSongwriters.some(songwriter => collaboratorNameLower.includes(songwriter))) {
+                    type = 'songwriter';
+                    console.log(`✅ [DEBUG] Matched as songwriter: "${collaboratorNameLower}"`);
+                  } else {
+                    console.log(`❌ [DEBUG] No producer/songwriter match for: "${collaboratorNameLower}"`);
+                  }
                 }
 
                 collaboratingArtists.push({
-                  name: artistName,
+                  name: collaboratorName,
                   type: type,
                   relation: 'recording credit'
                 });
-                processedArtists.add(artistName);
-                console.log(`🎵 [DEBUG] Found recording credit: ${artistName} (${type})`);
+                processedArtists.add(collaboratorName);
+                console.log(`🎵 [DEBUG] Found recording credit: ${collaboratorName} (${type})`);
               }
             }
           }
