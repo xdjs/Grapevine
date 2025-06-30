@@ -33,36 +33,19 @@ class MusicBrainzService {
   private baseUrl = 'https://musicbrainz.org/ws/2';
   private userAgent = 'MusicCollaborationVisualizer/1.0 (https://replit.com)';
 
-  private async makeRequest(endpoint: string, retries: number = 3): Promise<any> {
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        await this.rateLimitDelay();
-        
-        const response = await fetch(`${this.baseUrl}${endpoint}`, {
-          headers: {
-            'User-Agent': this.userAgent,
-            'Accept': 'application/json',
-          },
-        });
+  private async makeRequest(endpoint: string): Promise<any> {
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      headers: {
+        'User-Agent': this.userAgent,
+        'Accept': 'application/json',
+      },
+    });
 
-        if (!response.ok) {
-          if (response.status === 503 && attempt < retries) {
-            console.log(`⚠️ [DEBUG] MusicBrainz 503 error, retrying attempt ${attempt + 1}/${retries}`);
-            await new Promise(resolve => setTimeout(resolve, 2000 * attempt)); // Progressive delay
-            continue;
-          }
-          throw new Error(`MusicBrainz API error: ${response.status}`);
-        }
-
-        return response.json();
-      } catch (error) {
-        if (attempt === retries) {
-          throw error;
-        }
-        console.log(`⚠️ [DEBUG] MusicBrainz request failed, retrying attempt ${attempt + 1}/${retries}`);
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-      }
+    if (!response.ok) {
+      throw new Error(`MusicBrainz API error: ${response.status}`);
     }
+
+    return response.json();
   }
 
   async searchArtist(artistName: string): Promise<MusicBrainzArtist | null> {

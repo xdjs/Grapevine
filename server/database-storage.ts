@@ -188,25 +188,10 @@ export class DatabaseStorage implements IStorage {
       // Add collaborating artists from MusicBrainz - limit to top 5 producers and songwriters for performance
       console.log(`🎨 [DEBUG] Processing ${collaborationData.artists.length} MusicBrainz collaborators...`);
       
-      // Filter to only include major producers and songwriters who have worked with big artists
-      const majorProducerSongwriters = new Set([
-        'max martin', 'jack antonoff', 'benny blanco', 'finneas', 'aaron dessner', 
-        'andrew watt', 'metro boomin', 'timbaland', 'pharrell williams', 'ryan tedder',
-        'sia', 'julia michaels', 'justin tranter', 'charlie puth', 'diane warren',
-        'dr. dre', 'rick rubin', 'shellback', 'ali payami', 'patrik berger',
-        'hit-boy', 'mike will made-it', 'mustard', 'london on da track', 'wheezy'
-      ]);
-      
-      // Separate collaborators by type and limit to top 3 major producers/songwriters each
+      // Separate collaborators by type and limit producers/songwriters to top 5 each
       const artists = collaborationData.artists.filter(c => c.type === 'artist');
-      const producers = collaborationData.artists
-        .filter(c => c.type === 'producer')
-        .filter(c => majorProducerSongwriters.has(c.name.toLowerCase()))
-        .slice(0, 3); // Changed from 2 to 3, only major producers
-      const songwriters = collaborationData.artists
-        .filter(c => c.type === 'songwriter') 
-        .filter(c => majorProducerSongwriters.has(c.name.toLowerCase()))
-        .slice(0, 3); // Changed from 2 to 3, only major songwriters
+      const producers = collaborationData.artists.filter(c => c.type === 'producer').slice(0, 5);
+      const songwriters = collaborationData.artists.filter(c => c.type === 'songwriter').slice(0, 5);
       
       const limitedCollaborators = [...artists, ...producers, ...songwriters];
       console.log(`⚡ [DEBUG] Limited to ${limitedCollaborators.length} collaborators (${producers.length} producers, ${songwriters.length} songwriters, ${artists.length} artists)`);
@@ -248,51 +233,6 @@ export class DatabaseStorage implements IStorage {
 
         // For producers and songwriters, fetch their authentic collaboration history from MusicBrainz
         let topCollaborators: string[] = [];
-        
-        // Define popularity rankings for major artists (higher = more popular)
-        const popularityMap = new Map<string, number>([
-          // Tier 1: Global superstars (100+)
-          ['taylor swift', 150], ['beyoncé', 145], ['rihanna', 140], ['lady gaga', 135], 
-          ['ariana grande', 130], ['justin bieber', 125], ['billie eilish', 120], ['drake', 115], 
-          ['the weeknd', 110], ['dua lipa', 105], ['olivia rodrigo', 102], ['harry styles', 100],
-          
-          // Tier 2: Major stars (75-99)
-          ['ed sheeran', 95], ['bruno mars', 90], ['justin timberlake', 85], ['selena gomez', 80], 
-          ['miley cyrus', 78], ['katy perry', 76], ['sia', 75], ['adele', 90], ['sam smith', 75],
-          
-          // Tier 3: Well-known artists (50-74)
-          ['post malone', 70], ['lorde', 68], ['charli xcx', 65], ['lana del rey', 62], 
-          ['the 1975', 60], ['troye sivan', 58], ['halsey', 55], ['shawn mendes', 52], ['camila cabello', 50],
-          
-          // Tier 4: Rising/established artists (25-49)
-          ['doja cat', 45], ['lizzo', 42], ['sza', 40], ['bad bunny', 38], ['rosé', 35], 
-          ['lisa', 32], ['jennie', 30], ['jisoo', 28], ['clairo', 25], ['phoebe bridgers', 22],
-          
-          // Electronic/Dance (specialized popularity)
-          ['calvin harris', 65], ['david guetta', 60], ['diplo', 55], ['skrillex', 50], 
-          ['marshmello', 45], ['zedd', 40], ['disclosure', 35], ['flume', 30],
-          
-          // Hip-Hop/R&B established (high popularity)
-          ['kendrick lamar', 95], ['j. cole', 85], ['travis scott', 80], ['kanye west', 75], 
-          ['childish gambino', 70], ['frank ocean', 68], ['tyler, the creator', 65],
-          
-          // Rock/Alternative established
-          ['imagine dragons', 70], ['coldplay', 85], ['arctic monkeys', 60], ['radiohead', 55],
-          
-          // K-Pop (specialized but high)
-          ['bts', 120], ['blackpink', 90], ['twice', 60], ['stray kids', 45],
-          
-          // Major Producers (get special priority in cross-connections)
-          ['max martin', 80], ['dr. dre', 85], ['timbaland', 82], ['pharrell williams', 88], 
-          ['rick rubin', 75], ['jack antonoff', 78], ['benny blanco', 72], ['finneas', 70],
-          ['andrew watt', 68], ['metro boomin', 65], ['mike will made-it', 60], ['mustard', 58],
-          ['hit-boy', 55], ['london on da track', 52], ['wheezy', 50], ['pierre bourne', 48],
-          
-          // Major Songwriters (get special priority)
-          ['diane warren', 85], ['ryan tedder', 82], ['sia', 78], ['julia michaels', 70],
-          ['justin tranter', 68], ['charlie puth', 65], ['ed sheeran', 95] // Ed Sheeran is both artist and songwriter
-        ]);
-        
         if (collaborator.type === 'producer' || collaborator.type === 'songwriter') {
           try {
             console.log(`🔍 [DEBUG] Fetching authentic collaborations for ${collaborator.type} "${collaborator.name}"`);
@@ -319,26 +259,15 @@ export class DatabaseStorage implements IStorage {
               console.log(`✅ [DEBUG] Found ${topCollaborators.length} authentic collaborations for "${collaborator.name}":`, topCollaborators);
               
               // Add branching artist nodes to the network for style discovery
-              // Show 3 branching connections for comprehensive but clean networks
-              const maxBranchingNodes = 3; // Increased to 3 for both songwriters and producers
-              
-              // Sort artists by popularity, prioritizing well-known collaborators
+              // For songwriters and producers, show their top 3 collaborating artists
+              const maxBranchingNodes = collaborator.type === 'songwriter' ? 3 : 2;
               const branchingArtists = artistCollaborators
                 .filter(artistName => artistName !== collaborator.name)
-                .sort((a, b) => {
-                  const popularityA = popularityMap.get(a.toLowerCase()) || 0;
-                  const popularityB = popularityMap.get(b.toLowerCase()) || 0;
-                  return popularityB - popularityA; // Sort descending (most popular first)
-                })
                 .slice(0, maxBranchingNodes);
               
               console.log(`🎨 [DEBUG] Creating ${branchingArtists.length} branching connections for ${collaborator.type} "${collaborator.name}"`);
-              if (branchingArtists.length > 0) {
-                const popularityInfo = branchingArtists.map(artist => {
-                  const popularity = popularityMap.get(artist.toLowerCase()) || 0;
-                  return `${artist} (${popularity})`;
-                });
-                console.log(`📝 [DEBUG] ${collaborator.type} "${collaborator.name}" branching to popular artists:`, popularityInfo);
+              if (branchingArtists.length > 0 && collaborator.type === 'songwriter') {
+                console.log(`📝 [DEBUG] Songwriter "${collaborator.name}" branching to artists:`, branchingArtists);
               }
               
               for (const branchingArtist of branchingArtists) {
@@ -373,62 +302,6 @@ export class DatabaseStorage implements IStorage {
                     target: branchingArtist,
                   });
                   console.log(`🔗 [DEBUG] Created branching link: "${collaborator.name}" ↔ "${branchingArtist}"`);
-                  
-                  // For producers/songwriters, try to find other popular producers who also work with this branching artist
-                  // This creates cross-connections that make the web more in-depth
-                  if ((collaborator.type === 'producer' || collaborator.type === 'songwriter') && branchingArtists.length < maxBranchingNodes) {
-                    try {
-                      console.log(`🔍 [DEBUG] Looking for other producers who worked with "${branchingArtist}"`);
-                      const branchingArtistCollabs = await musicBrainzService.getArtistCollaborations(branchingArtist);
-                      
-                      if (branchingArtistCollabs && branchingArtistCollabs.artists.length > 0) {
-                        // Find other popular producers/songwriters who worked with this artist
-                        const otherProducers = branchingArtistCollabs.artists
-                          .filter(c => c.type === 'producer' || c.type === 'songwriter')
-                          .filter(c => c.name !== collaborator.name) // Not the current producer
-                          .filter(c => !nodes.some(node => node.name === c.name)) // Not already in network
-                          .sort((a, b) => {
-                            const popularityA = popularityMap.get(a.name.toLowerCase()) || 0;
-                            const popularityB = popularityMap.get(b.name.toLowerCase()) || 0;
-                            return popularityB - popularityA;
-                          })
-                          .slice(0, 1); // Add just 1 cross-connection producer to avoid overcrowding
-                        
-                        for (const crossProducer of otherProducers) {
-                          console.log(`🌐 [DEBUG] Adding cross-connection producer "${crossProducer.name}" who also worked with "${branchingArtist}"`);
-                          
-                          // Try to get MusicNerd ID for the cross-connection producer
-                          let crossProducerArtistId: string | null = null;
-                          try {
-                            crossProducerArtistId = await musicNerdService.getArtistId(crossProducer.name);
-                          } catch (error) {
-                            console.log(`Could not fetch MusicNerd ID for cross-producer ${crossProducer.name}`);
-                          }
-                          
-                          const crossProducerNode: NetworkNode = {
-                            id: crossProducer.name,
-                            name: crossProducer.name,
-                            type: crossProducer.type as 'producer' | 'songwriter',
-                            size: 10, // Smaller size for cross-connection nodes
-                            imageUrl: null,
-                            spotifyId: null,
-                            artistId: crossProducerArtistId,
-                            collaborations: [branchingArtist], // Show connection to the shared artist
-                          };
-                          nodes.push(crossProducerNode);
-                          
-                          // Create link between cross-producer and the shared artist
-                          links.push({
-                            source: crossProducer.name,
-                            target: branchingArtist,
-                          });
-                          console.log(`🔗 [DEBUG] Created cross-connection: "${crossProducer.name}" ↔ "${branchingArtist}"`);
-                        }
-                      }
-                    } catch (error: any) {
-                      console.log(`⚠️ [DEBUG] Could not find cross-connections for "${branchingArtist}"`, error?.message || 'Unknown error');
-                    }
-                  }
                 }
               }
             }
@@ -441,93 +314,12 @@ export class DatabaseStorage implements IStorage {
             }
           } catch (error) {
             console.log(`❌ [DEBUG] Error fetching collaborations for "${collaborator.name}":`, error);
-            
-            // Enhanced fallback: use known major collaborators for popular producers/songwriters
-            let fallbackCollaborators: string[] = [];
-            const collaboratorNameLower = collaborator.name.toLowerCase();
-            
-            // Major producer/songwriter known collaborations - only include the most prolific ones
-            const knownCollaborations = new Map<string, string[]>([
-              ['max martin', ['taylor swift', 'ariana grande', 'the weeknd', 'dua lipa', 'britney spears']],
-              ['jack antonoff', ['taylor swift', 'lorde', 'lana del rey', 'clairo', 'bleachers']],
-              ['benny blanco', ['ed sheeran', 'justin bieber', 'halsey', 'rihanna', 'katy perry']],
-              ['finneas', ['billie eilish', 'selena gomez', 'camila cabello', 'tove lo']],
-              ['aaron dessner', ['taylor swift', 'phoebe bridgers', 'bon iver', 'the national']],
-              ['andrew watt', ['post malone', 'ozzy osbourne', 'miley cyrus', 'justin bieber']],
-              ['metro boomin', ['future', '21 savage', 'travis scott', 'drake', 'the weeknd']],
-              ['timbaland', ['justin timberlake', 'missy elliott', 'aaliyah', 'nelly furtado']],
-              ['pharrell williams', ['daft punk', 'robin thicke', 'ed sheeran', 'ariana grande']],
-              ['ryan tedder', ['adele', 'taylor swift', 'ed sheeran', 'onerepublic', 'beyoncé']],
-              ['sia', ['david guetta', 'flo rida', 'beyoncé', 'rihanna', 'britney spears']],
-              ['julia michaels', ['justin bieber', 'selena gomez', 'gwen stefani', 'ed sheeran']],
-              ['shellback', ['taylor swift', 'pink', 'britney spears', 'ariana grande']],
-              ['ali payami', ['taylor swift', 'the weeknd', 'dua lipa', 'ellie goulding']],
-              ['charlie puth', ['wiz khalifa', 'meghan trainor', 'jason derulo', 'maroon 5']],
-              ['diane warren', ['aerosmith', 'celine dion', 'whitney houston', 'lady gaga']]
-            ]);
-            
-            // Look for known collaborations
-            knownCollaborations.forEach((collaborators, producer) => {
-              if (collaboratorNameLower.includes(producer)) {
-                fallbackCollaborators = collaborators.filter(c => c !== artistName.toLowerCase());
-                console.log(`🎯 [DEBUG] Using known collaborations for "${collaborator.name}":`, fallbackCollaborators);
-              }
-            });
-            
-            // If no known collaborations found, use network fallback
-            if (fallbackCollaborators.length === 0) {
-              const networkCollaborators = collaborationData.artists
-                .filter(c => c.name !== collaborator.name && c.name !== artistName)
-                .map(c => c.name);
-              fallbackCollaborators = networkCollaborators.slice(0, 2);
-              console.log(`🔄 [DEBUG] Using network fallback for "${collaborator.name}":`, fallbackCollaborators);
-            }
-            
-            topCollaborators = [artistName, ...fallbackCollaborators];
-            
-            // Create branching nodes for fallback collaborators - show 3 for comprehensive networks
-            const maxBranchingNodes = 3;
-            const branchingArtists = fallbackCollaborators
-              .sort((a, b) => {
-                const popularityA = popularityMap.get(a.toLowerCase()) || 0;
-                const popularityB = popularityMap.get(b.toLowerCase()) || 0;
-                return popularityB - popularityA;
-              })
-              .slice(0, maxBranchingNodes);
-              
-            console.log(`🎨 [DEBUG] Creating ${branchingArtists.length} fallback branching connections for ${collaborator.type} "${collaborator.name}"`);
-            
-            for (const branchingArtist of branchingArtists) {
-              const existingNode = nodes.find(node => node.name === branchingArtist);
-              if (!existingNode) {
-                console.log(`🌟 [DEBUG] Adding fallback branching artist "${branchingArtist}" connected to ${collaborator.type} "${collaborator.name}"`);
-                
-                let branchingArtistId: string | null = null;
-                try {
-                  branchingArtistId = await musicNerdService.getArtistId(branchingArtist);
-                } catch (error) {
-                  console.log(`Could not fetch MusicNerd ID for fallback artist ${branchingArtist}`);
-                }
-                
-                const branchingNode: NetworkNode = {
-                  id: branchingArtist,
-                  name: branchingArtist,
-                  type: 'artist',
-                  size: 12,
-                  imageUrl: null,
-                  spotifyId: null,
-                  artistId: branchingArtistId,
-                  collaborations: [collaborator.name],
-                };
-                nodes.push(branchingNode);
-                
-                links.push({
-                  source: collaborator.name,
-                  target: branchingArtist,
-                });
-                console.log(`🔗 [DEBUG] Created fallback branching link: "${collaborator.name}" ↔ "${branchingArtist}"`);
-              }
-            }
+            // Fallback to current network collaborators
+            const networkCollaborators = collaborationData.artists
+              .filter(c => c.name !== collaborator.name && c.name !== artistName)
+              .map(c => c.name);
+            topCollaborators = [artistName, ...networkCollaborators.slice(0, 2)];
+            console.log(`🔄 [DEBUG] Using network fallback for "${collaborator.name}":`, topCollaborators);
           }
         }
 
@@ -665,15 +457,18 @@ export class DatabaseStorage implements IStorage {
             };
             
             // Get MusicNerd artist ID for the collaborator
+            let musicNerdUrl = 'https://music-nerd-git-staging-musicnerd.vercel.app';
             try {
               const artistId = await musicNerdService.getArtistId(collab.name);
               if (artistId) {
-                collaboratorNode.artistId = artistId;
+                musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${artistId}`;
                 console.log(`✅ [DEBUG] Found MusicNerd ID for ${collab.name}: ${artistId}`);
               }
             } catch (error) {
               console.log(`📭 [DEBUG] No MusicNerd ID found for ${collab.name}`);
             }
+            
+            collaboratorNode.musicNerdUrl = musicNerdUrl;
             nodes.push(collaboratorNode);
             links.push({
               source: mainArtistNode.id,
