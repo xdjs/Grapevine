@@ -23,12 +23,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     
     console.log(`🔍 [Vercel] Looking up artist options for: "${artistName}"`);
+    console.log(`🔍 [Vercel] Environment check - CONNECTION_STRING exists:`, !!process.env.CONNECTION_STRING);
+    console.log(`🔍 [Vercel] Node.js version:`, process.version);
+    console.log(`🔍 [Vercel] Platform:`, process.platform);
     
     // Get environment variables
     const CONNECTION_STRING = process.env.CONNECTION_STRING;
     
     if (!CONNECTION_STRING) {
       console.error('❌ [Vercel] CONNECTION_STRING not found');
+      console.error('❌ [Vercel] Available env vars:', Object.keys(process.env).filter(k => !k.startsWith('npm_')));
       return res.status(500).json({ message: 'Database connection not configured' });
     }
     

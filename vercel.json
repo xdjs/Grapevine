@@ -7,26 +7,39 @@
       "config": {
         "distDir": "dist/public"
       }
+    },
+    {
+      "src": "api/**/*.ts",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
+      "src": "/api/test",
+      "dest": "/api/test"
+    },
+    {
       "src": "/api/artist-options/(.*)",
-      "dest": "/api/artist-options/[artistName].js"
+      "dest": "/api/artist-options/[artistName]"
     },
     {
       "src": "/api/network/(.*)",
-      "dest": "/api/network/[artistName].js"
+      "dest": "/api/network/[artistName]"
     },
     {
       "src": "/api/search",
-      "dest": "/api/search.js"
+      "dest": "/api/search"
     },
     {
       "src": "/(.*)",
       "dest": "/dist/public/$1"
     }
   ],
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "nodejs20.x"
+    }
+  },
   "env": {
     "NODE_ENV": "production"
   }

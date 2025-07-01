@@ -113,6 +113,23 @@ npx drizzle-kit push
 2. **Database Connection**: Verify CONNECTION_STRING format
 3. **API Timeouts**: Check OpenAI API key and rate limits
 4. **Missing Dependencies**: Ensure all packages are in dependencies, not devDependencies
+5. **No Logs on Vercel**: Check function configuration and runtime settings
+
+### Vercel Configuration Issues Fixed:
+
+1. **Added proper builds configuration** for TypeScript API functions
+2. **Fixed routing** to properly map API endpoints to serverless functions
+3. **Added TypeScript configuration** for API directory
+4. **Enhanced logging** with detailed error reporting and environment checks
+5. **Added test endpoint** at `/api/test` to verify basic functionality
+
+### Enhanced Logging:
+
+The API functions now include comprehensive logging:
+- Environment variable checks
+- Request headers and timing
+- Detailed error messages with stack traces
+- Node.js version and platform information
 
 ### Environment Variable Format:
 
@@ -123,6 +140,13 @@ CONNECTION_STRING="postgresql://user:pass@host:port/db?sslmode=require"
 # OpenAI
 OPENAI_API_KEY="sk-..."
 ```
+
+### Testing Vercel Deployment:
+
+1. **Test basic functionality**: `GET /api/test`
+2. **Test artist search**: `GET /api/artist-options/Taylor%20Swift`
+3. **Test network generation**: `GET /api/network/Taylor%20Swift`
+4. **Check Vercel function logs** in deployment dashboard
 
 ## Performance Optimization
 

@@ -23,6 +23,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     console.log(`🎵 [Vercel] Network data request for: ${artistName}`);
+    console.log(`🎵 [Vercel] Function started at:`, new Date().toISOString());
+    console.log(`🎵 [Vercel] Environment check - CONNECTION_STRING exists:`, !!process.env.CONNECTION_STRING);
+    console.log(`🎵 [Vercel] Environment check - OPENAI_API_KEY exists:`, !!process.env.OPENAI_API_KEY);
+    console.log(`🎵 [Vercel] Node.js version:`, process.version);
+    console.log(`🎵 [Vercel] Request headers:`, JSON.stringify(req.headers, null, 2));
     
     // Get environment variables
     const CONNECTION_STRING = process.env.CONNECTION_STRING;
@@ -30,6 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     if (!CONNECTION_STRING) {
       console.error('❌ [Vercel] CONNECTION_STRING not found');
+      console.error('❌ [Vercel] Available env vars:', Object.keys(process.env).filter(k => !k.startsWith('npm_')));
       return res.status(500).json({ message: 'Database connection not configured' });
     }
 
@@ -209,14 +215,21 @@ Provide 5 producers and 5 songwriters who have actually worked with ${artistName
       
     } catch (dbError) {
       console.error('❌ [Vercel] Database/OpenAI error:', dbError);
+      console.error('❌ [Vercel] Error stack:', dbError instanceof Error ? dbError.stack : 'No stack trace');
       return res.status(500).json({ 
         message: 'Failed to generate network data', 
-        error: dbError instanceof Error ? dbError.message : 'Unknown error'
+        error: dbError instanceof Error ? dbError.message : 'Unknown error',
+        timestamp: new Date().toISOString()
       });
     }
     
   } catch (error) {
     console.error("❌ [Vercel] Error fetching network data:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error('❌ [Vercel] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
   }
 }
