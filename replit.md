@@ -250,6 +250,35 @@ Changelog:
 - Comprehensive error handling with intelligent fallback to MusicBrainz when OpenAI is unavailable
 - Fixed TypeScript variable scope issues and type safety for seamless integration
 
+
+### Multi-Role Node Consolidation (June 30, 2025)
+- Implemented comprehensive multi-role support for people with multiple industry roles
+- Backend now merges people appearing in multiple roles (artist + songwriter, producer + songwriter) into single nodes
+- Enhanced schema to support `types` array alongside primary `type` for backward compatibility
+- Main artists who also work as songwriters/producers (like Olivia Rodrigo) now appear as single multi-role nodes
+- Frontend displays multi-colored segmented circles for people with multiple roles
+- Enhanced tooltips show all roles (e.g., "artist + songwriter" instead of separate entries)
+- Fixed node duplication issue where the same person appeared multiple times in the network
+- System successfully consolidates collaboration data across all roles for complete relationship mapping
+
+### Enhanced Role Detection System (June 30, 2025)
+- Created comprehensive role detection database with 100+ music industry professionals
+- Added pattern-based role detection for names not in database (e.g., "martin" → producer+songwriter)
+- Applied enhanced role detection to ALL nodes across all data sources (OpenAI, MusicBrainz, Wikipedia)
+- Both main artists and collaborators now get accurate multi-role assignment
+- Branching artists also receive enhanced role detection for complete accuracy
+- System now correctly identifies producer-songwriters like Max Martin, Jack Antonoff, Dan Nigro
+- Artist-songwriters like Taylor Swift, Olivia Rodrigo properly labeled with both roles
+- Producer-artists like Calvin Harris, Diplo correctly show dual roles
+
+### Fixed Filter Visibility System (June 30, 2025)
+- Fixed filter functionality to make circles completely disappear/reappear instead of opacity changes
+- Updated filter logic to properly handle multi-role nodes (visible if ANY role should be shown)
+- Corrected DOM element targeting to hide entire node groups (.node-group) instead of just .node
+- Labels and connections now disappear together with their associated circles
+- Multi-role nodes remain visible as long as at least one of their roles is selected in filters
+- Enhanced filter behavior provides clean visual transitions when toggling checkboxes
+=======
 ### Supabase Caching System Integration (June 30, 2025)
 - Added webmapdata jsonb column to artists table for caching network visualization data
 - Implemented intelligent caching system to check for existing network data before generating new results
@@ -267,6 +296,7 @@ Changelog:
 - Tooltips now show the exact top 3 artists each producer/songwriter has worked with
 - Enhanced collaboration data stored in node structure for instant tooltip display
 - Tooltip format matches user-requested design showing artist names in clean list format
+
 
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals
