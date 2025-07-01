@@ -32,18 +32,8 @@ export default function NetworkVisualizer({
     const width = window.innerWidth;
     const height = window.innerHeight;
 
-    // Preserve current zoom transform before clearing
-    const currentTransform = zoomRef.current ? d3.zoomTransform(svg.node() as any) : d3.zoomIdentity;
-    
-    // Clear existing content but preserve zoom state
+    // Clear existing content
     svg.selectAll("*").remove();
-    
-    // Ensure SVG has proper dimensions without conflicting viewBox
-    svg
-      .attr("width", width)
-      .attr("height", height)
-      .style("width", "100%")
-      .style("height", "100%");
 
     // Filter out links where either node doesn't exist or is isolated
     const nodeSet = new Set(data.nodes.map(n => n.id));
@@ -60,62 +50,28 @@ export default function NetworkVisualizer({
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
-      .filter((event: any) => {
-        // Allow wheel events (including trackpad pinch), touch gestures, and programmatic zoom
-        if (event.type === 'wheel') {
-          // Allow all wheel events including trackpad pinch gestures
-          return true;
-        }
-        
-        // Handle touch events for mobile pinch zoom
-        if (event.type === 'touchstart' || event.type === 'touchmove' || event.type === 'touchend') {
-          // Allow multi-touch gestures (pinch zoom)
-          return event.touches && event.touches.length >= 2;
-        }
-        
-        // Allow programmatic zoom calls (from buttons)
-        if (!event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown') {
-          return true;
-        }
-        
-        return false; // Block single-touch drag and clicks on background
+      .filter((event) => {
+        // Only allow wheel events and programmatic zoom (no drag panning or clicks)
+        // This prevents the tree from floating away when dragging on empty space
+        return event.type === 'wheel' || (!event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown');
       })
-      .on("zoom", (event: any) => {
-        // Handle zoom from wheel, pinch gestures, and programmatic zoom
+      .on("zoom", (event) => {
+        // Respond to user scroll wheel and programmatic zoom only
         const { transform } = event;
         networkGroup.attr("transform", transform);
         setCurrentZoom(transform.k);
         onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
-        
-        // Log zoom events for debugging
-        if (event.sourceEvent) {
-          const eventType = event.sourceEvent.type;
-          const gestureType = event.sourceEvent.touches ? 
-            `touch (${event.sourceEvent.touches.length} fingers)` : 
-            eventType;
-          console.log(`${gestureType} zoom: ${transform.k.toFixed(2)}x`);
-        }
       });
 
-    // Apply zoom behavior
+    // Apply zoom behavior but prevent background dragging and clicking
     svg.call(zoom);
     zoomRef.current = zoom;
-    
-    // Restore the preserved zoom transform to prevent reset glitching
-    if (currentTransform && !currentTransform.k.toString().includes('NaN')) {
-      svg.call(zoom.transform, currentTransform);
-    }
 
-    // Prevent unwanted background interactions while preserving zoom
+    // Add explicit prevention of background interactions
     svg.on("mousedown.drag", null)
+       .on("touchstart.drag", null)
        .on("click.zoom", null)
-       .on("dblclick.zoom", null)
-       .on("touchstart.drag", function(event: any) {
-         // Only prevent single-touch drag, allow multi-touch pinch
-         if (event.touches && event.touches.length === 1) {
-           event.preventDefault();
-         }
-       });
+       .on("dblclick.zoom", null);
 
     // Find connected components for cluster positioning
     const findConnectedComponents = () => {
@@ -579,40 +535,53 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
-  // Handle zoom button clicks using D3.js zoom behavior
-  const handleZoomIn = () => {
-    if (!zoomRef.current || !svgRef.current) return;
+  // SVG viewBox zoom function (working implementation)
+  const applyZoom = (scale: number) => {
+    if (!svgRef.current) return;
+    
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    
+    // Calculate new viewBox dimensions
+    const newWidth = width / scale;
+    const newHeight = height / scale;
+    const offsetX = (width - newWidth) / 2;
+    const offsetY = (height - newHeight) / 2;
+    
+    // Apply smooth transition
     const svg = d3.select(svgRef.current);
-    const newZoom = Math.min(8, currentZoom * 1.2); // Cap at 8x (same as scaleExtent)
-    
     svg.transition()
-      .duration(300)
-      .call(zoomRef.current.scaleTo, newZoom);
-    
-    console.log(`Button zoom in: ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+      .duration(200)
+      .attrTween('viewBox', () => {
+        const currentViewBox = svgRef.current?.getAttribute('viewBox') || `0 0 ${width} ${height}`;
+        const [cx, cy, cw, ch] = currentViewBox.split(' ').map(Number);
+        const interpolator = d3.interpolate([cx, cy, cw, ch], [offsetX, offsetY, newWidth, newHeight]);
+        return (t: number) => {
+          const [x, y, w, h] = interpolator(t);
+          return `${x} ${y} ${w} ${h}`;
+        };
+      });
+  };
+
+  // Handle zoom button clicks
+  const handleZoomIn = () => {
+    const newZoom = Math.min(5, currentZoom * 1.2); // Cap at 5x
+    setCurrentZoom(newZoom);
+    applyZoom(newZoom);
+    console.log(`Zooming from ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
   };
 
   const handleZoomOut = () => {
-    if (!zoomRef.current || !svgRef.current) return;
-    const svg = d3.select(svgRef.current);
-    const newZoom = Math.max(0.2, currentZoom / 1.2); // Min 0.2x (same as scaleExtent)
-    
-    svg.transition()
-      .duration(300)
-      .call(zoomRef.current.scaleTo, newZoom);
-    
-    console.log(`Button zoom out: ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+    const newZoom = Math.max(0.2, currentZoom / 1.2); // Min 0.2x
+    setCurrentZoom(newZoom);
+    applyZoom(newZoom);
+    console.log(`Zooming from ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
   };
 
   const handleZoomReset = () => {
-    if (!zoomRef.current || !svgRef.current) return;
-    const svg = d3.select(svgRef.current);
-    
-    svg.transition()
-      .duration(500)
-      .call(zoomRef.current.transform, d3.zoomIdentity);
-    
-    console.log('Button zoom reset to 1.00');
+    setCurrentZoom(1);
+    applyZoom(1);
+    console.log('Zoom reset to 1.00');
   };
 
   const handleArtistSelection = (artistId: string) => {
