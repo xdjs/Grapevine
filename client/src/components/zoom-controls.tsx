@@ -61,7 +61,7 @@ export default function ZoomControls({
   };
 
   return (
-    <div className="fixed top-6 right-6 flex flex-col gap-2 opacity-100 transition-opacity duration-500 z-30">
+    <div className="fixed top-20 right-6 flex flex-col gap-2 opacity-100 transition-opacity duration-500 z-30">
       <Button
         onMouseDown={handleZoomInStart}
         onMouseUp={stopContinuousZoom}

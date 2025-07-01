@@ -3,7 +3,7 @@ import SearchInterface from "@/components/search-interface";
 import NetworkVisualizer from "@/components/network-visualizer";
 import ZoomControls from "@/components/zoom-controls";
 import FilterControls from "@/components/filter-controls";
-import Legend from "@/components/legend";
+
 import { NetworkData, FilterState } from "@/types/network";
 import { Loader2 } from "lucide-react";
 
@@ -113,7 +113,6 @@ export default function Home() {
             filterState={filterState}
             onFilterChange={setFilterState}
           />
-          <Legend />
         </>
       )}
     </div>
