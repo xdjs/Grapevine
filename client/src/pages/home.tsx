@@ -6,6 +6,7 @@ import FilterControls from "@/components/filter-controls";
 import Legend from "@/components/legend";
 import { NetworkData, FilterState } from "@/types/network";
 import { Loader2 } from "lucide-react";
+import musicNerdLogo from "@assets/musicNerdLogo_1751389187695.png";
 
 export default function Home() {
   const [networkData, setNetworkData] = useState<NetworkData | null>(null);
@@ -71,7 +72,14 @@ export default function Home() {
       {isLoading && showNetworkView && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-30">
           <div className="bg-black/80 rounded-lg p-8 flex flex-col items-center space-y-4">
-            <Loader2 className="h-12 w-12 animate-spin text-pink-500" />
+            <div className="relative flex items-center justify-center">
+              <Loader2 className="h-16 w-16 animate-spin text-pink-500" />
+              <img 
+                src={musicNerdLogo} 
+                alt="MusicNerd Logo" 
+                className="absolute w-8 h-8 object-contain"
+              />
+            </div>
             <p className="text-lg font-medium text-white">Creating collaboration network...</p>
             <p className="text-sm text-gray-400 text-center max-w-md">
               Analyzing authentic collaboration data from MusicBrainz, OpenAI, and Spotify
