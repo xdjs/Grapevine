@@ -8,6 +8,7 @@ export const artists = pgTable("artists", {
   type: text("type").notNull(), // 'artist', 'producer', 'songwriter'
   imageUrl: text("image_url"),
   spotifyId: text("spotify_id"),
+  webmapdata: jsonb("webmapdata"), // Cache for network visualization data
 });
 
 export const collaborations = pgTable("collaborations", {
@@ -52,6 +53,7 @@ export const networkLinkSchema = z.object({
 export const networkDataSchema = z.object({
   nodes: z.array(networkNodeSchema),
   links: z.array(networkLinkSchema),
+  cached: z.boolean().optional(),
 });
 
 export type NetworkNode = z.infer<typeof networkNodeSchema>;

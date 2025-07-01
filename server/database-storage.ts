@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { db, isDatabaseAvailable } from './supabase';
 import { artists, collaborations, type Artist, type InsertArtist, type Collaboration, type InsertCollaboration, type NetworkData, type NetworkNode, type NetworkLink } from "@shared/schema";
 import { spotifyService } from "./spotify";
@@ -37,12 +37,28 @@ export class DatabaseStorage implements IStorage {
     
     try {
       const result = await db
-        .select()
+        .select({
+          id: artists.id,
+          name: artists.name,
+          webmapdata: artists.webmapdata
+        })
         .from(artists)
         .where(eq(artists.name, name))
         .limit(1);
       
-      return result[0];
+      const artist = result[0];
+      if (artist) {
+        // Add default type field since MusicNerd database doesn't have it
+        return {
+          id: artist.id,
+          name: artist.name,
+          type: 'artist' as const,
+          imageUrl: null,
+          spotifyId: null,
+          webmapdata: artist.webmapdata
+        };
+      }
+      return undefined;
     } catch (error) {
       console.error('Error fetching artist by name:', error);
       return undefined;
@@ -483,10 +499,20 @@ export class DatabaseStorage implements IStorage {
               }
             }
 
+
             // Final node array from consolidated map
             const nodes = Array.from(nodeMap.values());
             console.log(`✅ [DEBUG] Successfully created network from OpenAI data: ${nodes.length} total nodes (including main artist) for "${artistName}"`);
             return { nodes, links };
+
+            console.log(`✅ [DEBUG] Successfully created network from OpenAI data: ${openAIData.artists.length} collaborators for "${artistName}"`);
+            
+            // Cache the generated network data
+            const networkData = { nodes, links };
+            await this.cacheNetworkData(artistName, networkData);
+            
+            return networkData;
+
           }
         } catch (error) {
           console.error(`❌ [DEBUG] OpenAI API error for "${artistName}":`, error);
@@ -880,9 +906,17 @@ export class DatabaseStorage implements IStorage {
             }
             
             console.log(`✅ [DEBUG] Successfully created network from Wikipedia data: ${wikipediaCollaborators.length} collaborators for "${artistName}"`);
+
             // Final node array from consolidated map
             const nodes = Array.from(nodeMap.values());
             return { nodes, links };
+   
+            // Cache the generated network data
+            const networkData = { nodes, links };
+            await this.cacheNetworkData(artistName, networkData);
+            
+            return networkData;
+
           } else {
             console.log(`❌ [DEBUG] Wikipedia returned 0 collaborators for "${artistName}"`);
           }
@@ -957,12 +991,20 @@ export class DatabaseStorage implements IStorage {
           console.log(`👤 [DEBUG] Returning only the main artist node without any collaborators`);
         }
         
+
         // Final node array from consolidated map
         const nodes = Array.from(nodeMap.values());
         return { nodes, links };
+
+        // Cache the generated network data
+        const networkData = { nodes, links };
+        await this.cacheNetworkData(artistName, networkData);
+        return networkData;
+
       } else {
         console.log(`✅ [DEBUG] Successfully created network from MusicBrainz data: ${collaborationData.artists.length} collaborators for "${artistName}"`);
       }
+
 
       // Final node array from consolidated map
       const nodes = Array.from(nodeMap.values());
@@ -972,16 +1014,76 @@ export class DatabaseStorage implements IStorage {
       // Return just the main artist if everything fails
       const nodes = Array.from(nodeMap.values());
       return { nodes, links };
+
+      // Cache the generated network data
+      const networkData = { nodes, links };
+      await this.cacheNetworkData(artistName, networkData);
+      return networkData;
+    } catch (error) {
+      console.error('Error generating real collaboration network:', error);
+      // Return just the main artist if everything fails
+      const networkData = { nodes, links };
+      await this.cacheNetworkData(artistName, networkData);
+      return networkData;
+    }
+  }
+
+  private async cacheNetworkData(artistName: string, networkData: NetworkData): Promise<void> {
+    if (!db) {
+      console.log(`⚠️ [DEBUG] Database not available - skipping cache for "${artistName}"`);
+      return;
+    }
+
+    try {
+      console.log(`💾 [DEBUG] Caching webmapdata for "${artistName}"`);
+      
+      // Check if artist already exists in database
+      const existingArtist = await this.getArtistByName(artistName);
+      
+      if (existingArtist) {
+        // Update existing artist with webMapData
+        // Update existing artist with webmapdata using raw SQL since schema doesn't match MusicNerd DB
+        await db.execute(sql`
+          UPDATE artists 
+          SET webmapdata = ${JSON.stringify(networkData)}::jsonb 
+          WHERE name = ${artistName}
+        `);
+        console.log(`✅ [DEBUG] Updated webmapdata cache for existing artist "${artistName}"`);
+      } else {
+        // Create new artist entry with webmapdata using raw SQL since schema doesn't match MusicNerd DB
+        await db.execute(sql`
+          INSERT INTO artists (name, webmapdata) 
+          VALUES (${artistName}, ${JSON.stringify(networkData)}::jsonb)
+        `);
+        console.log(`✅ [DEBUG] Created new artist "${artistName}" with webmapdata cache`);
+      }
+    } catch (error) {
+      console.error(`❌ [DEBUG] Error caching webmapdata for "${artistName}":`, error);
+
     }
   }
 
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
+    // First, check if we have cached webmapdata for this artist (applies to ALL artists)
+    console.log(`💾 [DEBUG] Checking for cached webmapdata for "${artistName}"`);
+    const cachedArtist = await this.getArtistByName(artistName);
+    
+    if (cachedArtist?.webmapdata) {
+      console.log(`✅ [DEBUG] Found cached webmapdata for "${artistName}" - using cached data`);
+      return cachedArtist.webmapdata as NetworkData;
+    }
+    
+    console.log(`🆕 [DEBUG] No cached data found for "${artistName}" - generating new network data`);
+    
     // For demo artists with rich mock data, use real MusicBrainz to showcase enhanced producer/songwriter extraction
     const enhancedMusicBrainzArtists = ['Post Malone', 'The Weeknd', 'Ariana Grande', 'Billie Eilish', 'Taylor Swift', 'Drake'];
     
     if (enhancedMusicBrainzArtists.includes(artistName)) {
       console.log(`🎵 [DEBUG] Using enhanced MusicBrainz data for "${artistName}" to showcase deep producer/songwriter networks`);
-      return this.generateRealCollaborationNetwork(artistName);
+      const networkData = await this.generateRealCollaborationNetwork(artistName);
+      // Cache the result
+      await this.cacheNetworkData(artistName, networkData);
+      return networkData;
     }
     
     const mainArtist = await this.getArtistByName(artistName);
