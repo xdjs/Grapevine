@@ -275,6 +275,15 @@ Changelog:
 - Improved loading spinner and tooltip responsiveness for mobile viewing
 - Enhanced filter controls with smaller touch targets and mobile-appropriate spacing
 
+### Fixed Pinch Zoom Stability (July 1, 2025)
+- Enhanced pinch zoom functionality to maintain proper zoom levels and smooth interaction
+- Improved D3.js zoom behavior filter to properly handle multi-touch gestures
+- Updated touch event handling to distinguish between single-touch and multi-touch interactions
+- Modified CSS touch-action properties for better pinch zoom responsiveness
+- Added comprehensive zoom event logging for debugging touch interactions
+- Fixed zoom transform persistence to prevent unwanted zoom level resets during pinch gestures
+- Pinch zoom now works smoothly alongside existing zoom button functionality without conflicts
+
 ### OpenAI Primary Data Source Integration (June 30, 2025)
 - Integrated OpenAI API as the primary data source for music collaboration networks
 - Updated data source priority: 1) OpenAI → 2) MusicBrainz → 3) Wikipedia → 4) Known collaborations fallback

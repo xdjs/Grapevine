@@ -52,21 +52,38 @@ export default function NetworkVisualizer({
       .scaleExtent([0.2, 8])
       .filter((event) => {
         // Allow wheel events, programmatic zoom, and multi-touch gestures (pinch zoom)
-        // This prevents the tree from floating away when dragging on empty space
-        const isWheelEvent = event.type === 'wheel';
-        const isProgrammaticZoom = !event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown';
-        const isMultiTouch = event.type === 'touchstart' && event.touches && event.touches.length > 1;
-        const isTouchMove = event.type === 'touchmove' && event.touches && event.touches.length > 1;
-        const isTouchEnd = event.type === 'touchend' && event.changedTouches && event.changedTouches.length > 0;
+        if (event.type === 'wheel') return true;
+        if (!event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown') return true;
         
-        return isWheelEvent || isProgrammaticZoom || isMultiTouch || isTouchMove || isTouchEnd;
+        // For touch events, only allow multi-touch gestures (pinch zoom)
+        if (event.type === 'touchstart' || event.type === 'touchmove') {
+          return event.touches && event.touches.length > 1;
+        }
+        
+        // Allow touch end events that were part of multi-touch gestures
+        if (event.type === 'touchend') {
+          return true; // Let D3 handle the cleanup
+        }
+        
+        return false;
       })
       .on("zoom", (event) => {
-        // Respond to user scroll wheel and programmatic zoom only
+        // Respond to user scroll wheel, programmatic zoom, and pinch zoom
         const { transform } = event;
+        
+        // Apply transform immediately for smooth interaction
         networkGroup.attr("transform", transform);
         setCurrentZoom(transform.k);
         onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
+        
+        // Log zoom changes for debugging
+        if (event.sourceEvent && event.sourceEvent.type === 'touchmove') {
+          console.log(`Pinch zoom: ${transform.k.toFixed(2)}x`);
+        } else if (event.sourceEvent && event.sourceEvent.type === 'wheel') {
+          console.log(`Wheel zoom: ${transform.k.toFixed(2)}x`);
+        } else if (!event.sourceEvent) {
+          console.log(`Button zoom: ${currentZoom.toFixed(2)} to ${transform.k.toFixed(2)}`);
+        }
       });
 
     // Apply zoom behavior but prevent background dragging and clicking
@@ -76,13 +93,7 @@ export default function NetworkVisualizer({
     // Add explicit prevention of single-touch background interactions
     svg.on("mousedown.drag", null)
        .on("click.zoom", null)
-       .on("dblclick.zoom", null)
-       .on("touchstart.drag", (event: any) => {
-         // Prevent single-touch dragging but allow multi-touch gestures
-         if (event.touches && event.touches.length === 1) {
-           event.preventDefault();
-         }
-       });
+       .on("dblclick.zoom", null);
 
     // Find connected components for cluster positioning
     const findConnectedComponents = () => {
