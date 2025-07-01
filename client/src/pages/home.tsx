@@ -6,6 +6,7 @@ import FilterControls from "@/components/filter-controls";
 import Legend from "@/components/legend";
 import { NetworkData, FilterState } from "@/types/network";
 import { Loader2 } from "lucide-react";
+import musicNerdLogo from "@assets/musicNerdLogo_1751388774788.png";
 
 export default function Home() {
   const [networkData, setNetworkData] = useState<NetworkData | null>(null);
@@ -48,6 +49,15 @@ export default function Home() {
 
   return (
     <div className="relative w-screen h-screen bg-black text-white overflow-hidden">
+      {/* MusicNerd Logo */}
+      <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-20">
+        <img 
+          src={musicNerdLogo} 
+          alt="MusicNerd Logo" 
+          className="h-16 w-16 md:h-20 md:w-20"
+        />
+      </div>
+
       {/* Search Interface */}
       <SearchInterface
         onNetworkData={handleNetworkData}
