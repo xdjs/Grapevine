@@ -78,32 +78,42 @@ export default function NetworkVisualizer({
        .on("touchmove.zoom", null)
        .on("touchend.zoom", null);
 
-    // Custom pinch zoom variables
-    let initialDistance = 0;
-    let initialScale = 1;
-    let isPinching = false;
-    let animationFrameId: number | null = null;
-    let pendingScale = 1;
-    let baseTransform = { x: 0, y: 0, k: 1 };
-
-    const applyPinchTransform = () => {
-      if (isPinching) {
-        // Apply smooth transform without triggering D3 events
-        networkGroup.attr("transform", `translate(${baseTransform.x}, ${baseTransform.y}) scale(${pendingScale})`);
-        
-        // Update D3's internal zoom state to match
-        const newTransform = d3.zoomIdentity.translate(baseTransform.x, baseTransform.y).scale(pendingScale);
-        svg.property("__zoom", newTransform);
-        
-        // Update React state
-        setCurrentZoom(pendingScale);
-        onZoomChange({ k: pendingScale, x: baseTransform.x, y: baseTransform.y });
-        
-        animationFrameId = null;
+    // Define zoom functions that will be used by both buttons and pinch gestures
+    const handleZoomIn = () => {
+      if (zoomRef.current) {
+        const currentTransform = d3.zoomTransform(svg.node());
+        const newScale = Math.min(8, currentTransform.k * 1.2);
+        console.log(`Zooming from ${currentTransform.k.toFixed(2)} to ${newScale.toFixed(2)}`);
+        const transform = d3.zoomIdentity.translate(currentTransform.x, currentTransform.y).scale(newScale);
+        svg.transition().duration(300).call(zoomRef.current.transform, transform);
       }
     };
 
-    // Custom touch event handlers
+    const handleZoomOut = () => {
+      if (zoomRef.current) {
+        const currentTransform = d3.zoomTransform(svg.node());
+        const newScale = Math.max(0.2, currentTransform.k / 1.2);
+        console.log(`Zooming from ${currentTransform.k.toFixed(2)} to ${newScale.toFixed(2)}`);
+        const transform = d3.zoomIdentity.translate(currentTransform.x, currentTransform.y).scale(newScale);
+        svg.transition().duration(300).call(zoomRef.current.transform, transform);
+      }
+    };
+
+    const handleZoomReset = () => {
+      if (zoomRef.current) {
+        console.log("Zoom reset to 1.00");
+        const transform = d3.zoomIdentity.translate(0, 0).scale(1);
+        svg.transition().duration(500).call(zoomRef.current.transform, transform);
+      }
+    };
+
+    // Pinch zoom variables
+    let initialDistance = 0;
+    let lastScale = 1;
+    let isPinching = false;
+    let pinchThreshold = 0.1; // Minimum change required to trigger zoom
+
+    // Custom touch event handlers using existing zoom functions
     const handleTouchStart = (event: TouchEvent) => {
       if (event.touches.length === 2) {
         console.log("🤏 Starting pinch gesture");
@@ -114,11 +124,7 @@ export default function NetworkVisualizer({
           Math.pow(touch2.clientX - touch1.clientX, 2) + 
           Math.pow(touch2.clientY - touch1.clientY, 2)
         );
-        const currentTransform = d3.zoomTransform(svg.node());
-        initialScale = currentTransform.k;
-        baseTransform = { x: currentTransform.x, y: currentTransform.y, k: currentTransform.k };
-        pendingScale = initialScale;
-        console.log(`🤏 Initial distance: ${initialDistance}, Initial scale: ${initialScale}`);
+        lastScale = 1;
         event.preventDefault();
         event.stopPropagation();
       } else if (event.touches.length === 1) {
@@ -137,11 +143,17 @@ export default function NetworkVisualizer({
         
         if (initialDistance > 0) {
           const scaleChange = currentDistance / initialDistance;
-          pendingScale = Math.max(0.2, Math.min(8, initialScale * scaleChange));
           
-          // Use requestAnimationFrame for smooth updates
-          if (!animationFrameId) {
-            animationFrameId = requestAnimationFrame(applyPinchTransform);
+          // Use threshold to prevent too frequent updates
+          if (Math.abs(scaleChange - lastScale) > pinchThreshold) {
+            if (scaleChange > lastScale) {
+              // Pinch out - zoom in
+              handleZoomIn();
+            } else {
+              // Pinch in - zoom out
+              handleZoomOut();
+            }
+            lastScale = scaleChange;
           }
         }
         event.preventDefault();
@@ -151,19 +163,10 @@ export default function NetworkVisualizer({
 
     const handleTouchEnd = (event: TouchEvent) => {
       if (isPinching) {
-        console.log("🤏 Ending pinch gesture, final scale:", pendingScale);
+        console.log("🤏 Ending pinch gesture");
         isPinching = false;
         initialDistance = 0;
-        initialScale = 1;
-        
-        // Cancel any pending animation
-        if (animationFrameId) {
-          cancelAnimationFrame(animationFrameId);
-          animationFrameId = null;
-        }
-        
-        // Apply final transform
-        applyPinchTransform();
+        lastScale = 1;
       }
     };
 
@@ -178,9 +181,6 @@ export default function NetworkVisualizer({
       svgElement.removeEventListener('touchstart', handleTouchStart);
       svgElement.removeEventListener('touchmove', handleTouchMove);
       svgElement.removeEventListener('touchend', handleTouchEnd);
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
     };
 
     // Find connected components for cluster positioning
