@@ -167,25 +167,18 @@
     
     /* Enable pinch zoom on SVG container */
     svg {
-      touch-action: manipulation;
+      touch-action: pinch-zoom;
       -webkit-touch-callout: none;
       -webkit-user-select: none;
       -khtml-user-select: none;
       -moz-user-select: none;
       -ms-user-select: none;
       user-select: none;
-      -webkit-overflow-scrolling: touch;
     }
     
-    /* Allow pinch zoom on network container */
+    /* Prevent single-touch scrolling on network container */
     .network-group {
-      touch-action: manipulation;
-    }
-    
-    /* Ensure the main container allows proper touch handling */
-    .relative.w-screen.h-screen {
-      touch-action: manipulation;
-      overflow: hidden;
+      touch-action: pinch-zoom;
     }
   }
   

@@ -24,17 +24,6 @@ export default function NetworkVisualizer({
   const [currentZoom, setCurrentZoom] = useState(1);
   const [showArtistModal, setShowArtistModal] = useState(false);
   const [selectedArtistName, setSelectedArtistName] = useState("");
-  
-  // Touch state for pinch zoom
-  const touchStateRef = useRef<{
-    initialDistance: number | null;
-    initialScale: number;
-    center: { x: number; y: number } | null;
-  }>({
-    initialDistance: null,
-    initialScale: 1,
-    center: null
-  });
 
   useEffect(() => {
     if (!svgRef.current || !data || !visible) return;
@@ -57,114 +46,43 @@ export default function NetworkVisualizer({
     // Create network group
     const networkGroup = svg.append("g").attr("class", "network-group");
 
-    // Helper functions for distance calculation
-    const getDistance = (touch1: Touch, touch2: Touch) => {
-      const dx = touch1.clientX - touch2.clientX;
-      const dy = touch1.clientY - touch2.clientY;
-      return Math.sqrt(dx * dx + dy * dy);
-    };
-
-    const getCenter = (touch1: Touch, touch2: Touch) => {
-      return {
-        x: (touch1.clientX + touch2.clientX) / 2,
-        y: (touch1.clientY + touch2.clientY) / 2
-      };
-    };
-
-    // Custom touch event handlers for pinch zoom
-    const handleTouchStart = (event: TouchEvent) => {
-      console.log(`Touch start: ${event.touches.length} touches`);
-      if (event.touches.length === 2) {
-        event.preventDefault();
-        const distance = getDistance(event.touches[0], event.touches[1]);
-        
-        touchStateRef.current = {
-          initialDistance: distance,
-          initialScale: currentZoom,
-          center: null
-        };
-        
-        console.log(`🔥 Pinch start: distance=${distance.toFixed(0)}, current scale=${currentZoom.toFixed(2)}`);
-      }
-    };
-
-    const handleTouchMove = (event: TouchEvent) => {
-      console.log(`Touch move: ${event.touches.length} touches`);
-      if (event.touches.length === 2 && touchStateRef.current.initialDistance) {
-        event.preventDefault();
-        event.stopPropagation();
-        
-        const distance = getDistance(event.touches[0], event.touches[1]);
-        const scaleFactor = distance / touchStateRef.current.initialDistance;
-        const newScale = Math.max(0.2, Math.min(8, touchStateRef.current.initialScale * scaleFactor));
-        
-        // Apply transform directly without triggering D3 zoom events
-        const transform = d3.zoomIdentity.scale(newScale);
-        networkGroup.attr('transform', transform.toString());
-        
-        setCurrentZoom(newScale);
-        onZoomChange({ k: newScale, x: 0, y: 0 });
-        
-        console.log(`🔥 Pinch zoom: ${newScale.toFixed(2)}x (factor: ${scaleFactor.toFixed(2)})`);
-      }
-    };
-
-    const handleTouchEnd = (event: TouchEvent) => {
-      if (event.touches.length < 2 && touchStateRef.current.initialDistance) {
-        console.log(`Pinch end: maintaining scale at ${currentZoom.toFixed(2)}x`);
-        
-        // Update the initial scale for next pinch gesture
-        touchStateRef.current = {
-          initialDistance: null,
-          initialScale: currentZoom,
-          center: null
-        };
-      }
-    };
-
-    // Create zoom behavior for wheel/button interaction only
+    // Create zoom behavior for mouse/touch interaction
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .filter((event) => {
-        // Only allow wheel events and programmatic zoom (buttons)
-        return event.type === 'wheel' || !event.sourceEvent;
+        // Allow wheel events, programmatic zoom, and multi-touch gestures (pinch zoom)
+        // This prevents the tree from floating away when dragging on empty space
+        const isWheelEvent = event.type === 'wheel';
+        const isProgrammaticZoom = !event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown';
+        const isMultiTouch = event.type === 'touchstart' && event.touches && event.touches.length > 1;
+        const isTouchMove = event.type === 'touchmove' && event.touches && event.touches.length > 1;
+        const isTouchEnd = event.type === 'touchend' && event.changedTouches && event.changedTouches.length > 0;
+        
+        return isWheelEvent || isProgrammaticZoom || isMultiTouch || isTouchMove || isTouchEnd;
       })
       .on("zoom", (event) => {
-        // Respond to user scroll wheel and button zoom only
+        // Respond to user scroll wheel and programmatic zoom only
         const { transform } = event;
-        
-        // Apply transform immediately for smooth interaction
         networkGroup.attr("transform", transform);
         setCurrentZoom(transform.k);
         onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
-        
-        // Log zoom changes for debugging
-        if (event.sourceEvent && event.sourceEvent.type === 'wheel') {
-          console.log(`Wheel zoom: ${transform.k.toFixed(2)}x`);
-        } else if (!event.sourceEvent) {
-          console.log(`Button zoom: ${currentZoom.toFixed(2)} to ${transform.k.toFixed(2)}`);
-        }
       });
 
     // Apply zoom behavior but prevent background dragging and clicking
     svg.call(zoom);
     zoomRef.current = zoom;
 
-    // Add custom touch event listeners for pinch zoom
-    const svgElement = svgRef.current;
-    if (svgElement) {
-      console.log('🔧 Adding touch event listeners to SVG element');
-      svgElement.addEventListener('touchstart', handleTouchStart, { passive: false });
-      svgElement.addEventListener('touchmove', handleTouchMove, { passive: false });
-      svgElement.addEventListener('touchend', handleTouchEnd, { passive: false });
-      console.log('✅ Touch event listeners added to SVG');
-    }
-
     // Add explicit prevention of single-touch background interactions
     svg.on("mousedown.drag", null)
        .on("click.zoom", null)
-       .on("dblclick.zoom", null);
+       .on("dblclick.zoom", null)
+       .on("touchstart.drag", (event: any) => {
+         // Prevent single-touch dragging but allow multi-touch gestures
+         if (event.touches && event.touches.length === 1) {
+           event.preventDefault();
+         }
+       });
 
     // Find connected components for cluster positioning
     const findConnectedComponents = () => {
@@ -553,14 +471,6 @@ export default function NetworkVisualizer({
     return () => {
       tooltip.remove();
       simulation.stop();
-      
-      // Remove custom touch event listeners
-      const svgElement = svgRef.current;
-      if (svgElement) {
-        svgElement.removeEventListener('touchstart', handleTouchStart);
-        svgElement.removeEventListener('touchmove', handleTouchMove);
-        svgElement.removeEventListener('touchend', handleTouchEnd);
-      }
     };
   }, [data, visible, onZoomChange]);
 
@@ -664,61 +574,25 @@ export default function NetworkVisualizer({
       });
   };
 
-  // Handle zoom button clicks - apply both visual and D3 transform
+  // Handle zoom button clicks
   const handleZoomIn = () => {
-    const newZoom = Math.min(8, currentZoom * 1.2); // Cap at 8x
-    const transform = d3.zoomIdentity.scale(newZoom);
-    
-    if (svgRef.current) {
-      const svg = d3.select(svgRef.current);
-      const networkGroup = svg.select('.network-group');
-      networkGroup.attr('transform', transform.toString());
-    }
-    
+    const newZoom = Math.min(5, currentZoom * 1.2); // Cap at 5x
     setCurrentZoom(newZoom);
-    onZoomChange({ k: newZoom, x: 0, y: 0 });
-    
-    // Update touchState for next pinch gesture
-    touchStateRef.current.initialScale = newZoom;
-    
-    console.log(`Button zoom in: ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+    applyZoom(newZoom);
+    console.log(`Zooming from ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
   };
 
   const handleZoomOut = () => {
     const newZoom = Math.max(0.2, currentZoom / 1.2); // Min 0.2x
-    const transform = d3.zoomIdentity.scale(newZoom);
-    
-    if (svgRef.current) {
-      const svg = d3.select(svgRef.current);
-      const networkGroup = svg.select('.network-group');
-      networkGroup.attr('transform', transform.toString());
-    }
-    
     setCurrentZoom(newZoom);
-    onZoomChange({ k: newZoom, x: 0, y: 0 });
-    
-    // Update touchState for next pinch gesture  
-    touchStateRef.current.initialScale = newZoom;
-    
-    console.log(`Button zoom out: ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+    applyZoom(newZoom);
+    console.log(`Zooming from ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
   };
 
   const handleZoomReset = () => {
-    const transform = d3.zoomIdentity.scale(1);
-    
-    if (svgRef.current) {
-      const svg = d3.select(svgRef.current);
-      const networkGroup = svg.select('.network-group');
-      networkGroup.attr('transform', transform.toString());
-    }
-    
     setCurrentZoom(1);
-    onZoomChange({ k: 1, x: 0, y: 0 });
-    
-    // Update touchState for next pinch gesture
-    touchStateRef.current.initialScale = 1;
-    
-    console.log('Button zoom reset to 1.00');
+    applyZoom(1);
+    console.log('Zoom reset to 1.00');
   };
 
   const handleArtistSelection = (artistId: string) => {
