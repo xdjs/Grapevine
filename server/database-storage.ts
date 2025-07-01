@@ -1087,7 +1087,14 @@ export class DatabaseStorage implements IStorage {
       return this.generateRealCollaborationNetwork(artistName);
     }
 
-    // Artist exists in database, build network from stored data
+    // If artist exists in MusicNerd database (UUID ID), skip collaboration lookup 
+    // and generate real collaboration data instead since MusicNerd doesn't have our collaborations table
+    if (typeof mainArtist.id === 'string' && mainArtist.id.includes('-')) {
+      console.log(`🎵 [DEBUG] Found MusicNerd artist "${artistName}" - generating real collaboration network`);
+      return this.generateRealCollaborationNetwork(artistName);
+    }
+
+    // Artist exists in our own database, build network from stored data
     const nodes: NetworkNode[] = [];
     const links: NetworkLink[] = [];
     
@@ -1101,8 +1108,8 @@ export class DatabaseStorage implements IStorage {
     };
     nodes.push(mainArtistNode);
 
-    // Get collaborations from database
-    const artistCollaborations = await this.getCollaborationsByArtist(mainArtist.id);
+    // Get collaborations from database (only for integer IDs)
+    const artistCollaborations = await this.getCollaborationsByArtist(mainArtist.id as number);
     
     for (const collab of artistCollaborations) {
       const collaborator = await this.getArtist(collab.toArtistId);
