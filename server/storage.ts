@@ -147,7 +147,8 @@ export class MemStorage implements IStorage {
       name: insertArtist.name,
       type: insertArtist.type,
       imageUrl: insertArtist.imageUrl || null,
-      spotifyId: insertArtist.spotifyId || null
+      spotifyId: insertArtist.spotifyId || null,
+      webmapdata: null
     };
     this.artists.set(id, artist);
     return artist;

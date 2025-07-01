@@ -9,6 +9,24 @@
       }
     }
   ],
+  "routes": [
+    {
+      "src": "/api/artist-options/(.*)",
+      "dest": "/api/artist-options/[artistName].js"
+    },
+    {
+      "src": "/api/network/(.*)",
+      "dest": "/api/network/[artistName].js"
+    },
+    {
+      "src": "/api/search",
+      "dest": "/api/search.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/public/$1"
+    }
+  ],
   "env": {
     "NODE_ENV": "production"
   }
