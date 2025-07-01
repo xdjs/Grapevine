@@ -70,6 +70,20 @@
   #root {
     background-color: #000000 !important;
     min-height: 100vh;
+    position: relative;
+  }
+
+  /* Mobile viewport adjustments */
+  @media (max-width: 768px) {
+    body {
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Prevent zoom on double tap */
+    * {
+      touch-action: manipulation;
+    }
   }
 }
 
@@ -113,5 +127,50 @@
     pointer-events: none;
     z-index: 1000;
     backdrop-filter: blur(8px);
+  }
+  
+  /* Mobile-specific styles */
+  @media (max-width: 768px) {
+    .network-tooltip {
+      padding: 8px;
+      font-size: 12px;
+      max-width: 80vw;
+      word-wrap: break-word;
+    }
+    
+    .node-artist, .node-producer, .node-songwriter {
+      stroke-width: 2px;
+    }
+    
+    .network-node {
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* Larger touch targets for mobile */
+    .network-node circle {
+      pointer-events: all;
+    }
+    
+    /* Hide scrollbars but keep functionality on mobile */
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    
+    /* Improve text rendering on mobile */
+    .network-node text {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      user-select: none;
+      font-size: 11px;
+    }
+  }
+  
+  /* Tablet styles */
+  @media (max-width: 1024px) and (min-width: 769px) {
+    .network-tooltip {
+      font-size: 13px;
+      padding: 10px;
+    }
   }
 }
