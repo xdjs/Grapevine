@@ -119,8 +119,13 @@ export default function NetworkVisualizer({
     const componentWidth = width / componentsPerRow;
     const componentHeight = height / Math.ceil(components.length / componentsPerRow);
     
-    // Find the main artist node (the one being searched) - it has the largest size
-    const mainArtistNode = data.nodes.find(node => node.size === 20 && node.type === 'artist');
+    // Find the main artist node - it's the largest artist node (size can be 20, 25, or 30)
+    const mainArtistNode = data.nodes
+      .filter(node => node.type === 'artist' || (node.types && node.types.includes('artist')))
+      .reduce((largest, current) => 
+        !largest || current.size > largest.size ? current : largest, 
+        null as NetworkNode | null
+      );
     
     components.forEach((component, index) => {
       const row = Math.floor(index / componentsPerRow);
@@ -153,7 +158,7 @@ export default function NetworkVisualizer({
       }
     };
 
-    // Create simulation
+    // Create simulation with centering force for main artist
     const simulation = d3
       .forceSimulation<NetworkNode>(data.nodes)
       .force(
@@ -165,7 +170,9 @@ export default function NetworkVisualizer({
       )
       .force("charge", d3.forceManyBody().strength(-150))
       .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
-      .force("boundary", boundaryForce);
+      .force("boundary", boundaryForce)
+      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
+      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.1 : 0));
 
     simulationRef.current = simulation;
 
@@ -344,8 +351,13 @@ export default function NetworkVisualizer({
         content += `<br/><br/><em>Click to search on Music Nerd</em>`;
         
         // Add note about right-click for non-primary artists
-        const mainArtistNode = data.nodes.find(node => node.size === 20 && node.type === 'artist');
-        if (d !== mainArtistNode) {
+        const primaryArtistNode = data.nodes
+          .filter(node => node.type === 'artist' || (node.types && node.types.includes('artist')))
+          .reduce((largest, current) => 
+            !largest || current.size > largest.size ? current : largest, 
+            null as NetworkNode | null
+          );
+        if (d !== primaryArtistNode) {
           content += `<br/><em>Right-click to view ${d.name}'s network</em>`;
         }
       }
