@@ -175,8 +175,8 @@ Requirements:
         });
       }
 
-      // Build network data structure
-      const nodes = [];
+      // Build network data structure with multi-role consolidation
+      const nodeMap = new Map();
       const links = [];
 
       // Add main artist node
@@ -192,37 +192,60 @@ Requirements:
         size: 30,
         musicNerdId: mainArtistResult.rows.length > 0 ? mainArtistResult.rows[0].id : null
       };
-      nodes.push(mainNode);
+      nodeMap.set(artistName, mainNode);
 
-      // Process producers and songwriters
+      // Process producers and songwriters with multi-role consolidation
       for (const collaborator of collaborationData.artists || []) {
-        const collabNode = {
-          id: collaborator.name,
-          name: collaborator.name,
-          type: collaborator.type,
-          types: [collaborator.type],
-          color: collaborator.type === 'producer' ? '#8A2BE2' : '#00CED1',
-          size: 20,
-          musicNerdId: null,
-          topCollaborators: collaborator.topCollaborators || []
-        };
+        // Check if we already have a node for this person
+        let collabNode = nodeMap.get(collaborator.name);
+        
+        if (collabNode) {
+          // Person already exists - add the new role to their types array
+          if (!collabNode.types.includes(collaborator.type)) {
+            collabNode.types.push(collaborator.type);
+            console.log(`🎭 [Vercel] Added ${collaborator.type} role to existing ${collaborator.name} node (now has ${collabNode.types.length} roles)`);
+          }
+          // Update color for multi-role nodes (artist + songwriter = multi-color, producer + songwriter = purple)
+          if (collabNode.types.includes('artist') && collabNode.types.includes('songwriter')) {
+            collabNode.color = '#FF69B4'; // Keep artist color for artist-songwriters
+          } else if (collabNode.types.includes('producer') && collabNode.types.includes('songwriter')) {
+            collabNode.color = '#8A2BE2'; // Keep producer color for producer-songwriters
+          }
+        } else {
+          // Create new node
+          collabNode = {
+            id: collaborator.name,
+            name: collaborator.name,
+            type: collaborator.type,
+            types: [collaborator.type],
+            color: collaborator.type === 'producer' ? '#8A2BE2' : '#00CED1',
+            size: 20,
+            musicNerdId: null,
+            topCollaborators: collaborator.topCollaborators || []
+          };
 
-        // Look up MusicNerd ID for collaborator
-        const collabQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
-        const collabResult = await client.query(collabQuery, [collaborator.name]);
-        if (collabResult.rows.length > 0) {
-          collabNode.musicNerdId = collabResult.rows[0].id;
+          // Look up MusicNerd ID for collaborator
+          const collabQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
+          const collabResult = await client.query(collabQuery, [collaborator.name]);
+          if (collabResult.rows.length > 0) {
+            collabNode.musicNerdId = collabResult.rows[0].id;
+          }
+
+          nodeMap.set(collaborator.name, collabNode);
         }
 
-        nodes.push(collabNode);
-        links.push({
-          source: artistName,
-          target: collaborator.name
-        });
+        // Create link (only once per person, not per role)
+        const existingLink = links.find(link => link.source === artistName && link.target === collaborator.name);
+        if (!existingLink) {
+          links.push({
+            source: artistName,
+            target: collaborator.name
+          });
+        }
 
         // Add branching artists
         for (const branchingArtist of collaborator.topCollaborators || []) {
-          if (branchingArtist !== artistName && !nodes.find(n => n.id === branchingArtist)) {
+          if (branchingArtist !== artistName && !nodeMap.has(branchingArtist)) {
             const branchNode = {
               id: branchingArtist,
               name: branchingArtist,
@@ -240,7 +263,7 @@ Requirements:
               branchNode.musicNerdId = branchResult.rows[0].id;
             }
 
-            nodes.push(branchNode);
+            nodeMap.set(branchingArtist, branchNode);
             links.push({
               source: collaborator.name,
               target: branchingArtist
@@ -248,6 +271,9 @@ Requirements:
           }
         }
       }
+
+      // Convert nodeMap to nodes array
+      const nodes = Array.from(nodeMap.values());
 
       const networkData = { nodes, links };
 
