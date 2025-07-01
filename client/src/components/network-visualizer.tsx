@@ -82,7 +82,26 @@ export default function NetworkVisualizer({
     let initialDistance = 0;
     let initialScale = 1;
     let isPinching = false;
-    let lastPinchTransform: any = null;
+    let animationFrameId: number | null = null;
+    let pendingScale = 1;
+    let baseTransform = { x: 0, y: 0, k: 1 };
+
+    const applyPinchTransform = () => {
+      if (isPinching) {
+        // Apply smooth transform without triggering D3 events
+        networkGroup.attr("transform", `translate(${baseTransform.x}, ${baseTransform.y}) scale(${pendingScale})`);
+        
+        // Update D3's internal zoom state to match
+        const newTransform = d3.zoomIdentity.translate(baseTransform.x, baseTransform.y).scale(pendingScale);
+        svg.property("__zoom", newTransform);
+        
+        // Update React state
+        setCurrentZoom(pendingScale);
+        onZoomChange({ k: pendingScale, x: baseTransform.x, y: baseTransform.y });
+        
+        animationFrameId = null;
+      }
+    };
 
     // Custom touch event handlers
     const handleTouchStart = (event: TouchEvent) => {
@@ -97,9 +116,11 @@ export default function NetworkVisualizer({
         );
         const currentTransform = d3.zoomTransform(svg.node());
         initialScale = currentTransform.k;
-        lastPinchTransform = currentTransform;
+        baseTransform = { x: currentTransform.x, y: currentTransform.y, k: currentTransform.k };
+        pendingScale = initialScale;
         console.log(`🤏 Initial distance: ${initialDistance}, Initial scale: ${initialScale}`);
         event.preventDefault();
+        event.stopPropagation();
       } else if (event.touches.length === 1) {
         event.preventDefault();
       }
@@ -116,32 +137,33 @@ export default function NetworkVisualizer({
         
         if (initialDistance > 0) {
           const scaleChange = currentDistance / initialDistance;
-          const newScale = Math.max(0.2, Math.min(8, initialScale * scaleChange));
-          console.log(`🤏 Pinch zoom: ${scaleChange.toFixed(2)}x, new scale: ${newScale.toFixed(2)}`);
+          pendingScale = Math.max(0.2, Math.min(8, initialScale * scaleChange));
           
-          // Apply the transform directly to the network group
-          const transform = `translate(${lastPinchTransform.x}, ${lastPinchTransform.y}) scale(${newScale})`;
-          networkGroup.attr("transform", transform);
-          
-          // Update state without triggering D3 zoom
-          setCurrentZoom(newScale);
-          onZoomChange({ k: newScale, x: lastPinchTransform.x, y: lastPinchTransform.y });
-          
-          // Store the new transform for D3's internal state
-          const newTransform = d3.zoomIdentity.translate(lastPinchTransform.x, lastPinchTransform.y).scale(newScale);
-          svg.property("__zoom", newTransform);
+          // Use requestAnimationFrame for smooth updates
+          if (!animationFrameId) {
+            animationFrameId = requestAnimationFrame(applyPinchTransform);
+          }
         }
         event.preventDefault();
+        event.stopPropagation();
       }
     };
 
     const handleTouchEnd = (event: TouchEvent) => {
       if (isPinching) {
-        console.log("🤏 Ending pinch gesture");
+        console.log("🤏 Ending pinch gesture, final scale:", pendingScale);
         isPinching = false;
         initialDistance = 0;
         initialScale = 1;
-        lastPinchTransform = null;
+        
+        // Cancel any pending animation
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+        }
+        
+        // Apply final transform
+        applyPinchTransform();
       }
     };
 
@@ -150,6 +172,16 @@ export default function NetworkVisualizer({
     svgElement.addEventListener('touchstart', handleTouchStart, { passive: false });
     svgElement.addEventListener('touchmove', handleTouchMove, { passive: false });
     svgElement.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+    // Cleanup function for touch event listeners
+    const cleanup = () => {
+      svgElement.removeEventListener('touchstart', handleTouchStart);
+      svgElement.removeEventListener('touchmove', handleTouchMove);
+      svgElement.removeEventListener('touchend', handleTouchEnd);
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
 
     // Find connected components for cluster positioning
     const findConnectedComponents = () => {
@@ -538,6 +570,7 @@ export default function NetworkVisualizer({
     return () => {
       tooltip.remove();
       simulation.stop();
+      cleanup();
     };
   }, [data, visible, onZoomChange]);
 
