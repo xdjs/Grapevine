@@ -98,8 +98,8 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
           const data = await response.json();
           console.log('Received artist options:', data.options);
           setArtistOptions(data.options || []);
-          // Never show dropdown when network view is active
-          const shouldShowDropdown = (data.options || []).length > 0 && !showNetworkView;
+          // Never show dropdown when network view is active or when there's an active search
+          const shouldShowDropdown = (data.options || []).length > 0 && !showNetworkView && !currentSearch;
           setShowDropdown(shouldShowDropdown);
           console.log('Dropdown should show:', shouldShowDropdown);
         } catch (error) {
@@ -175,6 +175,9 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
+      // Immediately hide dropdown when Enter is pressed
+      setShowDropdown(false);
+      setArtistOptions([]);
       handleSearch();
     }
   };
@@ -222,7 +225,12 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               disabled={isLoading}
             />
             <Button
-              onClick={() => handleSearch()}
+              onClick={() => {
+                // Immediately hide dropdown when search button is clicked
+                setShowDropdown(false);
+                setArtistOptions([]);
+                handleSearch();
+              }}
               className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 p-0 bg-blue-600 hover:bg-blue-700 rounded-md"
               disabled={isLoading}
             >
@@ -299,7 +307,12 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                 disabled={isLoading}
               />
               <Button
-                onClick={() => handleSearch()}
+                onClick={() => {
+                  // Immediately hide dropdown when search button is clicked
+                  setShowDropdown(false);
+                  setArtistOptions([]);
+                  handleSearch();
+                }}
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700 rounded-md"
                 disabled={isLoading}
               >
