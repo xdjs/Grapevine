@@ -8,6 +8,7 @@ interface NetworkVisualizerProps {
   visible: boolean;
   filterState: FilterState;
   onZoomChange: (transform: { k: number; x: number; y: number }) => void;
+  onArtistSearch?: (artistName: string) => void;
 }
 
 export default function NetworkVisualizer({
@@ -15,6 +16,7 @@ export default function NetworkVisualizer({
   visible,
   filterState,
   onZoomChange,
+  onArtistSearch,
 }: NetworkVisualizerProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
@@ -276,6 +278,17 @@ export default function NetworkVisualizer({
           openMusicNerdProfile(d.name, d.artistId);
         }
       })
+      .on("contextmenu", function(event, d) {
+        event.preventDefault();
+        event.stopPropagation();
+        // Right-click to view artist's network (only for artist nodes that aren't the main artist)
+        if ((d.type === 'artist' || (d.types && d.types.includes('artist'))) && onArtistSearch) {
+          const mainArtistNode = data.nodes.find(node => node.size === 20 && node.type === 'artist');
+          if (d !== mainArtistNode) {
+            onArtistSearch(d.name);
+          }
+        }
+      })
       .call(
         d3
           .drag<SVGGElement, NetworkNode>()
@@ -329,6 +342,12 @@ export default function NetworkVisualizer({
 
       if (roles.includes('artist')) {
         content += `<br/><br/><em>Click to search on Music Nerd</em>`;
+        
+        // Add note about right-click for non-primary artists
+        const mainArtistNode = data.nodes.find(node => node.size === 20 && node.type === 'artist');
+        if (d !== mainArtistNode) {
+          content += `<br/><em>Right-click to view ${d.name}'s network</em>`;
+        }
       }
 
       tooltip.html(content).style("opacity", 1);

@@ -16,6 +16,7 @@ interface SearchInterfaceProps {
   showNetworkView: boolean;
   clearSearch?: boolean;
   onLoadingChange?: (loading: boolean) => void;
+  onSearchFunction?: (searchFn: (artistName: string) => void) => void;
 }
 
 interface ArtistOption {
@@ -24,12 +25,26 @@ interface ArtistOption {
   bio?: string;
 }
 
-export default function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange }: SearchInterfaceProps) {
+export default function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction }: SearchInterfaceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentSearch, setCurrentSearch] = useState("");
   const [artistOptions, setArtistOptions] = useState<ArtistOption[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const { toast } = useToast();
+
+  const handleSearch = (artistName?: string) => {
+    const query = artistName || searchQuery.trim();
+    if (!query) {
+      toast({
+        title: "Please enter an artist name",
+        variant: "destructive",
+      });
+      return;
+    }
+    setCurrentSearch(query);
+    setShowDropdown(false);
+    setArtistOptions([]);
+  };
 
   // Clear search field when clearSearch prop changes to true
   useEffect(() => {
@@ -40,6 +55,16 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
       setShowDropdown(false);
     }
   }, [clearSearch]);
+
+  // Expose search function to parent component
+  useEffect(() => {
+    if (onSearchFunction) {
+      onSearchFunction((artistName: string) => {
+        setSearchQuery(artistName);
+        handleSearch(artistName);
+      });
+    }
+  }, [onSearchFunction, handleSearch]);
 
   // Fetch artist options when user types
   useEffect(() => {
@@ -99,20 +124,6 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
       });
     }
   }, [error, toast]);
-
-  const handleSearch = (artistName?: string) => {
-    const query = artistName || searchQuery.trim();
-    if (!query) {
-      toast({
-        title: "Please enter an artist name",
-        variant: "destructive",
-      });
-      return;
-    }
-    setCurrentSearch(query);
-    setShowDropdown(false);
-    setArtistOptions([]);
-  };
 
   const handleArtistSelect = (artist: ArtistOption) => {
     setSearchQuery(artist.name);
@@ -201,66 +212,73 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
         </div>
       </div>
 
-      {/* Top Search Bar - Network View */}
+      {/* Top Bar Search - Network View */}
       <div
-        className={`absolute top-4 left-1/2 transform -translate-x-1/2 transition-all duration-500 z-30 ${
-          showNetworkView ? "opacity-100" : "opacity-0 pointer-events-none"
+        className={`absolute top-0 left-0 right-0 z-30 transition-all duration-700 ${
+          showNetworkView
+            ? "opacity-100 pointer-events-auto translate-y-0"
+            : "opacity-0 pointer-events-none -translate-y-12"
         }`}
       >
-        <div className="flex items-center space-x-4">
-          <img 
-            src={musicNerdLogoSmall} 
-            alt="MusicNerd Logo" 
-            className="w-12 h-12 object-contain flex-shrink-0"
-          />
-          <div className="relative w-full max-w-4xl">
-            <Input
-              type="text"
-              placeholder="Enter artist name (e.g., Taylor Swift, Drake, Billie Eilish, etc....)"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={handleKeyPress}
-              className="w-full pl-4 pr-12 py-3 bg-gray-900/90 backdrop-blur border-gray-700 text-white placeholder-gray-500"
-              disabled={isLoading}
-            />
-            <Button
-              onClick={() => handleSearch()}
-              className="absolute right-1 top-1/2 transform -translate-y-1/2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-sm"
-              disabled={isLoading}
-              size="sm"
-            >
-              {isLoading ? (
-                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Search className="w-4 h-4" />
-              )}
-            </Button>
+        <div className="bg-black/90 backdrop-blur-sm border-b border-gray-800 px-6 py-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <img 
+                src={musicNerdLogoSmall} 
+                alt="MusicNerd Logo" 
+                className="w-8 h-8 object-contain"
+              />
+              <h2 className="text-xl font-semibold text-white">Music Collaboration Network</h2>
+            </div>
             
-            {/* Artist Options Dropdown for Top Search */}
-            {showDropdown && artistOptions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-80 overflow-hidden">
-                <ScrollArea className="max-h-80">
-                  <div className="p-2">
-                    {artistOptions.map((artist) => (
-                      <Card
-                        key={artist.id}
-                        className="mb-2 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-gray-600"
-                        onClick={() => handleArtistSelect(artist)}
-                      >
-                        <CardHeader className="pb-2 pt-3 px-4">
-                          <CardTitle className="text-sm text-white">{artist.name}</CardTitle>
-                          {artist.bio && (
-                            <CardDescription className="text-xs text-gray-400 line-clamp-2">
-                              {artist.bio}
-                            </CardDescription>
-                          )}
-                        </CardHeader>
-                      </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
-            )}
+            <div className="flex-1 max-w-2xl relative">
+              <Input
+                type="text"
+                placeholder="Search for a new artist..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="w-full px-4 py-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-12"
+                disabled={isLoading}
+              />
+              <Button
+                onClick={() => handleSearch()}
+                className="absolute right-1 top-1 bottom-1 px-3 bg-blue-600 hover:bg-blue-700"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Search className="w-3 h-3" />
+                )}
+              </Button>
+              
+              {/* Artist Options Dropdown */}
+              {showDropdown && artistOptions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-hidden">
+                  <ScrollArea className="max-h-60">
+                    <div className="p-1">
+                      {artistOptions.map((artist) => (
+                        <Card
+                          key={artist.id}
+                          className="mb-1 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-gray-600"
+                          onClick={() => handleArtistSelect(artist)}
+                        >
+                          <CardHeader className="pb-1 pt-2 px-3">
+                            <CardTitle className="text-xs text-white">{artist.name}</CardTitle>
+                            {artist.bio && (
+                              <CardDescription className="text-xs text-gray-400 line-clamp-1">
+                                {artist.bio}
+                              </CardDescription>
+                            )}
+                          </CardHeader>
+                        </Card>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

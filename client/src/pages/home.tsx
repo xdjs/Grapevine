@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import SearchInterface from "@/components/search-interface";
 import NetworkVisualizer from "@/components/network-visualizer";
 import ZoomControls from "@/components/zoom-controls";
@@ -18,6 +18,7 @@ export default function Home() {
     showSongwriters: true,
     showArtists: true,
   });
+  const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
 
   const handleNetworkData = useCallback((data: NetworkData) => {
     // Replace existing network with new data
@@ -46,6 +47,12 @@ export default function Home() {
     setZoomTransform(transform);
   };
 
+  const handleArtistSearch = (artistName: string) => {
+    if (triggerSearchRef.current) {
+      triggerSearchRef.current(artistName);
+    }
+  };
+
   return (
     <div className="relative w-screen h-screen bg-black text-white overflow-hidden">
       {/* Search Interface */}
@@ -54,6 +61,9 @@ export default function Home() {
         showNetworkView={showNetworkView}
         clearSearch={clearSearchField}
         onLoadingChange={handleLoadingChange}
+        onSearchFunction={(searchFn) => {
+          triggerSearchRef.current = searchFn;
+        }}
       />
 
       {/* Network Visualization */}
@@ -64,6 +74,7 @@ export default function Home() {
           visible={showNetworkView}
           filterState={filterState}
           onZoomChange={handleZoomChange}
+          onArtistSearch={handleArtistSearch}
         />
       )}
 
