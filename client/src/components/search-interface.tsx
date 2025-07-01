@@ -71,8 +71,21 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
     const fetchArtistOptions = async () => {
       if (searchQuery.trim().length > 2) {
         try {
+          const apiUrl = `/api/artist-options/${encodeURIComponent(searchQuery.trim())}`;
           console.log('Fetching artist options for:', searchQuery.trim());
-          const response = await fetch(`/api/artist-options/${encodeURIComponent(searchQuery.trim())}`);
+          console.log('API URL:', apiUrl);
+          console.log('Current origin:', window.location.origin);
+          
+          const response = await fetch(apiUrl);
+          console.log('Response status:', response.status);
+          console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('API error response:', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+          }
+          
           const data = await response.json();
           console.log('Received artist options:', data.options);
           setArtistOptions(data.options || []);
