@@ -51,9 +51,10 @@ export default function NetworkVisualizer({
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .filter((event) => {
-        // Allow regular wheel events but block trackpad pinch (ctrlKey + wheel)
+        // Block wheel events if we detect trackpad pinch, allow others
         // Block touch events since we handle them manually for better pinch zoom control
-        const isRegularWheelEvent = event.type === 'wheel' && !event.ctrlKey;
+        const isPreciseWheel = event.type === 'wheel' && Math.abs(event.deltaY) < 50 && event.deltaY % 1 !== 0;
+        const isRegularWheelEvent = event.type === 'wheel' && !isPreciseWheel;
         const isProgrammaticZoom = !event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown';
         
         return isRegularWheelEvent || isProgrammaticZoom;
@@ -187,38 +188,56 @@ export default function NetworkVisualizer({
       }
     };
 
-    // Handle trackpad pinch gestures via wheel events
-    let lastWheelTime = 0;
-    let wheelDelta = 0;
-    const wheelThreshold = 50; // Minimum delta to trigger zoom
+    // Handle trackpad pinch gestures - using same approach as touch pinch
+    let isTrackpadPinching = false;
+    let lastTrackpadDelta = 0;
+    let trackpadScale = 1;
+    const trackpadThreshold = 0.05; // Minimum scale change to trigger zoom
 
-    const handleTrackpadPinch = (event: WheelEvent) => {
-      // Check if this is a pinch gesture (ctrlKey is set on trackpad pinch)
-      if (event.ctrlKey) {
+    const handleTrackpadStart = (event: WheelEvent) => {
+      // Detect trackpad pinch by checking for precise deltaY values typical of trackpad
+      const isPreciseWheel = Math.abs(event.deltaY) < 50 && event.deltaY % 1 !== 0;
+      if (isPreciseWheel) {
+        isTrackpadPinching = true;
+        lastTrackpadDelta = event.deltaY;
+        trackpadScale = 1;
+        console.log('🖱️ Starting trackpad pinch gesture');
         event.preventDefault();
+      }
+    };
+
+    const handleTrackpadMove = (event: WheelEvent) => {
+      if (isTrackpadPinching) {
+        const currentDelta = event.deltaY;
+        const deltaChange = currentDelta - lastTrackpadDelta;
         
-        const now = Date.now();
-        const timeDelta = now - lastWheelTime;
+        // Convert wheel delta to scale change (similar to touch distance calculation)
+        trackpadScale *= (1 - deltaChange * 0.01);
         
-        // Accumulate wheel delta for smoother zoom
-        wheelDelta += Math.abs(event.deltaY);
-        
-        // Trigger zoom if enough delta accumulated or enough time passed
-        if (wheelDelta >= wheelThreshold || timeDelta > 100) {
-          if (event.deltaY < 0) {
-            // Pinch out - zoom in
+        // Use same threshold logic as touch pinch
+        if (Math.abs(trackpadScale - 1) > trackpadThreshold) {
+          if (trackpadScale > 1) {
+            // Pinch out - zoom in using EXACT same code as touch pinch
             handlePinchZoomIn();
             console.log('🖱️ Trackpad pinch zoom in');
           } else {
-            // Pinch in - zoom out  
+            // Pinch in - zoom out using EXACT same code as touch pinch
             handlePinchZoomOut();
             console.log('🖱️ Trackpad pinch zoom out');
           }
-          
-          wheelDelta = 0;
+          trackpadScale = 1; // Reset scale after zoom
         }
         
-        lastWheelTime = now;
+        lastTrackpadDelta = currentDelta;
+        event.preventDefault();
+      }
+    };
+
+    const handleTrackpadEnd = (event: WheelEvent) => {
+      if (isTrackpadPinching) {
+        isTrackpadPinching = false;
+        trackpadScale = 1;
+        console.log('🖱️ Ending trackpad pinch gesture');
       }
     };
 
@@ -227,14 +246,30 @@ export default function NetworkVisualizer({
     svgElement.addEventListener('touchstart', handleTouchStart, { passive: false });
     svgElement.addEventListener('touchmove', handleTouchMove, { passive: false });
     svgElement.addEventListener('touchend', handleTouchEnd, { passive: false });
-    svgElement.addEventListener('wheel', handleTrackpadPinch, { passive: false });
+    // Unified wheel handler for trackpad pinch detection
+    const handleWheelEvent = (event: WheelEvent) => {
+      const isPreciseWheel = Math.abs(event.deltaY) < 50 && event.deltaY % 1 !== 0;
+      if (isPreciseWheel) {
+        if (!isTrackpadPinching) {
+          handleTrackpadStart(event);
+        } else {
+          handleTrackpadMove(event);
+        }
+      } else {
+        if (isTrackpadPinching) {
+          handleTrackpadEnd(event);
+        }
+      }
+    };
+
+    svgElement.addEventListener('wheel', handleWheelEvent, { passive: false });
 
     // Cleanup function for all event listeners
     const cleanup = () => {
       svgElement.removeEventListener('touchstart', handleTouchStart);
       svgElement.removeEventListener('touchmove', handleTouchMove);
       svgElement.removeEventListener('touchend', handleTouchEnd);
-      svgElement.removeEventListener('wheel', handleTrackpadPinch);
+      svgElement.removeEventListener('wheel', handleWheelEvent);
     };
 
     // Find connected components for cluster positioning

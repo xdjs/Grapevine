@@ -315,6 +315,16 @@ Changelog:
 - Labels and connections now disappear together with their associated circles
 - Multi-role nodes remain visible as long as at least one of their roles is selected in filters
 - Enhanced filter behavior provides clean visual transitions when toggling checkboxes
+
+### Comprehensive Pinch Zoom Implementation (July 1, 2025)
+- Fixed React state closure issue preventing proper zoom out functionality in pinch gestures
+- Touch pinch zoom now uses identical logic as zoom buttons with setCurrentZoom callback pattern
+- Both zoom in and zoom out work smoothly using exact same applyZoom function as buttons
+- Added trackpad pinch gesture support using same zoom functions as touch pinch
+- Trackpad pinch detection via precise wheel event patterns (no Ctrl key required)
+- All zoom methods (buttons, touch, trackpad) now use identical underlying code for consistency
+- Fixed glitching and snap-back issues by eliminating custom D3 transform logic
+- Smooth 200ms transitions maintained across all zoom input methods
 =======
 ### Supabase Caching System Integration (June 30, 2025)
 - Added webmapdata jsonb column to artists table for caching network visualization data
