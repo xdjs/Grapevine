@@ -5,6 +5,7 @@ import ZoomControls from "@/components/zoom-controls";
 import FilterControls from "@/components/filter-controls";
 import Legend from "@/components/legend";
 import RecenterButton from "@/components/recenter-button";
+import NavigationArrows from "@/components/navigation-arrows";
 import { NetworkData, FilterState } from "@/types/network";
 import { Loader2 } from "lucide-react";
 
@@ -118,6 +119,12 @@ export default function Home() {
           <RecenterButton
             onRecenter={() => {
               const event = new CustomEvent('network-zoom', { detail: { action: 'recenter' } });
+              window.dispatchEvent(event);
+            }}
+          />
+          <NavigationArrows
+            onMove={(direction) => {
+              const event = new CustomEvent('network-zoom', { detail: { action: 'move', direction } });
               window.dispatchEvent(event);
             }}
           />

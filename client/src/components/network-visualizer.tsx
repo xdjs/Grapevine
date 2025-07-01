@@ -48,28 +48,30 @@ export default function NetworkVisualizer({
     // Create network group
     const networkGroup = svg.append("g").attr("class", "network-group");
 
-    // Create zoom behavior for mouse/touch interaction
+    // Create zoom behavior for mouse/touch interaction - scroll wheel only
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .filter((event) => {
-        // Allow wheel events, programmatic zoom, and all drag panning
-        return event.type === 'wheel' || event.type === 'mousedown' || !event.sourceEvent;
+        // Only allow wheel events and programmatic zoom - no drag panning
+        return event.type === 'wheel' || !event.sourceEvent;
       })
       .on("zoom", (event) => {
-        // Respond to user scroll wheel, drag panning, and programmatic zoom
+        // Respond to user scroll wheel and programmatic zoom only
         const { transform } = event;
         networkGroup.attr("transform", transform);
         setCurrentZoom(transform.k);
         onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
       });
 
-    // Apply zoom behavior with full panning enabled
+    // Apply zoom behavior with panning disabled
     svg.call(zoom);
     zoomRef.current = zoom;
 
-    // Prevent double-click zoom but allow other interactions
-    svg.on("dblclick.zoom", null);
+    // Prevent double-click zoom and drag interactions
+    svg.on("dblclick.zoom", null)
+       .on("mousedown.zoom", null)
+       .on("touchstart.zoom", null);
 
     // Find connected components for cluster positioning
     const findConnectedComponents = () => {
@@ -596,6 +598,9 @@ export default function NetworkVisualizer({
         case "recenter":
           handleRecenter();
           break;
+        case "move":
+          handleMove(event.detail.direction);
+          break;
       }
     };
 
@@ -625,6 +630,43 @@ export default function NetworkVisualizer({
              .scale(currentZoom)
            );
       }
+    };
+
+    const handleMove = (direction: 'up' | 'down' | 'left' | 'right') => {
+      if (!zoomRef.current || !svgRef.current) return;
+
+      const svg = d3.select(svgRef.current);
+      const moveDistance = 100; // Distance to move in pixels
+      
+      // Get current transform
+      const currentTransform = d3.zoomTransform(svg.node()!);
+      
+      let newX = currentTransform.x;
+      let newY = currentTransform.y;
+      
+      // Calculate new position based on direction
+      switch (direction) {
+        case 'up':
+          newY += moveDistance;
+          break;
+        case 'down':
+          newY -= moveDistance;
+          break;
+        case 'left':
+          newX += moveDistance;
+          break;
+        case 'right':
+          newX -= moveDistance;
+          break;
+      }
+      
+      // Apply smooth transition to new position
+      svg.transition()
+         .duration(300)
+         .call(zoomRef.current.transform, d3.zoomIdentity
+           .translate(newX, newY)
+           .scale(currentTransform.k)
+         );
     };
 
     if (visible) {
