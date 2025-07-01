@@ -51,22 +51,23 @@ export default function NetworkVisualizer({
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .filter((event) => {
-        // Allow wheel events, programmatic zoom, and multi-touch gestures (pinch zoom)
+        // Allow wheel events and programmatic zoom
         if (event.type === 'wheel') return true;
-        if (!event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown') return true;
+        if (!event.sourceEvent) return true;
         
-        // For touch events, only allow multi-touch gestures (pinch zoom)
-        if (event.type === 'touchstart' || event.type === 'touchmove') {
-          return event.touches && event.touches.length > 1;
+        // For touch events, allow all multi-touch interactions
+        if (event.type === 'touchstart' || event.type === 'touchmove' || event.type === 'touchend') {
+          // Check if this is a multi-touch gesture
+          const isSingleTouch = event.touches && event.touches.length === 1;
+          const wasMultiTouch = event.changedTouches && event.changedTouches.length > 0 && !isSingleTouch;
+          
+          return !isSingleTouch || wasMultiTouch;
         }
         
-        // Allow touch end events that were part of multi-touch gestures
-        if (event.type === 'touchend') {
-          return true; // Let D3 handle the cleanup
-        }
-        
+        // Block other mouse/touch events that would cause panning
         return false;
       })
+      .touchable(true) // Explicitly enable touch support
       .on("zoom", (event) => {
         // Respond to user scroll wheel, programmatic zoom, and pinch zoom
         const { transform } = event;
@@ -83,6 +84,15 @@ export default function NetworkVisualizer({
           console.log(`Wheel zoom: ${transform.k.toFixed(2)}x`);
         } else if (!event.sourceEvent) {
           console.log(`Button zoom: ${currentZoom.toFixed(2)} to ${transform.k.toFixed(2)}`);
+        }
+      })
+      .on("end", (event) => {
+        // Ensure zoom level persists after touch gestures end
+        if (event.sourceEvent && (event.sourceEvent.type === 'touchend' || event.sourceEvent.type === 'touchcancel')) {
+          const { transform } = event;
+          console.log(`Touch zoom ended at: ${transform.k.toFixed(2)}x`);
+          // Force the zoom to stay at the current level
+          svg.call(zoom.transform, transform);
         }
       });
 
