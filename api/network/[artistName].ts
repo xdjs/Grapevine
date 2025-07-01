@@ -74,10 +74,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       // If no cached data and no OpenAI key, return error
       if (!OPENAI_API_KEY) {
+        console.error(`❌ [Vercel] OpenAI API key not configured for ${artistName}`);
         await client.end();
         return res.status(503).json({ 
+          error: 'OpenAI API key not configured',
           message: 'Network generation requires OpenAI API key. Please set OPENAI_API_KEY environment variable.',
-          artist: artistName
+          artist: artistName,
+          timestamp: new Date().toISOString()
         });
       }
       
@@ -117,11 +120,33 @@ Provide 5 producers and 5 songwriters who have actually worked with ${artistName
 
       let collaborationData;
       try {
-        collaborationData = JSON.parse(completion.choices[0].message.content || '{"artists": []}');
+        const openaiContent = completion.choices[0]?.message?.content;
+        console.log(`🤖 [Vercel] OpenAI response length: ${openaiContent?.length || 0} characters`);
+        
+        if (!openaiContent) {
+          console.error('❌ [Vercel] OpenAI returned empty response');
+          await client.end();
+          return res.status(503).json({ 
+            error: 'OpenAI API returned empty response',
+            message: 'Failed to generate collaboration data from OpenAI',
+            artist: artistName,
+            timestamp: new Date().toISOString()
+          });
+        }
+        
+        collaborationData = JSON.parse(openaiContent);
+        console.log(`✅ [Vercel] Parsed collaboration data with ${collaborationData.artists?.length || 0} artists`);
       } catch (parseError) {
-        console.error('❌ [Vercel] Failed to parse OpenAI response');
+        console.error('❌ [Vercel] Failed to parse OpenAI response:', parseError);
+        console.error('❌ [Vercel] Raw OpenAI content:', completion.choices[0]?.message?.content);
         await client.end();
-        return res.status(500).json({ message: 'Failed to parse collaboration data' });
+        return res.status(503).json({ 
+          error: 'Failed to parse OpenAI response',
+          message: 'OpenAI returned invalid JSON format',
+          artist: artistName,
+          parseError: parseError instanceof Error ? parseError.message : 'Unknown parse error',
+          timestamp: new Date().toISOString()
+        });
       }
 
       // Build network data structure
