@@ -53,28 +53,18 @@ export default function NetworkVisualizer({
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .filter((event) => {
-        // Allow wheel events and programmatic zoom
-        // Allow mousedown only on empty space (not on nodes)
-        if (event.type === 'wheel' || !event.sourceEvent) {
-          return true;
-        }
-        if (event.type === 'mousedown') {
-          // Check if the target is a node or part of a node group
-          const target = event.target as Element;
-          const isNode = target.closest('.node-group') || target.classList.contains('node') || target.tagName === 'circle' || target.tagName === 'text';
-          return !isNode; // Only allow panning on empty space
-        }
-        return false;
+        // Allow wheel events, programmatic zoom, and all drag panning
+        return event.type === 'wheel' || event.type === 'mousedown' || !event.sourceEvent;
       })
       .on("zoom", (event) => {
-        // Respond to user scroll wheel, background panning, and programmatic zoom
+        // Respond to user scroll wheel, drag panning, and programmatic zoom
         const { transform } = event;
         networkGroup.attr("transform", transform);
         setCurrentZoom(transform.k);
         onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
       });
 
-    // Apply zoom behavior with selective panning
+    // Apply zoom behavior with full panning enabled
     svg.call(zoom);
     zoomRef.current = zoom;
 
@@ -280,7 +270,6 @@ export default function NetworkVisualizer({
         hideTooltip();
       })
       .on("click", function(event, d) {
-        event.stopPropagation();
         // Open Music Nerd for any node that has an artist role
         if (d.type === 'artist' || (d.types && d.types.includes('artist'))) {
           openMusicNerdProfile(d.name, d.artistId);
@@ -288,7 +277,6 @@ export default function NetworkVisualizer({
       })
       .on("contextmenu", function(event, d) {
         event.preventDefault();
-        event.stopPropagation();
         // Right-click to view artist's network (only for artist nodes that aren't the main artist)
         if ((d.type === 'artist' || (d.types && d.types.includes('artist'))) && onArtistSearch) {
           const mainArtistNode = data.nodes.find(node => node.size === 20 && node.type === 'artist');
@@ -297,13 +285,7 @@ export default function NetworkVisualizer({
           }
         }
       })
-      .call(
-        d3
-          .drag<SVGGElement, NetworkNode>()
-          .on("start", dragstarted)
-          .on("drag", dragged)
-          .on("end", dragended)
-      );
+      // Node dragging disabled to allow full map panning
 
     // Add labels for all nodes
     const labelElements = networkGroup
@@ -416,28 +398,7 @@ export default function NetworkVisualizer({
       document.body.removeChild(link);
     }
 
-    function dragstarted(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
-      // Prevent event bubbling to avoid interfering with zoom behavior
-      event.sourceEvent.stopPropagation();
-      if (!event.active) simulation.alphaTarget(0.3).restart();
-      d.fx = d.x;
-      d.fy = d.y;
-    }
-
-    function dragged(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
-      // Prevent event bubbling to avoid interfering with zoom behavior
-      event.sourceEvent.stopPropagation();
-      d.fx = event.x;
-      d.fy = event.y;
-    }
-
-    function dragended(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
-      // Prevent event bubbling to avoid interfering with zoom behavior
-      event.sourceEvent.stopPropagation();
-      if (!event.active) simulation.alphaTarget(0);
-      d.fx = null;
-      d.fy = null;
-    }
+    // Drag functions removed - using full map panning instead
 
     // Update positions on tick
     simulation.on("tick", () => {
