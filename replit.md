@@ -270,6 +270,14 @@ Changelog:
 - Artist-songwriters like Taylor Swift, Olivia Rodrigo properly labeled with both roles
 - Producer-artists like Calvin Harris, Diplo correctly show dual roles
 
+### Fixed Filter Visibility System (June 30, 2025)
+- Fixed filter functionality to make circles completely disappear/reappear instead of opacity changes
+- Updated filter logic to properly handle multi-role nodes (visible if ANY role should be shown)
+- Corrected DOM element targeting to hide entire node groups (.node-group) instead of just .node
+- Labels and connections now disappear together with their associated circles
+- Multi-role nodes remain visible as long as at least one of their roles is selected in filters
+- Enhanced filter behavior provides clean visual transitions when toggling checkboxes
+
 ### Visual Improvements (June 26, 2025)
 - Updated color scheme to appealing pinks, purples, and teals
 - Artists: Pink (#ec4899), Producers: Purple (#a855f7), Songwriters: Teal (#14b8a6)
