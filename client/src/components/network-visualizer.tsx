@@ -9,6 +9,7 @@ interface NetworkVisualizerProps {
   filterState: FilterState;
   onZoomChange: (transform: { k: number; x: number; y: number }) => void;
   onArtistSearch?: (artistName: string) => void;
+  onRecenter?: () => void;
 }
 
 export default function NetworkVisualizer({
@@ -17,6 +18,7 @@ export default function NetworkVisualizer({
   filterState,
   onZoomChange,
   onArtistSearch,
+  onRecenter,
 }: NetworkVisualizerProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
@@ -46,14 +48,13 @@ export default function NetworkVisualizer({
     // Create network group
     const networkGroup = svg.append("g").attr("class", "network-group");
 
-    // Create zoom behavior for mouse/touch interaction
+    // Create zoom behavior for mouse/touch interaction - scroll wheel only
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .filter((event) => {
-        // Only allow wheel events and programmatic zoom (no drag panning or clicks)
-        // This prevents the tree from floating away when dragging on empty space
-        return event.type === 'wheel' || (!event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown');
+        // Only allow wheel events and programmatic zoom - no drag panning
+        return event.type === 'wheel' || !event.sourceEvent;
       })
       .on("zoom", (event) => {
         // Respond to user scroll wheel and programmatic zoom only
@@ -63,15 +64,14 @@ export default function NetworkVisualizer({
         onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
       });
 
-    // Apply zoom behavior but prevent background dragging and clicking
+    // Apply zoom behavior with panning disabled
     svg.call(zoom);
     zoomRef.current = zoom;
 
-    // Add explicit prevention of background interactions
-    svg.on("mousedown.drag", null)
-       .on("touchstart.drag", null)
-       .on("click.zoom", null)
-       .on("dblclick.zoom", null);
+    // Prevent double-click zoom and drag interactions
+    svg.on("dblclick.zoom", null)
+       .on("mousedown.zoom", null)
+       .on("touchstart.zoom", null);
 
     // Find connected components for cluster positioning
     const findConnectedComponents = () => {
@@ -128,24 +128,35 @@ export default function NetworkVisualizer({
       const centerX = col * componentWidth + componentWidth / 2;
       const centerY = row * componentHeight + componentHeight / 2;
       
-      component.forEach(node => {
+      component.forEach((node, nodeIndex) => {
         if (!node.x && !node.y) {
           // If this is the main artist node, center it in the viewport
           if (node === mainArtistNode) {
             node.x = width / 2;
             node.y = height / 2;
           } else {
-            node.x = centerX + (Math.random() - 0.5) * 100;
-            node.y = centerY + (Math.random() - 0.5) * 100;
+            // Use radial distribution around center with much more spacing
+            const angle = (nodeIndex / component.length) * 2 * Math.PI;
+            const radius = 200 + (Math.random() * 150); // Larger radius for better separation
+            node.x = centerX + Math.cos(angle) * radius;
+            node.y = centerY + Math.sin(angle) * radius;
+            
+            // Add more randomness for natural distribution
+            node.x += (Math.random() - 0.5) * 100;
+            node.y += (Math.random() - 0.5) * 100;
           }
         }
       });
     });
 
-    // Create boundary force to keep nodes within viewport
+    // Create boundary force to keep nodes and their labels within viewport
     const boundaryForce = () => {
-      const margin = 50;
       for (const node of data.nodes) {
+        // Calculate dynamic margin based on text length to account for labels
+        const textLength = node.name.length;
+        const textWidth = textLength * 4; // Approximate text width
+        const margin = Math.max(60, textWidth / 2); // Ensure labels don't go off-screen
+        
         if (node.x! < margin) node.x = margin;
         if (node.x! > width - margin) node.x = width - margin;
         if (node.y! < margin) node.y = margin;
@@ -153,7 +164,7 @@ export default function NetworkVisualizer({
       }
     };
 
-    // Create simulation
+    // Create simulation with enhanced spacing to prevent text overlap
     const simulation = d3
       .forceSimulation<NetworkNode>(data.nodes)
       .force(
@@ -161,11 +172,22 @@ export default function NetworkVisualizer({
         d3
           .forceLink<NetworkNode, NetworkLink>(validLinks)
           .id((d) => d.id)
-          .distance(80)
+          .distance(150) // Much larger link distance for better text spacing
       )
-      .force("charge", d3.forceManyBody().strength(-150))
-      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
-      .force("boundary", boundaryForce);
+      .force("charge", d3.forceManyBody().strength(-500)) // Much stronger repulsion for better spacing
+      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => {
+        // Calculate collision radius based on text length to prevent label overlap
+        const textLength = d.name.length;
+        const baseRadius = d.size + 40; // Increased base spacing around node
+        const textRadius = textLength * 6; // Larger text width estimation
+        return Math.max(baseRadius, textRadius + 20); // Extra padding for safety
+      }).strength(1)) // Maximum collision strength
+      .force("center", d3.forceCenter(width / 2, height / 2).strength(0.1)) // Gentle centering
+      .force("boundary", boundaryForce)
+      .alpha(1) // Initial energy
+      .alphaDecay(0.01) // Much slower cooling for better settling
+      .velocityDecay(0.3) // Less damping for more movement
+      .alphaMin(0.001); // Lower minimum alpha for longer simulation
 
     simulationRef.current = simulation;
 
@@ -272,7 +294,7 @@ export default function NetworkVisualizer({
         hideTooltip();
       })
       .on("click", function(event, d) {
-        event.stopPropagation();
+        // Don't prevent propagation - allow panning to work
         // Open Music Nerd for any node that has an artist role
         if (d.type === 'artist' || (d.types && d.types.includes('artist'))) {
           openMusicNerdProfile(d.name, d.artistId);
@@ -280,7 +302,6 @@ export default function NetworkVisualizer({
       })
       .on("contextmenu", function(event, d) {
         event.preventDefault();
-        event.stopPropagation();
         // Right-click to view artist's network (only for artist nodes that aren't the main artist)
         if ((d.type === 'artist' || (d.types && d.types.includes('artist'))) && onArtistSearch) {
           const mainArtistNode = data.nodes.find(node => node.size === 20 && node.type === 'artist');
@@ -289,13 +310,7 @@ export default function NetworkVisualizer({
           }
         }
       })
-      .call(
-        d3
-          .drag<SVGGElement, NetworkNode>()
-          .on("start", dragstarted)
-          .on("drag", dragged)
-          .on("end", dragended)
-      );
+      // Node dragging disabled to allow full map panning
 
     // Add labels for all nodes
     const labelElements = networkGroup
@@ -408,28 +423,7 @@ export default function NetworkVisualizer({
       document.body.removeChild(link);
     }
 
-    function dragstarted(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
-      // Prevent event bubbling to avoid interfering with zoom behavior
-      event.sourceEvent.stopPropagation();
-      if (!event.active) simulation.alphaTarget(0.3).restart();
-      d.fx = d.x;
-      d.fy = d.y;
-    }
-
-    function dragged(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
-      // Prevent event bubbling to avoid interfering with zoom behavior
-      event.sourceEvent.stopPropagation();
-      d.fx = event.x;
-      d.fy = event.y;
-    }
-
-    function dragended(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
-      // Prevent event bubbling to avoid interfering with zoom behavior
-      event.sourceEvent.stopPropagation();
-      if (!event.active) simulation.alphaTarget(0);
-      d.fx = null;
-      d.fy = null;
-    }
+    // Drag functions removed - using full map panning instead
 
     // Update positions on tick
     simulation.on("tick", () => {
@@ -602,7 +596,80 @@ export default function NetworkVisualizer({
         case "reset":
           handleZoomReset();
           break;
+        case "recenter":
+          handleRecenter();
+          break;
+        case "move":
+          handleMove(event.detail.direction);
+          break;
       }
+    };
+
+    const handleRecenter = () => {
+      if (!zoomRef.current || !svgRef.current) return;
+
+      const svg = d3.select(svgRef.current);
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      // Find the main artist node (largest artist node, or first artist if sizes are equal)
+      const mainArtistNode = data.nodes.find(node => node.size === 20 && node.type === 'artist') ||
+                           data.nodes.find(node => node.type === 'artist');
+
+      if (mainArtistNode && mainArtistNode.x !== undefined && mainArtistNode.y !== undefined) {
+        // Calculate transform to center the main artist
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const translateX = centerX - mainArtistNode.x * currentZoom;
+        const translateY = centerY - mainArtistNode.y * currentZoom;
+
+        // Apply smooth transition to center
+        svg.transition()
+           .duration(750)
+           .call(zoomRef.current.transform, d3.zoomIdentity
+             .translate(translateX, translateY)
+             .scale(currentZoom)
+           );
+      }
+    };
+
+    const handleMove = (direction: 'up' | 'down' | 'left' | 'right') => {
+      if (!zoomRef.current || !svgRef.current) return;
+
+      const svg = d3.select(svgRef.current);
+      const moveDistance = 100; // Distance to move in pixels
+      
+      // Get current transform
+      const currentTransform = d3.zoomTransform(svg.node()!);
+      
+      let newX = currentTransform.x;
+      let newY = currentTransform.y;
+      
+      // Calculate new position based on direction
+      // Note: When moving the camera view "up", we translate the content down (negative Y)
+      // This creates the effect of the camera looking up at the content
+      switch (direction) {
+        case 'up':
+          newY += moveDistance; // Move content down = camera looks up
+          break;
+        case 'down':
+          newY -= moveDistance; // Move content up = camera looks down
+          break;
+        case 'left':
+          newX += moveDistance; // Move content right = camera looks left
+          break;
+        case 'right':
+          newX -= moveDistance; // Move content left = camera looks right
+          break;
+      }
+      
+      // Apply smooth transition to new position
+      svg.transition()
+         .duration(300)
+         .call(zoomRef.current.transform, d3.zoomIdentity
+           .translate(newX, newY)
+           .scale(currentTransform.k)
+         );
     };
 
     if (visible) {
