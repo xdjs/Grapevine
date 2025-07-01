@@ -118,7 +118,7 @@ npx drizzle-kit push
 ### Vercel Configuration Issues Fixed:
 
 1. **Resolved conflicting functions/builds configuration** - removed builds section to use only functions approach
-2. **Updated to proper Vercel Node.js runtime** (@vercel/node@3.0.0)
+2. **Fixed Node.js version compatibility** - updated to use nodejs18.x (Vercel doesn't support 22.x)
 3. **Fixed routing** to properly map API endpoints to serverless functions
 4. **Added TypeScript configuration** for API directory
 5. **Enhanced logging** with detailed error reporting and environment checks
@@ -141,6 +141,16 @@ CONNECTION_STRING="postgresql://user:pass@host:port/db?sslmode=require"
 # OpenAI
 OPENAI_API_KEY="sk-..."
 ```
+
+### Node.js Version Requirements:
+
+Vercel currently supports the following Node.js versions:
+- **nodejs18.x** ✅ (Recommended - LTS)
+- **nodejs16.x** ✅ (Legacy support)
+- **nodejs20.x** ❌ (Not supported)
+- **nodejs22.x** ❌ (Not supported)
+
+The project is configured to use `nodejs18.x` for maximum compatibility.
 
 ### Testing Vercel Deployment:
 
