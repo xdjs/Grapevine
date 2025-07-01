@@ -145,12 +145,12 @@ OPENAI_API_KEY="sk-..."
 ### Runtime Specification:
 
 Vercel requires specific runtime versions in the format `@vercel/runtime@version`:
-- **@vercel/node@2.15.0** ✅ (Node.js 18.x - Current)
-- **@vercel/node@3.0.0** ✅ (Node.js 20.x - Latest)
+- **@vercel/node@18.x** ✅ (Node.js 18.x - Current)
+- **@vercel/node@20.x** ✅ (Node.js 20.x - Latest)
+- **@vercel/node** ❌ (Missing version)
 - **nodejs18.x** ❌ (Invalid format)
-- **nodejs20.x** ❌ (Invalid format)
 
-The project is configured to use `@vercel/node@2.15.0` for Node.js 18.x compatibility.
+The project is configured to use `@vercel/node@18.x` for Node.js 18.x compatibility.
 
 ### Testing Vercel Deployment:
 
