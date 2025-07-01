@@ -83,6 +83,13 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
     }
   }, [searchQuery, currentSearch]);
 
+  // Show dropdown when search field is focused and has valid options
+  useEffect(() => {
+    if (isSearchFocused && searchQuery.trim().length > 2 && artistOptions.length > 0 && !currentSearch) {
+      setShowDropdown(true);
+    }
+  }, [isSearchFocused, searchQuery, artistOptions, currentSearch]);
+
   // Fetch artist options when user types
   useEffect(() => {
     const fetchArtistOptions = async () => {
@@ -229,10 +236,19 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={handleKeyPress}
-              onFocus={() => setIsSearchFocused(true)}
+              onFocus={() => {
+                setIsSearchFocused(true);
+                // Re-trigger dropdown visibility when focus is gained
+                if (searchQuery.trim().length > 2 && artistOptions.length > 0) {
+                  setShowDropdown(true);
+                }
+              }}
               onBlur={() => {
                 // Delay hiding focus to allow dropdown clicks
-                setTimeout(() => setIsSearchFocused(false), 150);
+                setTimeout(() => {
+                  setIsSearchFocused(false);
+                  setShowDropdown(false);
+                }, 150);
               }}
               className="w-full px-6 py-4 bg-gray-900 border-gray-700 text-white placeholder-gray-500 text-lg h-14 pr-16"
               disabled={isLoading}
@@ -316,10 +332,19 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={handleKeyPress}
-                onFocus={() => setIsSearchFocused(true)}
+                onFocus={() => {
+                  setIsSearchFocused(true);
+                  // Re-trigger dropdown visibility when focus is gained
+                  if (searchQuery.trim().length > 2 && artistOptions.length > 0) {
+                    setShowDropdown(true);
+                  }
+                }}
                 onBlur={() => {
                   // Delay hiding focus to allow dropdown clicks
-                  setTimeout(() => setIsSearchFocused(false), 150);
+                  setTimeout(() => {
+                    setIsSearchFocused(false);
+                    setShowDropdown(false);
+                  }, 150);
                 }}
                 className="w-full px-4 py-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-12"
                 disabled={isLoading}
