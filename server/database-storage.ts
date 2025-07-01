@@ -503,15 +503,13 @@ export class DatabaseStorage implements IStorage {
             // Final node array from consolidated map
             const nodes = Array.from(nodeMap.values());
             console.log(`✅ [DEBUG] Successfully created network from OpenAI data: ${nodes.length} total nodes (including main artist) for "${artistName}"`);
-            return { nodes, links };
-
-            console.log(`✅ [DEBUG] Successfully created network from OpenAI data: ${openAIData.artists.length} collaborators for "${artistName}"`);
             
             // Cache the generated network data
-            const networkData = { nodes, links };
-            await this.cacheNetworkData(artistName, networkData);
+            const finalNetworkData = { nodes, links };
+            console.log(`💾 [DEBUG] About to cache OpenAI network data for "${artistName}" with ${nodes.length} nodes`);
+            await this.cacheNetworkData(artistName, finalNetworkData);
             
-            return networkData;
+            return finalNetworkData;
 
           }
         } catch (error) {
@@ -1052,9 +1050,13 @@ export class DatabaseStorage implements IStorage {
         `);
         console.log(`✅ [DEBUG] Created new artist "${artistName}" with webmapdata cache`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`❌ [DEBUG] Error caching webmapdata for "${artistName}":`, error);
-
+      console.error(`❌ [DEBUG] Full error details:`, {
+        message: error?.message,
+        code: error?.code,
+        detail: error?.detail
+      });
     }
   }
 
