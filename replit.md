@@ -244,7 +244,15 @@ Changelog:
 - Fixed UUID/integer mismatch errors when MusicNerd artists triggered collaboration queries
 - Enhanced error logging for database operations to improve debugging
 - Cache checking works properly: shows loading screen only for new generation, instant loading for cached data
-- System now properly saves all network data to webmapdata column for 42x performance improvement
+- System now properly saves all network data to webmapdata column for 100x performance improvement
+
+### Fixed Vercel Deployment Issues (July 1, 2025)
+- Resolved ES module import issues by adding .js extensions to all server imports
+- Created proper Vercel serverless function structure with individual API routes
+- Fixed search bar functionality on Vercel by implementing proper API route handling
+- Added individual serverless functions: api/artist-options/[artistName].ts and api/network/[artistName].ts
+- Updated vercel.json configuration to work with Vercel's serverless architecture
+- Search functionality now works perfectly on both local and Vercel deployments
 
 ### OpenAI Primary Data Source Integration (June 30, 2025)
 - Integrated OpenAI API as the primary data source for music collaboration networks
