@@ -78,33 +78,46 @@ export default function NetworkVisualizer({
        .on("touchmove.zoom", null)
        .on("touchend.zoom", null);
 
-    // Define zoom functions that will be used by both buttons and pinch gestures
-    const handleZoomIn = () => {
-      if (zoomRef.current) {
-        const currentTransform = d3.zoomTransform(svg.node());
-        const newScale = Math.min(8, currentTransform.k * 1.2);
-        console.log(`Zooming from ${currentTransform.k.toFixed(2)} to ${newScale.toFixed(2)}`);
-        const transform = d3.zoomIdentity.translate(currentTransform.x, currentTransform.y).scale(newScale);
-        svg.transition().duration(300).call(zoomRef.current.transform, transform);
-      }
+    // EXACT COPY of the working zoom button functions
+    const applyZoom = (scale: number) => {
+      if (!svgRef.current) return;
+      
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      
+      // Calculate new viewBox dimensions
+      const newWidth = width / scale;
+      const newHeight = height / scale;
+      const offsetX = (width - newWidth) / 2;
+      const offsetY = (height - newHeight) / 2;
+      
+      // Apply smooth transition
+      const svg = d3.select(svgRef.current);
+      svg.transition()
+        .duration(200)
+        .attrTween('viewBox', () => {
+          const currentViewBox = svgRef.current?.getAttribute('viewBox') || `0 0 ${width} ${height}`;
+          const [cx, cy, cw, ch] = currentViewBox.split(' ').map(Number);
+          const interpolator = d3.interpolate([cx, cy, cw, ch], [offsetX, offsetY, newWidth, newHeight]);
+          return (t: number) => {
+            const [x, y, w, h] = interpolator(t);
+            return `${x} ${y} ${w} ${h}`;
+          };
+        });
     };
 
-    const handleZoomOut = () => {
-      if (zoomRef.current) {
-        const currentTransform = d3.zoomTransform(svg.node());
-        const newScale = Math.max(0.2, currentTransform.k / 1.2);
-        console.log(`Zooming from ${currentTransform.k.toFixed(2)} to ${newScale.toFixed(2)}`);
-        const transform = d3.zoomIdentity.translate(currentTransform.x, currentTransform.y).scale(newScale);
-        svg.transition().duration(300).call(zoomRef.current.transform, transform);
-      }
+    const handlePinchZoomIn = () => {
+      const newZoom = Math.min(5, currentZoom * 1.2); // Cap at 5x
+      setCurrentZoom(newZoom);
+      applyZoom(newZoom);
+      console.log(`🤏 Pinch zoom in: ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
     };
 
-    const handleZoomReset = () => {
-      if (zoomRef.current) {
-        console.log("Zoom reset to 1.00");
-        const transform = d3.zoomIdentity.translate(0, 0).scale(1);
-        svg.transition().duration(500).call(zoomRef.current.transform, transform);
-      }
+    const handlePinchZoomOut = () => {
+      const newZoom = Math.max(0.2, currentZoom / 1.2); // Min 0.2x
+      setCurrentZoom(newZoom);
+      applyZoom(newZoom);
+      console.log(`🤏 Pinch zoom out: ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
     };
 
     // Pinch zoom variables
@@ -147,11 +160,11 @@ export default function NetworkVisualizer({
           // Use threshold to prevent too frequent updates
           if (Math.abs(scaleChange - lastScale) > pinchThreshold) {
             if (scaleChange > lastScale) {
-              // Pinch out - zoom in
-              handleZoomIn();
+              // Pinch out - zoom in using EXACT same code as zoom buttons
+              handlePinchZoomIn();
             } else {
-              // Pinch in - zoom out
-              handleZoomOut();
+              // Pinch in - zoom out using EXACT same code as zoom buttons
+              handlePinchZoomOut();
             }
             lastScale = scaleChange;
           }
