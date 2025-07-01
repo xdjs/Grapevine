@@ -32,8 +32,18 @@ export default function NetworkVisualizer({
     const width = window.innerWidth;
     const height = window.innerHeight;
 
-    // Clear existing content
+    // Preserve current zoom transform before clearing
+    const currentTransform = zoomRef.current ? d3.zoomTransform(svg.node() as any) : d3.zoomIdentity;
+    
+    // Clear existing content but preserve zoom state
     svg.selectAll("*").remove();
+    
+    // Ensure SVG has proper dimensions without conflicting viewBox
+    svg
+      .attr("width", width)
+      .attr("height", height)
+      .style("width", "100%")
+      .style("height", "100%");
 
     // Filter out links where either node doesn't exist or is isolated
     const nodeSet = new Set(data.nodes.map(n => n.id));
@@ -90,6 +100,11 @@ export default function NetworkVisualizer({
     // Apply zoom behavior
     svg.call(zoom);
     zoomRef.current = zoom;
+    
+    // Restore the preserved zoom transform to prevent reset glitching
+    if (currentTransform && !currentTransform.k.toString().includes('NaN')) {
+      svg.call(zoom.transform, currentTransform);
+    }
 
     // Prevent unwanted background interactions while preserving zoom
     svg.on("mousedown.drag", null)
@@ -564,53 +579,40 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
-  // SVG viewBox zoom function (working implementation)
-  const applyZoom = (scale: number) => {
-    if (!svgRef.current) return;
-    
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    
-    // Calculate new viewBox dimensions
-    const newWidth = width / scale;
-    const newHeight = height / scale;
-    const offsetX = (width - newWidth) / 2;
-    const offsetY = (height - newHeight) / 2;
-    
-    // Apply smooth transition
-    const svg = d3.select(svgRef.current);
-    svg.transition()
-      .duration(200)
-      .attrTween('viewBox', () => {
-        const currentViewBox = svgRef.current?.getAttribute('viewBox') || `0 0 ${width} ${height}`;
-        const [cx, cy, cw, ch] = currentViewBox.split(' ').map(Number);
-        const interpolator = d3.interpolate([cx, cy, cw, ch], [offsetX, offsetY, newWidth, newHeight]);
-        return (t: number) => {
-          const [x, y, w, h] = interpolator(t);
-          return `${x} ${y} ${w} ${h}`;
-        };
-      });
-  };
-
-  // Handle zoom button clicks
+  // Handle zoom button clicks using D3.js zoom behavior
   const handleZoomIn = () => {
-    const newZoom = Math.min(5, currentZoom * 1.2); // Cap at 5x
-    setCurrentZoom(newZoom);
-    applyZoom(newZoom);
-    console.log(`Zooming from ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+    if (!zoomRef.current || !svgRef.current) return;
+    const svg = d3.select(svgRef.current);
+    const newZoom = Math.min(8, currentZoom * 1.2); // Cap at 8x (same as scaleExtent)
+    
+    svg.transition()
+      .duration(300)
+      .call(zoomRef.current.scaleTo, newZoom);
+    
+    console.log(`Button zoom in: ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
   };
 
   const handleZoomOut = () => {
-    const newZoom = Math.max(0.2, currentZoom / 1.2); // Min 0.2x
-    setCurrentZoom(newZoom);
-    applyZoom(newZoom);
-    console.log(`Zooming from ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+    if (!zoomRef.current || !svgRef.current) return;
+    const svg = d3.select(svgRef.current);
+    const newZoom = Math.max(0.2, currentZoom / 1.2); // Min 0.2x (same as scaleExtent)
+    
+    svg.transition()
+      .duration(300)
+      .call(zoomRef.current.scaleTo, newZoom);
+    
+    console.log(`Button zoom out: ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
   };
 
   const handleZoomReset = () => {
-    setCurrentZoom(1);
-    applyZoom(1);
-    console.log('Zoom reset to 1.00');
+    if (!zoomRef.current || !svgRef.current) return;
+    const svg = d3.select(svgRef.current);
+    
+    svg.transition()
+      .duration(500)
+      .call(zoomRef.current.transform, d3.zoomIdentity);
+    
+    console.log('Button zoom reset to 1.00');
   };
 
   const handleArtistSelection = (artistId: string) => {
