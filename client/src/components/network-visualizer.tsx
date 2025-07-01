@@ -135,15 +135,15 @@ export default function NetworkVisualizer({
             node.x = width / 2;
             node.y = height / 2;
           } else {
-            // Use radial distribution around center with more spacing
+            // Use radial distribution around center with much more spacing
             const angle = (nodeIndex / component.length) * 2 * Math.PI;
-            const radius = 150 + (Math.random() * 100); // Variable radius for natural look
+            const radius = 200 + (Math.random() * 150); // Larger radius for better separation
             node.x = centerX + Math.cos(angle) * radius;
             node.y = centerY + Math.sin(angle) * radius;
             
-            // Add some randomness but keep structured spacing
-            node.x += (Math.random() - 0.5) * 50;
-            node.y += (Math.random() - 0.5) * 50;
+            // Add more randomness for natural distribution
+            node.x += (Math.random() - 0.5) * 100;
+            node.y += (Math.random() - 0.5) * 100;
           }
         }
       });
@@ -172,21 +172,22 @@ export default function NetworkVisualizer({
         d3
           .forceLink<NetworkNode, NetworkLink>(validLinks)
           .id((d) => d.id)
-          .distance(120) // Increased link distance for better spacing
+          .distance(150) // Much larger link distance for better text spacing
       )
-      .force("charge", d3.forceManyBody().strength(-300)) // Stronger repulsion
+      .force("charge", d3.forceManyBody().strength(-500)) // Much stronger repulsion for better spacing
       .force("collision", d3.forceCollide<NetworkNode>().radius((d) => {
         // Calculate collision radius based on text length to prevent label overlap
         const textLength = d.name.length;
-        const baseRadius = d.size + 20; // Base spacing around node
-        const textRadius = textLength * 4; // Approximate text width
-        return Math.max(baseRadius, textRadius);
-      }))
+        const baseRadius = d.size + 40; // Increased base spacing around node
+        const textRadius = textLength * 6; // Larger text width estimation
+        return Math.max(baseRadius, textRadius + 20); // Extra padding for safety
+      }).strength(1)) // Maximum collision strength
       .force("center", d3.forceCenter(width / 2, height / 2).strength(0.1)) // Gentle centering
       .force("boundary", boundaryForce)
       .alpha(1) // Initial energy
-      .alphaDecay(0.02) // Slower cooling for better settling
-      .velocityDecay(0.4); // More damping for stability
+      .alphaDecay(0.01) // Much slower cooling for better settling
+      .velocityDecay(0.3) // Less damping for more movement
+      .alphaMin(0.001); // Lower minimum alpha for longer simulation
 
     simulationRef.current = simulation;
 
