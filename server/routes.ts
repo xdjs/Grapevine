@@ -27,6 +27,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error fetching network data:", error);
+      
+      // Check if it's a "not found" error
+      if (error instanceof Error && error.message.includes('not found in database')) {
+        return res.status(404).json({ message: error.message });
+      }
+      
       res.status(500).json({ message: "Internal server error" });
     }
   });

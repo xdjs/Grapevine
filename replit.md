@@ -246,6 +246,15 @@ Changelog:
 - Cache checking works properly: shows loading screen only for new generation, instant loading for cached data
 - System now properly saves all network data to webmapdata column for 100x performance improvement
 
+### Prevented Non-Existent Artist Database Creation (July 1, 2025)
+- Fixed issue where searching for non-existent artists created new database entries
+- Modified getNetworkData to check artist existence before generating networks
+- Updated cacheNetworkData to only update existing artists, never create new ones
+- Added proper 404 error handling with user-friendly messages
+- Frontend now shows "Artist not in database" message with helpful guidance
+- Maintains full caching functionality for existing artists (180ms cached responses)
+- All Vercel API routes updated with same validation logic
+
 ### Fixed Vercel Deployment Issues (July 1, 2025)
 - Resolved ES module import issues by adding .js extensions to all server imports
 - Created proper Vercel serverless function structure with individual API routes

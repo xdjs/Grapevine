@@ -45,6 +45,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       await client.connect();
       
+      // First check if artist exists in database
+      const artistExistsQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
+      const artistExistsResult = await client.query(artistExistsQuery, [artistName]);
+      
+      if (artistExistsResult.rows.length === 0) {
+        await client.end();
+        return res.status(404).json({ 
+          message: `Artist "${artistName}" not found in database. Please search for an existing artist.`
+        });
+      }
+      
       // Check for cached webmapdata
       const cacheQuery = 'SELECT webmapdata FROM artists WHERE LOWER(name) = LOWER($1) AND webmapdata IS NOT NULL';
       const cacheResult = await client.query(cacheQuery, [artistName]);

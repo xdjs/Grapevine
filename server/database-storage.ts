@@ -1043,12 +1043,8 @@ export class DatabaseStorage implements IStorage {
         `);
         console.log(`✅ [DEBUG] Updated webmapdata cache for existing artist "${artistName}"`);
       } else {
-        // Create new artist entry with webmapdata using raw SQL since schema doesn't match MusicNerd DB
-        await db.execute(sql`
-          INSERT INTO artists (name, webmapdata) 
-          VALUES (${artistName}, ${JSON.stringify(networkData)}::jsonb)
-        `);
-        console.log(`✅ [DEBUG] Created new artist "${artistName}" with webmapdata cache`);
+        // Don't create new artists - only cache data for existing artists
+        console.log(`❌ [DEBUG] Artist "${artistName}" does not exist in database - skipping cache creation`);
       }
     } catch (error: any) {
       console.error(`❌ [DEBUG] Error caching webmapdata for "${artistName}":`, error);
@@ -1085,8 +1081,9 @@ export class DatabaseStorage implements IStorage {
     
     const mainArtist = await this.getArtistByName(artistName);
     if (!mainArtist) {
-      // Try to get real collaboration data from external APIs
-      return this.generateRealCollaborationNetwork(artistName);
+      // Artist doesn't exist in database - return error instead of creating new entry
+      console.log(`❌ [DEBUG] Artist "${artistName}" does not exist in database - cannot generate network`);
+      throw new Error(`Artist "${artistName}" not found in database. Please search for an existing artist.`);
     }
 
     // If artist exists in MusicNerd database (UUID ID), skip collaboration lookup 

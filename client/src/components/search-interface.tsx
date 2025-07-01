@@ -133,9 +133,15 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
   // Show error toast when query fails
   useEffect(() => {
     if (error) {
+      // Check if it's a "not found in database" error
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isNotFoundError = errorMessage.includes('not found in database');
+      
       toast({
-        title: "Artist not found",
-        description: "Try any artist name - we'll create a network with their collaborators",
+        title: isNotFoundError ? "Artist not in database" : "Error loading network",
+        description: isNotFoundError 
+          ? "This artist isn't in our database yet. Try searching for another artist from the dropdown suggestions."
+          : "Please try again or search for another artist.",
         variant: "destructive",
       });
     }
