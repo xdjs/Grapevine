@@ -645,18 +645,20 @@ export default function NetworkVisualizer({
       let newY = currentTransform.y;
       
       // Calculate new position based on direction
+      // Note: When moving the camera view "up", we translate the content down (negative Y)
+      // This creates the effect of the camera looking up at the content
       switch (direction) {
         case 'up':
-          newY += moveDistance;
+          newY += moveDistance; // Move content down = camera looks up
           break;
         case 'down':
-          newY -= moveDistance;
+          newY -= moveDistance; // Move content up = camera looks down
           break;
         case 'left':
-          newX += moveDistance;
+          newX += moveDistance; // Move content right = camera looks left
           break;
         case 'right':
-          newX -= moveDistance;
+          newX -= moveDistance; // Move content left = camera looks right
           break;
       }
       
