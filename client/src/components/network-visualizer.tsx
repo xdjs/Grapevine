@@ -73,6 +73,7 @@ export default function NetworkVisualizer({
 
     // Custom touch event handlers for pinch zoom
     const handleTouchStart = (event: TouchEvent) => {
+      console.log(`Touch start: ${event.touches.length} touches`);
       if (event.touches.length === 2) {
         event.preventDefault();
         const distance = getDistance(event.touches[0], event.touches[1]);
@@ -83,11 +84,12 @@ export default function NetworkVisualizer({
           center: null
         };
         
-        console.log(`Pinch start: distance=${distance.toFixed(0)}, current scale=${currentZoom.toFixed(2)}`);
+        console.log(`🔥 Pinch start: distance=${distance.toFixed(0)}, current scale=${currentZoom.toFixed(2)}`);
       }
     };
 
     const handleTouchMove = (event: TouchEvent) => {
+      console.log(`Touch move: ${event.touches.length} touches`);
       if (event.touches.length === 2 && touchStateRef.current.initialDistance) {
         event.preventDefault();
         event.stopPropagation();
@@ -103,7 +105,7 @@ export default function NetworkVisualizer({
         setCurrentZoom(newScale);
         onZoomChange({ k: newScale, x: 0, y: 0 });
         
-        console.log(`Pinch zoom: ${newScale.toFixed(2)}x (factor: ${scaleFactor.toFixed(2)})`);
+        console.log(`🔥 Pinch zoom: ${newScale.toFixed(2)}x (factor: ${scaleFactor.toFixed(2)})`);
       }
     };
 
@@ -152,9 +154,17 @@ export default function NetworkVisualizer({
     // Add custom touch event listeners for pinch zoom
     const svgElement = svgRef.current;
     if (svgElement) {
+      console.log('🔧 Adding touch event listeners to SVG element');
       svgElement.addEventListener('touchstart', handleTouchStart, { passive: false });
       svgElement.addEventListener('touchmove', handleTouchMove, { passive: false });
       svgElement.addEventListener('touchend', handleTouchEnd, { passive: false });
+      
+      // Also add to document for broader touch capture
+      document.addEventListener('touchstart', handleTouchStart, { passive: false });
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd, { passive: false });
+      
+      console.log('✅ Touch event listeners added');
     }
 
     // Add explicit prevention of single-touch background interactions
@@ -556,6 +566,11 @@ export default function NetworkVisualizer({
         svgElement.removeEventListener('touchstart', handleTouchStart);
         svgElement.removeEventListener('touchmove', handleTouchMove);
         svgElement.removeEventListener('touchend', handleTouchEnd);
+        
+        // Remove document listeners too
+        document.removeEventListener('touchstart', handleTouchStart);
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
       }
     };
   }, [data, visible, onZoomChange]);
