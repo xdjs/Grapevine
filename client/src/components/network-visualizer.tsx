@@ -51,12 +51,13 @@ export default function NetworkVisualizer({
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .filter((event) => {
-        // Allow wheel events (including trackpad pinch which D3 handles naturally)
+        // Allow regular wheel scrolling but block trackpad pinch (ctrlKey + wheel)
         // Block touch events since we handle them manually for better pinch zoom control
-        const isWheelEvent = event.type === 'wheel';
+        const isTrackpadPinch = event.type === 'wheel' && event.ctrlKey;
+        const isRegularWheelEvent = event.type === 'wheel' && !event.ctrlKey;
         const isProgrammaticZoom = !event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown';
         
-        return isWheelEvent || isProgrammaticZoom;
+        return isRegularWheelEvent || isProgrammaticZoom;
       })
       .on("zoom", (event) => {
         // Respond to user scroll wheel and programmatic zoom only
@@ -189,17 +190,37 @@ export default function NetworkVisualizer({
 
 
 
-    // Add touch event listeners directly to the SVG element (D3 handles wheel events naturally)
+    // Trackpad pinch zoom handler using same logic as touch pinch
+    const handleTrackpadPinch = (event: WheelEvent) => {
+      if (event.ctrlKey) {
+        // This is a trackpad pinch gesture
+        event.preventDefault();
+        
+        if (event.deltaY < 0) {
+          // Pinch out - zoom in using EXACT same code as zoom buttons
+          handlePinchZoomIn();
+          console.log('🖱️ Trackpad pinch zoom in');
+        } else {
+          // Pinch in - zoom out using EXACT same code as zoom buttons
+          handlePinchZoomOut();
+          console.log('🖱️ Trackpad pinch zoom out');
+        }
+      }
+    };
+
+    // Add touch event listeners and trackpad pinch handler directly to the SVG element
     const svgElement = svg.node() as SVGSVGElement;
     svgElement.addEventListener('touchstart', handleTouchStart, { passive: false });
     svgElement.addEventListener('touchmove', handleTouchMove, { passive: false });
     svgElement.addEventListener('touchend', handleTouchEnd, { passive: false });
+    svgElement.addEventListener('wheel', handleTrackpadPinch, { passive: false });
 
-    // Cleanup function for touch event listeners
+    // Cleanup function for all event listeners
     const cleanup = () => {
       svgElement.removeEventListener('touchstart', handleTouchStart);
       svgElement.removeEventListener('touchmove', handleTouchMove);
       svgElement.removeEventListener('touchend', handleTouchEnd);
+      svgElement.removeEventListener('wheel', handleTrackpadPinch);
     };
 
     // Find connected components for cluster positioning
