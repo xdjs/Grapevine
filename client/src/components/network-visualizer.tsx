@@ -50,28 +50,57 @@ export default function NetworkVisualizer({
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
-      .filter((event) => {
-        // Only allow wheel events and programmatic zoom (no drag panning or clicks)
-        // This prevents the tree from floating away when dragging on empty space
-        return event.type === 'wheel' || (!event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown');
+      .filter((event: any) => {
+        // Allow wheel events (including trackpad pinch), touch gestures, and programmatic zoom
+        if (event.type === 'wheel') {
+          // Allow all wheel events including trackpad pinch gestures
+          return true;
+        }
+        
+        // Handle touch events for mobile pinch zoom
+        if (event.type === 'touchstart' || event.type === 'touchmove' || event.type === 'touchend') {
+          // Allow multi-touch gestures (pinch zoom)
+          return event.touches && event.touches.length >= 2;
+        }
+        
+        // Allow programmatic zoom calls (from buttons)
+        if (!event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown') {
+          return true;
+        }
+        
+        return false; // Block single-touch drag and clicks on background
       })
-      .on("zoom", (event) => {
-        // Respond to user scroll wheel and programmatic zoom only
+      .on("zoom", (event: any) => {
+        // Handle zoom from wheel, pinch gestures, and programmatic zoom
         const { transform } = event;
         networkGroup.attr("transform", transform);
         setCurrentZoom(transform.k);
         onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
+        
+        // Log zoom events for debugging
+        if (event.sourceEvent) {
+          const eventType = event.sourceEvent.type;
+          const gestureType = event.sourceEvent.touches ? 
+            `touch (${event.sourceEvent.touches.length} fingers)` : 
+            eventType;
+          console.log(`${gestureType} zoom: ${transform.k.toFixed(2)}x`);
+        }
       });
 
-    // Apply zoom behavior but prevent background dragging and clicking
+    // Apply zoom behavior
     svg.call(zoom);
     zoomRef.current = zoom;
 
-    // Add explicit prevention of background interactions
+    // Prevent unwanted background interactions while preserving zoom
     svg.on("mousedown.drag", null)
-       .on("touchstart.drag", null)
        .on("click.zoom", null)
-       .on("dblclick.zoom", null);
+       .on("dblclick.zoom", null)
+       .on("touchstart.drag", function(event: any) {
+         // Only prevent single-touch drag, allow multi-touch pinch
+         if (event.touches && event.touches.length === 1) {
+           event.preventDefault();
+         }
+       });
 
     // Find connected components for cluster positioning
     const findConnectedComponents = () => {
