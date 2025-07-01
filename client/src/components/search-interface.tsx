@@ -137,11 +137,15 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
       const errorMessage = error instanceof Error ? error.message : String(error);
       const isNotFoundError = errorMessage.includes('not found in database');
       
+      console.error('🚨 [Search Interface] Network query error:', error);
+      console.error('🚨 [Search Interface] Error message:', errorMessage);
+      console.error('🚨 [Search Interface] Current search:', currentSearch);
+      
       toast({
         title: isNotFoundError ? "Artist not in database" : "Error loading network",
         description: isNotFoundError 
           ? "This artist isn't in our database yet. Try searching for another artist from the dropdown suggestions."
-          : "Please try again or search for another artist.",
+          : `Please try again or search for another artist. Error: ${errorMessage.substring(0, 100)}`,
         variant: "destructive",
       });
     }

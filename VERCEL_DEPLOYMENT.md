@@ -152,12 +152,28 @@ Vercel requires specific runtime versions in the format `@vercel/runtime@version
 
 The project is configured to use `@vercel/node@18.x` for Node.js 18.x compatibility.
 
-### Testing Vercel Deployment:
+### Debugging Vercel "Error loading network" Issue:
 
-1. **Test basic functionality**: `GET /api/test`
-2. **Test artist search**: `GET /api/artist-options/Taylor%20Swift`
-3. **Test network generation**: `GET /api/network/Taylor%20Swift`
-4. **Check Vercel function logs** in deployment dashboard
+1. **Test health endpoint**: `GET /api/health` - Check if API routes are working
+2. **Test artist search**: `GET /api/artist-options/Taylor%20Swift` - Verify database connection
+3. **Test network generation**: `GET /api/network/Taylor%20Swift` - Check network API
+4. **Check browser console**: Look for detailed error messages with request/response info
+5. **Check Vercel function logs** in deployment dashboard for server-side errors
+
+### Common Deployment Issues:
+
+- **API routes not found (404)**: Vercel isn't detecting TypeScript files in `/api` directory
+- **Database connection errors**: CONNECTION_STRING environment variable not set
+- **OpenAI API errors**: OPENAI_API_KEY environment variable not set  
+- **Module import errors**: CommonJS/ES module compatibility issues
+- **Timeout errors**: Functions taking too long (30s limit on Vercel)
+
+### Diagnostic Steps:
+
+1. Visit `/api/health` on your deployed site to check system status
+2. Open browser console and search for an artist to see detailed error logs
+3. Check if the error includes "404" (API not found) or "500" (server error)
+4. Verify environment variables are set in Vercel dashboard
 
 ## Performance Optimization
 
