@@ -215,8 +215,7 @@ Requirements:
         nodes.push(collabNode);
         links.push({
           source: artistName,
-          target: collaborator.name,
-          type: collaborator.type === 'producer' ? 'production' : 'songwriting'
+          target: collaborator.name
         });
 
         // Add branching artists
@@ -241,8 +240,7 @@ Requirements:
             nodes.push(branchNode);
             links.push({
               source: collaborator.name,
-              target: branchingArtist,
-              type: collaborator.type === 'producer' ? 'production' : 'songwriting'
+              target: branchingArtist
             });
           }
         }
