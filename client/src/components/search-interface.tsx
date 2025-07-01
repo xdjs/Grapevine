@@ -236,11 +236,28 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={handleKeyPress}
-              onFocus={() => {
+              onFocus={async () => {
                 setIsSearchFocused(true);
                 // Re-trigger dropdown visibility when focus is gained
-                if (searchQuery.trim().length > 2 && artistOptions.length > 0) {
-                  setShowDropdown(true);
+                if (searchQuery.trim().length > 2) {
+                  if (artistOptions.length > 0) {
+                    setShowDropdown(true);
+                  } else {
+                    // Fetch artist options if we don't have any
+                    try {
+                      const apiUrl = `/api/artist-options/${encodeURIComponent(searchQuery.trim())}`;
+                      const response = await fetch(apiUrl);
+                      if (response.ok) {
+                        const data = await response.json();
+                        setArtistOptions(data.options || []);
+                        if ((data.options || []).length > 0) {
+                          setShowDropdown(true);
+                        }
+                      }
+                    } catch (error) {
+                      console.error('Error fetching artist options on focus:', error);
+                    }
+                  }
                 }
               }}
               onBlur={() => {
@@ -332,11 +349,28 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={handleKeyPress}
-                onFocus={() => {
+                onFocus={async () => {
                   setIsSearchFocused(true);
                   // Re-trigger dropdown visibility when focus is gained
-                  if (searchQuery.trim().length > 2 && artistOptions.length > 0) {
-                    setShowDropdown(true);
+                  if (searchQuery.trim().length > 2) {
+                    if (artistOptions.length > 0) {
+                      setShowDropdown(true);
+                    } else {
+                      // Fetch artist options if we don't have any
+                      try {
+                        const apiUrl = `/api/artist-options/${encodeURIComponent(searchQuery.trim())}`;
+                        const response = await fetch(apiUrl);
+                        if (response.ok) {
+                          const data = await response.json();
+                          setArtistOptions(data.options || []);
+                          if ((data.options || []).length > 0) {
+                            setShowDropdown(true);
+                          }
+                        }
+                      } catch (error) {
+                        console.error('Error fetching artist options on focus:', error);
+                      }
+                    }
                   }
                 }}
                 onBlur={() => {
