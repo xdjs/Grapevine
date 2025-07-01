@@ -185,6 +185,7 @@ Requirements:
       
       const mainNode = {
         id: artistName,
+        name: artistName,
         type: 'artist',
         types: ['artist'],
         color: '#FF69B4',
@@ -197,6 +198,7 @@ Requirements:
       for (const collaborator of collaborationData.artists || []) {
         const collabNode = {
           id: collaborator.name,
+          name: collaborator.name,
           type: collaborator.type,
           types: [collaborator.type],
           color: collaborator.type === 'producer' ? '#8A2BE2' : '#00CED1',
@@ -223,6 +225,7 @@ Requirements:
           if (branchingArtist !== artistName && !nodes.find(n => n.id === branchingArtist)) {
             const branchNode = {
               id: branchingArtist,
+              name: branchingArtist,
               type: 'artist',
               types: ['artist'],
               color: '#FF69B4',
