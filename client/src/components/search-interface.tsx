@@ -71,10 +71,13 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
     const fetchArtistOptions = async () => {
       if (searchQuery.trim().length > 2) {
         try {
+          console.log('Fetching artist options for:', searchQuery.trim());
           const response = await fetch(`/api/artist-options/${encodeURIComponent(searchQuery.trim())}`);
           const data = await response.json();
+          console.log('Received artist options:', data.options);
           setArtistOptions(data.options || []);
           setShowDropdown((data.options || []).length > 0);
+          console.log('Dropdown should show:', (data.options || []).length > 0);
         } catch (error) {
           console.error('Error fetching artist options:', error);
           setArtistOptions([]);
