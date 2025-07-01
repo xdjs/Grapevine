@@ -139,7 +139,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
             <img 
               src={musicNerdLogo} 
               alt="MusicNerd Logo" 
-              className="w-24 h-24 object-contain"
+              className="w-32 h-32 object-contain"
             />
           </div>
           <h1 className="text-4xl font-bold mb-2 text-white">
