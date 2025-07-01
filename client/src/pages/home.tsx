@@ -113,7 +113,6 @@ export default function Home() {
             filterState={filterState}
             onFilterChange={setFilterState}
           />
-
         </>
       )}
     </div>
