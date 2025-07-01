@@ -42,6 +42,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
       return;
     }
     setCurrentSearch(query);
+    // Immediately hide dropdown and clear options when search starts
     setShowDropdown(false);
     setArtistOptions([]);
   };
@@ -128,6 +129,9 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
   useEffect(() => {
     if (data && data !== undefined) {
       onNetworkData(data);
+      // Hide dropdown and clear artist options when network loads
+      setShowDropdown(false);
+      setArtistOptions([]);
     }
   }, [data, onNetworkData]);
 
@@ -163,6 +167,9 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
 
   const handleArtistSelect = (artist: ArtistOption) => {
     setSearchQuery(artist.name);
+    // Immediately hide dropdown and clear options when artist is selected
+    setShowDropdown(false);
+    setArtistOptions([]);
     handleSearch(artist.name);
   };
 
