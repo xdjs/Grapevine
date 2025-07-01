@@ -907,10 +907,10 @@ export class DatabaseStorage implements IStorage {
 
             // Final node array from consolidated map
             const nodes = Array.from(nodeMap.values());
-            return { nodes, links };
-   
+            
             // Cache the generated network data
             const networkData = { nodes, links };
+            console.log(`💾 [DEBUG] About to cache Wikipedia network data for "${artistName}" with ${nodes.length} nodes`);
             await this.cacheNetworkData(artistName, networkData);
             
             return networkData;
