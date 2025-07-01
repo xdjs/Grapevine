@@ -92,8 +92,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         apiKey: OPENAI_API_KEY,
       });
 
-      const prompt = `Generate a list of producers and songwriters who have collaborated with ${artistName}. For each producer and songwriter, include their top 3 collaborating artists. Return the data in this exact JSON format:
+      const prompt = `Generate a list of producers and songwriters who have collaborated with ${artistName}. Return ONLY valid JSON with no additional text, markdown, or formatting.
 
+Required format:
 {
   "artists": [
     {
@@ -109,7 +110,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   ]
 }
 
-Provide 5 producers and 5 songwriters who have actually worked with ${artistName}. Use only real music industry collaborations.`;
+Requirements:
+- Provide exactly 5 producers and 5 songwriters who have actually worked with ${artistName}
+- Use only real music industry collaborations
+- Return ONLY the JSON object, no other text
+- Ensure all JSON is properly formatted and valid`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -134,7 +139,28 @@ Provide 5 producers and 5 songwriters who have actually worked with ${artistName
           });
         }
         
-        collaborationData = JSON.parse(openaiContent);
+        // Try to extract JSON from OpenAI response (sometimes includes extra text)
+        let jsonContent = openaiContent.trim();
+        
+        // Remove markdown code blocks if present
+        jsonContent = jsonContent.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
+        
+        // Look for JSON object boundaries
+        const jsonStart = jsonContent.indexOf('{');
+        const jsonEnd = jsonContent.lastIndexOf('}');
+        
+        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+          jsonContent = jsonContent.substring(jsonStart, jsonEnd + 1);
+        }
+        
+        // Try parsing the extracted JSON
+        try {
+          collaborationData = JSON.parse(jsonContent);
+        } catch (firstParseError) {
+          // Fallback: try to create a minimal valid structure if parsing fails
+          console.warn('❌ [Vercel] Primary JSON parse failed, trying fallback');
+          collaborationData = { artists: [] };
+        }
         console.log(`✅ [Vercel] Parsed collaboration data with ${collaborationData.artists?.length || 0} artists`);
       } catch (parseError) {
         console.error('❌ [Vercel] Failed to parse OpenAI response:', parseError);
