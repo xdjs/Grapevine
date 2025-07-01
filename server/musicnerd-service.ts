@@ -61,13 +61,13 @@ class MusicNerdService {
           
           await client.connect();
           
-          // Query for multiple matches - exact first, then fuzzy (only fields that exist in schema)
-          let query = 'SELECT id, name, type FROM artists WHERE LOWER(name) = LOWER($1) ORDER BY name LIMIT 10';
+          // Query for multiple matches - exact first, then fuzzy (only fields that exist in database)
+          let query = 'SELECT id, name FROM artists WHERE LOWER(name) = LOWER($1) ORDER BY name LIMIT 10';
           let result = await client.query(query, [artistName]);
           
           // If no exact matches, try fuzzy search
           if (result.rows.length === 0) {
-            query = 'SELECT id, name, type FROM artists WHERE LOWER(name) LIKE LOWER($1) ORDER BY CASE WHEN LOWER(name) LIKE LOWER($2) THEN 1 ELSE 2 END, name LIMIT 10';
+            query = 'SELECT id, name FROM artists WHERE LOWER(name) LIKE LOWER($1) ORDER BY CASE WHEN LOWER(name) LIKE LOWER($2) THEN 1 ELSE 2 END, name LIMIT 10';
             result = await client.query(query, [`%${artistName}%`, `${artistName}%`]);
           }
           
@@ -81,24 +81,15 @@ class MusicNerdService {
                 return foundLower.includes(searchLower) || searchLower.includes(foundLower) || foundLower === searchLower;
               })
               .map(artist => {
-                // Generate bio based on artist type and name
-                const generateBio = (name: string, type: string) => {
-                  switch (type) {
-                    case 'artist':
-                      return `${name} is a prominent artist known for their musical contributions across various genres. Their work has influenced many in the music industry and continues to resonate with listeners worldwide.`;
-                    case 'producer':
-                      return `${name} is a renowned music producer who has worked with numerous artists to create chart-topping hits. Their production style and expertise have shaped modern music production.`;
-                    case 'songwriter':
-                      return `${name} is a talented songwriter who has penned lyrics and melodies for various artists. Their songwriting skills have contributed to many successful songs across different genres.`;
-                    default:
-                      return `${name} is a music industry professional known for their contributions to the artistic and creative process of music production.`;
-                  }
+                // Generate bio based on artist name (since type column doesn't exist in database)
+                const generateBio = (name: string) => {
+                  return `${name} is a prominent artist known for their musical contributions across various genres. Their work has influenced many in the music industry and continues to resonate with listeners worldwide.`;
                 };
                 
                 return {
                   id: artist.id,
                   name: artist.name,
-                  bio: generateBio(artist.name, artist.type || 'artist')
+                  bio: generateBio(artist.name)
                 };
               });
             

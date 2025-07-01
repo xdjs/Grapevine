@@ -50,28 +50,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       await client.connect();
       
-      const query = 'SELECT id, name, type FROM artists WHERE LOWER(name) LIKE LOWER($1) LIMIT 10';
+      const query = 'SELECT id, name FROM artists WHERE LOWER(name) LIKE LOWER($1) LIMIT 10';
       const result = await client.query(query, [`%${artistName}%`]);
       
       options = result.rows.map(row => {
-        // Generate bio based on artist type and name
-        const generateBio = (name: string, type: string) => {
-          switch (type) {
-            case 'artist':
-              return `${name} is a prominent artist known for their musical contributions across various genres. Their work has influenced many in the music industry and continues to resonate with listeners worldwide.`;
-            case 'producer':
-              return `${name} is a renowned music producer who has worked with numerous artists to create chart-topping hits. Their production style and expertise have shaped modern music production.`;
-            case 'songwriter':
-              return `${name} is a talented songwriter who has penned lyrics and melodies for various artists. Their songwriting skills have contributed to many successful songs across different genres.`;
-            default:
-              return `${name} is a music industry professional known for their contributions to the artistic and creative process of music production.`;
-          }
+        // Generate bio based on artist name (since type column doesn't exist in database)
+        const generateBio = (name: string) => {
+          return `${name} is a prominent artist known for their musical contributions across various genres. Their work has influenced many in the music industry and continues to resonate with listeners worldwide.`;
         };
         
         return {
           id: row.id,
           name: row.name,
-          bio: generateBio(row.name, row.type || 'artist')
+          bio: generateBio(row.name)
         };
       });
       
