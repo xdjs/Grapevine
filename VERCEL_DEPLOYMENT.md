@@ -117,11 +117,12 @@ npx drizzle-kit push
 
 ### Vercel Configuration Issues Fixed:
 
-1. **Added proper builds configuration** for TypeScript API functions
-2. **Fixed routing** to properly map API endpoints to serverless functions
-3. **Added TypeScript configuration** for API directory
-4. **Enhanced logging** with detailed error reporting and environment checks
-5. **Added test endpoint** at `/api/test` to verify basic functionality
+1. **Resolved conflicting functions/builds configuration** - removed builds section to use only functions approach
+2. **Updated to proper Vercel Node.js runtime** (@vercel/node@3.0.0)
+3. **Fixed routing** to properly map API endpoints to serverless functions
+4. **Added TypeScript configuration** for API directory
+5. **Enhanced logging** with detailed error reporting and environment checks
+6. **Added test endpoint** at `/api/test` to verify basic functionality
 
 ### Enhanced Logging:
 
