@@ -76,39 +76,42 @@ export default function NetworkVisualizer({
       if (event.touches.length === 2) {
         event.preventDefault();
         const distance = getDistance(event.touches[0], event.touches[1]);
-        const center = getCenter(event.touches[0], event.touches[1]);
         
         touchStateRef.current = {
           initialDistance: distance,
           initialScale: currentZoom,
-          center: center
+          center: null
         };
         
-        console.log(`Pinch start: distance=${distance.toFixed(0)}, scale=${currentZoom.toFixed(2)}`);
+        console.log(`Pinch start: distance=${distance.toFixed(0)}, current scale=${currentZoom.toFixed(2)}`);
       }
     };
 
     const handleTouchMove = (event: TouchEvent) => {
       if (event.touches.length === 2 && touchStateRef.current.initialDistance) {
         event.preventDefault();
+        event.stopPropagation();
         
         const distance = getDistance(event.touches[0], event.touches[1]);
-        const scale = (distance / touchStateRef.current.initialDistance) * touchStateRef.current.initialScale;
-        const clampedScale = Math.max(0.2, Math.min(8, scale));
+        const scaleFactor = distance / touchStateRef.current.initialDistance;
+        const newScale = Math.max(0.2, Math.min(8, touchStateRef.current.initialScale * scaleFactor));
         
-        // Apply the zoom transform directly
-        const transform = d3.zoomIdentity.scale(clampedScale);
-        svg.select('.network-group').attr('transform', transform.toString());
-        setCurrentZoom(clampedScale);
-        onZoomChange({ k: clampedScale, x: 0, y: 0 });
+        // Apply transform directly without triggering D3 zoom events
+        const transform = d3.zoomIdentity.scale(newScale);
+        networkGroup.attr('transform', transform.toString());
         
-        console.log(`Pinch zoom: ${clampedScale.toFixed(2)}x`);
+        setCurrentZoom(newScale);
+        onZoomChange({ k: newScale, x: 0, y: 0 });
+        
+        console.log(`Pinch zoom: ${newScale.toFixed(2)}x (factor: ${scaleFactor.toFixed(2)})`);
       }
     };
 
     const handleTouchEnd = (event: TouchEvent) => {
-      if (event.touches.length < 2) {
-        console.log(`Pinch end: final scale=${currentZoom.toFixed(2)}x`);
+      if (event.touches.length < 2 && touchStateRef.current.initialDistance) {
+        console.log(`Pinch end: maintaining scale at ${currentZoom.toFixed(2)}x`);
+        
+        // Update the initial scale for next pinch gesture
         touchStateRef.current = {
           initialDistance: null,
           initialScale: currentZoom,
@@ -657,25 +660,61 @@ export default function NetworkVisualizer({
       });
   };
 
-  // Handle zoom button clicks
+  // Handle zoom button clicks - apply both visual and D3 transform
   const handleZoomIn = () => {
-    const newZoom = Math.min(5, currentZoom * 1.2); // Cap at 5x
+    const newZoom = Math.min(8, currentZoom * 1.2); // Cap at 8x
+    const transform = d3.zoomIdentity.scale(newZoom);
+    
+    if (svgRef.current) {
+      const svg = d3.select(svgRef.current);
+      const networkGroup = svg.select('.network-group');
+      networkGroup.attr('transform', transform.toString());
+    }
+    
     setCurrentZoom(newZoom);
-    applyZoom(newZoom);
-    console.log(`Zooming from ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+    onZoomChange({ k: newZoom, x: 0, y: 0 });
+    
+    // Update touchState for next pinch gesture
+    touchStateRef.current.initialScale = newZoom;
+    
+    console.log(`Button zoom in: ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
   };
 
   const handleZoomOut = () => {
     const newZoom = Math.max(0.2, currentZoom / 1.2); // Min 0.2x
+    const transform = d3.zoomIdentity.scale(newZoom);
+    
+    if (svgRef.current) {
+      const svg = d3.select(svgRef.current);
+      const networkGroup = svg.select('.network-group');
+      networkGroup.attr('transform', transform.toString());
+    }
+    
     setCurrentZoom(newZoom);
-    applyZoom(newZoom);
-    console.log(`Zooming from ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+    onZoomChange({ k: newZoom, x: 0, y: 0 });
+    
+    // Update touchState for next pinch gesture  
+    touchStateRef.current.initialScale = newZoom;
+    
+    console.log(`Button zoom out: ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
   };
 
   const handleZoomReset = () => {
+    const transform = d3.zoomIdentity.scale(1);
+    
+    if (svgRef.current) {
+      const svg = d3.select(svgRef.current);
+      const networkGroup = svg.select('.network-group');
+      networkGroup.attr('transform', transform.toString());
+    }
+    
     setCurrentZoom(1);
-    applyZoom(1);
-    console.log('Zoom reset to 1.00');
+    onZoomChange({ k: 1, x: 0, y: 0 });
+    
+    // Update touchState for next pinch gesture
+    touchStateRef.current.initialScale = 1;
+    
+    console.log('Button zoom reset to 1.00');
   };
 
   const handleArtistSelection = (artistId: string) => {
