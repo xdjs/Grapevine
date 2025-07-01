@@ -76,6 +76,13 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
     }
   }, [showNetworkView]);
 
+  // Clear currentSearch when user starts editing a different query
+  useEffect(() => {
+    if (currentSearch && searchQuery.trim() !== currentSearch) {
+      setCurrentSearch("");
+    }
+  }, [searchQuery, currentSearch]);
+
   // Fetch artist options when user types
   useEffect(() => {
     const fetchArtistOptions = async () => {
