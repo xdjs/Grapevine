@@ -24,6 +24,17 @@ export default function NetworkVisualizer({
   const [currentZoom, setCurrentZoom] = useState(1);
   const [showArtistModal, setShowArtistModal] = useState(false);
   const [selectedArtistName, setSelectedArtistName] = useState("");
+  
+  // Touch state for pinch zoom
+  const touchStateRef = useRef<{
+    initialDistance: number | null;
+    initialScale: number;
+    center: { x: number; y: number } | null;
+  }>({
+    initialDistance: null,
+    initialScale: 1,
+    center: null
+  });
 
   useEffect(() => {
     if (!svgRef.current || !data || !visible) return;
@@ -46,30 +57,76 @@ export default function NetworkVisualizer({
     // Create network group
     const networkGroup = svg.append("g").attr("class", "network-group");
 
-    // Create zoom behavior for mouse/touch interaction
+    // Helper functions for distance calculation
+    const getDistance = (touch1: Touch, touch2: Touch) => {
+      const dx = touch1.clientX - touch2.clientX;
+      const dy = touch1.clientY - touch2.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    const getCenter = (touch1: Touch, touch2: Touch) => {
+      return {
+        x: (touch1.clientX + touch2.clientX) / 2,
+        y: (touch1.clientY + touch2.clientY) / 2
+      };
+    };
+
+    // Custom touch event handlers for pinch zoom
+    const handleTouchStart = (event: TouchEvent) => {
+      if (event.touches.length === 2) {
+        event.preventDefault();
+        const distance = getDistance(event.touches[0], event.touches[1]);
+        const center = getCenter(event.touches[0], event.touches[1]);
+        
+        touchStateRef.current = {
+          initialDistance: distance,
+          initialScale: currentZoom,
+          center: center
+        };
+        
+        console.log(`Pinch start: distance=${distance.toFixed(0)}, scale=${currentZoom.toFixed(2)}`);
+      }
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (event.touches.length === 2 && touchStateRef.current.initialDistance) {
+        event.preventDefault();
+        
+        const distance = getDistance(event.touches[0], event.touches[1]);
+        const scale = (distance / touchStateRef.current.initialDistance) * touchStateRef.current.initialScale;
+        const clampedScale = Math.max(0.2, Math.min(8, scale));
+        
+        // Apply the zoom transform directly
+        const transform = d3.zoomIdentity.scale(clampedScale);
+        svg.select('.network-group').attr('transform', transform.toString());
+        setCurrentZoom(clampedScale);
+        onZoomChange({ k: clampedScale, x: 0, y: 0 });
+        
+        console.log(`Pinch zoom: ${clampedScale.toFixed(2)}x`);
+      }
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      if (event.touches.length < 2) {
+        console.log(`Pinch end: final scale=${currentZoom.toFixed(2)}x`);
+        touchStateRef.current = {
+          initialDistance: null,
+          initialScale: currentZoom,
+          center: null
+        };
+      }
+    };
+
+    // Create zoom behavior for wheel/button interaction only
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .filter((event) => {
-        // Allow wheel events and programmatic zoom
-        if (event.type === 'wheel') return true;
-        if (!event.sourceEvent) return true;
-        
-        // For touch events, allow all multi-touch interactions
-        if (event.type === 'touchstart' || event.type === 'touchmove' || event.type === 'touchend') {
-          // Check if this is a multi-touch gesture
-          const isSingleTouch = event.touches && event.touches.length === 1;
-          const wasMultiTouch = event.changedTouches && event.changedTouches.length > 0 && !isSingleTouch;
-          
-          return !isSingleTouch || wasMultiTouch;
-        }
-        
-        // Block other mouse/touch events that would cause panning
-        return false;
+        // Only allow wheel events and programmatic zoom (buttons)
+        return event.type === 'wheel' || !event.sourceEvent;
       })
-      .touchable(true) // Explicitly enable touch support
       .on("zoom", (event) => {
-        // Respond to user scroll wheel, programmatic zoom, and pinch zoom
+        // Respond to user scroll wheel and button zoom only
         const { transform } = event;
         
         // Apply transform immediately for smooth interaction
@@ -78,27 +135,24 @@ export default function NetworkVisualizer({
         onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
         
         // Log zoom changes for debugging
-        if (event.sourceEvent && event.sourceEvent.type === 'touchmove') {
-          console.log(`Pinch zoom: ${transform.k.toFixed(2)}x`);
-        } else if (event.sourceEvent && event.sourceEvent.type === 'wheel') {
+        if (event.sourceEvent && event.sourceEvent.type === 'wheel') {
           console.log(`Wheel zoom: ${transform.k.toFixed(2)}x`);
         } else if (!event.sourceEvent) {
           console.log(`Button zoom: ${currentZoom.toFixed(2)} to ${transform.k.toFixed(2)}`);
-        }
-      })
-      .on("end", (event) => {
-        // Ensure zoom level persists after touch gestures end
-        if (event.sourceEvent && (event.sourceEvent.type === 'touchend' || event.sourceEvent.type === 'touchcancel')) {
-          const { transform } = event;
-          console.log(`Touch zoom ended at: ${transform.k.toFixed(2)}x`);
-          // Force the zoom to stay at the current level
-          svg.call(zoom.transform, transform);
         }
       });
 
     // Apply zoom behavior but prevent background dragging and clicking
     svg.call(zoom);
     zoomRef.current = zoom;
+
+    // Add custom touch event listeners for pinch zoom
+    const svgElement = svgRef.current;
+    if (svgElement) {
+      svgElement.addEventListener('touchstart', handleTouchStart, { passive: false });
+      svgElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+      svgElement.addEventListener('touchend', handleTouchEnd, { passive: false });
+    }
 
     // Add explicit prevention of single-touch background interactions
     svg.on("mousedown.drag", null)
@@ -492,6 +546,14 @@ export default function NetworkVisualizer({
     return () => {
       tooltip.remove();
       simulation.stop();
+      
+      // Remove custom touch event listeners
+      const svgElement = svgRef.current;
+      if (svgElement) {
+        svgElement.removeEventListener('touchstart', handleTouchStart);
+        svgElement.removeEventListener('touchmove', handleTouchMove);
+        svgElement.removeEventListener('touchend', handleTouchEnd);
+      }
     };
   }, [data, visible, onZoomChange]);
 
