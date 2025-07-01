@@ -1089,7 +1089,7 @@ export class DatabaseStorage implements IStorage {
 
     // If artist exists in MusicNerd database (UUID ID), skip collaboration lookup 
     // and generate real collaboration data instead since MusicNerd doesn't have our collaborations table
-    if (typeof mainArtist.id === 'string' && mainArtist.id.includes('-')) {
+    if (typeof mainArtist.id === 'string' && mainArtist.id.toString().includes('-')) {
       console.log(`🎵 [DEBUG] Found MusicNerd artist "${artistName}" - generating real collaboration network`);
       return this.generateRealCollaborationNetwork(artistName);
     }
