@@ -60,6 +60,16 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground overflow-hidden;
+    background-color: #000000 !important;
+  }
+  
+  html {
+    background-color: #000000 !important;
+  }
+  
+  #root {
+    background-color: #000000 !important;
+    min-height: 100vh;
   }
 }
 
