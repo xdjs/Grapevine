@@ -1,0 +1,11 @@
+# Include static files
+!public/
+!static/
+!dist/
+!favicon.ico
+!*.ico
+
+# Exclude unnecessary files
+node_modules/
+.git/
+*.log
