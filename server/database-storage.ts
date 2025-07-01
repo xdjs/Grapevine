@@ -994,8 +994,7 @@ export class DatabaseStorage implements IStorage {
 
         // Final node array from consolidated map
         const nodes = Array.from(nodeMap.values());
-        return { nodes, links };
-
+        
         // Cache the generated network data
         const networkData = { nodes, links };
         await this.cacheNetworkData(artistName, networkData);
@@ -1005,16 +1004,9 @@ export class DatabaseStorage implements IStorage {
         console.log(`✅ [DEBUG] Successfully created network from MusicBrainz data: ${collaborationData.artists.length} collaborators for "${artistName}"`);
       }
 
-
       // Final node array from consolidated map
       const nodes = Array.from(nodeMap.values());
-      return { nodes, links };
-    } catch (error) {
-      console.error('Error generating real collaboration network:', error);
-      // Return just the main artist if everything fails
-      const nodes = Array.from(nodeMap.values());
-      return { nodes, links };
-
+      
       // Cache the generated network data
       const networkData = { nodes, links };
       await this.cacheNetworkData(artistName, networkData);
@@ -1022,6 +1014,9 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error generating real collaboration network:', error);
       // Return just the main artist if everything fails
+      const nodes = Array.from(nodeMap.values());
+      
+      // Cache the generated network data
       const networkData = { nodes, links };
       await this.cacheNetworkData(artistName, networkData);
       return networkData;

@@ -19,6 +19,7 @@ export interface NetworkLink {
 export interface NetworkData {
   nodes: NetworkNode[];
   links: NetworkLink[];
+  cached?: boolean;
 }
 
 export interface FilterState {
