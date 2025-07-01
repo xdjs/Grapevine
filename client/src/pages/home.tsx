@@ -4,6 +4,7 @@ import NetworkVisualizer from "@/components/network-visualizer";
 import ZoomControls from "@/components/zoom-controls";
 import FilterControls from "@/components/filter-controls";
 import Legend from "@/components/legend";
+import RecenterButton from "@/components/recenter-button";
 import { NetworkData, FilterState } from "@/types/network";
 import { Loader2 } from "lucide-react";
 
@@ -114,6 +115,12 @@ export default function Home() {
             onFilterChange={setFilterState}
           />
           <Legend />
+          <RecenterButton
+            onRecenter={() => {
+              const event = new CustomEvent('network-zoom', { detail: { action: 'recenter' } });
+              window.dispatchEvent(event);
+            }}
+          />
         </>
       )}
     </div>

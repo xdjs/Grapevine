@@ -9,6 +9,7 @@ interface NetworkVisualizerProps {
   filterState: FilterState;
   onZoomChange: (transform: { k: number; x: number; y: number }) => void;
   onArtistSearch?: (artistName: string) => void;
+  onRecenter?: () => void;
 }
 
 export default function NetworkVisualizer({
@@ -17,6 +18,7 @@ export default function NetworkVisualizer({
   filterState,
   onZoomChange,
   onArtistSearch,
+  onRecenter,
 }: NetworkVisualizerProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
@@ -51,27 +53,33 @@ export default function NetworkVisualizer({
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .filter((event) => {
-        // Only allow wheel events and programmatic zoom (no drag panning or clicks)
-        // This prevents the tree from floating away when dragging on empty space
-        return event.type === 'wheel' || (!event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown');
+        // Allow wheel events and programmatic zoom
+        // Allow mousedown only on empty space (not on nodes)
+        if (event.type === 'wheel' || !event.sourceEvent) {
+          return true;
+        }
+        if (event.type === 'mousedown') {
+          // Check if the target is a node or part of a node group
+          const target = event.target as Element;
+          const isNode = target.closest('.node-group') || target.classList.contains('node') || target.tagName === 'circle' || target.tagName === 'text';
+          return !isNode; // Only allow panning on empty space
+        }
+        return false;
       })
       .on("zoom", (event) => {
-        // Respond to user scroll wheel and programmatic zoom only
+        // Respond to user scroll wheel, background panning, and programmatic zoom
         const { transform } = event;
         networkGroup.attr("transform", transform);
         setCurrentZoom(transform.k);
         onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
       });
 
-    // Apply zoom behavior but prevent background dragging and clicking
+    // Apply zoom behavior with selective panning
     svg.call(zoom);
     zoomRef.current = zoom;
 
-    // Add explicit prevention of background interactions
-    svg.on("mousedown.drag", null)
-       .on("touchstart.drag", null)
-       .on("click.zoom", null)
-       .on("dblclick.zoom", null);
+    // Prevent double-click zoom but allow other interactions
+    svg.on("dblclick.zoom", null);
 
     // Find connected components for cluster positioning
     const findConnectedComponents = () => {
@@ -602,6 +610,37 @@ export default function NetworkVisualizer({
         case "reset":
           handleZoomReset();
           break;
+        case "recenter":
+          handleRecenter();
+          break;
+      }
+    };
+
+    const handleRecenter = () => {
+      if (!zoomRef.current || !svgRef.current) return;
+
+      const svg = d3.select(svgRef.current);
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      // Find the main artist node (largest artist node, or first artist if sizes are equal)
+      const mainArtistNode = data.nodes.find(node => node.size === 20 && node.type === 'artist') ||
+                           data.nodes.find(node => node.type === 'artist');
+
+      if (mainArtistNode && mainArtistNode.x !== undefined && mainArtistNode.y !== undefined) {
+        // Calculate transform to center the main artist
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const translateX = centerX - mainArtistNode.x * currentZoom;
+        const translateY = centerY - mainArtistNode.y * currentZoom;
+
+        // Apply smooth transition to center
+        svg.transition()
+           .duration(750)
+           .call(zoomRef.current.transform, d3.zoomIdentity
+             .translate(translateX, translateY)
+             .scale(currentZoom)
+           );
       }
     };
 
