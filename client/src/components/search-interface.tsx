@@ -8,6 +8,7 @@ import { NetworkData } from "@/types/network";
 import { Search } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import musicNerdLogo from "@assets/musicNerdLogo_1751389187695.png";
 
 interface SearchInterfaceProps {
   onNetworkData: (data: NetworkData) => void;
@@ -136,7 +137,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
         <div className="text-center">
           <div className="mb-6 flex justify-center">
             <img 
-              src="/attached_assets/musicNerdLogo_1751389084069.png" 
+              src={musicNerdLogo} 
               alt="MusicNerd Logo" 
               className="w-24 h-24 object-contain"
             />
