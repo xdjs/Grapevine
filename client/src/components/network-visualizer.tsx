@@ -51,9 +51,15 @@ export default function NetworkVisualizer({
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .filter((event) => {
-        // Only allow wheel events and programmatic zoom (no drag panning or clicks)
+        // Allow wheel events, programmatic zoom, and multi-touch gestures (pinch zoom)
         // This prevents the tree from floating away when dragging on empty space
-        return event.type === 'wheel' || (!event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown');
+        const isWheelEvent = event.type === 'wheel';
+        const isProgrammaticZoom = !event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown';
+        const isMultiTouch = event.type === 'touchstart' && event.touches && event.touches.length > 1;
+        const isTouchMove = event.type === 'touchmove' && event.touches && event.touches.length > 1;
+        const isTouchEnd = event.type === 'touchend' && event.changedTouches && event.changedTouches.length > 0;
+        
+        return isWheelEvent || isProgrammaticZoom || isMultiTouch || isTouchMove || isTouchEnd;
       })
       .on("zoom", (event) => {
         // Respond to user scroll wheel and programmatic zoom only
@@ -67,11 +73,16 @@ export default function NetworkVisualizer({
     svg.call(zoom);
     zoomRef.current = zoom;
 
-    // Add explicit prevention of background interactions
+    // Add explicit prevention of single-touch background interactions
     svg.on("mousedown.drag", null)
-       .on("touchstart.drag", null)
        .on("click.zoom", null)
-       .on("dblclick.zoom", null);
+       .on("dblclick.zoom", null)
+       .on("touchstart.drag", (event: any) => {
+         // Prevent single-touch dragging but allow multi-touch gestures
+         if (event.touches && event.touches.length === 1) {
+           event.preventDefault();
+         }
+       });
 
     // Find connected components for cluster positioning
     const findConnectedComponents = () => {

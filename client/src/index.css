@@ -164,6 +164,22 @@
       user-select: none;
       font-size: 11px;
     }
+    
+    /* Enable pinch zoom on SVG container */
+    svg {
+      touch-action: pinch-zoom;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+    
+    /* Prevent single-touch scrolling on network container */
+    .network-group {
+      touch-action: pinch-zoom;
+    }
   }
   
   /* Tablet styles */
