@@ -24,8 +24,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let dbStatus = 'not configured';
     if (process.env.CONNECTION_STRING) {
       try {
-        const pg = require('pg');
-        const client = new pg.Client({
+        const { Client } = await import('pg');
+        const client = new Client({
           connectionString: process.env.CONNECTION_STRING,
           ssl: { rejectUnauthorized: false }
         });

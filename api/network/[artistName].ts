@@ -41,8 +41,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
       // First, check if we have cached data
-      const pg = require('pg');
-      const client = new pg.Client({
+      const { Client } = await import('pg');
+      const client = new Client({
         connectionString: CONNECTION_STRING,
         ssl: {
           rejectUnauthorized: false
@@ -84,7 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Generate new network data using OpenAI
       console.log(`🤖 [Vercel] Generating network for ${artistName} using OpenAI`);
       
-      const OpenAI = require('openai');
+      const OpenAI = (await import('openai')).default;
       const openai = new OpenAI({
         apiKey: OPENAI_API_KEY,
       });

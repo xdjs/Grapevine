@@ -120,7 +120,7 @@ npx drizzle-kit push
 1. **Resolved conflicting functions/builds configuration** - removed builds section to use only functions approach
 2. **Fixed vercel.json schema validation** - corrected functions configuration to use proper object format
 3. **Fixed routing** to properly map API endpoints to serverless functions
-4. **Fixed ES module compatibility issues** - converted dynamic imports to CommonJS require statements
+4. **Fixed ES module compatibility issues** - converted back to dynamic imports for Vercel serverless environment
 5. **Enhanced logging** with detailed error reporting and environment checks  
 6. **Added test endpoint** at `/api/test` to verify basic functionality
 
