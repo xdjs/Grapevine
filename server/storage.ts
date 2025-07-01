@@ -1,8 +1,8 @@
-import { artists, collaborations, type Artist, type InsertArtist, type Collaboration, type InsertCollaboration, type NetworkData, type NetworkNode, type NetworkLink } from "@shared/schema";
-import { spotifyService } from "./spotify";
-import { musicBrainzService } from "./musicbrainz";
-import { wikipediaService } from "./wikipedia";
-import { musicNerdService } from "./musicnerd-service";
+import { artists, collaborations, type Artist, type InsertArtist, type Collaboration, type InsertCollaboration, type NetworkData, type NetworkNode, type NetworkLink } from "../shared/schema.js";
+import { spotifyService } from "./spotify.js";
+import { musicBrainzService } from "./musicbrainz.js";
+import { wikipediaService } from "./wikipedia.js";
+import { musicNerdService } from "./musicnerd-service.js";
 
 export interface IStorage {
   // Artist methods
@@ -677,8 +677,8 @@ export class MemStorage implements IStorage {
   }
 }
 
-import { DatabaseStorage } from './database-storage';
-import { isDatabaseAvailable } from './supabase';
+import { DatabaseStorage } from './database-storage.js';
+import { isDatabaseAvailable } from './supabase.js';
 
 // Initialize storage based on database availability
 let storage: IStorage;

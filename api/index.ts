@@ -1,5 +1,11 @@
-// For Vercel deployment, this file should contain individual API routes
-// This is a placeholder - you'll need to set up individual route files
-export default function handler(req: any, res: any) {
-  res.status(200).json({ message: 'API endpoint - configure individual routes' });
-}
+import express from "express";
+import { registerRoutes } from "../server/routes.js";
+
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+// Register all routes
+registerRoutes(app);
+
+export default app;

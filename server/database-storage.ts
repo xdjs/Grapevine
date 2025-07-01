@@ -1,12 +1,12 @@
 import { eq, and, sql } from 'drizzle-orm';
-import { db, isDatabaseAvailable } from './supabase';
-import { artists, collaborations, type Artist, type InsertArtist, type Collaboration, type InsertCollaboration, type NetworkData, type NetworkNode, type NetworkLink } from "@shared/schema";
-import { spotifyService } from "./spotify";
-import { openAIService } from "./openai-service";
-import { musicBrainzService } from "./musicbrainz";
-import { wikipediaService } from "./wikipedia";
-import { musicNerdService } from "./musicnerd-service";
-import { IStorage } from './storage';
+import { db, isDatabaseAvailable } from './supabase.js';
+import { artists, collaborations, type Artist, type InsertArtist, type Collaboration, type InsertCollaboration, type NetworkData, type NetworkNode, type NetworkLink } from "../shared/schema.js";
+import { spotifyService } from "./spotify.js";
+import { openAIService } from "./openai-service.js";
+import { musicBrainzService } from "./musicbrainz.js";
+import { wikipediaService } from "./wikipedia.js";
+import { musicNerdService } from "./musicnerd-service.js";
+import { IStorage } from './storage.js';
 
 export class DatabaseStorage implements IStorage {
   constructor() {
