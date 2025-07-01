@@ -40,8 +40,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     try {
       // Use direct PostgreSQL connection via pg
-      const { Client } = await import('pg');
-      const client = new Client({
+      const pg = require('pg');
+      const client = new pg.Client({
         connectionString: CONNECTION_STRING,
         ssl: {
           rejectUnauthorized: false
