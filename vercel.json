@@ -2,33 +2,25 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist/public",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist/public"
+      }
+    }
+  ],
   "routes": [
     {
-      "src": "/api/test",
-      "dest": "/api/test"
-    },
-    {
-      "src": "/api/artist-options/(.*)",
-      "dest": "/api/artist-options/[artistName]"
-    },
-    {
-      "src": "/api/network/(.*)",
-      "dest": "/api/network/[artistName]"
-    },
-    {
-      "src": "/api/search",
-      "dest": "/api/search"
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
     },
     {
       "src": "/(.*)",
       "dest": "/dist/public/$1"
     }
   ],
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "@vercel/node@18.x"
-    }
-  },
   "env": {
     "NODE_ENV": "production"
   }
