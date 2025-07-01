@@ -134,6 +134,13 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
         }`}
       >
         <div className="text-center">
+          <div className="mb-6 flex justify-center">
+            <img 
+              src="/attached_assets/musicNerdLogo_1751389084069.png" 
+              alt="MusicNerd Logo" 
+              className="w-24 h-24 object-contain"
+            />
+          </div>
           <h1 className="text-4xl font-bold mb-2 text-white">
             Music Collaboration Network
           </h1>
