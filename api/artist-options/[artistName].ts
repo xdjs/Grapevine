@@ -24,9 +24,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     console.log(`🔍 [Vercel] Looking up artist options for: "${artistName}"`);
     
-    // Import and initialize services
-    const { createClient } = await import('@supabase/supabase-js');
-    
     // Get environment variables
     const CONNECTION_STRING = process.env.CONNECTION_STRING;
     
@@ -35,33 +32,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ message: 'Database connection not configured' });
     }
     
-    // Initialize Supabase client for direct database queries
-    const supabaseUrl = process.env.SUPABASE_URL || 'https://placeholder.supabase.co';
-    const supabaseKey = process.env.SUPABASE_ANON_KEY || 'placeholder_key';
-    
     let options = [];
     
     try {
-      // Try to use Supabase client directly
-      const supabase = createClient(supabaseUrl, supabaseKey);
+      // Use direct PostgreSQL connection via pg
+      const { Client } = await import('pg');
+      const client = new Client({
+        connectionString: CONNECTION_STRING,
+        ssl: {
+          rejectUnauthorized: false
+        }
+      });
       
-      const { data, error } = await supabase
-        .from('artists')
-        .select('id, name, bio')
-        .ilike('name', `%${artistName}%`)
-        .limit(10);
+      await client.connect();
       
-      if (error) {
-        console.error('❌ [Vercel] Supabase query error:', error);
-        return res.status(500).json({ message: 'Database query failed' });
-      }
+      const query = 'SELECT id, name FROM artists WHERE LOWER(name) LIKE LOWER($1) LIMIT 10';
+      const result = await client.query(query, [`%${artistName}%`]);
       
-      options = data || [];
+      options = result.rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        bio: `${row.name} - Music Artist` // Simple bio for dropdown
+      }));
+      
+      await client.end();
+      
       console.log(`✅ [Vercel] Found ${options.length} artist options for "${artistName}"`);
       
     } catch (dbError) {
       console.error('❌ [Vercel] Database connection failed:', dbError);
-      return res.status(500).json({ message: 'Database connection failed' });
+      console.error('❌ [Vercel] CONNECTION_STRING available:', !!CONNECTION_STRING);
+      console.error('❌ [Vercel] Error details:', JSON.stringify(dbError, null, 2));
+      return res.status(500).json({ 
+        message: 'Database connection failed', 
+        error: dbError instanceof Error ? dbError.message : 'Unknown error',
+        hasConnectionString: !!CONNECTION_STRING
+      });
     }
     
     res.json({ options });
