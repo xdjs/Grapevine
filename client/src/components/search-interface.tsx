@@ -217,7 +217,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
             </Button>
             
             {/* Artist Options Dropdown */}
-            {showDropdown && artistOptions.length > 0 && (
+            {showDropdown && artistOptions.length > 0 && !showNetworkView && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-80 overflow-hidden">
                 <ScrollArea className="max-h-80">
                   <div className="p-2">
