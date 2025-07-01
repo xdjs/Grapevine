@@ -170,11 +170,18 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
       >
         <div className="text-center">
           <div className="mb-6 flex justify-center">
-            <img 
-              src={musicNerdLogo} 
-              alt="MusicNerd Logo" 
-              className="w-32 h-32 object-contain"
-            />
+            <a 
+              href="https://musicnerd.xyz" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:opacity-80 transition-opacity cursor-pointer"
+            >
+              <img 
+                src={musicNerdLogo} 
+                alt="MusicNerd Logo" 
+                className="w-32 h-32 object-contain"
+              />
+            </a>
           </div>
           <h1 className="text-4xl font-bold mb-2 text-white">
             Music Collaboration Network
@@ -245,11 +252,18 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
         <div className="bg-black/90 backdrop-blur-sm border-b border-gray-800 px-6 py-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <img 
-                src={musicNerdLogoSmall} 
-                alt="MusicNerd Logo" 
-                className="w-8 h-8 object-contain"
-              />
+              <a 
+                href="https://musicnerd.xyz" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="hover:opacity-80 transition-opacity cursor-pointer"
+              >
+                <img 
+                  src={musicNerdLogoSmall} 
+                  alt="MusicNerd Logo" 
+                  className="w-8 h-8 object-contain"
+                />
+              </a>
               <h2 className="text-xl font-semibold text-white">Music Collaboration Network</h2>
             </div>
             
