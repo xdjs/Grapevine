@@ -126,24 +126,35 @@ export default function NetworkVisualizer({
       const centerX = col * componentWidth + componentWidth / 2;
       const centerY = row * componentHeight + componentHeight / 2;
       
-      component.forEach(node => {
+      component.forEach((node, nodeIndex) => {
         if (!node.x && !node.y) {
           // If this is the main artist node, center it in the viewport
           if (node === mainArtistNode) {
             node.x = width / 2;
             node.y = height / 2;
           } else {
-            node.x = centerX + (Math.random() - 0.5) * 100;
-            node.y = centerY + (Math.random() - 0.5) * 100;
+            // Use radial distribution around center with more spacing
+            const angle = (nodeIndex / component.length) * 2 * Math.PI;
+            const radius = 150 + (Math.random() * 100); // Variable radius for natural look
+            node.x = centerX + Math.cos(angle) * radius;
+            node.y = centerY + Math.sin(angle) * radius;
+            
+            // Add some randomness but keep structured spacing
+            node.x += (Math.random() - 0.5) * 50;
+            node.y += (Math.random() - 0.5) * 50;
           }
         }
       });
     });
 
-    // Create boundary force to keep nodes within viewport
+    // Create boundary force to keep nodes and their labels within viewport
     const boundaryForce = () => {
-      const margin = 50;
       for (const node of data.nodes) {
+        // Calculate dynamic margin based on text length to account for labels
+        const textLength = node.name.length;
+        const textWidth = textLength * 4; // Approximate text width
+        const margin = Math.max(60, textWidth / 2); // Ensure labels don't go off-screen
+        
         if (node.x! < margin) node.x = margin;
         if (node.x! > width - margin) node.x = width - margin;
         if (node.y! < margin) node.y = margin;
@@ -151,7 +162,7 @@ export default function NetworkVisualizer({
       }
     };
 
-    // Create simulation
+    // Create simulation with enhanced spacing to prevent text overlap
     const simulation = d3
       .forceSimulation<NetworkNode>(data.nodes)
       .force(
@@ -159,11 +170,21 @@ export default function NetworkVisualizer({
         d3
           .forceLink<NetworkNode, NetworkLink>(validLinks)
           .id((d) => d.id)
-          .distance(80)
+          .distance(120) // Increased link distance for better spacing
       )
-      .force("charge", d3.forceManyBody().strength(-150))
-      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
-      .force("boundary", boundaryForce);
+      .force("charge", d3.forceManyBody().strength(-300)) // Stronger repulsion
+      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => {
+        // Calculate collision radius based on text length to prevent label overlap
+        const textLength = d.name.length;
+        const baseRadius = d.size + 20; // Base spacing around node
+        const textRadius = textLength * 4; // Approximate text width
+        return Math.max(baseRadius, textRadius);
+      }))
+      .force("center", d3.forceCenter(width / 2, height / 2).strength(0.1)) // Gentle centering
+      .force("boundary", boundaryForce)
+      .alpha(1) // Initial energy
+      .alphaDecay(0.02) // Slower cooling for better settling
+      .velocityDecay(0.4); // More damping for stability
 
     simulationRef.current = simulation;
 
@@ -270,6 +291,7 @@ export default function NetworkVisualizer({
         hideTooltip();
       })
       .on("click", function(event, d) {
+        // Don't prevent propagation - allow panning to work
         // Open Music Nerd for any node that has an artist role
         if (d.type === 'artist' || (d.types && d.types.includes('artist'))) {
           openMusicNerdProfile(d.name, d.artistId);
