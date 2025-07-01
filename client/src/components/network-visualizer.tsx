@@ -107,17 +107,21 @@ export default function NetworkVisualizer({
     };
 
     const handlePinchZoomIn = () => {
-      const newZoom = Math.min(5, currentZoom * 1.2); // Cap at 5x
-      setCurrentZoom(newZoom);
-      applyZoom(newZoom);
-      console.log(`🤏 Pinch zoom in: ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+      setCurrentZoom(prevZoom => {
+        const newZoom = Math.min(5, prevZoom * 1.2); // Cap at 5x
+        console.log(`🤏 Pinch zoom in: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+        applyZoom(newZoom);
+        return newZoom;
+      });
     };
 
     const handlePinchZoomOut = () => {
-      const newZoom = Math.max(0.2, currentZoom / 1.2); // Min 0.2x
-      setCurrentZoom(newZoom);
-      applyZoom(newZoom);
-      console.log(`🤏 Pinch zoom out: ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+      setCurrentZoom(prevZoom => {
+        const newZoom = Math.max(0.2, prevZoom / 1.2); // Min 0.2x
+        console.log(`🤏 Pinch zoom out: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+        applyZoom(newZoom);
+        return newZoom;
+      });
     };
 
     // Pinch zoom variables
