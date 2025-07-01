@@ -25,7 +25,9 @@
     }
   ],
   "functions": {
-    "api/**/*.ts": "@vercel/node"
+    "api/**/*.ts": {
+      "runtime": "@vercel/node"
+    }
   },
   "env": {
     "NODE_ENV": "production"
