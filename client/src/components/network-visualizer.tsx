@@ -158,13 +158,7 @@ export default function NetworkVisualizer({
       svgElement.addEventListener('touchstart', handleTouchStart, { passive: false });
       svgElement.addEventListener('touchmove', handleTouchMove, { passive: false });
       svgElement.addEventListener('touchend', handleTouchEnd, { passive: false });
-      
-      // Also add to document for broader touch capture
-      document.addEventListener('touchstart', handleTouchStart, { passive: false });
-      document.addEventListener('touchmove', handleTouchMove, { passive: false });
-      document.addEventListener('touchend', handleTouchEnd, { passive: false });
-      
-      console.log('✅ Touch event listeners added');
+      console.log('✅ Touch event listeners added to SVG');
     }
 
     // Add explicit prevention of single-touch background interactions
@@ -566,11 +560,6 @@ export default function NetworkVisualizer({
         svgElement.removeEventListener('touchstart', handleTouchStart);
         svgElement.removeEventListener('touchmove', handleTouchMove);
         svgElement.removeEventListener('touchend', handleTouchEnd);
-        
-        // Remove document listeners too
-        document.removeEventListener('touchstart', handleTouchStart);
-        document.removeEventListener('touchmove', handleTouchMove);
-        document.removeEventListener('touchend', handleTouchEnd);
       }
     };
   }, [data, visible, onZoomChange]);
