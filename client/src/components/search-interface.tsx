@@ -66,6 +66,13 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
     }
   }, [onSearchFunction, handleSearch]);
 
+  // Hide dropdown when network view changes or current search changes
+  useEffect(() => {
+    if (showNetworkView && currentSearch && searchQuery.trim().toLowerCase() === currentSearch.toLowerCase()) {
+      setShowDropdown(false);
+    }
+  }, [showNetworkView, currentSearch, searchQuery]);
+
   // Fetch artist options when user types
   useEffect(() => {
     const fetchArtistOptions = async () => {
@@ -89,8 +96,11 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
           const data = await response.json();
           console.log('Received artist options:', data.options);
           setArtistOptions(data.options || []);
-          setShowDropdown((data.options || []).length > 0);
-          console.log('Dropdown should show:', (data.options || []).length > 0);
+          // Hide dropdown if the search query matches the current displayed network
+          const shouldShowDropdown = (data.options || []).length > 0 && 
+            (!showNetworkView || searchQuery.trim().toLowerCase() !== currentSearch.toLowerCase());
+          setShowDropdown(shouldShowDropdown);
+          console.log('Dropdown should show:', shouldShowDropdown);
         } catch (error) {
           console.error('Error fetching artist options:', error);
           setArtistOptions([]);
