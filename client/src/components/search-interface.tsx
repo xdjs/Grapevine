@@ -65,12 +65,36 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
 
   useEffect(() => {
     if (onSearchFunction) {
-      onSearchFunction((artistName: string) => {
+      onSearchFunction(async (artistName: string) => {
+        console.log(`🔍 [Search Interface] Triggered search for: ${artistName}`);
         setSearchQuery(artistName);
-        handleSearch();
+        
+        // Trigger search immediately with the new artist name
+        try {
+          setIsLoading(true);
+          onLoadingChange?.(true);
+          
+          const data = await fetchNetworkData(artistName.trim());
+          onNetworkData(data);
+          
+          toast({
+            title: "Network Generated",
+            description: `Found collaboration network for ${artistName}`,
+          });
+        } catch (error) {
+          console.error(`❌ [Search Interface] Error searching for ${artistName}:`, error);
+          toast({
+            title: "Error",
+            description: error instanceof Error ? error.message : "Failed to fetch network data",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoading(false);
+          onLoadingChange?.(false);
+        }
       });
     }
-  }, [onSearchFunction, handleSearch]);
+  }, [onSearchFunction, onNetworkData, onLoadingChange, toast]);
 
   return (
     <>
