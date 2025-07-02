@@ -610,12 +610,10 @@ export default function NetworkVisualizer({
       }
       
       // Use artist ID if available, otherwise go to main page
-
-      let musicNerdUrl = `https://musicnerd.xyz/`;
+      let musicNerdUrl = musicNerdBaseUrl;
       
       if (artistId) {
-        musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
-
+        musicNerdUrl = `${musicNerdBaseUrl}/artist/${artistId}`;
         console.log(`🎵 Opening MusicNerd artist page for "${artistName}": ${musicNerdUrl}`);
       } else {
         console.log(`🎵 No artist ID found for "${artistName}", opening main MusicNerd page`);
