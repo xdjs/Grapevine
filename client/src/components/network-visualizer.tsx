@@ -917,7 +917,7 @@ export default function NetworkVisualizer({
 
   return (
     <div
-      className={`w-full h-full transition-opacity duration-700 ${
+      className={`network-container transition-opacity duration-700 ${
         visible ? "opacity-100" : "opacity-0"
       }`}
     >

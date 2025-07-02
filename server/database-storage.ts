@@ -1070,22 +1070,14 @@ export class DatabaseStorage implements IStorage {
     const cachedArtist = await this.getArtistByName(artistName);
     
     if (cachedArtist?.webmapdata) {
-      console.log(`✅ [DEBUG] Found cached webmapdata for "${artistName}" - using cached data`);
+      console.log(`✅ [DEBUG] Found cached webmapdata for "${cachedArtist.name}" - using cached data`);
       return cachedArtist.webmapdata as NetworkData;
     }
     
     console.log(`🆕 [DEBUG] No cached data found for "${artistName}" - generating new network data`);
     
     // For demo artists with rich mock data, use real MusicBrainz to showcase enhanced producer/songwriter extraction
-    const enhancedMusicBrainzArtists = ['Post Malone', 'The Weeknd', 'Ariana Grande', 'Billie Eilish', 'Taylor Swift', 'Drake'];
-    
-    if (enhancedMusicBrainzArtists.includes(artistName)) {
-      console.log(`🎵 [DEBUG] Using enhanced MusicBrainz data for "${artistName}" to showcase deep producer/songwriter networks`);
-      const networkData = await this.generateRealCollaborationNetwork(artistName);
-      // Cache the result
-      await this.cacheNetworkData(artistName, networkData);
-      return networkData;
-    }
+    const enhancedMusicBrainzArtists: string[] = ['Post Malone', 'The Weeknd', 'Ariana Grande', 'Billie Eilish', 'Taylor Swift', 'Drake'];
     
     const mainArtist = await this.getArtistByName(artistName);
     if (!mainArtist) {
@@ -1094,11 +1086,21 @@ export class DatabaseStorage implements IStorage {
       throw new Error(`Artist "${artistName}" not found in database. Please search for an existing artist.`);
     }
 
+    // Check if this is an enhanced demo artist using the correct database name
+    if (enhancedMusicBrainzArtists.includes(mainArtist.name)) {
+      console.log(`🎵 [DEBUG] Using enhanced MusicBrainz data for "${mainArtist.name}" to showcase deep producer/songwriter networks`);
+      const networkData = await this.generateRealCollaborationNetwork(mainArtist.name);
+      // Cache the result
+      await this.cacheNetworkData(mainArtist.name, networkData);
+      return networkData;
+    }
+
     // If artist exists in MusicNerd database (UUID ID), skip collaboration lookup 
     // and generate real collaboration data instead since MusicNerd doesn't have our collaborations table
-    if (typeof mainArtist.id === 'string' && mainArtist.id.includes('-')) {
-      console.log(`🎵 [DEBUG] Found MusicNerd artist "${artistName}" - generating real collaboration network`);
-      return this.generateRealCollaborationNetwork(artistName);
+    const artistId = String(mainArtist.id);
+    if (artistId.includes('-')) {
+      console.log(`🎵 [DEBUG] Found MusicNerd artist "${mainArtist.name}" - generating real collaboration network`);
+      return this.generateRealCollaborationNetwork(mainArtist.name);
     }
 
     // Artist exists in our own database, build network from stored data

@@ -51,8 +51,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       await client.connect();
       
-      // First check if artist exists in database
-      const artistExistsQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
+      // First check if artist exists in database and get the correct capitalization
+      const artistExistsQuery = 'SELECT id, name FROM artists WHERE LOWER(name) = LOWER($1)';
       const artistExistsResult = await client.query(artistExistsQuery, [artistName]);
       
       if (artistExistsResult.rows.length === 0) {
@@ -62,9 +62,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
       
-      // Check for cached webmapdata
+      // Use the correct artist name from database (with proper capitalization)
+      const correctArtistName = artistExistsResult.rows[0].name;
+      
+      // Check for cached webmapdata using the correct artist name
       const cacheQuery = 'SELECT webmapdata FROM artists WHERE LOWER(name) = LOWER($1) AND webmapdata IS NOT NULL';
-      const cacheResult = await client.query(cacheQuery, [artistName]);
+      const cacheResult = await client.query(cacheQuery, [correctArtistName]);
       
       if (cacheResult.rows.length > 0 && cacheResult.rows[0].webmapdata) {
         console.log(`✅ [Vercel] Found cached data for ${artistName}`);
@@ -92,7 +95,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         apiKey: OPENAI_API_KEY,
       });
 
-      const prompt = `Generate a list of producers and songwriters who have collaborated with ${artistName}. Return ONLY valid JSON with no additional text, markdown, or formatting.
+      const prompt = `Generate a list of producers and songwriters who have collaborated with ${correctArtistName}. Return ONLY valid JSON with no additional text, markdown, or formatting.
 
 Required format:
 {
@@ -111,7 +114,7 @@ Required format:
 }
 
 Requirements:
-- Provide exactly 5 producers and 5 songwriters who have actually worked with ${artistName}
+- Provide exactly 5 producers and 5 songwriters who have actually worked with ${correctArtistName}
 - Use only real music industry collaborations
 - Return ONLY the JSON object, no other text
 - Ensure all JSON is properly formatted and valid`;
@@ -179,20 +182,17 @@ Requirements:
       const nodeMap = new Map();
       const links = [];
 
-      // Add main artist node
-      const mainArtistQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
-      const mainArtistResult = await client.query(mainArtistQuery, [artistName]);
-      
+      // Add main artist node using correct capitalization from database
       const mainNode = {
-        id: artistName,
-        name: artistName,
+        id: correctArtistName,
+        name: correctArtistName,
         type: 'artist',
         types: ['artist'],
         color: '#FF69B4',
         size: 30,
-        artistId: mainArtistResult.rows.length > 0 ? mainArtistResult.rows[0].id : null
+        artistId: artistExistsResult.rows[0].id
       };
-      nodeMap.set(artistName, mainNode);
+      nodeMap.set(correctArtistName, mainNode);
 
       // Process producers and songwriters with multi-role consolidation
       for (const collaborator of collaborationData.artists || []) {
@@ -235,17 +235,17 @@ Requirements:
         }
 
         // Create link (only once per person, not per role)
-        const existingLink = links.find(link => link.source === artistName && link.target === collaborator.name);
+        const existingLink = links.find(link => link.source === correctArtistName && link.target === collaborator.name);
         if (!existingLink) {
           links.push({
-            source: artistName,
+            source: correctArtistName,
             target: collaborator.name
           });
         }
 
         // Add branching artists
         for (const branchingArtist of collaborator.topCollaborators || []) {
-          if (branchingArtist !== artistName && !nodeMap.has(branchingArtist)) {
+          if (branchingArtist !== correctArtistName && !nodeMap.has(branchingArtist)) {
             const branchNode = {
               id: branchingArtist,
               name: branchingArtist,
@@ -280,8 +280,8 @@ Requirements:
       // Cache the generated data
       try {
         const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE LOWER(name) = LOWER($2)';
-        await client.query(updateQuery, [JSON.stringify(networkData), artistName]);
-        console.log(`💾 [Vercel] Cached network data for ${artistName}`);
+        await client.query(updateQuery, [JSON.stringify(networkData), correctArtistName]);
+        console.log(`💾 [Vercel] Cached network data for ${correctArtistName}`);
       } catch (cacheError) {
         console.warn('⚠️ [Vercel] Failed to cache data:', cacheError);
       }
