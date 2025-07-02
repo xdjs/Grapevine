@@ -234,7 +234,7 @@ export default function SearchInterface({
               <div 
                 ref={dropdownRef}
                 className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
-                style={{ maxHeight: 'calc(100vh - 400px)' }}
+                style={{ maxHeight: 'calc(100vh - 500px)' }}
               >
                 <div className="p-2">
                   {isLoadingOptions && (
