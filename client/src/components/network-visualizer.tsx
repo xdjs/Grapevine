@@ -780,7 +780,7 @@ export default function NetworkVisualizer({
 
   const handleArtistSelection = (artistId: string) => {
     // Open the specific artist page with the selected ID
-    const musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${artistId}`;
+    const musicNerdUrl = `https://www.musicnerd.xyz/artist/${artistId}`;
     console.log(`🎵 Opening selected artist page: ${musicNerdUrl}`);
     
     const link = document.createElement('a');

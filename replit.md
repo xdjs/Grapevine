@@ -329,12 +329,15 @@ Changelog:
 ### Production-Only MusicNerd URL Configuration (July 2, 2025)
 - Removed all staging URL fallbacks from both backend and frontend code
 - System now exclusively uses MUSICNERD_BASE_URL environment variable for production URLs
+- Updated all hardcoded staging URLs in database-storage.ts to use environment variable
+- Updated artist-selection-modal.tsx to fetch configuration dynamically instead of hardcoded URL
 - Added proper error handling when environment variable is not configured
 - Artist node clicks are disabled if production URL is not available
 - Backend returns 500 error with clear message if MUSICNERD_BASE_URL is missing
 - Frontend validates configuration response and prevents clicks without valid URL
 - Currently configured to use https://www.musicnerd.xyz/ production site
 - All artist nodes now link exclusively to production MusicNerd environment
+- Complete elimination of staging URLs throughout the entire codebase
 =======
 ### Supabase Caching System Integration (June 30, 2025)
 - Added webmapdata jsonb column to artists table for caching network visualization data

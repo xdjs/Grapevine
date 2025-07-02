@@ -31,6 +31,26 @@ export default function ArtistSelectionModal({
 }: ArtistSelectionModalProps) {
   const [options, setOptions] = useState<ArtistOption[]>([]);
   const [loading, setLoading] = useState(false);
+  const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("");
+
+  // Fetch configuration on component mount
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch('/api/config');
+        if (response.ok) {
+          const config = await response.json();
+          if (config.musicNerdBaseUrl) {
+            setMusicNerdBaseUrl(config.musicNerdBaseUrl);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching config:', error);
+      }
+    };
+    
+    fetchConfig();
+  }, []);
 
   useEffect(() => {
     if (isOpen && artistName) {
@@ -58,7 +78,9 @@ export default function ArtistSelectionModal({
   };
 
   const handleOpenMainPage = () => {
-    window.open('https://music-nerd-git-staging-musicnerd.vercel.app/', '_blank');
+    if (musicNerdBaseUrl) {
+      window.open(musicNerdBaseUrl, '_blank');
+    }
     onClose();
   };
 
