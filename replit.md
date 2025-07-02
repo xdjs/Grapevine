@@ -325,6 +325,14 @@ Changelog:
 - All zoom methods (buttons, touch, trackpad) now use identical underlying code for consistency
 - Fixed glitching and snap-back issues by eliminating custom D3 transform logic
 - Smooth 200ms transitions maintained across all zoom input methods
+
+### Fixed Main Artist Direct Navigation (July 2, 2025)
+- Fixed issue where clicking main artist node showed selection modal instead of going directly to their page
+- Updated frontend click handler to identify main artist and bypass modal when artistId is available
+- Fixed Vercel API inconsistency: changed musicNerdId to artistId for consistent field naming
+- Main artist now navigates directly to their MusicNerd profile page when clicked
+- Other collaborator artists still show selection modal when multiple options exist
+- Ensured consistent behavior between Replit development and Vercel production deployments
 =======
 ### Supabase Caching System Integration (June 30, 2025)
 - Added webmapdata jsonb column to artists table for caching network visualization data
