@@ -78,8 +78,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get configuration including MusicNerd base URL
   app.get("/api/config", async (req, res) => {
     try {
-      // Default to staging if no environment variable is set
-      const musicNerdBaseUrl = process.env.MUSICNERD_BASE_URL || "https://music-nerd-git-staging-musicnerd.vercel.app";
+      // Use production URL from environment variable
+      const musicNerdBaseUrl = process.env.MUSICNERD_BASE_URL;
+      
+      if (!musicNerdBaseUrl) {
+        console.error("🔧 [CRITICAL] MUSICNERD_BASE_URL environment variable is not set");
+        res.status(500).json({ message: "MusicNerd base URL not configured" });
+        return;
+      }
       
       console.log(`🔧 [DEBUG] Config endpoint called, returning musicNerdBaseUrl: ${musicNerdBaseUrl}`);
       

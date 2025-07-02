@@ -24,7 +24,7 @@ export default function NetworkVisualizer({
   const [currentZoom, setCurrentZoom] = useState(1);
   const [showArtistModal, setShowArtistModal] = useState(false);
   const [selectedArtistName, setSelectedArtistName] = useState("");
-  const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("https://music-nerd-git-staging-musicnerd.vercel.app");
+  const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("");
 
   // Fetch configuration on component mount
   useEffect(() => {
@@ -38,8 +38,12 @@ export default function NetworkVisualizer({
         if (response.ok) {
           const config = await response.json();
           console.log('🔧 [Config] Received config:', config);
-          setMusicNerdBaseUrl(config.musicNerdBaseUrl);
-          console.log(`🔧 [Config] MusicNerd base URL set to: ${config.musicNerdBaseUrl}`);
+          if (config.musicNerdBaseUrl) {
+            setMusicNerdBaseUrl(config.musicNerdBaseUrl);
+            console.log(`🔧 [Config] MusicNerd base URL set to: ${config.musicNerdBaseUrl}`);
+          } else {
+            console.error('🔧 [Config] No musicNerdBaseUrl in config response');
+          }
         } else {
           const errorText = await response.text();
           console.error('🔧 [Config] Error response:', errorText);
@@ -597,6 +601,12 @@ export default function NetworkVisualizer({
         } catch (error) {
           console.error(`Error fetching artist options for "${artistName}":`, error);
         }
+      }
+      
+      // Check if base URL is available
+      if (!musicNerdBaseUrl) {
+        console.error(`🎵 Cannot open MusicNerd profile for "${artistName}": Base URL not configured`);
+        return;
       }
       
       // Use artist ID if available, otherwise go to main page
