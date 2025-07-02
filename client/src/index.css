@@ -268,4 +268,33 @@
       max-height: min(50vh, calc(100dvh - 250px)) !important;
     }
   }
+  
+  /* Always show scrollbar on main page */
+  html, body {
+    overflow-y: scroll !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(107, 114, 128, 0.8) rgba(31, 41, 55, 0.5);
+  }
+  
+  /* Webkit scrollbar styling for main page */
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    width: 12px;
+  }
+  
+  html::-webkit-scrollbar-track,
+  body::-webkit-scrollbar-track {
+    background: rgba(31, 41, 55, 0.5);
+  }
+  
+  html::-webkit-scrollbar-thumb,
+  body::-webkit-scrollbar-thumb {
+    background: rgba(107, 114, 128, 0.8);
+    border-radius: 6px;
+  }
+  
+  html::-webkit-scrollbar-thumb:hover,
+  body::-webkit-scrollbar-thumb:hover {
+    background: rgba(107, 114, 128, 1);
+  }
 }
