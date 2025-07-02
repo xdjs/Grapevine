@@ -219,4 +219,29 @@
       padding: 10px;
     }
   }
+  
+  /* Responsive dropdown positioning for better viewport fit */
+  @media (max-height: 700px) {
+    .artist-dropdown-scroll {
+      max-height: 45vh !important;
+    }
+  }
+  
+  @media (max-height: 600px) {
+    .artist-dropdown-scroll {
+      max-height: 40vh !important;
+    }
+  }
+  
+  @media (max-height: 500px) {
+    .artist-dropdown-scroll {
+      max-height: 35vh !important;
+    }
+  }
+  
+  @media (max-height: 400px) {
+    .artist-dropdown-scroll {
+      max-height: 30vh !important;
+    }
+  }
 }

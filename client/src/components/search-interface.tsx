@@ -269,7 +269,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
             
             {/* Artist Options Dropdown - Instant Search Results */}
             {(showDropdown || isLoadingOptions) && (!showNetworkView || isSearchFocused) && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-[70vh] overflow-y-auto artist-dropdown-scroll">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-[50vh] sm:max-h-[60vh] lg:max-h-[70vh] overflow-y-auto artist-dropdown-scroll">
                 <div className="p-2">
                   {isLoadingOptions && (
                     <div className="flex items-center justify-center py-4">
@@ -398,7 +398,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               
               {/* Artist Options Dropdown - Network View Instant Search */}
               {(showDropdown || isLoadingOptions) && (!showNetworkView || isSearchFocused) && (
-                <div className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-[60vh] overflow-y-auto artist-dropdown-scroll">
+                <div className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-[40vh] sm:max-h-[50vh] lg:max-h-[60vh] overflow-y-auto artist-dropdown-scroll">
                   <div className="p-1">
                     {isLoadingOptions && (
                       <div className="flex items-center justify-center py-2">

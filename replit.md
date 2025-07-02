@@ -338,7 +338,8 @@ Changelog:
 - Updated match badges to only show "Exact Match" when artist name exactly matches user input
 - Removed misleading "Best", "Good", "Match" badges for partial matches to ensure accuracy
 - Increased search recommendations from 10 to all available results (up to 100-200 matches) for comprehensive artist discovery
-- Enhanced dropdown heights to 70% viewport height to accommodate extensive search results with smooth scrolling
+- Enhanced dropdown heights with responsive sizing (50vh on mobile, 60vh on tablets, 70vh on desktop) that adapts to viewport height
+- Added intelligent viewport-aware positioning to ensure dropdowns always fit within user's screen
 - Added result counters showing "X artists found" to help users understand the breadth of available options
 =======
 ### Supabase Caching System Integration (June 30, 2025)
