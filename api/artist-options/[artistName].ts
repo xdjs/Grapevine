@@ -50,7 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       await client.connect();
       
-      const query = 'SELECT id, name FROM artists WHERE LOWER(name) LIKE LOWER($1) LIMIT 20';
+      const query = 'SELECT id, name FROM artists WHERE LOWER(name) LIKE LOWER($1) LIMIT 100';
       const result = await client.query(query, [`%${artistName}%`]);
       
       options = result.rows.map(row => {
