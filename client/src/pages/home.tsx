@@ -81,7 +81,7 @@ export default function Home() {
   };
 
   return (
-    <div className="relative w-screen h-screen bg-black text-white overflow-hidden">
+    <div className="relative w-full min-h-screen bg-black text-white">
       {/* Search Interface */}
       <SearchInterface
         onNetworkData={handleNetworkData}

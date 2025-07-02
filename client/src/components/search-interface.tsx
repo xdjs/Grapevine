@@ -241,7 +241,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
             Discover how artists connect through producers and songwriters
           </p>
 
-          <div className="relative w-full">
+          <div className="relative w-full search-dropdown-container">
             <Input
               type="text"
               placeholder="Enter an artist name..."
@@ -269,7 +269,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
             
             {/* Artist Options Dropdown - Instant Search Results */}
             {(showDropdown || isLoadingOptions) && (!showNetworkView || isSearchFocused) && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-[50vh] sm:max-h-[60vh] lg:max-h-[70vh] overflow-y-auto artist-dropdown-scroll">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll">
                 <div className="p-2">
                   {isLoadingOptions && (
                     <div className="flex items-center justify-center py-4">
@@ -352,7 +352,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               </h2>
             </div>
             
-            <div className="flex-1 relative">
+            <div className="flex-1 relative search-dropdown-container">
               <Input
                 type="text"
                 placeholder="Search for a new artist..."
