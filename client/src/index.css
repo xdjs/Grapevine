@@ -74,15 +74,22 @@
   
   html {
     background-color: #000000 !important;
+    overflow: hidden !important;
   }
   
-  /* Hide scrollbars everywhere except dropdown and body */
-  *:not(body):not(.artist-dropdown-scroll) {
+  body {
+    overflow: hidden !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+  }
+  
+  /* Hide scrollbars everywhere except dropdown */
+  *:not(.artist-dropdown-scroll) {
     scrollbar-width: none !important; /* Firefox */
     -ms-overflow-style: none !important; /* IE and Edge */
   }
   
-  *:not(body):not(.artist-dropdown-scroll)::-webkit-scrollbar {
+  *:not(.artist-dropdown-scroll)::-webkit-scrollbar {
     display: none !important; /* Chrome, Safari, Opera */
     width: 0 !important;
     height: 0 !important;

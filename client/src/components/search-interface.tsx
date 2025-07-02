@@ -40,20 +40,7 @@ export default function SearchInterface({
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
-  // Ensure page never scrolls
-  useEffect(() => {
-    const body = document.body;
-    const html = document.documentElement;
-    
-    // Always keep page scrolling disabled
-    body.style.overflowY = 'hidden';
-    html.style.overflowY = 'hidden';
-    
-    return () => {
-      body.style.overflowY = 'hidden';
-      html.style.overflowY = 'hidden';
-    };
-  }, []);
+
 
   const fetchOptions = async (query: string): Promise<ArtistOption[]> => {
     if (query.length < 1) return [];
