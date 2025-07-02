@@ -300,13 +300,19 @@ Changelog:
 
 ### Enhanced Role Detection System (June 30, 2025)
 - Created comprehensive role detection database with 100+ music industry professionals
-- Added pattern-based role detection for names not in database (e.g., "martin" → producer+songwriter)
 - Applied enhanced role detection to ALL nodes across all data sources (OpenAI, MusicBrainz, Wikipedia)
 - Both main artists and collaborators now get accurate multi-role assignment
 - Branching artists also receive enhanced role detection for complete accuracy
 - System now correctly identifies producer-songwriters like Max Martin, Jack Antonoff, Dan Nigro
 - Artist-songwriters like Taylor Swift, Olivia Rodrigo properly labeled with both roles
 - Producer-artists like Calvin Harris, Diplo correctly show dual roles
+
+### Removed Pattern-Based Role Detection (July 2, 2025)
+- Eliminated hardcoded pattern matching logic that assigned roles based on name patterns
+- System now relies exclusively on curated database and external data source classifications
+- AI and MusicBrainz/Wikipedia sources provide role assignments without code-based name guessing
+- Enhanced accuracy by removing assumptions about roles based on name fragments
+- Role detection now uses only verified sources: known database → AI categorization → external API analysis
 
 ### Fixed Filter Visibility System (June 30, 2025)
 - Fixed filter functionality to make circles completely disappear/reappear instead of opacity changes

@@ -279,56 +279,7 @@ export class DatabaseStorage implements IStorage {
         return knownRoles;
       }
       
-      // If not in known list, check for common patterns
-      const lowerName = personName.toLowerCase();
-      
-      // Common producer-songwriter patterns
-      if (lowerName.includes('martin') || lowerName.includes('max') || 
-          lowerName.includes('antonoff') || lowerName.includes('jack') ||
-          lowerName.includes('nigro') || lowerName.includes('dessner') ||
-          lowerName.includes('rubin') || lowerName.includes('rick') ||
-          lowerName.includes('quincy') || lowerName.includes('jones') ||
-          lowerName.includes('ronson') || lowerName.includes('mark') ||
-          lowerName.includes('blanco') || lowerName.includes('benny') ||
-          lowerName.includes('ludwig') || lowerName.includes('watt') ||
-          lowerName.includes('payami') || lowerName.includes('ali') ||
-          lowerName.includes('shellback') || lowerName.includes('metro') ||
-          lowerName.includes('boomin') || lowerName.includes('dean') ||
-          lowerName.includes('mike') || lowerName.includes('40') ||
-          lowerName.includes('shebib') || lowerName.includes('noah') ||
-          lowerName.includes('hit-boy') || lowerName.includes('mustard') ||
-          lowerName.includes('london') || lowerName.includes('track') ||
-          lowerName.includes('tm88') || lowerName.includes('southside') ||
-          lowerName.includes('wheezy') || lowerName.includes('pierre') ||
-          lowerName.includes('bourne') || lowerName.includes('kenny') ||
-          lowerName.includes('beats') || lowerName.includes('alchemist') ||
-          lowerName.includes('madlib') || lowerName.includes('dilla') ||
-          lowerName.includes('nujabes')) {
-        if (defaultRole === 'producer') {
-          return ['producer', 'songwriter'];
-        }
-        if (defaultRole === 'songwriter') {
-          return ['songwriter', 'producer'];
-        }
-      }
-      
-      // Common artist-songwriter patterns
-      if (lowerName.includes('swift') || lowerName.includes('taylor') ||
-          lowerName.includes('sheeran') || lowerName.includes('ed') ||
-          lowerName.includes('adele') || lowerName.includes('keys') ||
-          lowerName.includes('alicia') || lowerName.includes('gaga') ||
-          lowerName.includes('rodrigo') || lowerName.includes('olivia') ||
-          lowerName.includes('bridgers') || lowerName.includes('phoebe') ||
-          lowerName.includes('lana') || lowerName.includes('del') ||
-          lowerName.includes('rey') || lowerName.includes('h.e.r.')) {
-        if (defaultRole === 'artist') {
-          return ['artist', 'songwriter'];
-        }
-        if (defaultRole === 'songwriter') {
-          return ['songwriter', 'artist'];
-        }
-      }
-      
+      // If not in known database, return the default role provided by external data sources
       return [defaultRole];
     };
 
