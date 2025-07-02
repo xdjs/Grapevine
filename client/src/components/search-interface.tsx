@@ -233,7 +233,8 @@ export default function SearchInterface({
             {(showDropdown || isLoadingOptions) && (!showNetworkView || isSearchFocused) && (
               <div 
                 ref={dropdownRef}
-                className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll max-h-80"
+                className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
+                style={{ maxHeight: 'calc(100vh - 280px)' }}
               >
                 <div className="p-2">
                   {isLoadingOptions && (
@@ -364,7 +365,8 @@ export default function SearchInterface({
               {(showDropdown || isLoadingOptions) && (!showNetworkView || isSearchFocused) && (
                 <div 
                   ref={dropdownRef}
-                  className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll max-h-80"
+                  className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
+                  style={{ maxHeight: 'calc(100vh - 120px)' }}
                 >
                   <div className="p-1">
                     {isLoadingOptions && (
