@@ -325,6 +325,15 @@ Changelog:
 - All zoom methods (buttons, touch, trackpad) now use identical underlying code for consistency
 - Fixed glitching and snap-back issues by eliminating custom D3 transform logic
 - Smooth 200ms transitions maintained across all zoom input methods
+
+### Scrollable Artist Search Dropdown (July 2, 2025)
+- Replaced Radix UI ScrollArea with native browser scrolling for reliable cross-platform functionality
+- Added custom purple scrollbar styling (#AE53FF) that matches the website's color palette
+- Applied scrolling to both homepage and network view dropdowns with appropriate height limits
+- Fixed network view dropdown overlap with zoom controls using right margin spacing (right-14 sm:right-20)
+- Added viewport-responsive max height (60vh) to prevent dropdown from extending to screen bottom
+- Dropdown now provides smooth scrolling experience with purple thumb and dark track styling
+- All dropdown positioning optimized for both mobile and desktop viewing
 =======
 ### Supabase Caching System Integration (June 30, 2025)
 - Added webmapdata jsonb column to artists table for caching network visualization data
