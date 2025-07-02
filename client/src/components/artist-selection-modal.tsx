@@ -84,7 +84,7 @@ export default function ArtistSelectionModal({
                   key={option.id}
                   className="cursor-pointer hover:bg-accent transition-colors border-l-4"
                   style={{
-                    borderLeftColor: index === 0 ? '#FF69B4' : index === 1 ? '#8A2BE2' : '#00CED1'
+                    borderLeftColor: '#FF69B4'
                   }}
                   onClick={() => handleSelectArtist(option.id)}
                 >

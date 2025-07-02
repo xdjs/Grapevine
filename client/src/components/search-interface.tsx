@@ -283,7 +283,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                       key={artist.id}
                       className="mb-2 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4"
                       style={{
-                        borderLeftColor: index === 0 ? '#FF69B4' : index === 1 ? '#8A2BE2' : '#00CED1'
+                        borderLeftColor: '#FF69B4'
                       }}
                       onClick={() => handleArtistSelect(artist)}
                     >
