@@ -386,6 +386,11 @@ export default function NetworkVisualizer({
       const group = d3.select(this);
       const roles = d.types || [d.type];
       
+      // Debug multi-role nodes
+      if (roles.length > 1) {
+        console.log(`🎭 [Frontend] Multi-role node "${d.name}": roles = [${roles.join(', ')}]`);
+      }
+      
       if (roles.length === 1) {
         // Single role - simple circle
         group.append("circle")
