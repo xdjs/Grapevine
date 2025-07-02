@@ -77,7 +77,7 @@
     overflow: hidden !important;
   }
   
-  /* Globally hide all scrollbars */
+  /* Hide scrollbars everywhere except dropdown */
   * {
     scrollbar-width: none !important; /* Firefox */
     -ms-overflow-style: none !important; /* IE and Edge */
@@ -87,6 +87,32 @@
     display: none !important; /* Chrome, Safari, Opera */
     width: 0 !important;
     height: 0 !important;
+  }
+  
+  /* Allow scrollbars only in dropdown menu */
+  .artist-dropdown-scroll {
+    scrollbar-width: thin !important; /* Firefox */
+    -ms-overflow-style: auto !important; /* IE and Edge */
+  }
+  
+  .artist-dropdown-scroll::-webkit-scrollbar {
+    display: block !important; /* Chrome, Safari, Opera */
+    width: 8px !important;
+    height: 8px !important;
+  }
+  
+  .artist-dropdown-scroll::-webkit-scrollbar-track {
+    background: #374151 !important;
+    border-radius: 4px !important;
+  }
+  
+  .artist-dropdown-scroll::-webkit-scrollbar-thumb {
+    background: #6b7280 !important;
+    border-radius: 4px !important;
+  }
+  
+  .artist-dropdown-scroll::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af !important;
   }
   
   #root {
