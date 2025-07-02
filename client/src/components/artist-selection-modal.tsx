@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 interface ArtistOption {
   id: string;
+  artistId?: string;
   name: string;
   bio?: string;
 }
@@ -108,7 +109,7 @@ export default function ArtistSelectionModal({
                   style={{
                     borderLeftColor: '#FF69B4'
                   }}
-                  onClick={() => handleSelectArtist(option.id)}
+                  onClick={() => handleSelectArtist(option.artistId || option.id)}
                 >
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">

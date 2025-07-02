@@ -61,6 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
         return {
           id: row.id,
+          artistId: row.id, // Add artistId field for consistency with frontend
           name: row.name,
           bio: generateBio(row.name)
         };

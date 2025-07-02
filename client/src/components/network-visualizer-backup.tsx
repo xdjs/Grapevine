@@ -599,7 +599,7 @@ export default function NetworkVisualizer({
             return;
           } else if (data.options && data.options.length === 1) {
             // Single artist found - use its ID
-            artistId = data.options[0].artistId || data.options[0].id;
+            artistId = data.options[0].id;
             console.log(`🎵 Single artist found for "${artistName}": ${artistId}`);
           }
         } catch (error) {
