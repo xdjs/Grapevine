@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import SearchInterface from "@/components/search-interface";
 import NetworkVisualizer from "@/components/network-visualizer";
 import ZoomControls from "@/components/zoom-controls";
@@ -22,6 +22,23 @@ export default function Home() {
   });
   const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
   const isMobile = useIsMobile();
+
+  // Manage body overflow classes based on network view state
+  useEffect(() => {
+    const body = document.body;
+    if (showNetworkView) {
+      body.classList.remove('network-hidden');
+      body.classList.add('network-visible');
+    } else {
+      body.classList.remove('network-visible');
+      body.classList.add('network-hidden');
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      body.classList.remove('network-visible', 'network-hidden');
+    };
+  }, [showNetworkView]);
 
   const handleNetworkData = useCallback((data: NetworkData) => {
     // Replace existing network with new data
@@ -81,7 +98,7 @@ export default function Home() {
   };
 
   return (
-    <div className="relative w-full min-h-screen bg-black text-white overflow-x-hidden">
+    <div className={`relative w-full min-h-screen bg-black text-white ${!showNetworkView ? 'overflow-x-hidden' : ''}`}>
       {/* Search Interface */}
       <SearchInterface
         onNetworkData={handleNetworkData}
