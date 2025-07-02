@@ -128,7 +128,7 @@ export default function NetworkVisualizer({
     let initialDistance = 0;
     let lastScale = 1;
     let isPinching = false;
-    let pinchThreshold = 0.1; // Minimum change required to trigger zoom
+    let pinchThreshold = 0.2; // Increased from 0.1 to 0.2 for less sensitivity
 
     // Custom touch event handlers using existing zoom functions
     const handleTouchStart = (event: TouchEvent) => {
@@ -194,9 +194,9 @@ export default function NetworkVisualizer({
     const handleWheelZoom = (event: WheelEvent) => {
       event.preventDefault();
       
-      // Smooth throttling instead of batching
+      // Reduced sensitivity with longer throttling
       const now = Date.now();
-      if (now - lastWheelTime < 8) { // ~120fps for smoother experience
+      if (now - lastWheelTime < 50) { // Increased from 8ms to 50ms for less sensitivity
         return;
       }
       lastWheelTime = now;
