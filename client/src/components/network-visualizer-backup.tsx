@@ -472,43 +472,23 @@ export default function NetworkVisualizer({
       })
       .on("click", function(event, d) {
         event.stopPropagation();
-        console.log(`🎯 [CLICK DEBUG] ===== NODE CLICK EVENT =====`);
-        console.log(`🎯 [CLICK DEBUG] Node: "${d.name}"`);
-        console.log(`🎯 [CLICK DEBUG] Type: ${d.type}`);
-        console.log(`🎯 [CLICK DEBUG] Types: ${JSON.stringify(d.types)}`);
-        console.log(`🎯 [CLICK DEBUG] ArtistId: ${d.artistId}`);
-        console.log(`🎯 [CLICK DEBUG] Environment: ${window.location.href}`);
-        console.log(`🎯 [CLICK DEBUG] Event type: ${event.type}`);
-        console.log(`🎯 [CLICK DEBUG] Event target: ${event.target}`);
+        console.log(`🎯 [Frontend] Node clicked: "${d.name}" (type: ${d.type}, artistId: ${d.artistId})`);
+        console.log(`🎯 [Frontend] Environment: ${window.location.href}`);
+        console.log(`🎯 [Frontend] Current baseUrl: ${musicNerdBaseUrl}`);
         
-        // Check if this is an artist node
-        const isArtistNode = d.type === 'artist' || (d.types && d.types.includes('artist'));
-        console.log(`🎯 [CLICK DEBUG] Is artist node: ${isArtistNode}`);
-        
-        if (isArtistNode) {
-          console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile...`);
-          
+        // Open Music Nerd for any node that has an artist role
+        if (d.type === 'artist' || (d.types && d.types.includes('artist'))) {
           // Check if this is the main artist (largest artist node)
           const isMainArtist = d === mainArtistNode;
-          console.log(`🎯 [CLICK DEBUG] Is main artist: ${isMainArtist}`);
           
-          try {
-            // For main artist with artistId, go directly to their page (skip modal)
-            if (isMainArtist && d.artistId) {
-              console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile for main artist with ID`);
-              openMusicNerdProfile(d.name, d.artistId);
-            } else {
-              console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile for regular flow`);
-              // For other artists or main artist without artistId, use normal flow
-              openMusicNerdProfile(d.name, d.artistId);
-            }
-          } catch (error) {
-            console.error(`🎯 [CLICK DEBUG] Error calling openMusicNerdProfile:`, error);
+          // For main artist with artistId, go directly to their page (skip modal)
+          if (isMainArtist && d.artistId) {
+            openMusicNerdProfile(d.name, d.artistId);
+          } else {
+            // For other artists or main artist without artistId, use normal flow
+            openMusicNerdProfile(d.name, d.artistId);
           }
-        } else {
-          console.log(`🎯 [CLICK DEBUG] Not an artist node, skipping action`);
         }
-        console.log(`🎯 [CLICK DEBUG] ===== END CLICK EVENT =====`);
       })
       .on("contextmenu", function(event, d) {
         event.preventDefault();
@@ -619,7 +599,7 @@ export default function NetworkVisualizer({
             return;
           } else if (data.options && data.options.length === 1) {
             // Single artist found - use its ID
-            artistId = data.options[0].artistId || data.options[0].id;
+            artistId = data.options[0].id;
             console.log(`🎵 Single artist found for "${artistName}": ${artistId}`);
           }
         } catch (error) {
@@ -629,25 +609,21 @@ export default function NetworkVisualizer({
         console.log(`🎵 [Frontend] artistId provided (${artistId}), skipping lookup and going directly to page`);
       }
       
-      // Always fetch the current base URL to ensure we have the latest configuration
-      let baseUrl;
-      try {
-        console.log('🔧 [Config] Fetching current base URL from /api/config...');
-        const configResponse = await fetch('/api/config');
-        if (configResponse.ok) {
-          const config = await configResponse.json();
-          baseUrl = config.musicNerdBaseUrl;
-          console.log(`🔧 [Config] Retrieved base URL: ${baseUrl}`);
-          
-          // Update state for consistency
-          if (baseUrl !== musicNerdBaseUrl) {
-            setMusicNerdBaseUrl(baseUrl);
+      // Check if base URL is available, fetch it if not
+      let baseUrl = musicNerdBaseUrl;
+      if (!baseUrl) {
+        try {
+          console.log('🔧 [Config] Base URL not cached, fetching config...');
+          const configResponse = await fetch('/api/config');
+          if (configResponse.ok) {
+            const config = await configResponse.json();
+            baseUrl = config.musicNerdBaseUrl;
+            setMusicNerdBaseUrl(baseUrl); // Update state for future use
+            console.log(`🔧 [Config] Fetched base URL: ${baseUrl}`);
           }
-        } else {
-          console.error('🔧 [Config] Failed to fetch config, status:', configResponse.status);
+        } catch (error) {
+          console.error('🔧 [Config] Error fetching config:', error);
         }
-      } catch (error) {
-        console.error('🔧 [Config] Error fetching config:', error);
       }
       
       if (!baseUrl) {
@@ -917,7 +893,7 @@ export default function NetworkVisualizer({
 
   return (
     <div
-      className={`network-container transition-opacity duration-700 ${
+      className={`w-full h-full transition-opacity duration-700 ${
         visible ? "opacity-100" : "opacity-0"
       }`}
     >

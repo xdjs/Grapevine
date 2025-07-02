@@ -30,7 +30,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     nodeVersion: process.version,
     envVarsCount: Object.keys(process.env).length,
     hasConnectionString: !!process.env.CONNECTION_STRING,
-    hasOpenAIKey: !!process.env.OPENAI_API_KEY
+    hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+    musicNerdBaseUrl: process.env.MUSICNERD_BASE_URL || 'NOT_SET',
+    allMusicNerdEnvs: {
+      MUSICNERD_BASE_URL: process.env.MUSICNERD_BASE_URL,
+      MUSICNERD_URL: process.env.MUSICNERD_URL,
+      MUSIC_NERD_BASE_URL: process.env.MUSIC_NERD_BASE_URL,
+      MUSIC_NERD_URL: process.env.MUSIC_NERD_URL
+    }
   };
 
   console.log('🧪 [Vercel Test] Sending response:', JSON.stringify(response, null, 2));
