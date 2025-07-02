@@ -61,13 +61,11 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
     background-color: #000000 !important;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
   }
   
   body.network-hidden {
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
   }
   
   body.network-visible {
