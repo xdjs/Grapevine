@@ -474,16 +474,7 @@ export default function NetworkVisualizer({
           
           // For main artist with artistId, go directly to their page (skip modal)
           if (isMainArtist && d.artistId) {
-            const musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${d.artistId}`;
-            console.log(`🎵 Opening main artist page directly for "${d.name}": ${musicNerdUrl}`);
-            
-            const link = document.createElement('a');
-            link.href = musicNerdUrl;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            openMusicNerdProfile(d.name, d.artistId);
           } else {
             // For other artists or main artist without artistId, use normal flow
             openMusicNerdProfile(d.name, d.artistId);
