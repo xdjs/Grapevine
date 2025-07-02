@@ -341,7 +341,7 @@ Changelog:
 - Enhanced dropdown heights with responsive sizing (50vh on mobile, 60vh on tablets, 70vh on desktop) that adapts to viewport height
 - Added intelligent viewport-aware positioning to ensure dropdowns always fit within user's screen
 - Enabled vertical scrolling on home page with visible scrollbar for better navigation
-- Added informational footer content with usage instructions and data source attribution
+- Added informational "How it works" section positioned below search interface with usage instructions and data source attribution
 - Added result counters showing "X artists found" to help users understand the breadth of available options
 =======
 ### Supabase Caching System Integration (June 30, 2025)
