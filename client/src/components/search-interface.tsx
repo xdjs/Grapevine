@@ -258,8 +258,8 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
             
             {/* Artist Options Dropdown */}
             {showDropdown && artistOptions.length > 0 && (!showNetworkView || isSearchFocused) && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-80 overflow-hidden">
-                <ScrollArea className="max-h-80">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-80">
+                <ScrollArea className="h-full max-h-80 overflow-y-auto">
                   <div className="p-2">
                     {artistOptions.map((artist) => (
                       <Card
@@ -358,7 +358,6 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                     setShowDropdown(false);
                   }, 150);
                 }}
-                className="w-full px-4 py-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-12"
                 disabled={isLoading}
               />
               <Button
@@ -380,8 +379,8 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               
               {/* Artist Options Dropdown */}
               {showDropdown && artistOptions.length > 0 && (!showNetworkView || isSearchFocused) && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-hidden">
-                  <ScrollArea className="max-h-60">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-60">
+                  <ScrollArea className="h-full max-h-60 overflow-y-auto">
                     <div className="p-1">
                       {artistOptions.map((artist) => (
                         <Card
