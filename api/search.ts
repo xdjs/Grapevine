@@ -44,23 +44,61 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       await client.connect();
       
-      const searchQuery = 'SELECT id, name FROM artists WHERE LOWER(name) = LOWER($1) LIMIT 1';
-      const result = await client.query(searchQuery, [query]);
+      // Enhanced search with fuzzy matching and multiple results
+      let searchQuery;
+      let queryParams;
       
+      if (query.length === 1) {
+        // Single character: find artists starting with that character
+        searchQuery = `
+          SELECT id, name, bio 
+          FROM artists 
+          WHERE LOWER(name) LIKE LOWER($1) 
+          ORDER BY 
+            CASE WHEN LOWER(name) LIKE LOWER($2) THEN 1 ELSE 2 END,
+            name 
+          LIMIT 100
+        `;
+        queryParams = [`${query}%`, `${query}%`];
+      } else {
+        // Multiple characters: comprehensive fuzzy search
+        searchQuery = `
+          SELECT id, name, bio 
+          FROM artists 
+          WHERE LOWER(name) LIKE LOWER($1) 
+             OR LOWER(name) LIKE LOWER($2) 
+             OR LOWER(name) LIKE LOWER($3)
+          ORDER BY 
+            CASE WHEN LOWER(name) = LOWER($4) THEN 1
+                 WHEN LOWER(name) LIKE LOWER($5) THEN 2
+                 WHEN LOWER(name) LIKE LOWER($6) THEN 3
+                 ELSE 4 END,
+            name 
+          LIMIT 100
+        `;
+        queryParams = [
+          `%${query}%`,     // Contains query
+          `${query}%`,      // Starts with query  
+          `%${query}`,      // Ends with query
+          query,            // Exact match (highest priority)
+          `${query}%`,      // Starts with (priority 2)
+          `%${query}%`      // Contains (priority 3)
+        ];
+      }
+      
+      const result = await client.query(searchQuery, queryParams);
       await client.end();
       
-      if (result.rows.length === 0) {
-        return res.status(404).json({ message: "Artist not found" });
-      }
+      // Convert to expected format for dropdown
+      const artists = result.rows.map(row => ({
+        id: row.id.toString(),
+        artistId: row.id.toString(), 
+        name: row.name,
+        bio: row.bio || undefined
+      }));
 
-      const artist = {
-        id: result.rows[0].id,
-        name: result.rows[0].name,
-        type: 'artist' // Default type
-      };
-
-      console.log(`✅ [Vercel] Found artist: ${artist.name}`);
-      res.json(artist);
+      console.log(`✅ [Vercel] Found ${artists.length} artists for query: ${query}`);
+      res.json(artists);
       
     } catch (dbError) {
       console.error('❌ [Vercel] Database error:', dbError);
