@@ -75,6 +75,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Clear cached data for an artist (temporary debugging endpoint)
+  app.delete("/api/clear-cache/:artistName", async (req, res) => {
+    try {
+      const artistName = req.params.artistName;
+      console.log(`🗑️ [DEBUG] Clearing cache for "${artistName}"`);
+      
+      if ('getArtistByName' in storage && 'cacheNetworkData' in storage) {
+        const artist = await storage.getArtistByName(artistName);
+        if (artist) {
+          // Clear the webmapdata field
+          if ('webmapdata' in artist) {
+            const { DatabaseStorage } = await import("./database-storage");
+            if (storage instanceof DatabaseStorage) {
+              // Use direct database update
+              const connectionString = process.env.CONNECTION_STRING;
+              if (connectionString) {
+                const { Client } = await import('pg');
+                const client = new Client({ connectionString });
+                await client.connect();
+                await client.query('UPDATE artists SET webmapdata = NULL WHERE LOWER(name) = LOWER($1)', [artistName]);
+                await client.end();
+                console.log(`✅ [DEBUG] Cache cleared for "${artistName}"`);
+                res.json({ message: `Cache cleared for ${artistName}` });
+                return;
+              }
+            }
+          }
+        }
+      }
+      
+      res.json({ message: `No cache found for ${artistName}` });
+    } catch (error) {
+      console.error("Clear cache error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get configuration including MusicNerd base URL
   app.get("/api/config", async (req, res) => {
     try {
