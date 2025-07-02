@@ -25,6 +25,22 @@ interface ArtistOption {
   bio?: string;
 }
 
+// Custom hook for viewport height
+const useViewportHeight = () => {
+  const [viewportHeight, setViewportHeight] = useState(typeof window !== 'undefined' ? window.innerHeight : 800);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportHeight(window.innerHeight);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return viewportHeight;
+};
+
 export default function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction, onClearAll }: SearchInterfaceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentSearch, setCurrentSearch] = useState("");
@@ -34,6 +50,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+  const viewportHeight = useViewportHeight();
 
   // Debounced function to fetch artist options
   const debouncedFetchOptions = useCallback(async (query: string) => {
@@ -267,9 +284,11 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               )}
             </Button>
             
+
             {/* Artist Options Dropdown - Instant Search Results */}
             {(showDropdown || isLoadingOptions) && (!showNetworkView || isSearchFocused) && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto artist-dropdown-scroll">
+
                 <div className="p-2">
                   {isLoadingOptions && (
                     <div className="flex items-center justify-center py-4">
@@ -388,10 +407,11 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                   <Search className="w-3 h-3" />
                 )}
               </Button>
-              
+
               {/* Artist Options Dropdown - Network View Instant Search */}
               {(showDropdown || isLoadingOptions) && (!showNetworkView || isSearchFocused) && (
                 <div className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto artist-dropdown-scroll">
+
                   <div className="p-1">
                     {isLoadingOptions && (
                       <div className="flex items-center justify-center py-2">
