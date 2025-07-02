@@ -51,13 +51,12 @@ export default function NetworkVisualizer({
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .filter((event) => {
-        // Allow regular wheel scrolling but block trackpad pinch (ctrlKey + wheel)
+        // Block all wheel events since we handle them manually for better zoom control
         // Block touch events since we handle them manually for better pinch zoom control
-        const isTrackpadPinch = event.type === 'wheel' && event.ctrlKey;
-        const isRegularWheelEvent = event.type === 'wheel' && !event.ctrlKey;
+        const isWheelEvent = event.type === 'wheel';
         const isProgrammaticZoom = !event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown';
         
-        return isRegularWheelEvent || isProgrammaticZoom;
+        return !isWheelEvent && (isProgrammaticZoom || event.type === 'mousedown' || event.type === 'mousemove');
       })
       .on("zoom", (event) => {
         // Respond to user scroll wheel and programmatic zoom only
@@ -190,37 +189,48 @@ export default function NetworkVisualizer({
 
 
 
-    // Trackpad pinch zoom handler using same logic as touch pinch
-    const handleTrackpadPinch = (event: WheelEvent) => {
-      if (event.ctrlKey) {
-        // This is a trackpad pinch gesture
-        event.preventDefault();
-        
-        if (event.deltaY < 0) {
-          // Pinch out - zoom in using EXACT same code as zoom buttons
-          handlePinchZoomIn();
-          console.log('🖱️ Trackpad pinch zoom in');
-        } else {
-          // Pinch in - zoom out using EXACT same code as zoom buttons
-          handlePinchZoomOut();
-          console.log('🖱️ Trackpad pinch zoom out');
-        }
+    // Universal wheel event handler for mouse scroll and trackpad pinch
+    let wheelTimeout: NodeJS.Timeout | null = null;
+    const handleWheelZoom = (event: WheelEvent) => {
+      event.preventDefault();
+      
+      // Clear previous timeout to batch wheel events
+      if (wheelTimeout) {
+        clearTimeout(wheelTimeout);
       }
+      
+      // Determine zoom direction based on deltaY
+      const zoomIn = event.deltaY < 0;
+      
+      // Batch wheel events to prevent too rapid zooming
+      wheelTimeout = setTimeout(() => {
+        if (zoomIn) {
+          handlePinchZoomIn();
+          console.log(event.ctrlKey ? '🖱️ Trackpad pinch zoom in' : '🖱️ Mouse wheel zoom in');
+        } else {
+          handlePinchZoomOut();
+          console.log(event.ctrlKey ? '🖱️ Trackpad pinch zoom out' : '🖱️ Mouse wheel zoom out');
+        }
+        wheelTimeout = null;
+      }, 16); // ~60fps throttling
     };
 
-    // Add touch event listeners and trackpad pinch handler directly to the SVG element
+    // Add touch and wheel event listeners directly to the SVG element
     const svgElement = svg.node() as SVGSVGElement;
     svgElement.addEventListener('touchstart', handleTouchStart, { passive: false });
     svgElement.addEventListener('touchmove', handleTouchMove, { passive: false });
     svgElement.addEventListener('touchend', handleTouchEnd, { passive: false });
-    svgElement.addEventListener('wheel', handleTrackpadPinch, { passive: false });
+    svgElement.addEventListener('wheel', handleWheelZoom, { passive: false });
 
     // Cleanup function for all event listeners
     const cleanup = () => {
       svgElement.removeEventListener('touchstart', handleTouchStart);
       svgElement.removeEventListener('touchmove', handleTouchMove);
       svgElement.removeEventListener('touchend', handleTouchEnd);
-      svgElement.removeEventListener('wheel', handleTrackpadPinch);
+      svgElement.removeEventListener('wheel', handleWheelZoom);
+      if (wheelTimeout) {
+        clearTimeout(wheelTimeout);
+      }
     };
 
     // Find connected components for cluster positioning
