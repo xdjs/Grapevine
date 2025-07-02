@@ -115,6 +115,30 @@
     background: #9ca3af !important;
   }
   
+  /* Page-level scrollbar styling when dropdown extends beyond viewport */
+  body::-webkit-scrollbar {
+    width: 12px !important;
+    display: block !important;
+  }
+  
+  body::-webkit-scrollbar-track {
+    background: #000000 !important;
+  }
+  
+  body::-webkit-scrollbar-thumb {
+    background: #8a2be2 !important;
+    border-radius: 6px !important;
+  }
+  
+  body::-webkit-scrollbar-thumb:hover {
+    background: #9932cc !important;
+  }
+  
+  body {
+    scrollbar-width: thin !important;
+    scrollbar-color: #8a2be2 #000000 !important;
+  }
+  
   #root {
     background-color: #000000 !important;
     min-height: 100vh;

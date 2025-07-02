@@ -38,6 +38,27 @@ export default function SearchInterface({
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  // Manage body scrolling when dropdown is visible and extends beyond viewport
+  useEffect(() => {
+    const body = document.body;
+    
+    if (showDropdown && artistOptions.length > 0) {
+      // Allow vertical scrolling when dropdown is visible
+      body.style.overflowY = 'auto';
+    } else if (!showNetworkView) {
+      // Hide scrolling when dropdown is hidden and not in network view
+      body.style.overflowY = 'hidden';
+    }
+    
+    return () => {
+      // Cleanup - restore previous state based on network view
+      if (!showNetworkView) {
+        body.style.overflowY = 'hidden';
+      }
+    };
+  }, [showDropdown, artistOptions.length, showNetworkView]);
 
   const fetchOptions = async (query: string): Promise<ArtistOption[]> => {
     if (query.length < 1) return [];
@@ -228,7 +249,10 @@ export default function SearchInterface({
             
             {/* Artist Options Dropdown - Instant Search Results */}
             {(showDropdown || isLoadingOptions) && (!showNetworkView || isSearchFocused) && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll">
+              <div 
+                ref={dropdownRef}
+                className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
+              >
                 <div className="p-2">
                   {isLoadingOptions && (
                     <div className="flex items-center justify-center py-4">
@@ -356,7 +380,10 @@ export default function SearchInterface({
               
               {/* Artist Options Dropdown - Network View Instant Search */}
               {(showDropdown || isLoadingOptions) && (!showNetworkView || isSearchFocused) && (
-                <div className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll">
+                <div 
+                  ref={dropdownRef}
+                  className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
+                >
                   <div className="p-1">
                     {isLoadingOptions && (
                       <div className="flex items-center justify-center py-2">
