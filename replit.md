@@ -370,6 +370,16 @@ Changelog:
 - Other collaborator artists still show selection modal when multiple options exist
 - Ensured consistent behavior between Replit development and Vercel production deployments
 
+### Fixed Field Naming Inconsistency for Vercel Deployment (July 2, 2025)
+- Identified and resolved critical field naming inconsistency between local and Vercel APIs
+- Updated Vercel API endpoints to return both `id` and `artistId` fields for backward compatibility
+- Fixed local server musicnerd-service.ts to include `artistId` field in artist options responses
+- Updated frontend components to prioritize `artistId` field over `id` for consistency
+- Modified artist selection modal to handle both field names properly
+- Fixed openMusicNerdProfile function to skip API lookups when artistId is already provided
+- All APIs now return consistent field structure for seamless artist node navigation
+- Local testing confirmed: artist nodes with artistId bypass API calls and open MusicNerd pages directly
+
 
 
 ### Supabase Caching System Integration (June 30, 2025)

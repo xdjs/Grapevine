@@ -118,6 +118,7 @@ class MusicNerdService {
                 
                 return {
                   id: artist.id,
+                  artistId: artist.id, // Add artistId field for consistency with frontend
                   name: artist.name,
                   bio: generateBio(artist.name),
                   score: score
