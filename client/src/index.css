@@ -74,46 +74,19 @@
   
   html {
     background-color: #000000 !important;
-    overflow-x: hidden;
-    overflow-y: hidden;
+    overflow: hidden !important;
   }
   
-  /* Hide scrollbars on dropdown components but keep functionality */
-  .artist-dropdown-scroll {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
+  /* Globally hide all scrollbars */
+  * {
+    scrollbar-width: none !important; /* Firefox */
+    -ms-overflow-style: none !important; /* IE and Edge */
   }
   
-  .artist-dropdown-scroll::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
-  }
-  
-  /* Hide scrollbars from non-main elements while preserving main page scrollbar */
-  .search-dropdown-container *::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .search-dropdown-container * {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  
-  /* Allow only body to show scrollbar */
-  body::-webkit-scrollbar {
-    width: 12px;
-  }
-  
-  body::-webkit-scrollbar-track {
-    background: #000000;
-  }
-  
-  body::-webkit-scrollbar-thumb {
-    background: #8a2be2;
-    border-radius: 6px;
-  }
-  
-  body::-webkit-scrollbar-thumb:hover {
-    background: #9932cc;
+  *::-webkit-scrollbar {
+    display: none !important; /* Chrome, Safari, Opera */
+    width: 0 !important;
+    height: 0 !important;
   }
   
   #root {
