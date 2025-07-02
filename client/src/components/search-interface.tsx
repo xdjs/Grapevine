@@ -40,31 +40,20 @@ export default function SearchInterface({
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
-  // Manage body scrolling when dropdown is visible and extends beyond viewport
+  // Ensure page never scrolls
   useEffect(() => {
     const body = document.body;
     const html = document.documentElement;
     
-    if (showDropdown && artistOptions.length > 0) {
-      // Allow vertical scrolling when dropdown is visible
-      console.log('[DEBUG] Enabling page scrolling - dropdown visible with', artistOptions.length, 'options');
-      body.style.overflowY = 'auto';
-      html.style.overflowY = 'auto';
-    } else if (!showNetworkView) {
-      // Hide scrolling when dropdown is hidden and not in network view
-      console.log('[DEBUG] Disabling page scrolling - dropdown hidden, not in network view');
-      body.style.overflowY = 'hidden';
-      html.style.overflowY = 'hidden';
-    }
+    // Always keep page scrolling disabled
+    body.style.overflowY = 'hidden';
+    html.style.overflowY = 'hidden';
     
     return () => {
-      // Cleanup - restore previous state based on network view
-      if (!showNetworkView) {
-        body.style.overflowY = 'hidden';
-        html.style.overflowY = 'hidden';
-      }
+      body.style.overflowY = 'hidden';
+      html.style.overflowY = 'hidden';
     };
-  }, [showDropdown, artistOptions.length, showNetworkView]);
+  }, []);
 
   const fetchOptions = async (query: string): Promise<ArtistOption[]> => {
     if (query.length < 1) return [];
@@ -199,7 +188,7 @@ export default function SearchInterface({
     <>
       {/* Centered Search - Initial View */}
       <div
-        className={`absolute inset-0 flex items-center justify-center z-20 transition-all duration-700 px-4 -mt-32 ${
+        className={`absolute inset-0 flex items-start justify-center z-20 transition-all duration-700 px-4 pt-16 ${
           showNetworkView
             ? "opacity-0 pointer-events-none -translate-y-12"
             : "opacity-100"
@@ -257,7 +246,7 @@ export default function SearchInterface({
             {(showDropdown || isLoadingOptions) && (!showNetworkView || isSearchFocused) && (
               <div 
                 ref={dropdownRef}
-                className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
+                className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll max-h-80"
               >
                 <div className="p-2">
                   {isLoadingOptions && (
@@ -388,7 +377,7 @@ export default function SearchInterface({
               {(showDropdown || isLoadingOptions) && (!showNetworkView || isSearchFocused) && (
                 <div 
                   ref={dropdownRef}
-                  className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
+                  className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll max-h-80"
                 >
                   <div className="p-1">
                     {isLoadingOptions && (
