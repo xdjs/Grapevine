@@ -26,10 +26,100 @@ interface ArtistOption {
   bio?: string;
 }
 
+// Debounce function
+function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
+
 function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction, onClearAll }: SearchInterfaceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [artistOptions, setArtistOptions] = useState<ArtistOption[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const { toast } = useToast();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch artist options for instant search
+  const fetchArtistOptions = useCallback(async (query: string) => {
+    if (query.trim().length < 1) {
+      setArtistOptions([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    try {
+      setIsLoadingOptions(true);
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`);
+      if (response.ok) {
+        const options = await response.json();
+        setArtistOptions(options);
+        setShowDropdown(options.length > 0);
+      }
+    } catch (error) {
+      console.error('Error fetching artist options:', error);
+      setArtistOptions([]);
+      setShowDropdown(false);
+    } finally {
+      setIsLoadingOptions(false);
+    }
+  }, []);
+
+  // Debounced version for instant search
+  const debouncedFetchOptions = useCallback(
+    (() => {
+      let timeout: NodeJS.Timeout;
+      return (query: string) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fetchArtistOptions(query), 150);
+      };
+    })(),
+    [fetchArtistOptions]
+  );
+
+  const handleInputChange = (value: string) => {
+    setSearchQuery(value);
+    if (value.trim().length >= 1) {
+      debouncedFetchOptions(value.trim());
+    } else {
+      setArtistOptions([]);
+      setShowDropdown(false);
+    }
+  };
+
+  const handleArtistSelect = async (artist: ArtistOption) => {
+    setSearchQuery(artist.name);
+    setShowDropdown(false);
+    setArtistOptions([]);
+    
+    // Trigger search immediately
+    try {
+      setIsLoading(true);
+      onLoadingChange?.(true);
+      
+      const data = await fetchNetworkData(artist.name.trim());
+      onNetworkData(data);
+      
+      toast({
+        title: "Network Generated",
+        description: `Found collaboration network for ${artist.name}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to fetch network data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      onLoadingChange?.(false);
+    }
+  };
 
   const handleSearch = useCallback(async () => {
     if (!searchQuery.trim()) return;
@@ -127,8 +217,22 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               type="text"
               placeholder="Enter artist name..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleInputChange(e.target.value)}
               onKeyPress={handleKeyPress}
+              onFocus={() => {
+                setIsSearchFocused(true);
+                if (searchQuery.trim().length >= 1 && artistOptions.length === 0) {
+                  debouncedFetchOptions(searchQuery.trim());
+                } else if (artistOptions.length > 0) {
+                  setShowDropdown(true);
+                }
+              }}
+              onBlur={() => {
+                setTimeout(() => {
+                  setIsSearchFocused(false);
+                  setShowDropdown(false);
+                }, 150);
+              }}
               className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-12 sm:pr-16 text-base sm:text-lg rounded-xl"
               disabled={isLoading}
             />
@@ -143,6 +247,64 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 <Search className="w-4 h-4 sm:w-5 sm:h-5" />
               )}
             </Button>
+
+            {/* Artist Options Dropdown - Home View */}
+            {(showDropdown || isLoadingOptions) && !showNetworkView && (
+              <div 
+                ref={dropdownRef}
+                className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
+                style={{ maxHeight: '160px' }}
+              >
+                <div className="p-1">
+                  {isLoadingOptions && (
+                    <div className="flex items-center justify-center py-2">
+                      <div className="w-3 h-3 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mr-2" />
+                      <span className="text-xs text-gray-400">Finding artists...</span>
+                    </div>
+                  )}
+                  
+                  {!isLoadingOptions && artistOptions.length > 0 && (
+                    <>
+                      <div className="text-xs text-gray-400 px-2 py-1 border-b border-gray-700 mb-2">
+                        {artistOptions.length} artist{artistOptions.length !== 1 ? 's' : ''} found
+                      </div>
+                      {artistOptions.map((artist, index) => (
+                        <Card
+                          key={artist.id}
+                          className="mb-2 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4"
+                          style={{
+                            borderLeftColor: '#FF69B4'
+                          }}
+                          onClick={() => handleArtistSelect(artist)}
+                        >
+                          <CardHeader className="pb-2 pt-3 px-4">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-sm text-white">{artist.name}</CardTitle>
+                              {artist.name.toLowerCase() === searchQuery.toLowerCase() && (
+                                <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                                  Exact Match
+                                </span>
+                              )}
+                            </div>
+                            {artist.bio && (
+                              <CardDescription className="text-xs text-gray-400 line-clamp-2">
+                                {artist.bio}
+                              </CardDescription>
+                            )}
+                          </CardHeader>
+                        </Card>
+                      ))}
+                    </>
+                  )}
+                  
+                  {!isLoadingOptions && artistOptions.length === 0 && searchQuery.length >= 1 && (
+                    <div className="py-4 text-center text-xs text-gray-400">
+                      No artists found for "{searchQuery}"
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -175,18 +337,36 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               </h2>
             </div>
             
-            <div className="flex-1 relative">
+            <div className="flex-1 relative search-dropdown-container">
               <Input
                 type="text"
                 placeholder="Search for a new artist..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleInputChange(e.target.value)}
                 onKeyPress={handleKeyPress}
+                onFocus={() => {
+                  setIsSearchFocused(true);
+                  if (searchQuery.trim().length >= 1 && artistOptions.length === 0) {
+                    debouncedFetchOptions(searchQuery.trim());
+                  } else if (artistOptions.length > 0) {
+                    setShowDropdown(true);
+                  }
+                }}
+                onBlur={() => {
+                  setTimeout(() => {
+                    setIsSearchFocused(false);
+                    setShowDropdown(false);
+                  }, 150);
+                }}
                 className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-10 sm:pr-12 text-sm sm:text-base"
                 disabled={isLoading}
               />
               <Button
-                onClick={handleSearch}
+                onClick={() => {
+                  setShowDropdown(false);
+                  setArtistOptions([]);
+                  handleSearch();
+                }}
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 bg-blue-600 hover:bg-blue-700 rounded-md"
                 disabled={isLoading}
               >
@@ -196,6 +376,63 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                   <Search className="w-3 h-3" />
                 )}
               </Button>
+
+              {/* Artist Options Dropdown - Network View */}
+              {(showDropdown || isLoadingOptions) && showNetworkView && isSearchFocused && (
+                <div 
+                  className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
+                  style={{ maxHeight: '130px' }}
+                >
+                  <div className="p-1">
+                    {isLoadingOptions && (
+                      <div className="flex items-center justify-center py-2">
+                        <div className="w-3 h-3 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mr-2" />
+                        <span className="text-xs text-gray-400">Finding artists...</span>
+                      </div>
+                    )}
+                    
+                    {!isLoadingOptions && artistOptions.length > 0 && (
+                      <>
+                        <div className="text-xs text-gray-400 px-2 py-1 border-b border-gray-700 mb-1">
+                          {artistOptions.length} artist{artistOptions.length !== 1 ? 's' : ''} found
+                        </div>
+                        {artistOptions.map((artist, index) => (
+                          <Card
+                            key={artist.id}
+                            className="mb-1 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4"
+                            style={{
+                              borderLeftColor: '#FF69B4'
+                            }}
+                            onClick={() => handleArtistSelect(artist)}
+                          >
+                            <CardHeader className="pb-1 pt-2 px-3">
+                              <div className="flex items-center justify-between">
+                                <CardTitle className="text-xs text-white">{artist.name}</CardTitle>
+                                {artist.name.toLowerCase() === searchQuery.toLowerCase() && (
+                                  <span className="text-xs px-1 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                                    Exact Match
+                                  </span>
+                                )}
+                              </div>
+                              {artist.bio && (
+                                <CardDescription className="text-xs text-gray-400 line-clamp-1">
+                                  {artist.bio}
+                                </CardDescription>
+                              )}
+                            </CardHeader>
+                          </Card>
+                        ))}
+                      </>
+                    )}
+                    
+                    {!isLoadingOptions && artistOptions.length === 0 && searchQuery.length >= 1 && (
+                      <div className="py-2 text-center text-xs text-gray-400">
+                        No artists found for "{searchQuery}"
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
