@@ -234,7 +234,7 @@ export default function SearchInterface({
               <div 
                 ref={dropdownRef}
                 className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
-                style={{ maxHeight: 'calc(100vh - 280px)' }}
+                style={{ maxHeight: 'calc(100vh - 320px)' }}
               >
                 <div className="p-2">
                   {isLoadingOptions && (
@@ -366,7 +366,7 @@ export default function SearchInterface({
                 <div 
                   ref={dropdownRef}
                   className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
-                  style={{ maxHeight: 'calc(100vh - 120px)' }}
+                  style={{ maxHeight: 'calc(100vh - 160px)' }}
                 >
                   <div className="p-1">
                     {isLoadingOptions && (
