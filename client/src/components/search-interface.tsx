@@ -31,6 +31,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
   const [currentSearch, setCurrentSearch] = useState("");
   const [artistOptions, setArtistOptions] = useState<ArtistOption[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const { toast } = useToast();
 
   const handleSearch = (artistName?: string) => {
@@ -43,6 +44,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
       return;
     }
     setCurrentSearch(query);
+    // Immediately hide dropdown and clear options when search starts
     setShowDropdown(false);
     setArtistOptions([]);
   };
@@ -67,12 +69,27 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
     }
   }, [onSearchFunction, handleSearch]);
 
-  // Hide dropdown when network view changes or current search changes
+  // Hide dropdown when network view changes
   useEffect(() => {
-    if (showNetworkView && currentSearch && searchQuery.trim().toLowerCase() === currentSearch.toLowerCase()) {
+    if (showNetworkView) {
       setShowDropdown(false);
+      setArtistOptions([]);
     }
-  }, [showNetworkView, currentSearch, searchQuery]);
+  }, [showNetworkView]);
+
+  // Clear currentSearch when user starts editing a different query
+  useEffect(() => {
+    if (currentSearch && searchQuery.trim() !== currentSearch) {
+      setCurrentSearch("");
+    }
+  }, [searchQuery, currentSearch]);
+
+  // Show dropdown when search field is focused and has valid options
+  useEffect(() => {
+    if (isSearchFocused && searchQuery.trim().length > 2 && artistOptions.length > 0 && !currentSearch) {
+      setShowDropdown(true);
+    }
+  }, [isSearchFocused, searchQuery, artistOptions, currentSearch]);
 
   // Fetch artist options when user types
   useEffect(() => {
@@ -97,9 +114,8 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
           const data = await response.json();
           console.log('Received artist options:', data.options);
           setArtistOptions(data.options || []);
-          // Hide dropdown if the search query matches the current displayed network
-          const shouldShowDropdown = (data.options || []).length > 0 && 
-            (!showNetworkView || searchQuery.trim().toLowerCase() !== currentSearch.toLowerCase());
+          // Show dropdown when there are options and either no network view OR user is actively focused on search
+          const shouldShowDropdown = (data.options || []).length > 0 && (!showNetworkView || isSearchFocused) && !currentSearch;
           setShowDropdown(shouldShowDropdown);
           console.log('Dropdown should show:', shouldShowDropdown);
         } catch (error) {
@@ -129,6 +145,9 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
   useEffect(() => {
     if (data && data !== undefined) {
       onNetworkData(data);
+      // Hide dropdown and clear artist options when network loads
+      setShowDropdown(false);
+      setArtistOptions([]);
     }
   }, [data, onNetworkData]);
 
@@ -164,11 +183,17 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
 
   const handleArtistSelect = (artist: ArtistOption) => {
     setSearchQuery(artist.name);
+    // Immediately hide dropdown and clear options when artist is selected
+    setShowDropdown(false);
+    setArtistOptions([]);
     handleSearch(artist.name);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
+      // Immediately hide dropdown when Enter is pressed
+      setShowDropdown(false);
+      setArtistOptions([]);
       handleSearch();
     }
   };
@@ -212,11 +237,15 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={handleKeyPress}
-              className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-gray-900 border-gray-700 text-white placeholder-gray-500 text-base sm:text-lg h-12 sm:h-14 pr-14 sm:pr-16"
               disabled={isLoading}
             />
             <Button
-              onClick={() => handleSearch()}
+              onClick={() => {
+                // Immediately hide dropdown when search button is clicked
+                setShowDropdown(false);
+                setArtistOptions([]);
+                handleSearch();
+              }}
               className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 p-0 bg-blue-600 hover:bg-blue-700 rounded-md"
               disabled={isLoading}
             >
@@ -228,7 +257,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
             </Button>
             
             {/* Artist Options Dropdown */}
-            {showDropdown && artistOptions.length > 0 && !showNetworkView && (
+            {showDropdown && artistOptions.length > 0 && (!showNetworkView || isSearchFocused) && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-80 overflow-hidden">
                 <ScrollArea className="max-h-80">
                   <div className="p-2">
@@ -291,12 +320,55 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={handleKeyPress}
+
                 className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-10 sm:pr-12 text-sm sm:text-base"
                 disabled={isLoading}
               />
               <Button
                 onClick={() => handleSearch()}
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 sm:h-8 sm:w-8 p-0 bg-blue-600 hover:bg-blue-700 rounded-md"
+                onFocus={async () => {
+                  setIsSearchFocused(true);
+                  // Re-trigger dropdown visibility when focus is gained
+                  if (searchQuery.trim().length > 2) {
+                    if (artistOptions.length > 0) {
+                      setShowDropdown(true);
+                    } else {
+                      // Fetch artist options if we don't have any
+                      try {
+                        const apiUrl = `/api/artist-options/${encodeURIComponent(searchQuery.trim())}`;
+                        const response = await fetch(apiUrl);
+                        if (response.ok) {
+                          const data = await response.json();
+                          setArtistOptions(data.options || []);
+                          if ((data.options || []).length > 0) {
+                            setShowDropdown(true);
+                          }
+                        }
+                      } catch (error) {
+                        console.error('Error fetching artist options on focus:', error);
+                      }
+                    }
+                  }
+                }}
+                onBlur={() => {
+                  // Delay hiding focus to allow dropdown clicks
+                  setTimeout(() => {
+                    setIsSearchFocused(false);
+                    setShowDropdown(false);
+                  }, 150);
+                }}
+                className="w-full px-4 py-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-12"
+                disabled={isLoading}
+              />
+              <Button
+                onClick={() => {
+                  // Immediately hide dropdown when search button is clicked
+                  setShowDropdown(false);
+                  setArtistOptions([]);
+                  handleSearch();
+                }}
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700 rounded-md"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -307,7 +379,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               </Button>
               
               {/* Artist Options Dropdown */}
-              {showDropdown && artistOptions.length > 0 && (
+              {showDropdown && artistOptions.length > 0 && (!showNetworkView || isSearchFocused) && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-hidden">
                   <ScrollArea className="max-h-60">
                     <div className="p-1">

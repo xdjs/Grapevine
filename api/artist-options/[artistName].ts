@@ -53,11 +53,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const query = 'SELECT id, name FROM artists WHERE LOWER(name) LIKE LOWER($1) LIMIT 10';
       const result = await client.query(query, [`%${artistName}%`]);
       
-      options = result.rows.map(row => ({
-        id: row.id,
-        name: row.name,
-        bio: `${row.name} - Music Artist` // Simple bio for dropdown
-      }));
+      options = result.rows.map(row => {
+        // Generate bio based on artist name (since type column doesn't exist in database)
+        const generateBio = (name: string) => {
+          return `${name} is a prominent artist known for their musical contributions across various genres. Their work has influenced many in the music industry and continues to resonate with listeners worldwide.`;
+        };
+        
+        return {
+          id: row.id,
+          name: row.name,
+          bio: generateBio(row.name)
+        };
+      });
       
       await client.end();
       

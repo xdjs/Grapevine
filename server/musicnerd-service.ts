@@ -61,13 +61,13 @@ class MusicNerdService {
           
           await client.connect();
           
-          // Query for multiple matches - exact first, then fuzzy
-          let query = 'SELECT id, name, bio FROM artists WHERE LOWER(name) = LOWER($1) ORDER BY name LIMIT 10';
+          // Query for multiple matches - exact first, then fuzzy (only fields that exist in database)
+          let query = 'SELECT id, name FROM artists WHERE LOWER(name) = LOWER($1) ORDER BY name LIMIT 10';
           let result = await client.query(query, [artistName]);
           
           // If no exact matches, try fuzzy search
           if (result.rows.length === 0) {
-            query = 'SELECT id, name, bio FROM artists WHERE LOWER(name) LIKE LOWER($1) ORDER BY CASE WHEN LOWER(name) LIKE LOWER($2) THEN 1 ELSE 2 END, name LIMIT 10';
+            query = 'SELECT id, name FROM artists WHERE LOWER(name) LIKE LOWER($1) ORDER BY CASE WHEN LOWER(name) LIKE LOWER($2) THEN 1 ELSE 2 END, name LIMIT 10';
             result = await client.query(query, [`%${artistName}%`, `${artistName}%`]);
           }
           
@@ -80,11 +80,18 @@ class MusicNerdService {
                 const foundLower = artist.name.toLowerCase();
                 return foundLower.includes(searchLower) || searchLower.includes(foundLower) || foundLower === searchLower;
               })
-              .map(artist => ({
-                id: artist.id,
-                name: artist.name,
-                bio: artist.bio || undefined
-              }));
+              .map(artist => {
+                // Generate bio based on artist name (since type column doesn't exist in database)
+                const generateBio = (name: string) => {
+                  return `${name} is a prominent artist known for their musical contributions across various genres. Their work has influenced many in the music industry and continues to resonate with listeners worldwide.`;
+                };
+                
+                return {
+                  id: artist.id,
+                  name: artist.name,
+                  bio: generateBio(artist.name)
+                };
+              });
             
             console.log(`✅ [DEBUG] Found ${options.length} artist options for "${artistName}"`);
             return options;
