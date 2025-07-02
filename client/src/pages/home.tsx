@@ -46,6 +46,15 @@ export default function Home() {
     setTimeout(() => setClearSearchField(false), 100);
   };
 
+  const handleClearNetwork = () => {
+    setNetworkData(null);
+    setIsLoading(false);
+    setClearSearchField(true);
+    // Keep showNetworkView as true to stay on the network page
+    // Reset the clear flag after a brief delay
+    setTimeout(() => setClearSearchField(false), 100);
+  };
+
   const handleZoomChange = (transform: { k: number; x: number; y: number }) => {
     setZoomTransform(transform);
   };
@@ -120,7 +129,7 @@ export default function Home() {
                 onZoomIn={handleZoomIn}
                 onZoomOut={handleZoomOut}
                 onZoomReset={handleZoomReset}
-                onClearAll={handleReset}
+                onClearAll={handleClearNetwork}
               />
               <FilterControls
                 filterState={filterState}
@@ -136,7 +145,7 @@ export default function Home() {
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
             onZoomReset={handleZoomReset}
-            onClearAll={handleReset}
+            onClearAll={handleClearNetwork}
           />
         </>
       )}
