@@ -603,17 +603,33 @@ export default function NetworkVisualizer({
         }
       }
       
-      // Check if base URL is available
-      if (!musicNerdBaseUrl) {
+      // Check if base URL is available, fetch it if not
+      let baseUrl = musicNerdBaseUrl;
+      if (!baseUrl) {
+        try {
+          console.log('🔧 [Config] Base URL not cached, fetching config...');
+          const configResponse = await fetch('/api/config');
+          if (configResponse.ok) {
+            const config = await configResponse.json();
+            baseUrl = config.musicNerdBaseUrl;
+            setMusicNerdBaseUrl(baseUrl); // Update state for future use
+            console.log(`🔧 [Config] Fetched base URL: ${baseUrl}`);
+          }
+        } catch (error) {
+          console.error('🔧 [Config] Error fetching config:', error);
+        }
+      }
+      
+      if (!baseUrl) {
         console.error(`🎵 Cannot open MusicNerd profile for "${artistName}": Base URL not configured`);
         return;
       }
       
       // Use artist ID if available, otherwise go to main page
-      let musicNerdUrl = musicNerdBaseUrl;
+      let musicNerdUrl = baseUrl;
       
       if (artistId) {
-        musicNerdUrl = `${musicNerdBaseUrl}/artist/${artistId}`;
+        musicNerdUrl = `${baseUrl}/artist/${artistId}`;
         console.log(`🎵 Opening MusicNerd artist page for "${artistName}": ${musicNerdUrl}`);
       } else {
         console.log(`🎵 No artist ID found for "${artistName}", opening main MusicNerd page`);
