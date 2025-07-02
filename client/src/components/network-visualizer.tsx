@@ -24,6 +24,33 @@ export default function NetworkVisualizer({
   const [currentZoom, setCurrentZoom] = useState(1);
   const [showArtistModal, setShowArtistModal] = useState(false);
   const [selectedArtistName, setSelectedArtistName] = useState("");
+  const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("https://music-nerd-git-staging-musicnerd.vercel.app");
+
+  // Fetch configuration on component mount
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        console.log('🔧 [Config] Fetching config from /api/config');
+        const response = await fetch('/api/config');
+        console.log('🔧 [Config] Response status:', response.status);
+        console.log('🔧 [Config] Response ok:', response.ok);
+        
+        if (response.ok) {
+          const config = await response.json();
+          console.log('🔧 [Config] Received config:', config);
+          setMusicNerdBaseUrl(config.musicNerdBaseUrl);
+          console.log(`🔧 [Config] MusicNerd base URL set to: ${config.musicNerdBaseUrl}`);
+        } else {
+          const errorText = await response.text();
+          console.error('🔧 [Config] Error response:', errorText);
+        }
+      } catch (error) {
+        console.error('Error fetching config:', error);
+      }
+    };
+    
+    fetchConfig();
+  }, []);
 
   useEffect(() => {
     if (!svgRef.current || !data || !visible) return;
@@ -573,10 +600,10 @@ export default function NetworkVisualizer({
       }
       
       // Use artist ID if available, otherwise go to main page
-      let musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/`;
+      let musicNerdUrl = `${musicNerdBaseUrl}/`;
       
       if (artistId) {
-        musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${artistId}`;
+        musicNerdUrl = `${musicNerdBaseUrl}/artist/${artistId}`;
         console.log(`🎵 Opening MusicNerd artist page for "${artistName}": ${musicNerdUrl}`);
       } else {
         console.log(`🎵 No artist ID found for "${artistName}", opening main MusicNerd page`);

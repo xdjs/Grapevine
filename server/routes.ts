@@ -75,6 +75,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get configuration including MusicNerd base URL
+  app.get("/api/config", async (req, res) => {
+    try {
+      // Default to staging if no environment variable is set
+      const musicNerdBaseUrl = process.env.MUSICNERD_BASE_URL || "https://music-nerd-git-staging-musicnerd.vercel.app";
+      
+      console.log(`🔧 [DEBUG] Config endpoint called, returning musicNerdBaseUrl: ${musicNerdBaseUrl}`);
+      
+      res.json({ 
+        musicNerdBaseUrl 
+      });
+    } catch (error) {
+      console.error("Config error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
