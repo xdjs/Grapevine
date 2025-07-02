@@ -276,7 +276,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
             {showDropdown && artistOptions.length > 0 && (!showNetworkView || isSearchFocused) && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll" 
                    style={{ 
-                     maxHeight: `${Math.min(320, Math.max(200, viewportHeight * 0.4 - 40))}px`
+                     maxHeight: '140px' // Height for exactly 2 artist cards (70px each)
                    }}>
                 <div className="p-2">
                   {artistOptions.map((artist) => (
@@ -393,7 +393,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               {showDropdown && artistOptions.length > 0 && (!showNetworkView || isSearchFocused) && (
                 <div className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
                      style={{ 
-                       maxHeight: `${Math.min(240, Math.max(150, viewportHeight * 0.3 - 20))}px`
+                       maxHeight: '100px' // Height for exactly 2 compact artist cards (50px each)
                      }}>
                   <div className="p-1">
                     {artistOptions.map((artist) => (
