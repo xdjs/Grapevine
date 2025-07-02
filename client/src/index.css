@@ -76,43 +76,46 @@
   
   html {
     background-color: #000000 !important;
-    overflow: hidden !important;
+    overflow-x: hidden;
+    overflow-y: hidden;
   }
   
-  /* Force hide ALL scrollbars globally except body */
-  *:not(body) {
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
+  /* Hide scrollbars on dropdown components but keep functionality */
+  .artist-dropdown-scroll {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
   }
   
-  *:not(body)::-webkit-scrollbar {
-    display: none !important;
-    width: 0 !important;
-    height: 0 !important;
+  .artist-dropdown-scroll::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
   }
   
-  /* Ensure main body scrollbar is visible and styled */
+  /* Hide scrollbars from non-main elements while preserving main page scrollbar */
+  .search-dropdown-container *::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .search-dropdown-container * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  /* Allow only body to show scrollbar */
   body::-webkit-scrollbar {
-    width: 12px !important;
-    display: block !important;
+    width: 12px;
   }
   
   body::-webkit-scrollbar-track {
-    background: #000000 !important;
+    background: #000000;
   }
   
   body::-webkit-scrollbar-thumb {
-    background: #8a2be2 !important;
-    border-radius: 6px !important;
+    background: #8a2be2;
+    border-radius: 6px;
   }
   
   body::-webkit-scrollbar-thumb:hover {
-    background: #9932cc !important;
-  }
-  
-  body {
-    scrollbar-width: auto !important;
-    -ms-overflow-style: scrollbar !important;
+    background: #9932cc;
   }
   
   #root {
