@@ -320,13 +320,6 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={handleKeyPress}
-
-                className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-10 sm:pr-12 text-sm sm:text-base"
-                disabled={isLoading}
-              />
-              <Button
-                onClick={() => handleSearch()}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 sm:h-8 sm:w-8 p-0 bg-blue-600 hover:bg-blue-700 rounded-md"
                 onFocus={async () => {
                   setIsSearchFocused(true);
                   // Re-trigger dropdown visibility when focus is gained
@@ -358,7 +351,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                     setShowDropdown(false);
                   }, 150);
                 }}
-                className="w-full px-4 py-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-12"
+                className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-10 sm:pr-12 text-sm sm:text-base"
                 disabled={isLoading}
               />
               <Button
@@ -368,7 +361,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                   setArtistOptions([]);
                   handleSearch();
                 }}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700 rounded-md"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 sm:h-8 sm:w-8 p-0 bg-blue-600 hover:bg-blue-700 rounded-md"
                 disabled={isLoading}
               >
                 {isLoading ? (
