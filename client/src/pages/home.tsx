@@ -99,7 +99,6 @@ export default function Home() {
         <div className="absolute bottom-24 left-0 right-0 px-4 text-center z-10">
           <div className="max-w-2xl mx-auto space-y-6">
             <div className="text-gray-400 text-sm">
-              <h3 className="text-white text-lg font-semibold mb-3">How it works</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                 <div className="bg-gray-900/50 p-4 rounded-lg">
                   <div className="text-pink-400 font-medium mb-2">1. Search</div>
