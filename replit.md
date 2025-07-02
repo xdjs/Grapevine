@@ -326,6 +326,7 @@ Changelog:
 - Fixed glitching and snap-back issues by eliminating custom D3 transform logic
 - Smooth 200ms transitions maintained across all zoom input methods
 
+
 ### Production-Only MusicNerd URL Configuration (July 2, 2025)
 - Removed all staging URL fallbacks from both backend and frontend code
 - System now exclusively uses MUSICNERD_BASE_URL environment variable for production URLs
@@ -337,8 +338,19 @@ Changelog:
 - Frontend validates configuration response and prevents clicks without valid URL
 - Currently configured to use https://www.musicnerd.xyz/ production site
 - All artist nodes now link exclusively to production MusicNerd environment
+
 - Complete elimination of staging URLs throughout the entire codebase
-=======
+
+
+### Fixed Main Artist Direct Navigation (July 2, 2025)
+- Fixed issue where clicking main artist node showed selection modal instead of going directly to their page
+- Updated frontend click handler to identify main artist and bypass modal when artistId is available
+- Fixed Vercel API inconsistency: changed musicNerdId to artistId for consistent field naming
+- Main artist now navigates directly to their MusicNerd profile page when clicked
+- Other collaborator artists still show selection modal when multiple options exist
+- Ensured consistent behavior between Replit development and Vercel production deployments
+
+
 ### Supabase Caching System Integration (June 30, 2025)
 - Added webmapdata jsonb column to artists table for caching network visualization data
 - Implemented intelligent caching system to check for existing network data before generating new results
