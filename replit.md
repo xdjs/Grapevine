@@ -339,6 +339,29 @@ Changelog:
 - Updated match badges to only show "Exact Match" when artist name exactly matches user input
 - Removed misleading "Best", "Good", "Match" badges for partial matches to ensure accuracy
 
+- Increased search recommendations from 10 to all available results (up to 100-200 matches) for comprehensive artist discovery
+- Enhanced dropdown heights with responsive sizing (50vh on mobile, 60vh on tablets, 70vh on desktop) that adapts to viewport height
+- Added intelligent viewport-aware positioning to ensure dropdowns always fit within user's screen
+- Enabled vertical scrolling on home page with visible scrollbar for better navigation
+- Added informational "How it works" section positioned below search interface with usage instructions and data source attribution
+- Added result counters showing "X artists found" to help users understand the breadth of available options
+
+### Perfect Dropdown Height for 3 Artists Display (July 2, 2025)
+- Fixed dropdown height to display exactly 3 artists at a time as requested by user
+- Home page dropdown: Set to 160px height for precise 3-artist display
+- Network view dropdown: Set to 130px height for compact 3-artist display
+- Ensured scroll arrows remain fully visible within viewport boundaries
+- No page scrolling required to access dropdown functionality
+
+### Responsive Mobile Layout Improvements (July 2, 2025)
+- Enhanced mobile responsive design to prevent overlapping content on smaller screens
+- "How it works" content repositioned with responsive bottom spacing (bottom-4 on mobile, bottom-12 on tablets, bottom-24 on desktop)
+- Reduced logo size on mobile (w-16 h-16) for better space utilization
+- Adjusted title and subtitle text sizes for mobile readability (text-xl on mobile vs text-4xl on desktop)
+- Improved padding and spacing for search interface on mobile devices (pt-8 on mobile vs pt-16 on desktop)
+- Enhanced grid layouts with responsive padding and gap sizing for mobile-first design
+- All content now properly fits within mobile viewport without overlapping or requiring page scrolling
+
 ### Fixed MusicNerd Production Domain Integration (July 2, 2025)
 - Updated all MusicNerd redirect URLs from staging domain to production domain
 - Changed `music-nerd-git-staging-musicnerd.vercel.app` to `musicnerd.xyz` across all files
@@ -377,6 +400,7 @@ Changelog:
 - All OpenAI prompts, cache operations, and node creation now use authentic database artist names
 - Ensures network maps display proper artist stylization as stored in MusicNerd database
 - Applied fix to both cached data retrieval and new network generation paths
+
 
 
 

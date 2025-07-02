@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import SearchInterface from "@/components/search-interface";
 import NetworkVisualizer from "@/components/network-visualizer";
 import ZoomControls from "@/components/zoom-controls";
@@ -22,6 +22,31 @@ export default function Home() {
   });
   const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
   const isMobile = useIsMobile();
+
+  // Manage body overflow classes based on network view state
+  useEffect(() => {
+    const body = document.body;
+    const html = document.documentElement;
+    
+    // Remove all existing classes first
+    body.classList.remove('network-visible', 'network-hidden');
+    
+    if (showNetworkView) {
+      body.classList.add('network-visible');
+      // Allow scrolling when network is visible and may need it
+      body.style.overflow = 'hidden';
+    } else {
+      body.classList.add('network-hidden');
+      // No scrolling on home page
+      body.style.overflow = 'hidden';
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      body.classList.remove('network-visible', 'network-hidden');
+      body.style.overflow = 'hidden';
+    };
+  }, [showNetworkView]);
 
   const handleNetworkData = useCallback((data: NetworkData) => {
     // Replace existing network with new data
@@ -81,7 +106,7 @@ export default function Home() {
   };
 
   return (
-    <div className="relative w-screen h-screen bg-black text-white overflow-hidden">
+    <div className={`relative w-full min-h-screen bg-black text-white ${!showNetworkView ? 'overflow-x-hidden' : ''}`}>
       {/* Search Interface */}
       <SearchInterface
         onNetworkData={handleNetworkData}
@@ -93,6 +118,38 @@ export default function Home() {
         }}
         onClearAll={handleReset}
       />
+
+      {/* How it works Content - Only visible when not showing network */}
+      {!showNetworkView && (
+        <div className="absolute bottom-4 sm:bottom-12 md:bottom-24 left-0 right-0 px-4 text-center z-10">
+          <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
+            <div className="text-gray-400 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs">
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
+                  <div className="text-pink-400 font-medium mb-1 sm:mb-2">1. Search</div>
+                  <div className="text-xs sm:text-sm">Enter any artist name to start exploring their collaboration network</div>
+                </div>
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
+                  <div className="text-purple-400 font-medium mb-1 sm:mb-2">2. Discover</div>
+                  <div className="text-xs sm:text-sm">See producers, songwriters, and other artists they've worked with</div>
+                </div>
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
+                  <div className="text-cyan-400 font-medium mb-1 sm:mb-2">3. Explore</div>
+                  <div className="text-xs sm:text-sm">Click any node to search for that artist's connections</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-gray-500 text-xs">
+              <p className="mb-1 sm:mb-2">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
+              <p>Click on artist nodes to visit their MusicNerd profiles</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Spacer to ensure scrollable content */}
+      <div className="h-96"></div>
 
       {/* Network Visualization */}
       {networkData && (

@@ -59,27 +59,94 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground overflow-hidden;
+    @apply font-sans antialiased bg-background text-foreground;
     background-color: #000000 !important;
+    overflow: hidden;
+  }
+  
+  body.network-hidden {
+    overflow: hidden;
+  }
+  
+  body.network-visible {
+    overflow: hidden;
   }
   
   html {
     background-color: #000000 !important;
+    overflow: hidden !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    position: fixed !important;
+    width: 100vw !important;
   }
+  
+  body {
+    overflow: hidden !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    position: fixed !important;
+    width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Hide scrollbars everywhere except dropdown */
+  *:not(.artist-dropdown-scroll) {
+    scrollbar-width: none !important; /* Firefox */
+    -ms-overflow-style: none !important; /* IE and Edge */
+  }
+  
+  *:not(.artist-dropdown-scroll)::-webkit-scrollbar {
+    display: none !important; /* Chrome, Safari, Opera */
+    width: 0 !important;
+    height: 0 !important;
+  }
+  
+  /* Allow scrollbars only in dropdown menu */
+  .artist-dropdown-scroll {
+    scrollbar-width: thin !important; /* Firefox */
+    -ms-overflow-style: auto !important; /* IE and Edge */
+  }
+  
+  .artist-dropdown-scroll::-webkit-scrollbar {
+    display: block !important; /* Chrome, Safari, Opera */
+    width: 8px !important;
+    height: 8px !important;
+  }
+  
+  .artist-dropdown-scroll::-webkit-scrollbar-track {
+    background: #374151 !important;
+    border-radius: 4px !important;
+  }
+  
+  .artist-dropdown-scroll::-webkit-scrollbar-thumb {
+    background: #6b7280 !important;
+    border-radius: 4px !important;
+  }
+  
+  .artist-dropdown-scroll::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af !important;
+  }
+  
+
   
   #root {
     background-color: #000000 !important;
-    min-height: 100vh;
-    position: relative;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   /* Mobile viewport adjustments */
   @media (max-width: 768px) {
-    body {
-      overflow-x: hidden;
-      -webkit-overflow-scrolling: touch;
-    }
-    
     /* Prevent zoom on double tap */
     * {
       touch-action: manipulation;
@@ -127,6 +194,23 @@
     pointer-events: none;
     z-index: 1000;
     backdrop-filter: blur(8px);
+  }
+
+  /* Network visualization container constraints */
+  .network-container {
+    width: 100%;
+    height: 100vh;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+
+  .network-container svg {
+    width: 100%;
+    height: 100%;
+    display: block;
   }
 
   /* Custom scrollbar styling for artist dropdown */
@@ -218,5 +302,84 @@
       font-size: 13px;
       padding: 10px;
     }
+  }
+  
+  /* Responsive dropdown positioning for better viewport fit */
+  .artist-dropdown-scroll {
+    /* Calculate max height to ensure dropdown stays within viewport */
+    max-height: min(50vh, calc(100vh - 250px)) !important;
+  }
+  
+  @media (max-height: 700px) {
+    .artist-dropdown-scroll {
+      max-height: min(45vh, calc(100vh - 200px)) !important;
+    }
+  }
+  
+  @media (max-height: 600px) {
+    .artist-dropdown-scroll {
+      max-height: min(40vh, calc(100vh - 180px)) !important;
+    }
+  }
+  
+  @media (max-height: 500px) {
+    .artist-dropdown-scroll {
+      max-height: min(35vh, calc(100vh - 150px)) !important;
+    }
+  }
+  
+  @media (max-height: 400px) {
+    .artist-dropdown-scroll {
+      max-height: min(30vh, calc(100vh - 120px)) !important;
+    }
+  }
+  
+  /* Ensure dropdown never extends beyond bottom of viewport */
+  .search-dropdown-container {
+    position: relative;
+  }
+  
+  .search-dropdown-container .artist-dropdown-scroll {
+    bottom: auto;
+    top: 100%;
+    /* Adjust positioning if dropdown would go off-screen */
+    transform: translateY(0);
+  }
+  
+  /* For dropdowns that might go off bottom of screen */
+  @supports (height: 100dvh) {
+    .artist-dropdown-scroll {
+      max-height: min(50vh, calc(100dvh - 250px)) !important;
+    }
+  }
+  
+  /* Always show scrollbar on main page - matching dropdown style */
+  html, body {
+    overflow-y: scroll !important;
+    scrollbar-width: thin;
+    scrollbar-color: #AE53FF #1a1a1a;
+  }
+  
+  /* Webkit scrollbar styling for main page */
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    width: 12px;
+  }
+  
+  html::-webkit-scrollbar-track,
+  body::-webkit-scrollbar-track {
+    background: #1a1a1a;
+    border-radius: 6px;
+  }
+  
+  html::-webkit-scrollbar-thumb,
+  body::-webkit-scrollbar-thumb {
+    background: #AE53FF;
+    border-radius: 6px;
+  }
+  
+  html::-webkit-scrollbar-thumb:hover,
+  body::-webkit-scrollbar-thumb:hover {
+    background: #C970FF;
   }
 }
