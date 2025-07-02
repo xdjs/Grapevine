@@ -474,7 +474,6 @@ export default function NetworkVisualizer({
         event.stopPropagation();
         console.log(`🎯 [Frontend] Node clicked: "${d.name}" (type: ${d.type}, artistId: ${d.artistId})`);
         console.log(`🎯 [Frontend] Environment: ${window.location.href}`);
-        console.log(`🎯 [Frontend] Current baseUrl: ${musicNerdBaseUrl}`);
         
         // Open Music Nerd for any node that has an artist role
         if (d.type === 'artist' || (d.types && d.types.includes('artist'))) {
@@ -609,21 +608,25 @@ export default function NetworkVisualizer({
         console.log(`🎵 [Frontend] artistId provided (${artistId}), skipping lookup and going directly to page`);
       }
       
-      // Check if base URL is available, fetch it if not
-      let baseUrl = musicNerdBaseUrl;
-      if (!baseUrl) {
-        try {
-          console.log('🔧 [Config] Base URL not cached, fetching config...');
-          const configResponse = await fetch('/api/config');
-          if (configResponse.ok) {
-            const config = await configResponse.json();
-            baseUrl = config.musicNerdBaseUrl;
-            setMusicNerdBaseUrl(baseUrl); // Update state for future use
-            console.log(`🔧 [Config] Fetched base URL: ${baseUrl}`);
+      // Always fetch the current base URL to ensure we have the latest configuration
+      let baseUrl;
+      try {
+        console.log('🔧 [Config] Fetching current base URL from /api/config...');
+        const configResponse = await fetch('/api/config');
+        if (configResponse.ok) {
+          const config = await configResponse.json();
+          baseUrl = config.musicNerdBaseUrl;
+          console.log(`🔧 [Config] Retrieved base URL: ${baseUrl}`);
+          
+          // Update state for consistency
+          if (baseUrl !== musicNerdBaseUrl) {
+            setMusicNerdBaseUrl(baseUrl);
           }
-        } catch (error) {
-          console.error('🔧 [Config] Error fetching config:', error);
+        } else {
+          console.error('🔧 [Config] Failed to fetch config, status:', configResponse.status);
         }
+      } catch (error) {
+        console.error('🔧 [Config] Error fetching config:', error);
       }
       
       if (!baseUrl) {
