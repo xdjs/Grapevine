@@ -371,7 +371,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               
               {/* Artist Options Dropdown */}
               {showDropdown && artistOptions.length > 0 && (!showNetworkView || isSearchFocused) && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto artist-dropdown-scroll">
+                <div className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto artist-dropdown-scroll">
                   <div className="p-1">
                     {artistOptions.map((artist) => (
                       <Card
