@@ -7,7 +7,6 @@ import { fetchNetworkData } from "@/lib/network-data";
 import { NetworkData } from "@/types/network";
 import { Search } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import musicNerdLogo from "@assets/musicNerdLogo_1751389187695.png";
 import musicNerdLogoSmall from "@assets/musicNerdLogo_1751389498769.png";
 
@@ -258,27 +257,25 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
             
             {/* Artist Options Dropdown */}
             {showDropdown && artistOptions.length > 0 && (!showNetworkView || isSearchFocused) && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-80 overflow-hidden">
-                <ScrollArea className="max-h-80 artist-dropdown-scroll">
-                  <div className="p-2">
-                    {artistOptions.map((artist) => (
-                      <Card
-                        key={artist.id}
-                        className="mb-2 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-gray-600"
-                        onClick={() => handleArtistSelect(artist)}
-                      >
-                        <CardHeader className="pb-2 pt-3 px-4">
-                          <CardTitle className="text-sm text-white">{artist.name}</CardTitle>
-                          {artist.bio && (
-                            <CardDescription className="text-xs text-gray-400 line-clamp-2">
-                              {artist.bio}
-                            </CardDescription>
-                          )}
-                        </CardHeader>
-                      </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
+              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto artist-dropdown-scroll">
+                <div className="p-2">
+                  {artistOptions.map((artist) => (
+                    <Card
+                      key={artist.id}
+                      className="mb-2 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-gray-600"
+                      onClick={() => handleArtistSelect(artist)}
+                    >
+                      <CardHeader className="pb-2 pt-3 px-4">
+                        <CardTitle className="text-sm text-white">{artist.name}</CardTitle>
+                        {artist.bio && (
+                          <CardDescription className="text-xs text-gray-400 line-clamp-2">
+                            {artist.bio}
+                          </CardDescription>
+                        )}
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -374,27 +371,25 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               
               {/* Artist Options Dropdown */}
               {showDropdown && artistOptions.length > 0 && (!showNetworkView || isSearchFocused) && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-hidden">
-                  <ScrollArea className="max-h-60 artist-dropdown-scroll">
-                    <div className="p-1">
-                      {artistOptions.map((artist) => (
-                        <Card
-                          key={artist.id}
-                          className="mb-1 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-gray-600"
-                          onClick={() => handleArtistSelect(artist)}
-                        >
-                          <CardHeader className="pb-1 pt-2 px-3">
-                            <CardTitle className="text-xs text-white">{artist.name}</CardTitle>
-                            {artist.bio && (
-                              <CardDescription className="text-xs text-gray-400 line-clamp-1">
-                                {artist.bio}
-                              </CardDescription>
-                            )}
-                          </CardHeader>
-                        </Card>
-                      ))}
-                    </div>
-                  </ScrollArea>
+                <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto artist-dropdown-scroll">
+                  <div className="p-1">
+                    {artistOptions.map((artist) => (
+                      <Card
+                        key={artist.id}
+                        className="mb-1 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-gray-600"
+                        onClick={() => handleArtistSelect(artist)}
+                      >
+                        <CardHeader className="pb-1 pt-2 px-3">
+                          <CardTitle className="text-xs text-white">{artist.name}</CardTitle>
+                          {artist.bio && (
+                            <CardDescription className="text-xs text-gray-400 line-clamp-1">
+                              {artist.bio}
+                            </CardDescription>
+                          )}
+                        </CardHeader>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
