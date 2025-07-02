@@ -172,7 +172,7 @@ export default function SearchInterface({
     <>
       {/* Centered Search - Initial View */}
       <div
-        className={`absolute inset-0 flex items-center justify-center z-20 transition-all duration-700 px-4 ${
+        className={`absolute inset-0 flex items-center justify-center z-20 transition-all duration-700 px-4 -mt-32 ${
           showNetworkView
             ? "opacity-0 pointer-events-none -translate-y-12"
             : "opacity-100"

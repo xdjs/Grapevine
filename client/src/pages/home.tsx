@@ -96,7 +96,7 @@ export default function Home() {
 
       {/* How it works Content - Only visible when not showing network */}
       {!showNetworkView && (
-        <div className="absolute bottom-16 left-0 right-0 px-4 text-center z-10">
+        <div className="absolute bottom-24 left-0 right-0 px-4 text-center z-10">
           <div className="max-w-2xl mx-auto space-y-6">
             <div className="text-gray-400 text-sm">
               <h3 className="text-white text-lg font-semibold mb-3">How it works</h3>
