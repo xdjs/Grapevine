@@ -175,14 +175,14 @@ export default function SearchInterface({
     <>
       {/* Centered Search - Initial View */}
       <div
-        className={`absolute inset-0 flex items-start justify-center z-20 transition-all duration-700 px-4 pt-16 ${
+        className={`absolute inset-0 flex items-start justify-center z-20 transition-all duration-700 px-4 pt-8 sm:pt-16 ${
           showNetworkView
             ? "opacity-0 pointer-events-none -translate-y-12"
             : "opacity-100"
         }`}
       >
         <div className="text-center w-full max-w-md">
-          <div className="mb-6 flex justify-center">
+          <div className="mb-4 sm:mb-6 flex justify-center">
             <a 
               href="https://musicnerd.xyz" 
               target="_blank" 
@@ -192,14 +192,14 @@ export default function SearchInterface({
               <img 
                 src={musicNerdLogo} 
                 alt="MusicNerd Logo" 
-                className="w-24 h-24 sm:w-32 sm:h-32 object-contain"
+                className="w-16 h-16 sm:w-24 sm:h-24 md:w-32 md:h-32 object-contain"
               />
             </a>
           </div>
-          <h1 className="text-2xl sm:text-4xl font-bold mb-2 text-white">
+          <h1 className="text-xl sm:text-2xl md:text-4xl font-bold mb-2 text-white">
             Music Collaboration Network
           </h1>
-          <p className="text-gray-400 mb-8 text-base sm:text-lg px-2">
+          <p className="text-gray-400 mb-6 sm:mb-8 text-sm sm:text-base md:text-lg px-2">
             Discover how artists connect through producers and songwriters
           </p>
 

@@ -343,6 +343,22 @@ Changelog:
 - Enabled vertical scrolling on home page with visible scrollbar for better navigation
 - Added informational "How it works" section positioned below search interface with usage instructions and data source attribution
 - Added result counters showing "X artists found" to help users understand the breadth of available options
+
+### Perfect Dropdown Height for 3 Artists Display (July 2, 2025)
+- Fixed dropdown height to display exactly 3 artists at a time as requested by user
+- Home page dropdown: Set to 160px height for precise 3-artist display
+- Network view dropdown: Set to 130px height for compact 3-artist display
+- Ensured scroll arrows remain fully visible within viewport boundaries
+- No page scrolling required to access dropdown functionality
+
+### Responsive Mobile Layout Improvements (July 2, 2025)
+- Enhanced mobile responsive design to prevent overlapping content on smaller screens
+- "How it works" content repositioned with responsive bottom spacing (bottom-4 on mobile, bottom-12 on tablets, bottom-24 on desktop)
+- Reduced logo size on mobile (w-16 h-16) for better space utilization
+- Adjusted title and subtitle text sizes for mobile readability (text-xl on mobile vs text-4xl on desktop)
+- Improved padding and spacing for search interface on mobile devices (pt-8 on mobile vs pt-16 on desktop)
+- Enhanced grid layouts with responsive padding and gap sizing for mobile-first design
+- All content now properly fits within mobile viewport without overlapping or requiring page scrolling
 =======
 ### Supabase Caching System Integration (June 30, 2025)
 - Added webmapdata jsonb column to artists table for caching network visualization data

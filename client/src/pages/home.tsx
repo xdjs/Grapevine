@@ -121,27 +121,27 @@ export default function Home() {
 
       {/* How it works Content - Only visible when not showing network */}
       {!showNetworkView && (
-        <div className="absolute bottom-24 left-0 right-0 px-4 text-center z-10">
-          <div className="max-w-2xl mx-auto space-y-6">
+        <div className="absolute bottom-4 sm:bottom-12 md:bottom-24 left-0 right-0 px-4 text-center z-10">
+          <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
             <div className="text-gray-400 text-sm">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                <div className="bg-gray-900/50 p-4 rounded-lg">
-                  <div className="text-pink-400 font-medium mb-2">1. Search</div>
-                  <div>Enter any artist name to start exploring their collaboration network</div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs">
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
+                  <div className="text-pink-400 font-medium mb-1 sm:mb-2">1. Search</div>
+                  <div className="text-xs sm:text-sm">Enter any artist name to start exploring their collaboration network</div>
                 </div>
-                <div className="bg-gray-900/50 p-4 rounded-lg">
-                  <div className="text-purple-400 font-medium mb-2">2. Discover</div>
-                  <div>See producers, songwriters, and other artists they've worked with</div>
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
+                  <div className="text-purple-400 font-medium mb-1 sm:mb-2">2. Discover</div>
+                  <div className="text-xs sm:text-sm">See producers, songwriters, and other artists they've worked with</div>
                 </div>
-                <div className="bg-gray-900/50 p-4 rounded-lg">
-                  <div className="text-cyan-400 font-medium mb-2">3. Explore</div>
-                  <div>Click any node to search for that artist's connections</div>
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
+                  <div className="text-cyan-400 font-medium mb-1 sm:mb-2">3. Explore</div>
+                  <div className="text-xs sm:text-sm">Click any node to search for that artist's connections</div>
                 </div>
               </div>
             </div>
             
             <div className="text-gray-500 text-xs">
-              <p className="mb-2">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
+              <p className="mb-1 sm:mb-2">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
               <p>Click on artist nodes to visit their MusicNerd profiles</p>
             </div>
           </div>
