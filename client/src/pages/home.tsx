@@ -26,17 +26,23 @@ export default function Home() {
   // Manage body overflow classes based on network view state
   useEffect(() => {
     const body = document.body;
+    const html = document.documentElement;
+    
+    // Remove all existing classes first
+    body.classList.remove('network-visible', 'network-hidden');
+    
     if (showNetworkView) {
-      body.classList.remove('network-hidden');
       body.classList.add('network-visible');
+      html.style.overflow = 'hidden';
     } else {
-      body.classList.remove('network-visible');
       body.classList.add('network-hidden');
+      html.style.overflow = 'hidden';
     }
     
     // Cleanup on unmount
     return () => {
       body.classList.remove('network-visible', 'network-hidden');
+      html.style.overflow = 'hidden';
     };
   }, [showNetworkView]);
 
