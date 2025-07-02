@@ -438,7 +438,25 @@ export default function NetworkVisualizer({
         event.stopPropagation();
         // Open Music Nerd for any node that has an artist role
         if (d.type === 'artist' || (d.types && d.types.includes('artist'))) {
-          openMusicNerdProfile(d.name, d.artistId);
+          // Check if this is the main artist (largest artist node)
+          const isMainArtist = d === mainArtistNode;
+          
+          // For main artist with artistId, go directly to their page (skip modal)
+          if (isMainArtist && d.artistId) {
+            const musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${d.artistId}`;
+            console.log(`🎵 Opening main artist page directly for "${d.name}": ${musicNerdUrl}`);
+            
+            const link = document.createElement('a');
+            link.href = musicNerdUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          } else {
+            // For other artists or main artist without artistId, use normal flow
+            openMusicNerdProfile(d.name, d.artistId);
+          }
         }
       })
       .on("contextmenu", function(event, d) {
