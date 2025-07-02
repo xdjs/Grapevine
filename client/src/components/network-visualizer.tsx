@@ -190,29 +190,28 @@ export default function NetworkVisualizer({
 
 
     // Universal wheel event handler for mouse scroll and trackpad pinch
-    let wheelTimeout: NodeJS.Timeout | null = null;
+    let lastWheelTime = 0;
     const handleWheelZoom = (event: WheelEvent) => {
       event.preventDefault();
       
-      // Clear previous timeout to batch wheel events
-      if (wheelTimeout) {
-        clearTimeout(wheelTimeout);
+      // Smooth throttling instead of batching
+      const now = Date.now();
+      if (now - lastWheelTime < 8) { // ~120fps for smoother experience
+        return;
       }
+      lastWheelTime = now;
       
       // Determine zoom direction based on deltaY
       const zoomIn = event.deltaY < 0;
       
-      // Batch wheel events to prevent too rapid zooming
-      wheelTimeout = setTimeout(() => {
-        if (zoomIn) {
-          handlePinchZoomIn();
-          console.log(event.ctrlKey ? '🖱️ Trackpad pinch zoom in' : '🖱️ Mouse wheel zoom in');
-        } else {
-          handlePinchZoomOut();
-          console.log(event.ctrlKey ? '🖱️ Trackpad pinch zoom out' : '🖱️ Mouse wheel zoom out');
-        }
-        wheelTimeout = null;
-      }, 16); // ~60fps throttling
+      // Immediate zoom for smooth response
+      if (zoomIn) {
+        handlePinchZoomIn();
+        console.log(event.ctrlKey ? '🖱️ Trackpad pinch zoom in' : '🖱️ Mouse wheel zoom in');
+      } else {
+        handlePinchZoomOut();
+        console.log(event.ctrlKey ? '🖱️ Trackpad pinch zoom out' : '🖱️ Mouse wheel zoom out');
+      }
     };
 
     // Add touch and wheel event listeners directly to the SVG element
@@ -228,9 +227,6 @@ export default function NetworkVisualizer({
       svgElement.removeEventListener('touchmove', handleTouchMove);
       svgElement.removeEventListener('touchend', handleTouchEnd);
       svgElement.removeEventListener('wheel', handleWheelZoom);
-      if (wheelTimeout) {
-        clearTimeout(wheelTimeout);
-      }
     };
 
     // Find connected components for cluster positioning
