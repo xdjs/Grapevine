@@ -25,6 +25,22 @@ interface ArtistOption {
   bio?: string;
 }
 
+// Custom hook for viewport height
+const useViewportHeight = () => {
+  const [viewportHeight, setViewportHeight] = useState(typeof window !== 'undefined' ? window.innerHeight : 800);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportHeight(window.innerHeight);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return viewportHeight;
+};
+
 export default function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction, onClearAll }: SearchInterfaceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentSearch, setCurrentSearch] = useState("");
@@ -32,6 +48,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
   const [showDropdown, setShowDropdown] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const { toast } = useToast();
+  const viewportHeight = useViewportHeight();
 
   const handleSearch = (artistName?: string) => {
     const query = artistName || searchQuery.trim();
@@ -257,7 +274,10 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
             
             {/* Artist Options Dropdown */}
             {showDropdown && artistOptions.length > 0 && (!showNetworkView || isSearchFocused) && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto artist-dropdown-scroll">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll" 
+                   style={{ 
+                     maxHeight: `${Math.min(320, Math.max(200, viewportHeight * 0.4 - 40))}px`
+                   }}>
                 <div className="p-2">
                   {artistOptions.map((artist) => (
                     <Card
@@ -371,7 +391,10 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               
               {/* Artist Options Dropdown */}
               {showDropdown && artistOptions.length > 0 && (!showNetworkView || isSearchFocused) && (
-                <div className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto artist-dropdown-scroll">
+                <div className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
+                     style={{ 
+                       maxHeight: `${Math.min(240, Math.max(150, viewportHeight * 0.3 - 20))}px`
+                     }}>
                   <div className="p-1">
                     {artistOptions.map((artist) => (
                       <Card
