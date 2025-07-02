@@ -472,6 +472,10 @@ export default function NetworkVisualizer({
       })
       .on("click", function(event, d) {
         event.stopPropagation();
+        console.log(`🎯 [Frontend] Node clicked: "${d.name}" (type: ${d.type}, artistId: ${d.artistId})`);
+        console.log(`🎯 [Frontend] Environment: ${window.location.href}`);
+        console.log(`🎯 [Frontend] Current baseUrl: ${musicNerdBaseUrl}`);
+        
         // Open Music Nerd for any node that has an artist role
         if (d.type === 'artist' || (d.types && d.types.includes('artist'))) {
           // Check if this is the main artist (largest artist node)
@@ -577,6 +581,8 @@ export default function NetworkVisualizer({
     }
 
       async function openMusicNerdProfile(artistName: string, artistId?: string | null) {
+      console.log(`🎵 [Frontend] openMusicNerdProfile called for "${artistName}" with artistId: ${artistId}`);
+      
       // If no specific artist ID provided, check for multiple options
       if (!artistId) {
         try {
