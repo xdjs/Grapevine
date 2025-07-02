@@ -17,6 +17,7 @@ interface SearchInterfaceProps {
   clearSearch?: boolean;
   onLoadingChange?: (loading: boolean) => void;
   onSearchFunction?: (searchFn: (artistName: string) => void) => void;
+  onClearAll?: () => void;
 }
 
 interface ArtistOption {
@@ -25,7 +26,7 @@ interface ArtistOption {
   bio?: string;
 }
 
-export default function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction }: SearchInterfaceProps) {
+export default function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction, onClearAll }: SearchInterfaceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentSearch, setCurrentSearch] = useState("");
   const [artistOptions, setArtistOptions] = useState<ArtistOption[]>([]);
@@ -266,18 +267,17 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
         <div className="bg-black/90 backdrop-blur-sm border-b border-gray-800 px-3 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <a 
-                href="https://musicnerd.xyz" 
-                target="_blank" 
-                rel="noopener noreferrer"
+              <button
+                onClick={onClearAll}
                 className="hover:opacity-80 transition-opacity cursor-pointer flex-shrink-0"
+                title="Clear All"
               >
                 <img 
                   src={musicNerdLogoSmall} 
-                  alt="MusicNerd Logo" 
+                  alt="MusicNerd Logo - Click to Clear" 
                   className="w-6 h-6 sm:w-8 sm:h-8 object-contain"
                 />
-              </a>
+              </button>
               <h2 className="text-sm sm:text-xl font-semibold text-white truncate">
                 <span className="hidden sm:inline">Music Collaboration Network</span>
                 <span className="sm:hidden">MusicNerd</span>

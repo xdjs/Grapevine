@@ -82,6 +82,7 @@ export default function Home() {
         onSearchFunction={(searchFn) => {
           triggerSearchRef.current = searchFn;
         }}
+        onClearAll={handleReset}
       />
 
       {/* Network Visualization */}
