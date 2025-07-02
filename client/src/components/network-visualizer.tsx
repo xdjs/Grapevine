@@ -635,16 +635,39 @@ export default function NetworkVisualizer({
         console.log(`🎵 No artist ID found for "${artistName}", opening main MusicNerd page`);
       }
       
-      // Create a temporary link element and click it - this approach is less likely to be blocked
-      const link = document.createElement('a');
-      link.href = musicNerdUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      
-      // Append to body, click, and remove
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Try multiple approaches to open the link
+      try {
+        // Method 1: window.open (most reliable for user-initiated actions)
+        const newWindow = window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
+        
+        // Method 2: Fallback to link click if window.open fails
+        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+          console.log('🎵 Window.open blocked, trying link click method...');
+          const link = document.createElement('a');
+          link.href = musicNerdUrl;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          
+          // Append to body, click, and remove
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          console.log('🎵 Successfully opened new window');
+        }
+      } catch (error) {
+        console.error('🎵 Error opening MusicNerd page:', error);
+        // Final fallback: copy URL to clipboard and notify user
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(musicNerdUrl).then(() => {
+            alert(`Unable to open page automatically. URL copied to clipboard: ${musicNerdUrl}`);
+          }).catch(() => {
+            alert(`Please visit: ${musicNerdUrl}`);
+          });
+        } else {
+          alert(`Please visit: ${musicNerdUrl}`);
+        }
+      }
     }
     function dragstarted(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
       // Prevent event bubbling to avoid interfering with zoom behavior
