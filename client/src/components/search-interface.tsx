@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 import musicNerdLogo from "@assets/musicNerdLogo_1751389084069.png";
 import musicNerdLogoSmall from "@assets/musicNerdLogo_1751389498769.png";
 import { NetworkData } from "@/types/network";
@@ -23,16 +24,6 @@ interface ArtistOption {
   bio?: string;
 }
 
-
-export default function SearchInterface({
-  onNetworkData,
-  showNetworkView,
-  clearSearch,
-  onLoadingChange,
-  onSearchFunction,
-  onClearAll,
-}: SearchInterfaceProps) {
-
 // Custom hook for viewport height
 const useViewportHeight = () => {
   const [viewportHeight, setViewportHeight] = useState(typeof window !== 'undefined' ? window.innerHeight : 800);
@@ -49,8 +40,14 @@ const useViewportHeight = () => {
   return viewportHeight;
 };
 
-export default function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction, onClearAll }: SearchInterfaceProps) {
-
+export default function SearchInterface({ 
+  onNetworkData, 
+  showNetworkView, 
+  clearSearch, 
+  onLoadingChange, 
+  onSearchFunction, 
+  onClearAll 
+}: SearchInterfaceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [artistOptions, setArtistOptions] = useState<ArtistOption[]>([]);
@@ -58,14 +55,10 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   const { toast } = useToast();
   const viewportHeight = useViewportHeight();
-
-
-
 
   const fetchOptions = async (query: string): Promise<ArtistOption[]> => {
     if (query.length < 1) return [];
@@ -91,11 +84,9 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
         try {
           const options = await fetchOptions(query);
           setArtistOptions(options);
-          if (options.length > 0) {
-            setShowDropdown(true);
-          }
+          setShowDropdown(true);
         } catch (error) {
-          console.error('Failed to fetch artist options:', error);
+          console.error('Error fetching artist options:', error);
           setArtistOptions([]);
         } finally {
           setIsLoadingOptions(false);
@@ -107,72 +98,72 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
     }, 150);
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, []);
-
   const handleInputChange = (value: string) => {
     setSearchQuery(value);
-    
-    if (value.trim().length >= 1) {
-      debouncedFetchOptions(value.trim());
-    } else {
-      setArtistOptions([]);
-      setShowDropdown(false);
-      setIsLoadingOptions(false);
-    }
+    debouncedFetchOptions(value);
   };
 
-  const handleSearch = async (artist?: string) => {
-    const searchTerm = artist || searchQuery.trim();
-    if (!searchTerm) return;
+  const handleArtistSelect = (artist: ArtistOption) => {
+    setSearchQuery(artist.name);
+    setShowDropdown(false);
+    setArtistOptions([]);
+    handleSearch(artist.name);
+  };
+
+  const handleSearch = async (artistName?: string) => {
+    const query = artistName || searchQuery.trim();
+    if (!query) return;
+
+    console.log(`🔍 [Frontend] Fetching network data for: "${query}"`);
+    console.log(`🔍 [Frontend] Request URL: /api/network/${encodeURIComponent(query)}`);
 
     setIsLoading(true);
     onLoadingChange(true);
-    
-    // Hide dropdown immediately when search starts
     setShowDropdown(false);
     setArtistOptions([]);
 
     try {
-      console.log(`🔍 [Frontend] Fetching network data for: "${searchTerm}"`);
-      const encodedArtist = encodeURIComponent(searchTerm);
-      const url = `/api/network/${encodedArtist}`;
-      console.log(`🔍 [Frontend] Request URL: ${url}`);
-      
-      const response = await fetch(url);
+      const response = await fetch(`/api/network/${encodeURIComponent(query)}`);
       console.log(`🔍 [Frontend] Response status: ${response.status}`);
       console.log(`🔍 [Frontend] Response ok: ${response.ok}`);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`❌ [Frontend] Network request failed: ${response.status} - ${errorText}`);
-        throw new Error(`Failed to fetch network data: ${response.status}`);
-      }
 
-      const networkData = await response.json();
-      console.log(`✅ [Frontend] Received network data with ${networkData.nodes.length} nodes`);
-      
-      onNetworkData(networkData);
-      setSearchQuery(searchTerm);
+      if (response.ok) {
+        const networkData = await response.json();
+        console.log(`✅ [Frontend] Received network data with ${networkData.nodes.length} nodes`);
+        onNetworkData(networkData);
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error(`❌ [Frontend] Error response:`, errorData);
+        toast({
+          title: "Artist not found",
+          description: errorData.message || "This artist is not currently in our database. Please try searching for a different artist.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
-      console.error("❌ [Frontend] Error fetching network data:", error);
+      console.error("❌ [Frontend] Network request failed:", error);
+      toast({
+        title: "Connection Error",
+        description: "Unable to search for artist. Please check your connection and try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
       onLoadingChange(false);
     }
   };
 
+  // Expose search function to parent
   useEffect(() => {
     if (onSearchFunction) {
-      onSearchFunction(handleSearch);
+      onSearchFunction((artistName: string) => {
+        setSearchQuery(artistName);
+        handleSearch(artistName);
+      });
     }
   }, [onSearchFunction]);
 
+  // Clear search when clearSearch prop changes
   useEffect(() => {
     if (clearSearch) {
       setSearchQuery("");
@@ -181,15 +172,21 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
     }
   }, [clearSearch]);
 
-  const handleArtistSelect = (artist: ArtistOption) => {
-    setShowDropdown(false);
-    setArtistOptions([]);
-    handleSearch(artist.name);
-  };
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+        setIsSearchFocused(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      // Immediately hide dropdown when Enter is pressed
       setShowDropdown(false);
       setArtistOptions([]);
       handleSearch();
@@ -227,25 +224,27 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
           <p className="text-gray-400 mb-6 sm:mb-8 text-sm sm:text-base md:text-lg px-2">
             Discover how artists connect through producers and songwriters
           </p>
-
-          <div className="relative w-full search-dropdown-container">
+          
+          <div className="relative search-dropdown-container">
             <Input
               type="text"
-              placeholder="Enter an artist name..."
+              placeholder="Search for an artist..."
               value={searchQuery}
               onChange={(e) => handleInputChange(e.target.value)}
               onKeyPress={handleKeyPress}
-              disabled={isLoading}
+              onFocus={() => {
+                setIsSearchFocused(true);
+                if (searchQuery.length >= 1) {
+                  setShowDropdown(true);
+                }
+              }}
+              className="w-full pr-12 text-base sm:text-lg py-2 sm:py-3 bg-gray-800 border-gray-700 text-white placeholder-gray-400"
             />
             <Button
-              onClick={() => {
-                // Immediately hide dropdown when search button is clicked
-                setShowDropdown(false);
-                setArtistOptions([]);
-                handleSearch();
-              }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 p-0 bg-blue-600 hover:bg-blue-700 rounded-md"
-              disabled={isLoading}
+              onClick={() => handleSearch()}
+              disabled={isLoading || !searchQuery.trim()}
+              size="sm"
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-pink-600 hover:bg-pink-700"
             >
               {isLoading ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -254,19 +253,13 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               )}
             </Button>
             
-
             {/* Artist Options Dropdown - Instant Search Results */}
             {(showDropdown || isLoadingOptions) && (!showNetworkView || isSearchFocused) && (
-
               <div 
                 ref={dropdownRef}
                 className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
                 style={{ maxHeight: '160px' }}
               >
-
-              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto artist-dropdown-scroll">
-
-
                 <div className="p-2">
                   {isLoadingOptions && (
                     <div className="flex items-center justify-center py-4">
@@ -284,19 +277,19 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                         <Card
                           key={artist.id}
                           className="mb-2 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4"
-                          style={{
-                            borderLeftColor: '#FF69B4'
-                          }}
+                          style={{ borderLeftColor: '#FF69B4' }}
                           onClick={() => handleArtistSelect(artist)}
                         >
-                          <CardHeader className="pb-2 pt-3 px-4">
+                          <CardHeader className="p-2">
                             <div className="flex items-center justify-between">
-                              <CardTitle className="text-sm text-white">{artist.name}</CardTitle>
-                              {artist.name.toLowerCase() === searchQuery.toLowerCase() && (
-                                <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                                  Exact Match
-                                </span>
-                              )}
+                              <CardTitle className="text-sm text-white font-medium truncate">
+                                {artist.name}
+                                {artist.name.toLowerCase() === searchQuery.toLowerCase() && (
+                                  <span className="ml-2 text-xs bg-pink-600 text-white px-2 py-1 rounded">
+                                    Exact Match
+                                  </span>
+                                )}
+                              </CardTitle>
                             </div>
                             {artist.bio && (
                               <CardDescription className="text-xs text-gray-400 line-clamp-2">
@@ -358,32 +351,20 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                 onKeyPress={handleKeyPress}
                 onFocus={() => {
                   setIsSearchFocused(true);
-                  // Trigger search if we have content but no current options
-                  if (searchQuery.trim().length >= 1 && artistOptions.length === 0) {
-                    debouncedFetchOptions(searchQuery.trim());
-                  } else if (artistOptions.length > 0) {
+                  if (searchQuery.length >= 1) {
                     setShowDropdown(true);
                   }
                 }}
                 onBlur={() => {
-                  // Delay hiding focus to allow dropdown clicks
-                  setTimeout(() => {
-                    setIsSearchFocused(false);
-                    setShowDropdown(false);
-                  }, 150);
+                  setTimeout(() => setIsSearchFocused(false), 200);
                 }}
-                className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-10 sm:pr-12 text-sm sm:text-base"
-                disabled={isLoading}
+                className="w-full pr-10 text-sm bg-gray-800 border-gray-700 text-white placeholder-gray-400"
               />
               <Button
-                onClick={() => {
-                  // Immediately hide dropdown when search button is clicked
-                  setShowDropdown(false);
-                  setArtistOptions([]);
-                  handleSearch();
-                }}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 bg-blue-600 hover:bg-blue-700 rounded-md"
-                disabled={isLoading}
+                onClick={() => handleSearch()}
+                disabled={isLoading || !searchQuery.trim()}
+                size="sm"
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-pink-600 hover:bg-pink-700 p-1.5"
               >
                 {isLoading ? (
                   <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -392,19 +373,14 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                 )}
               </Button>
 
-              {/* Artist Options Dropdown - Network View Instant Search */}
-              {(showDropdown || isLoadingOptions) && (!showNetworkView || isSearchFocused) && (
-
+              {/* Artist Options Dropdown - Network View */}
+              {(showDropdown || isLoadingOptions) && isSearchFocused && (
                 <div 
                   ref={dropdownRef}
-                  className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
+                  className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
                   style={{ maxHeight: '130px' }}
                 >
-
-                <div className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto artist-dropdown-scroll">
-
-
-                  <div className="p-1">
+                  <div className="p-2">
                     {isLoadingOptions && (
                       <div className="flex items-center justify-center py-2">
                         <div className="w-3 h-3 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mr-2" />
@@ -414,32 +390,27 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                     
                     {!isLoadingOptions && artistOptions.length > 0 && (
                       <>
-                        <div className="text-xs text-gray-400 px-2 py-1 border-b border-gray-700 mb-1">
+                        <div className="text-xs text-gray-400 px-2 py-1 border-b border-gray-700 mb-2">
                           {artistOptions.length} artist{artistOptions.length !== 1 ? 's' : ''} found
                         </div>
                         {artistOptions.map((artist, index) => (
                           <Card
                             key={artist.id}
                             className="mb-1 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4"
-                            style={{
-                              borderLeftColor: '#FF69B4'
-                            }}
+                            style={{ borderLeftColor: '#FF69B4' }}
                             onClick={() => handleArtistSelect(artist)}
                           >
-                            <CardHeader className="pb-1 pt-2 px-3">
+                            <CardHeader className="p-2">
                               <div className="flex items-center justify-between">
-                                <CardTitle className="text-xs text-white">{artist.name}</CardTitle>
-                                {artist.name.toLowerCase() === searchQuery.toLowerCase() && (
-                                  <span className="text-xs px-1 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                                    Exact Match
-                                  </span>
-                                )}
+                                <CardTitle className="text-xs text-white font-medium truncate">
+                                  {artist.name}
+                                  {artist.name.toLowerCase() === searchQuery.toLowerCase() && (
+                                    <span className="ml-2 text-xs bg-pink-600 text-white px-1 py-0.5 rounded text-xs">
+                                      Exact Match
+                                    </span>
+                                  )}
+                                </CardTitle>
                               </div>
-                              {artist.bio && (
-                                <CardDescription className="text-xs text-gray-400 line-clamp-1">
-                                  {artist.bio}
-                                </CardDescription>
-                              )}
                             </CardHeader>
                           </Card>
                         ))}
