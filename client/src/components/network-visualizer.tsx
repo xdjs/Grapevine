@@ -24,6 +24,37 @@ export default function NetworkVisualizer({
   const [currentZoom, setCurrentZoom] = useState(1);
   const [showArtistModal, setShowArtistModal] = useState(false);
   const [selectedArtistName, setSelectedArtistName] = useState("");
+  const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("");
+
+  // Fetch configuration on component mount
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        console.log('🔧 [Config] Fetching config from /api/config');
+        const response = await fetch('/api/config');
+        console.log('🔧 [Config] Response status:', response.status);
+        console.log('🔧 [Config] Response ok:', response.ok);
+        
+        if (response.ok) {
+          const config = await response.json();
+          console.log('🔧 [Config] Received config:', config);
+          if (config.musicNerdBaseUrl) {
+            setMusicNerdBaseUrl(config.musicNerdBaseUrl);
+            console.log(`🔧 [Config] MusicNerd base URL set to: ${config.musicNerdBaseUrl}`);
+          } else {
+            console.error('🔧 [Config] No musicNerdBaseUrl in config response');
+          }
+        } else {
+          const errorText = await response.text();
+          console.error('🔧 [Config] Error response:', errorText);
+        }
+      } catch (error) {
+        console.error('Error fetching config:', error);
+      }
+    };
+    
+    fetchConfig();
+  }, []);
 
   useEffect(() => {
     if (!svgRef.current || !data || !visible) return;
@@ -438,7 +469,25 @@ export default function NetworkVisualizer({
         event.stopPropagation();
         // Open Music Nerd for any node that has an artist role
         if (d.type === 'artist' || (d.types && d.types.includes('artist'))) {
-          openMusicNerdProfile(d.name, d.artistId);
+          // Check if this is the main artist (largest artist node)
+          const isMainArtist = d === mainArtistNode;
+          
+          // For main artist with artistId, go directly to their page (skip modal)
+          if (isMainArtist && d.artistId) {
+            const musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${d.artistId}`;
+            console.log(`🎵 Opening main artist page directly for "${d.name}": ${musicNerdUrl}`);
+            
+            const link = document.createElement('a');
+            link.href = musicNerdUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          } else {
+            // For other artists or main artist without artistId, use normal flow
+            openMusicNerdProfile(d.name, d.artistId);
+          }
         }
       })
       .on("contextmenu", function(event, d) {
@@ -531,7 +580,7 @@ export default function NetworkVisualizer({
       tooltip.style("opacity", 0);
     }
 
-    async function openMusicNerdProfile(artistName: string, artistId?: string | null) {
+      async function openMusicNerdProfile(artistName: string, artistId?: string | null) {
       // If no specific artist ID provided, check for multiple options
       if (!artistId) {
         try {
@@ -554,11 +603,19 @@ export default function NetworkVisualizer({
         }
       }
       
+      // Check if base URL is available
+      if (!musicNerdBaseUrl) {
+        console.error(`🎵 Cannot open MusicNerd profile for "${artistName}": Base URL not configured`);
+        return;
+      }
+      
       // Use artist ID if available, otherwise go to main page
-      let musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/`;
+
+      let musicNerdUrl = `https://musicnerd.xyz/`;
       
       if (artistId) {
-        musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${artistId}`;
+        musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
+
         console.log(`🎵 Opening MusicNerd artist page for "${artistName}": ${musicNerdUrl}`);
       } else {
         console.log(`🎵 No artist ID found for "${artistName}", opening main MusicNerd page`);
@@ -575,7 +632,6 @@ export default function NetworkVisualizer({
       link.click();
       document.body.removeChild(link);
     }
-
     function dragstarted(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
       // Prevent event bubbling to avoid interfering with zoom behavior
       event.sourceEvent.stopPropagation();
@@ -743,7 +799,9 @@ export default function NetworkVisualizer({
 
   const handleArtistSelection = (artistId: string) => {
     // Open the specific artist page with the selected ID
-    const musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${artistId}`;
+
+    const musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
+
     console.log(`🎵 Opening selected artist page: ${musicNerdUrl}`);
     
     const link = document.createElement('a');

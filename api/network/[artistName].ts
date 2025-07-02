@@ -190,7 +190,7 @@ Requirements:
         types: ['artist'],
         color: '#FF69B4',
         size: 30,
-        musicNerdId: mainArtistResult.rows.length > 0 ? mainArtistResult.rows[0].id : null
+        artistId: mainArtistResult.rows.length > 0 ? mainArtistResult.rows[0].id : null
       };
       nodeMap.set(artistName, mainNode);
 
@@ -220,7 +220,7 @@ Requirements:
             types: [collaborator.type],
             color: collaborator.type === 'producer' ? '#8A2BE2' : '#00CED1',
             size: 20,
-            musicNerdId: null,
+            artistId: null,
             topCollaborators: collaborator.topCollaborators || []
           };
 
@@ -228,7 +228,7 @@ Requirements:
           const collabQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
           const collabResult = await client.query(collabQuery, [collaborator.name]);
           if (collabResult.rows.length > 0) {
-            collabNode.musicNerdId = collabResult.rows[0].id;
+            collabNode.artistId = collabResult.rows[0].id;
           }
 
           nodeMap.set(collaborator.name, collabNode);
@@ -253,14 +253,14 @@ Requirements:
               types: ['artist'],
               color: '#FF69B4',
               size: 15,
-              musicNerdId: null
+              artistId: null
             };
 
             // Look up MusicNerd ID for branching artist
             const branchQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
             const branchResult = await client.query(branchQuery, [branchingArtist]);
             if (branchResult.rows.length > 0) {
-              branchNode.musicNerdId = branchResult.rows[0].id;
+              branchNode.artistId = branchResult.rows[0].id;
             }
 
             nodeMap.set(branchingArtist, branchNode);

@@ -23,6 +23,7 @@ interface ArtistOption {
   bio?: string;
 }
 
+
 export default function SearchInterface({
   onNetworkData,
   showNetworkView,
@@ -31,6 +32,25 @@ export default function SearchInterface({
   onSearchFunction,
   onClearAll,
 }: SearchInterfaceProps) {
+
+// Custom hook for viewport height
+const useViewportHeight = () => {
+  const [viewportHeight, setViewportHeight] = useState(typeof window !== 'undefined' ? window.innerHeight : 800);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportHeight(window.innerHeight);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return viewportHeight;
+};
+
+export default function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction, onClearAll }: SearchInterfaceProps) {
+
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [artistOptions, setArtistOptions] = useState<ArtistOption[]>([]);
@@ -38,7 +58,12 @@ export default function SearchInterface({
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  const { toast } = useToast();
+  const viewportHeight = useViewportHeight();
+
 
 
 
@@ -229,13 +254,19 @@ export default function SearchInterface({
               )}
             </Button>
             
+
             {/* Artist Options Dropdown - Instant Search Results */}
             {(showDropdown || isLoadingOptions) && (!showNetworkView || isSearchFocused) && (
+
               <div 
                 ref={dropdownRef}
                 className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
                 style={{ maxHeight: '160px' }}
               >
+
+              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto artist-dropdown-scroll">
+
+
                 <div className="p-2">
                   {isLoadingOptions && (
                     <div className="flex items-center justify-center py-4">
@@ -360,14 +391,19 @@ export default function SearchInterface({
                   <Search className="w-3 h-3" />
                 )}
               </Button>
-              
+
               {/* Artist Options Dropdown - Network View Instant Search */}
               {(showDropdown || isLoadingOptions) && (!showNetworkView || isSearchFocused) && (
+
                 <div 
                   ref={dropdownRef}
                   className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
                   style={{ maxHeight: '130px' }}
                 >
+
+                <div className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto artist-dropdown-scroll">
+
+
                   <div className="p-1">
                     {isLoadingOptions && (
                       <div className="flex items-center justify-center py-2">
