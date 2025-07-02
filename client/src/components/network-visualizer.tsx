@@ -51,9 +51,12 @@ export default function NetworkVisualizer({
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 8])
       .filter((event) => {
-        // Only allow wheel events and programmatic zoom (no drag panning or clicks)
-        // This prevents the tree from floating away when dragging on empty space
-        return event.type === 'wheel' || (!event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown');
+        // Block all wheel events since we handle them manually for better zoom control
+        // Block touch events since we handle them manually for better pinch zoom control
+        const isWheelEvent = event.type === 'wheel';
+        const isProgrammaticZoom = !event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown';
+        
+        return !isWheelEvent && (isProgrammaticZoom || event.type === 'mousedown' || event.type === 'mousemove');
       })
       .on("zoom", (event) => {
         // Respond to user scroll wheel and programmatic zoom only
@@ -67,11 +70,164 @@ export default function NetworkVisualizer({
     svg.call(zoom);
     zoomRef.current = zoom;
 
-    // Add explicit prevention of background interactions
+    // Completely disable D3's touch handling - we'll handle it manually
     svg.on("mousedown.drag", null)
-       .on("touchstart.drag", null)
        .on("click.zoom", null)
-       .on("dblclick.zoom", null);
+       .on("dblclick.zoom", null)
+       .on("touchstart.zoom", null)
+       .on("touchmove.zoom", null)
+       .on("touchend.zoom", null);
+
+    // EXACT COPY of the working zoom button functions
+    const applyZoom = (scale: number) => {
+      if (!svgRef.current) return;
+      
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      
+      // Calculate new viewBox dimensions
+      const newWidth = width / scale;
+      const newHeight = height / scale;
+      const offsetX = (width - newWidth) / 2;
+      const offsetY = (height - newHeight) / 2;
+      
+      // Apply smooth transition
+      const svg = d3.select(svgRef.current);
+      svg.transition()
+        .duration(200)
+        .attrTween('viewBox', () => {
+          const currentViewBox = svgRef.current?.getAttribute('viewBox') || `0 0 ${width} ${height}`;
+          const [cx, cy, cw, ch] = currentViewBox.split(' ').map(Number);
+          const interpolator = d3.interpolate([cx, cy, cw, ch], [offsetX, offsetY, newWidth, newHeight]);
+          return (t: number) => {
+            const [x, y, w, h] = interpolator(t);
+            return `${x} ${y} ${w} ${h}`;
+          };
+        });
+    };
+
+    const handlePinchZoomIn = () => {
+      setCurrentZoom(prevZoom => {
+        const newZoom = Math.min(5, prevZoom * 1.2); // Cap at 5x
+        console.log(`🤏 Pinch zoom in: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+        applyZoom(newZoom);
+        return newZoom;
+      });
+    };
+
+    const handlePinchZoomOut = () => {
+      setCurrentZoom(prevZoom => {
+        const newZoom = Math.max(0.2, prevZoom / 1.2); // Min 0.2x
+        console.log(`🤏 Pinch zoom out: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+        applyZoom(newZoom);
+        return newZoom;
+      });
+    };
+
+    // Pinch zoom variables
+    let initialDistance = 0;
+    let lastScale = 1;
+    let isPinching = false;
+    let pinchThreshold = 0.2; // Increased from 0.1 to 0.2 for less sensitivity
+
+    // Custom touch event handlers using existing zoom functions
+    const handleTouchStart = (event: TouchEvent) => {
+      if (event.touches.length === 2) {
+        console.log("🤏 Starting pinch gesture");
+        isPinching = true;
+        const touch1 = event.touches[0];
+        const touch2 = event.touches[1];
+        initialDistance = Math.sqrt(
+          Math.pow(touch2.clientX - touch1.clientX, 2) + 
+          Math.pow(touch2.clientY - touch1.clientY, 2)
+        );
+        lastScale = 1;
+        event.preventDefault();
+        event.stopPropagation();
+      } else if (event.touches.length === 1) {
+        event.preventDefault();
+      }
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (isPinching && event.touches.length === 2) {
+        const touch1 = event.touches[0];
+        const touch2 = event.touches[1];
+        const currentDistance = Math.sqrt(
+          Math.pow(touch2.clientX - touch1.clientX, 2) + 
+          Math.pow(touch2.clientY - touch1.clientY, 2)
+        );
+        
+        if (initialDistance > 0) {
+          const scaleChange = currentDistance / initialDistance;
+          
+          // Use threshold to prevent too frequent updates
+          if (Math.abs(scaleChange - lastScale) > pinchThreshold) {
+            if (scaleChange > lastScale) {
+              // Pinch out - zoom in using EXACT same code as zoom buttons
+              handlePinchZoomIn();
+            } else {
+              // Pinch in - zoom out using EXACT same code as zoom buttons
+              handlePinchZoomOut();
+            }
+            lastScale = scaleChange;
+          }
+        }
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      if (isPinching) {
+        console.log("🤏 Ending pinch gesture");
+        isPinching = false;
+        initialDistance = 0;
+        lastScale = 1;
+      }
+    };
+
+
+
+    // Universal wheel event handler for mouse scroll and trackpad pinch
+    let lastWheelTime = 0;
+    const handleWheelZoom = (event: WheelEvent) => {
+      event.preventDefault();
+      
+      // Reduced sensitivity with longer throttling
+      const now = Date.now();
+      if (now - lastWheelTime < 50) { // Increased from 8ms to 50ms for less sensitivity
+        return;
+      }
+      lastWheelTime = now;
+      
+      // Determine zoom direction based on deltaY
+      const zoomIn = event.deltaY < 0;
+      
+      // Immediate zoom for smooth response
+      if (zoomIn) {
+        handlePinchZoomIn();
+        console.log(event.ctrlKey ? '🖱️ Trackpad pinch zoom in' : '🖱️ Mouse wheel zoom in');
+      } else {
+        handlePinchZoomOut();
+        console.log(event.ctrlKey ? '🖱️ Trackpad pinch zoom out' : '🖱️ Mouse wheel zoom out');
+      }
+    };
+
+    // Add touch and wheel event listeners directly to the SVG element
+    const svgElement = svg.node() as SVGSVGElement;
+    svgElement.addEventListener('touchstart', handleTouchStart, { passive: false });
+    svgElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+    svgElement.addEventListener('touchend', handleTouchEnd, { passive: false });
+    svgElement.addEventListener('wheel', handleWheelZoom, { passive: false });
+
+    // Cleanup function for all event listeners
+    const cleanup = () => {
+      svgElement.removeEventListener('touchstart', handleTouchStart);
+      svgElement.removeEventListener('touchmove', handleTouchMove);
+      svgElement.removeEventListener('touchend', handleTouchEnd);
+      svgElement.removeEventListener('wheel', handleWheelZoom);
+    };
 
     // Find connected components for cluster positioning
     const findConnectedComponents = () => {
@@ -460,6 +616,7 @@ export default function NetworkVisualizer({
     return () => {
       tooltip.remove();
       simulation.stop();
+      cleanup();
     };
   }, [data, visible, onZoomChange]);
 

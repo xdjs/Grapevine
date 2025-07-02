@@ -3,9 +3,11 @@ import SearchInterface from "@/components/search-interface";
 import NetworkVisualizer from "@/components/network-visualizer";
 import ZoomControls from "@/components/zoom-controls";
 import FilterControls from "@/components/filter-controls";
+import MobileControls from "@/components/mobile-controls";
 
 import { NetworkData, FilterState } from "@/types/network";
 import { Loader2 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Home() {
   const [networkData, setNetworkData] = useState<NetworkData | null>(null);
@@ -19,6 +21,7 @@ export default function Home() {
     showArtists: true,
   });
   const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
+  const isMobile = useIsMobile();
 
   const handleNetworkData = useCallback((data: NetworkData) => {
     // Replace existing network with new data
@@ -43,6 +46,15 @@ export default function Home() {
     setTimeout(() => setClearSearchField(false), 100);
   };
 
+  const handleClearNetwork = () => {
+    setNetworkData(null);
+    setIsLoading(false);
+    setClearSearchField(true);
+    // Keep showNetworkView as true to stay on the network page
+    // Reset the clear flag after a brief delay
+    setTimeout(() => setClearSearchField(false), 100);
+  };
+
   const handleZoomChange = (transform: { k: number; x: number; y: number }) => {
     setZoomTransform(transform);
   };
@@ -51,6 +63,21 @@ export default function Home() {
     if (triggerSearchRef.current) {
       triggerSearchRef.current(artistName);
     }
+  };
+
+  const handleZoomIn = () => {
+    const event = new CustomEvent('network-zoom', { detail: { action: 'in' } });
+    window.dispatchEvent(event);
+  };
+
+  const handleZoomOut = () => {
+    const event = new CustomEvent('network-zoom', { detail: { action: 'out' } });
+    window.dispatchEvent(event);
+  };
+
+  const handleZoomReset = () => {
+    const event = new CustomEvent('network-zoom', { detail: { action: 'reset' } });
+    window.dispatchEvent(event);
   };
 
   return (
@@ -64,6 +91,7 @@ export default function Home() {
         onSearchFunction={(searchFn) => {
           triggerSearchRef.current = searchFn;
         }}
+        onClearAll={handleReset}
       />
 
       {/* Network Visualization */}
@@ -80,11 +108,11 @@ export default function Home() {
 
       {/* Loading Spinner */}
       {isLoading && showNetworkView && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-30">
-          <div className="bg-black/80 rounded-lg p-8 flex flex-col items-center space-y-4">
-            <Loader2 className="h-12 w-12 animate-spin text-pink-500" />
-            <p className="text-lg font-medium text-white">Creating collaboration network...</p>
-            <p className="text-sm text-gray-400 text-center max-w-md">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-30 p-4">
+          <div className="bg-black/80 rounded-lg p-4 sm:p-8 flex flex-col items-center space-y-3 sm:space-y-4 max-w-sm sm:max-w-md">
+            <Loader2 className="h-10 w-10 sm:h-12 sm:w-12 animate-spin text-pink-500" />
+            <p className="text-base sm:text-lg font-medium text-white text-center">Creating collaboration network...</p>
+            <p className="text-xs sm:text-sm text-gray-400 text-center">
               Analyzing authentic collaboration data from MusicBrainz, OpenAI, and Spotify
             </p>
           </div>
@@ -94,24 +122,30 @@ export default function Home() {
       {/* Controls - Only show when network is visible */}
       {showNetworkView && (
         <>
-          <ZoomControls
-            onZoomIn={() => {
-              const event = new CustomEvent('network-zoom', { detail: { action: 'in' } });
-              window.dispatchEvent(event);
-            }}
-            onZoomOut={() => {
-              const event = new CustomEvent('network-zoom', { detail: { action: 'out' } });
-              window.dispatchEvent(event);
-            }}
-            onZoomReset={() => {
-              const event = new CustomEvent('network-zoom', { detail: { action: 'reset' } });
-              window.dispatchEvent(event);
-            }}
-            onClearAll={handleReset}
-          />
-          <FilterControls
+          {/* Desktop Controls */}
+          {!isMobile && (
+            <>
+              <ZoomControls
+                onZoomIn={handleZoomIn}
+                onZoomOut={handleZoomOut}
+                onZoomReset={handleZoomReset}
+                onClearAll={handleClearNetwork}
+              />
+              <FilterControls
+                filterState={filterState}
+                onFilterChange={setFilterState}
+              />
+            </>
+          )}
+          
+          {/* Mobile Controls */}
+          <MobileControls
             filterState={filterState}
             onFilterChange={setFilterState}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onZoomReset={handleZoomReset}
+            onClearAll={handleClearNetwork}
           />
         </>
       )}

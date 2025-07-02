@@ -17,6 +17,7 @@ interface SearchInterfaceProps {
   clearSearch?: boolean;
   onLoadingChange?: (loading: boolean) => void;
   onSearchFunction?: (searchFn: (artistName: string) => void) => void;
+  onClearAll?: () => void;
 }
 
 interface ArtistOption {
@@ -25,7 +26,7 @@ interface ArtistOption {
   bio?: string;
 }
 
-export default function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction }: SearchInterfaceProps) {
+export default function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction, onClearAll }: SearchInterfaceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentSearch, setCurrentSearch] = useState("");
   const [artistOptions, setArtistOptions] = useState<ArtistOption[]>([]);
@@ -201,13 +202,13 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
     <>
       {/* Centered Search - Initial View */}
       <div
-        className={`absolute inset-0 flex items-center justify-center z-20 transition-all duration-700 ${
+        className={`absolute inset-0 flex items-center justify-center z-20 transition-all duration-700 px-4 ${
           showNetworkView
             ? "opacity-0 pointer-events-none -translate-y-12"
             : "opacity-100"
         }`}
       >
-        <div className="text-center">
+        <div className="text-center w-full max-w-md">
           <div className="mb-6 flex justify-center">
             <a 
               href="https://musicnerd.xyz" 
@@ -218,56 +219,24 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               <img 
                 src={musicNerdLogo} 
                 alt="MusicNerd Logo" 
-                className="w-32 h-32 object-contain"
+                className="w-24 h-24 sm:w-32 sm:h-32 object-contain"
               />
             </a>
           </div>
-          <h1 className="text-4xl font-bold mb-2 text-white">
+          <h1 className="text-2xl sm:text-4xl font-bold mb-2 text-white">
             Music Collaboration Network
           </h1>
-          <p className="text-gray-400 mb-8 text-lg">
+          <p className="text-gray-400 mb-8 text-base sm:text-lg px-2">
             Discover how artists connect through producers and songwriters
           </p>
 
-          <div className="relative w-full max-w-4xl">
+          <div className="relative w-full">
             <Input
               type="text"
-              placeholder="Enter an artist name (e.g., Taylor Swift, Drake, Billie Eilish, etc....)"
+              placeholder="Enter an artist name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={handleKeyPress}
-              onFocus={async () => {
-                setIsSearchFocused(true);
-                // Re-trigger dropdown visibility when focus is gained
-                if (searchQuery.trim().length > 2) {
-                  if (artistOptions.length > 0) {
-                    setShowDropdown(true);
-                  } else {
-                    // Fetch artist options if we don't have any
-                    try {
-                      const apiUrl = `/api/artist-options/${encodeURIComponent(searchQuery.trim())}`;
-                      const response = await fetch(apiUrl);
-                      if (response.ok) {
-                        const data = await response.json();
-                        setArtistOptions(data.options || []);
-                        if ((data.options || []).length > 0) {
-                          setShowDropdown(true);
-                        }
-                      }
-                    } catch (error) {
-                      console.error('Error fetching artist options on focus:', error);
-                    }
-                  }
-                }
-              }}
-              onBlur={() => {
-                // Delay hiding focus to allow dropdown clicks
-                setTimeout(() => {
-                  setIsSearchFocused(false);
-                  setShowDropdown(false);
-                }, 150);
-              }}
-              className="w-full px-6 py-4 bg-gray-900 border-gray-700 text-white placeholder-gray-500 text-lg h-14 pr-16"
               disabled={isLoading}
             />
             <Button
@@ -324,31 +293,40 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
             : "opacity-0 pointer-events-none -translate-y-12"
         }`}
       >
-        <div className="bg-black/90 backdrop-blur-sm border-b border-gray-800 px-6 py-4">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <a 
-                href="https://musicnerd.xyz" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="hover:opacity-80 transition-opacity cursor-pointer"
+        <div className="bg-black/90 backdrop-blur-sm border-b border-gray-800 px-3 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <button
+                onClick={onClearAll}
+                className="hover:opacity-80 transition-opacity cursor-pointer flex-shrink-0"
+                title="Clear All"
               >
                 <img 
                   src={musicNerdLogoSmall} 
-                  alt="MusicNerd Logo" 
-                  className="w-8 h-8 object-contain"
+                  alt="MusicNerd Logo - Click to Clear" 
+                  className="w-6 h-6 sm:w-8 sm:h-8 object-contain"
                 />
-              </a>
-              <h2 className="text-xl font-semibold text-white">Music Collaboration Network</h2>
+              </button>
+              <h2 className="text-sm sm:text-xl font-semibold text-white truncate">
+                <span className="hidden sm:inline">Music Collaboration Network</span>
+                <span className="sm:hidden">MusicNerd</span>
+              </h2>
             </div>
             
-            <div className="flex-1 max-w-2xl relative">
+            <div className="flex-1 relative">
               <Input
                 type="text"
                 placeholder="Search for a new artist..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={handleKeyPress}
+
+                className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-10 sm:pr-12 text-sm sm:text-base"
+                disabled={isLoading}
+              />
+              <Button
+                onClick={() => handleSearch()}
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 sm:h-8 sm:w-8 p-0 bg-blue-600 hover:bg-blue-700 rounded-md"
                 onFocus={async () => {
                   setIsSearchFocused(true);
                   // Re-trigger dropdown visibility when focus is gained

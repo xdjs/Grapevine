@@ -61,7 +61,7 @@ export default function ZoomControls({
   };
 
   return (
-    <div className="fixed top-20 right-6 flex flex-col gap-2 opacity-100 transition-opacity duration-500 z-30">
+    <div className="fixed top-16 sm:top-20 right-2 sm:right-6 flex flex-col gap-1 sm:gap-2 opacity-100 transition-opacity duration-500 z-30">
       <Button
         onMouseDown={handleZoomInStart}
         onMouseUp={stopContinuousZoom}
@@ -69,10 +69,10 @@ export default function ZoomControls({
         size="icon"
         variant="secondary"
         disabled={isZooming}
-        className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 disabled:opacity-50"
+        className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 disabled:opacity-50"
         title="Zoom In (Hold to continuous zoom)"
       >
-        <Plus className="w-5 h-5" />
+        <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
       </Button>
       <Button
         onMouseDown={handleZoomOutStart}
@@ -81,30 +81,30 @@ export default function ZoomControls({
         size="icon"
         variant="secondary"
         disabled={isZooming}
-        className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 disabled:opacity-50"
+        className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 disabled:opacity-50"
         title="Zoom Out (Hold to continuous zoom)"
       >
-        <Minus className="w-5 h-5" />
+        <Minus className="w-4 h-4 sm:w-5 sm:h-5" />
       </Button>
       <Button
         onClick={handleZoomReset}
         size="icon"
         variant="secondary"
         disabled={isZooming}
-        className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 disabled:opacity-50"
+        className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 disabled:opacity-50"
         title="Reset Zoom"
       >
-        <RotateCcw className="w-5 h-5" />
+        <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
       </Button>
       <div className="w-full h-px bg-gray-700 my-1"></div>
       <Button
         onClick={onClearAll}
         size="icon"
         variant="destructive"
-        className="w-12 h-12 bg-red-900/90 backdrop-blur hover:bg-red-800 border border-red-700"
+        className="w-10 h-10 sm:w-12 sm:h-12 bg-red-900/90 backdrop-blur hover:bg-red-800 border border-red-700"
         title="Clear All"
       >
-        <X className="w-5 h-5" />
+        <X className="w-4 h-4 sm:w-5 sm:h-5" />
       </Button>
     </div>
   );
