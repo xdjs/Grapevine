@@ -74,16 +74,15 @@
   
   html {
     background-color: #000000 !important;
-    overflow: hidden !important;
   }
   
-  /* Hide scrollbars everywhere except dropdown */
-  * {
+  /* Hide scrollbars everywhere except dropdown and body */
+  *:not(body):not(.artist-dropdown-scroll) {
     scrollbar-width: none !important; /* Firefox */
     -ms-overflow-style: none !important; /* IE and Edge */
   }
   
-  *::-webkit-scrollbar {
+  *:not(body):not(.artist-dropdown-scroll)::-webkit-scrollbar {
     display: none !important; /* Chrome, Safari, Opera */
     width: 0 !important;
     height: 0 !important;

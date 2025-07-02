@@ -43,19 +43,25 @@ export default function SearchInterface({
   // Manage body scrolling when dropdown is visible and extends beyond viewport
   useEffect(() => {
     const body = document.body;
+    const html = document.documentElement;
     
     if (showDropdown && artistOptions.length > 0) {
       // Allow vertical scrolling when dropdown is visible
+      console.log('[DEBUG] Enabling page scrolling - dropdown visible with', artistOptions.length, 'options');
       body.style.overflowY = 'auto';
+      html.style.overflowY = 'auto';
     } else if (!showNetworkView) {
       // Hide scrolling when dropdown is hidden and not in network view
+      console.log('[DEBUG] Disabling page scrolling - dropdown hidden, not in network view');
       body.style.overflowY = 'hidden';
+      html.style.overflowY = 'hidden';
     }
     
     return () => {
       // Cleanup - restore previous state based on network view
       if (!showNetworkView) {
         body.style.overflowY = 'hidden';
+        html.style.overflowY = 'hidden';
       }
     };
   }, [showDropdown, artistOptions.length, showNetworkView]);
