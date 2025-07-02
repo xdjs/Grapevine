@@ -269,11 +269,11 @@
     }
   }
   
-  /* Always show scrollbar on main page */
+  /* Always show scrollbar on main page - matching dropdown style */
   html, body {
     overflow-y: scroll !important;
     scrollbar-width: thin;
-    scrollbar-color: rgba(107, 114, 128, 0.8) rgba(31, 41, 55, 0.5);
+    scrollbar-color: #AE53FF #1a1a1a;
   }
   
   /* Webkit scrollbar styling for main page */
@@ -284,17 +284,18 @@
   
   html::-webkit-scrollbar-track,
   body::-webkit-scrollbar-track {
-    background: rgba(31, 41, 55, 0.5);
+    background: #1a1a1a;
+    border-radius: 6px;
   }
   
   html::-webkit-scrollbar-thumb,
   body::-webkit-scrollbar-thumb {
-    background: rgba(107, 114, 128, 0.8);
+    background: #AE53FF;
     border-radius: 6px;
   }
   
   html::-webkit-scrollbar-thumb:hover,
   body::-webkit-scrollbar-thumb:hover {
-    background: rgba(107, 114, 128, 1);
+    background: #C970FF;
   }
 }
