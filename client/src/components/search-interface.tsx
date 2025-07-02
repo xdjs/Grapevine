@@ -389,18 +389,35 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                 )}
               </Button>
               
-              {/* Artist Options Dropdown */}
-              {showDropdown && artistOptions.length > 0 && (!showNetworkView || isSearchFocused) && (
+              {/* Artist Options Dropdown - Network View Instant Search */}
+              {(showDropdown || isLoadingOptions) && (!showNetworkView || isSearchFocused) && (
                 <div className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto artist-dropdown-scroll">
                   <div className="p-1">
-                    {artistOptions.map((artist) => (
+                    {isLoadingOptions && (
+                      <div className="flex items-center justify-center py-2">
+                        <div className="w-3 h-3 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mr-2" />
+                        <span className="text-xs text-gray-400">Finding artists...</span>
+                      </div>
+                    )}
+                    
+                    {!isLoadingOptions && artistOptions.length > 0 && artistOptions.map((artist, index) => (
                       <Card
                         key={artist.id}
-                        className="mb-1 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-gray-600"
+                        className="mb-1 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4"
+                        style={{
+                          borderLeftColor: '#FF69B4'
+                        }}
                         onClick={() => handleArtistSelect(artist)}
                       >
                         <CardHeader className="pb-1 pt-2 px-3">
-                          <CardTitle className="text-xs text-white">{artist.name}</CardTitle>
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-xs text-white">{artist.name}</CardTitle>
+                            {index < 3 && (
+                              <span className="text-xs px-1 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                                {index === 0 ? 'Best' : index === 1 ? 'Good' : 'Match'}
+                              </span>
+                            )}
+                          </div>
                           {artist.bio && (
                             <CardDescription className="text-xs text-gray-400 line-clamp-1">
                               {artist.bio}
@@ -409,6 +426,12 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                         </CardHeader>
                       </Card>
                     ))}
+                    
+                    {!isLoadingOptions && artistOptions.length === 0 && searchQuery.length >= 1 && (
+                      <div className="py-2 text-center text-xs text-gray-400">
+                        No artists found for "{searchQuery}"
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
