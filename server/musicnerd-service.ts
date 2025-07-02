@@ -61,9 +61,43 @@ class MusicNerdService {
           
           await client.connect();
           
-          // Enhanced search with comprehensive fuzzy matching
-          const query = 'SELECT id, name FROM artists WHERE LOWER(name) LIKE LOWER($1) ORDER BY name LIMIT 50';
-          const result = await client.query(query, [`%${artistName}%`]);
+          // Optimized search with smart query selection based on input length
+          let query: string;
+          let params: string[];
+          
+          if (artistName.length === 1) {
+            // For single character: only show names starting with that character
+            query = `
+              SELECT id, name FROM artists 
+              WHERE LOWER(name) LIKE LOWER($1)
+              ORDER BY LENGTH(name), name 
+              LIMIT 15
+            `;
+            params = [`${artistName.toLowerCase()}%`];
+          } else if (artistName.length <= 3) {
+            // For short inputs: prefix matching with secondary contains matching
+            query = `
+              SELECT id, name FROM artists 
+              WHERE LOWER(name) LIKE LOWER($1) OR LOWER(name) LIKE LOWER($2)
+              ORDER BY 
+                CASE 
+                  WHEN LOWER(name) LIKE LOWER($1) THEN 1 
+                  WHEN LOWER(name) LIKE LOWER($3) THEN 2
+                  ELSE 3 
+                END,
+                LENGTH(name),
+                name 
+              LIMIT 20
+            `;
+            params = [`${artistName.toLowerCase()}%`, `%${artistName.toLowerCase()}%`, `${artistName.toLowerCase()}%`];
+          } else {
+            // For longer inputs: comprehensive fuzzy matching
+            query = 'SELECT id, name FROM artists WHERE LOWER(name) LIKE LOWER($1) ORDER BY LENGTH(name), name LIMIT 25';
+            params = [`%${artistName.toLowerCase()}%`];
+          }
+          
+          console.log(`🔍 [DEBUG] Optimized query for "${artistName}" (length: ${artistName.length})`);
+          const result = await client.query(query, params);
           
           await client.end();
           

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,59 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
   const [artistOptions, setArtistOptions] = useState<ArtistOption[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+
+  // Debounced function to fetch artist options
+  const debouncedFetchOptions = useCallback(async (query: string) => {
+    if (query.length === 0) {
+      setArtistOptions([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    // Show suggestions after just 1 character
+    if (query.length >= 1) {
+      setIsLoadingOptions(true);
+      
+      try {
+        console.log(`[Frontend] Fetching instant options for: "${query}"`);
+        const response = await fetch(`/api/artist-options/${encodeURIComponent(query)}`);
+        const data = await response.json();
+        
+        if (data.options && Array.isArray(data.options)) {
+          console.log(`[Frontend] Received ${data.options.length} instant options for "${query}"`);
+          setArtistOptions(data.options);
+          setShowDropdown(data.options.length > 0);
+        } else {
+          setArtistOptions([]);
+          setShowDropdown(false);
+        }
+      } catch (error) {
+        console.error('Error fetching artist options:', error);
+        setArtistOptions([]);
+        setShowDropdown(false);
+      } finally {
+        setIsLoadingOptions(false);
+      }
+    }
+  }, []);
+
+  // Handle input changes with debouncing
+  const handleInputChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    
+    // Clear existing timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    // Set new timeout for debounced search
+    debounceTimeoutRef.current = setTimeout(() => {
+      debouncedFetchOptions(value);
+    }, 150); // 150ms debounce for very responsive feel
+  }, [debouncedFetchOptions]);
 
   const handleSearch = (artistName?: string) => {
     const query = artistName || searchQuery.trim();
@@ -83,54 +135,14 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
     }
   }, [searchQuery, currentSearch]);
 
-  // Show dropdown when search field is focused and has valid options
+  // Cleanup debounce timeout on unmount
   useEffect(() => {
-    if (isSearchFocused && searchQuery.trim().length > 2 && artistOptions.length > 0 && !currentSearch) {
-      setShowDropdown(true);
-    }
-  }, [isSearchFocused, searchQuery, artistOptions, currentSearch]);
-
-  // Fetch artist options when user types
-  useEffect(() => {
-    const fetchArtistOptions = async () => {
-      if (searchQuery.trim().length > 2) {
-        try {
-          const apiUrl = `/api/artist-options/${encodeURIComponent(searchQuery.trim())}`;
-          console.log('Fetching artist options for:', searchQuery.trim());
-          console.log('API URL:', apiUrl);
-          console.log('Current origin:', window.location.origin);
-          
-          const response = await fetch(apiUrl);
-          console.log('Response status:', response.status);
-          console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-          
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error('API error response:', errorText);
-            throw new Error(`HTTP ${response.status}: ${errorText}`);
-          }
-          
-          const data = await response.json();
-          console.log('Received artist options:', data.options);
-          setArtistOptions(data.options || []);
-          // Show dropdown when there are options and either no network view OR user is actively focused on search
-          const shouldShowDropdown = (data.options || []).length > 0 && (!showNetworkView || isSearchFocused) && !currentSearch;
-          setShowDropdown(shouldShowDropdown);
-          console.log('Dropdown should show:', shouldShowDropdown);
-        } catch (error) {
-          console.error('Error fetching artist options:', error);
-          setArtistOptions([]);
-          setShowDropdown(false);
-        }
-      } else {
-        setArtistOptions([]);
-        setShowDropdown(false);
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
       }
     };
-
-    const debounceTimer = setTimeout(fetchArtistOptions, 300);
-    return () => clearTimeout(debounceTimer);
-  }, [searchQuery]);
+  }, []);
 
   const { data, isLoading, error, isFetching } = useQuery({
     queryKey: ["/api/network", currentSearch],
@@ -234,7 +246,7 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               type="text"
               placeholder="Enter an artist name..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleInputChange(e.target.value)}
               onKeyPress={handleKeyPress}
               disabled={isLoading}
             />
@@ -255,18 +267,35 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
               )}
             </Button>
             
-            {/* Artist Options Dropdown */}
-            {showDropdown && artistOptions.length > 0 && (!showNetworkView || isSearchFocused) && (
+            {/* Artist Options Dropdown - Instant Search Results */}
+            {(showDropdown || isLoadingOptions) && (!showNetworkView || isSearchFocused) && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto artist-dropdown-scroll">
                 <div className="p-2">
-                  {artistOptions.map((artist) => (
+                  {isLoadingOptions && (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="w-4 h-4 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mr-2" />
+                      <span className="text-xs text-gray-400">Finding artists...</span>
+                    </div>
+                  )}
+                  
+                  {!isLoadingOptions && artistOptions.length > 0 && artistOptions.map((artist, index) => (
                     <Card
                       key={artist.id}
-                      className="mb-2 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-gray-600"
+                      className="mb-2 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4"
+                      style={{
+                        borderLeftColor: index === 0 ? '#FF69B4' : index === 1 ? '#8A2BE2' : '#00CED1'
+                      }}
                       onClick={() => handleArtistSelect(artist)}
                     >
                       <CardHeader className="pb-2 pt-3 px-4">
-                        <CardTitle className="text-sm text-white">{artist.name}</CardTitle>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-sm text-white">{artist.name}</CardTitle>
+                          {index < 3 && (
+                            <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                              {index === 0 ? 'Best' : index === 1 ? 'Good' : 'Match'}
+                            </span>
+                          )}
+                        </div>
                         {artist.bio && (
                           <CardDescription className="text-xs text-gray-400 line-clamp-2">
                             {artist.bio}
@@ -275,6 +304,12 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                       </CardHeader>
                     </Card>
                   ))}
+                  
+                  {!isLoadingOptions && artistOptions.length === 0 && searchQuery.length >= 1 && (
+                    <div className="py-4 text-center text-xs text-gray-400">
+                      No artists found for "{searchQuery}"
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -315,30 +350,15 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                 type="text"
                 placeholder="Search for a new artist..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleInputChange(e.target.value)}
                 onKeyPress={handleKeyPress}
-                onFocus={async () => {
+                onFocus={() => {
                   setIsSearchFocused(true);
-                  // Re-trigger dropdown visibility when focus is gained
-                  if (searchQuery.trim().length > 2) {
-                    if (artistOptions.length > 0) {
-                      setShowDropdown(true);
-                    } else {
-                      // Fetch artist options if we don't have any
-                      try {
-                        const apiUrl = `/api/artist-options/${encodeURIComponent(searchQuery.trim())}`;
-                        const response = await fetch(apiUrl);
-                        if (response.ok) {
-                          const data = await response.json();
-                          setArtistOptions(data.options || []);
-                          if ((data.options || []).length > 0) {
-                            setShowDropdown(true);
-                          }
-                        }
-                      } catch (error) {
-                        console.error('Error fetching artist options on focus:', error);
-                      }
-                    }
+                  // Trigger search if we have content but no current options
+                  if (searchQuery.trim().length >= 1 && artistOptions.length === 0) {
+                    debouncedFetchOptions(searchQuery.trim());
+                  } else if (artistOptions.length > 0) {
+                    setShowDropdown(true);
                   }
                 }}
                 onBlur={() => {
