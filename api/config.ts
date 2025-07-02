@@ -1,4 +1,4 @@
-const handler = async (req, res) => {
+export default function handler(req, res) {
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -30,6 +30,4 @@ const handler = async (req, res) => {
       timestamp: new Date().toISOString()
     });
   }
-};
-
-module.exports = handler;
+}
