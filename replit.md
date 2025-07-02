@@ -370,6 +370,14 @@ Changelog:
 - Other collaborator artists still show selection modal when multiple options exist
 - Ensured consistent behavior between Replit development and Vercel production deployments
 
+### Fixed Artist Name Capitalization (July 2, 2025)
+- Fixed issue where map names used search input capitalization instead of database-stored capitalization
+- Modified network generation to use exact artist names from database (e.g., "julia michaels" → "Julia Michaels", "REnforShort" → "renforshort")
+- Updated both Vercel API routes and main server code to retrieve correct artist name before network generation
+- All OpenAI prompts, cache operations, and node creation now use authentic database artist names
+- Ensures network maps display proper artist stylization as stored in MusicNerd database
+- Applied fix to both cached data retrieval and new network generation paths
+
 
 
 ### Supabase Caching System Integration (June 30, 2025)
