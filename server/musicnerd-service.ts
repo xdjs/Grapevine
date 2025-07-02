@@ -71,7 +71,7 @@ class MusicNerdService {
               SELECT id, name FROM artists 
               WHERE LOWER(name) LIKE LOWER($1)
               ORDER BY LENGTH(name), name 
-              LIMIT 15
+              LIMIT 25
             `;
             params = [`${artistName.toLowerCase()}%`];
           } else if (artistName.length <= 3) {
@@ -87,12 +87,12 @@ class MusicNerdService {
                 END,
                 LENGTH(name),
                 name 
-              LIMIT 20
+              LIMIT 30
             `;
             params = [`${artistName.toLowerCase()}%`, `%${artistName.toLowerCase()}%`, `${artistName.toLowerCase()}%`];
           } else {
             // For longer inputs: comprehensive fuzzy matching
-            query = 'SELECT id, name FROM artists WHERE LOWER(name) LIKE LOWER($1) ORDER BY LENGTH(name), name LIMIT 25';
+            query = 'SELECT id, name FROM artists WHERE LOWER(name) LIKE LOWER($1) ORDER BY LENGTH(name), name LIMIT 35';
             params = [`%${artistName.toLowerCase()}%`];
           }
           
@@ -125,7 +125,7 @@ class MusicNerdService {
               })
               .filter(artist => artist.score > 0) // Only include relevant matches
               .sort((a, b) => b.score - a.score) // Sort by relevance score (descending)
-              .slice(0, 10) // Limit to top 10 results
+              .slice(0, 20) // Limit to top 20 results
               .map(({ score, ...artist }) => artist); // Remove score from final result
             
             console.log(`✅ [DEBUG] Found ${options.length} artist options for "${artistName}"`);

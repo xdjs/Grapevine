@@ -337,6 +337,8 @@ Changelog:
 - Improved search performance with length-based query optimization for faster results
 - Updated match badges to only show "Exact Match" when artist name exactly matches user input
 - Removed misleading "Best", "Good", "Match" badges for partial matches to ensure accuracy
+- Increased search recommendations from 10 to 20 results for better artist discovery
+- Enhanced dropdown heights to accommodate additional search results with improved scrolling
 =======
 ### Supabase Caching System Integration (June 30, 2025)
 - Added webmapdata jsonb column to artists table for caching network visualization data
