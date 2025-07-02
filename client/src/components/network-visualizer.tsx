@@ -576,7 +576,7 @@ export default function NetworkVisualizer({
       tooltip.style("opacity", 0);
     }
 
-    async function openMusicNerdProfile(artistName: string, artistId?: string | null) {
+      async function openMusicNerdProfile(artistName: string, artistId?: string | null) {
       // If no specific artist ID provided, check for multiple options
       if (!artistId) {
         try {
@@ -620,7 +620,6 @@ export default function NetworkVisualizer({
       link.click();
       document.body.removeChild(link);
     }
-
     function dragstarted(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
       // Prevent event bubbling to avoid interfering with zoom behavior
       event.sourceEvent.stopPropagation();
