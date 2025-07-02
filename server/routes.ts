@@ -37,7 +37,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Search for artists by name
+  // Search for artists by name - Returns multiple suggestions for dropdown
   app.get("/api/search", async (req, res) => {
     try {
       const query = req.query.q as string;
@@ -45,12 +45,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Query parameter 'q' is required" });
       }
 
-      const artist = await storage.getArtistByName(query);
-      if (!artist) {
-        return res.status(404).json({ message: "Artist not found" });
+      console.log(`🔍 [Server] Searching for artists: ${query}`);
+      
+      // Import the musicNerdService which has comprehensive search functionality
+      const { musicNerdService } = await import("./musicnerd-service");
+      const artistOptions = await musicNerdService.getArtistOptions(query);
+      
+      if (!artistOptions || artistOptions.length === 0) {
+        console.log(`📭 [Server] No artists found for: ${query}`);
+        return res.json([]); // Return empty array instead of 404 for dropdown
       }
 
-      res.json(artist);
+      console.log(`✅ [Server] Found ${artistOptions.length} artists for: ${query}`);
+      res.json(artistOptions);
     } catch (error) {
       console.error("Error searching artist:", error);
       res.status(500).json({ message: "Internal server error" });
