@@ -175,7 +175,7 @@ Changelog:
 ### MusicNerd Supabase Integration (June 28, 2025)
 - Integrated Supabase database connection via CONNECTION_STRING secret using direct PostgreSQL connection
 - Added artist ID lookup for direct linking to specific MusicNerd artist pages using real database queries
-- Artist nodes (pink circles) now link to `https://music-nerd-git-staging-musicnerd.vercel.app/artist/{artistId}` when ID available
+- Artist nodes (pink circles) now link to `https://musicnerd.xyz/artist/{artistId}` when ID available
 - Falls back to main MusicNerd page when no artist ID found
 - Only artist-type nodes get MusicNerd IDs - producers and songwriters remain unlinked
 - Implemented precise artist matching: exact name match first, then validated fuzzy matching
@@ -327,6 +327,26 @@ Changelog:
 - Smooth 200ms transitions maintained across all zoom input methods
 
 
+### Enhanced Instant Search Functionality (July 2, 2025)
+- Implemented real-time instant search with 150ms debounced API calls for immediate feedback
+- Enhanced relevance scoring algorithm with weighted factors for different match types
+- Optimized PostgreSQL database queries with smart query selection based on input length
+- Single-character searches now properly filter artists starting with that character
+- Added consistent pink (#FF69B4) color bars for all search recommendations across both search interfaces
+- Enhanced search dropdown with loading indicators and empty states
+- Applied identical instant search functionality to both home page and network view search bars
+- Improved search performance with length-based query optimization for faster results
+- Updated match badges to only show "Exact Match" when artist name exactly matches user input
+- Removed misleading "Best", "Good", "Match" badges for partial matches to ensure accuracy
+
+### Fixed MusicNerd Production Domain Integration (July 2, 2025)
+- Updated all MusicNerd redirect URLs from staging domain to production domain
+- Changed `music-nerd-git-staging-musicnerd.vercel.app` to `musicnerd.xyz` across all files
+- Fixed artist node links to open correct production artist pages
+- Updated artist selection modal to redirect to production MusicNerd homepage
+- All MusicNerd integrations now point to live production site instead of staging environment
+
+
 ### Production-Only MusicNerd URL Configuration (July 2, 2025)
 - Removed all staging URL fallbacks from both backend and frontend code
 - System now exclusively uses MUSICNERD_BASE_URL environment variable for production URLs
@@ -349,6 +369,7 @@ Changelog:
 - Main artist now navigates directly to their MusicNerd profile page when clicked
 - Other collaborator artists still show selection modal when multiple options exist
 - Ensured consistent behavior between Replit development and Vercel production deployments
+
 
 
 ### Supabase Caching System Integration (June 30, 2025)

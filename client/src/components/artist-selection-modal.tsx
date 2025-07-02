@@ -78,9 +78,9 @@ export default function ArtistSelectionModal({
   };
 
   const handleOpenMainPage = () => {
-    if (musicNerdBaseUrl) {
-      window.open(musicNerdBaseUrl, '_blank');
-    }
+
+    window.open('https://musicnerd.xyz/', '_blank');
+
     onClose();
   };
 
@@ -101,14 +101,24 @@ export default function ArtistSelectionModal({
         ) : (
           <ScrollArea className="max-h-96">
             <div className="space-y-3">
-              {options.map((option) => (
+              {options.map((option, index) => (
                 <Card
                   key={option.id}
-                  className="cursor-pointer hover:bg-accent transition-colors"
+                  className="cursor-pointer hover:bg-accent transition-colors border-l-4"
+                  style={{
+                    borderLeftColor: '#FF69B4'
+                  }}
                   onClick={() => handleSelectArtist(option.id)}
                 >
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">{option.name}</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">{option.name}</CardTitle>
+                      {option.name.toLowerCase() === artistName.toLowerCase() && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                          Exact Match
+                        </span>
+                      )}
+                    </div>
                     {option.bio && (
                       <CardDescription className="text-sm line-clamp-2">
                         {option.bio}

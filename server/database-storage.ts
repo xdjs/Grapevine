@@ -125,12 +125,13 @@ export class DatabaseStorage implements IStorage {
     const nodeMap = new Map<string, NetworkNode>();
     
     // Get MusicNerd URL for main artist
-    const musicNerdBaseUrl = process.env.MUSICNERD_BASE_URL;
-    let musicNerdUrl = musicNerdBaseUrl || '';
+
+    let musicNerdUrl = 'https://musicnerd.xyz';
     try {
       const artistId = await musicNerdService.getArtistId(artistName);
-      if (artistId && musicNerdBaseUrl) {
-        musicNerdUrl = `${musicNerdBaseUrl}/artist/${artistId}`;
+      if (artistId) {
+        musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
+
       }
     } catch (error) {
       console.log(`📭 [DEBUG] No MusicNerd ID found for main artist ${artistName}`);
@@ -406,11 +407,13 @@ export class DatabaseStorage implements IStorage {
                 console.log(`🎭 [DEBUG] Enhanced "${collaborator.name}" from ${collaborator.type} to roles:`, enhancedRoles);
 
                 // Get MusicNerd artist ID for the collaborator
-                let musicNerdUrl = musicNerdBaseUrl || '';
+
+                let musicNerdUrl = 'https://musicnerd.xyz';
                 try {
                   const artistId = await musicNerdService.getArtistId(collaborator.name);
-                  if (artistId && musicNerdBaseUrl) {
-                    musicNerdUrl = `${musicNerdBaseUrl}/artist/${artistId}`;
+                  if (artistId) {
+                    musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
+
                     console.log(`✅ [DEBUG] Found MusicNerd ID for ${collaborator.name}: ${artistId}`);
                   }
                 } catch (error) {
@@ -470,11 +473,13 @@ export class DatabaseStorage implements IStorage {
                     };
 
                     // Get MusicNerd ID for branching artist
-                    let branchingMusicNerdUrl = musicNerdBaseUrl || '';
+
+                    let branchingMusicNerdUrl = 'https://musicnerd.xyz';
                     try {
                       const branchingArtistId = await musicNerdService.getArtistId(branchingArtist);
-                      if (branchingArtistId && musicNerdBaseUrl) {
-                        branchingMusicNerdUrl = `${musicNerdBaseUrl}/artist/${branchingArtistId}`;
+                      if (branchingArtistId) {
+                        branchingMusicNerdUrl = `https://musicnerd.xyz/artist/${branchingArtistId}`;
+
                       }
                     } catch (error) {
                       console.log(`📭 [DEBUG] No MusicNerd ID found for branching artist ${branchingArtist}`);
@@ -965,12 +970,13 @@ export class DatabaseStorage implements IStorage {
               };
               
               // Get MusicNerd artist ID for the collaborator
-              const musicNerdBaseUrl = process.env.MUSICNERD_BASE_URL;
-              let musicNerdUrl = musicNerdBaseUrl || '';
+
+              let musicNerdUrl = 'https://musicnerd.xyz';
               try {
                 const artistId = await musicNerdService.getArtistId(collab.name);
-                if (artistId && musicNerdBaseUrl) {
-                  musicNerdUrl = `${musicNerdBaseUrl}/artist/${artistId}`;
+                if (artistId) {
+                  musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
+
                   console.log(`✅ [DEBUG] Found MusicNerd ID for ${collab.name}: ${artistId}`);
                 }
               } catch (error) {
