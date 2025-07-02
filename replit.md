@@ -325,6 +325,16 @@ Changelog:
 - All zoom methods (buttons, touch, trackpad) now use identical underlying code for consistency
 - Fixed glitching and snap-back issues by eliminating custom D3 transform logic
 - Smooth 200ms transitions maintained across all zoom input methods
+
+### Production-Only MusicNerd URL Configuration (July 2, 2025)
+- Removed all staging URL fallbacks from both backend and frontend code
+- System now exclusively uses MUSICNERD_BASE_URL environment variable for production URLs
+- Added proper error handling when environment variable is not configured
+- Artist node clicks are disabled if production URL is not available
+- Backend returns 500 error with clear message if MUSICNERD_BASE_URL is missing
+- Frontend validates configuration response and prevents clicks without valid URL
+- Currently configured to use https://www.musicnerd.xyz/ production site
+- All artist nodes now link exclusively to production MusicNerd environment
 =======
 ### Supabase Caching System Integration (June 30, 2025)
 - Added webmapdata jsonb column to artists table for caching network visualization data
