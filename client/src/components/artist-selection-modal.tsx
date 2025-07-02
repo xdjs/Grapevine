@@ -58,7 +58,7 @@ export default function ArtistSelectionModal({
   };
 
   const handleOpenMainPage = () => {
-    window.open('https://music-nerd-git-staging-musicnerd.vercel.app/', '_blank');
+    window.open('https://musicnerd.xyz/', '_blank');
     onClose();
   };
 

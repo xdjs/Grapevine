@@ -555,10 +555,10 @@ export default function NetworkVisualizer({
       }
       
       // Use artist ID if available, otherwise go to main page
-      let musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/`;
+      let musicNerdUrl = `https://musicnerd.xyz/`;
       
       if (artistId) {
-        musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${artistId}`;
+        musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
         console.log(`🎵 Opening MusicNerd artist page for "${artistName}": ${musicNerdUrl}`);
       } else {
         console.log(`🎵 No artist ID found for "${artistName}", opening main MusicNerd page`);
@@ -743,7 +743,7 @@ export default function NetworkVisualizer({
 
   const handleArtistSelection = (artistId: string) => {
     // Open the specific artist page with the selected ID
-    const musicNerdUrl = `https://music-nerd-git-staging-musicnerd.vercel.app/artist/${artistId}`;
+    const musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
     console.log(`🎵 Opening selected artist page: ${musicNerdUrl}`);
     
     const link = document.createElement('a');
