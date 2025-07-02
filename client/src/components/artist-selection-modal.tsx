@@ -79,14 +79,24 @@ export default function ArtistSelectionModal({
         ) : (
           <ScrollArea className="max-h-96">
             <div className="space-y-3">
-              {options.map((option) => (
+              {options.map((option, index) => (
                 <Card
                   key={option.id}
-                  className="cursor-pointer hover:bg-accent transition-colors"
+                  className="cursor-pointer hover:bg-accent transition-colors border-l-4"
+                  style={{
+                    borderLeftColor: index === 0 ? '#FF69B4' : index === 1 ? '#8A2BE2' : '#00CED1'
+                  }}
                   onClick={() => handleSelectArtist(option.id)}
                 >
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">{option.name}</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">{option.name}</CardTitle>
+                      {index < 3 && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                          {index === 0 ? 'Best Match' : index === 1 ? 'Good Match' : 'Match'}
+                        </span>
+                      )}
+                    </div>
                     {option.bio && (
                       <CardDescription className="text-sm line-clamp-2">
                         {option.bio}

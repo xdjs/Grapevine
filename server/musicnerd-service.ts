@@ -61,26 +61,22 @@ class MusicNerdService {
           
           await client.connect();
           
-          // Query for multiple matches - exact first, then fuzzy (only fields that exist in database)
-          let query = 'SELECT id, name FROM artists WHERE LOWER(name) = LOWER($1) ORDER BY name LIMIT 10';
-          let result = await client.query(query, [artistName]);
-          
-          // If no exact matches, try fuzzy search
-          if (result.rows.length === 0) {
-            query = 'SELECT id, name FROM artists WHERE LOWER(name) LIKE LOWER($1) ORDER BY CASE WHEN LOWER(name) LIKE LOWER($2) THEN 1 ELSE 2 END, name LIMIT 10';
-            result = await client.query(query, [`%${artistName}%`, `${artistName}%`]);
-          }
+          // Enhanced search with comprehensive fuzzy matching
+          const query = 'SELECT id, name FROM artists WHERE LOWER(name) LIKE LOWER($1) ORDER BY name LIMIT 50';
+          const result = await client.query(query, [`%${artistName}%`]);
           
           await client.end();
           
           if (result.rows.length > 0) {
             const options = result.rows
-              .filter(artist => {
+              .map(artist => {
                 const searchLower = artistName.toLowerCase();
                 const foundLower = artist.name.toLowerCase();
-                return foundLower.includes(searchLower) || searchLower.includes(foundLower) || foundLower === searchLower;
-              })
-              .map(artist => {
+                
+                // Calculate relevance score for better ranking
+                const score = this.calculateRelevanceScore(searchLower, foundLower);
+                console.log(`🔍 [DEBUG] "${artist.name}" relevance score: ${score}`);
+                
                 // Generate bio based on artist name (since type column doesn't exist in database)
                 const generateBio = (name: string) => {
                   return `${name} is a prominent artist known for their musical contributions across various genres. Their work has influenced many in the music industry and continues to resonate with listeners worldwide.`;
@@ -89,9 +85,14 @@ class MusicNerdService {
                 return {
                   id: artist.id,
                   name: artist.name,
-                  bio: generateBio(artist.name)
+                  bio: generateBio(artist.name),
+                  score: score
                 };
-              });
+              })
+              .filter(artist => artist.score > 0) // Only include relevant matches
+              .sort((a, b) => b.score - a.score) // Sort by relevance score (descending)
+              .slice(0, 10) // Limit to top 10 results
+              .map(({ score, ...artist }) => artist); // Remove score from final result
             
             console.log(`✅ [DEBUG] Found ${options.length} artist options for "${artistName}"`);
             return options;
@@ -196,6 +197,8 @@ class MusicNerdService {
     }
   }
 
+
+
   async searchArtistByName(artistName: string): Promise<MusicNerdArtist | null> {
     if (!this.isAvailable || !this.supabase) {
       return null;
@@ -218,6 +221,99 @@ class MusicNerdService {
       console.error(`Error searching for artist "${artistName}":`, error);
       return null;
     }
+  }
+
+  private calculateRelevanceScore(searchTerm: string, artistName: string): number {
+    let score = 0;
+    
+    // Exact match gets highest score
+    if (searchTerm === artistName) {
+      return 1000;
+    }
+    
+    // Case-insensitive exact match
+    if (searchTerm.toLowerCase() === artistName.toLowerCase()) {
+      return 900;
+    }
+    
+    const searchWords = searchTerm.split(/\s+/).filter(word => word.length > 0);
+    const artistWords = artistName.toLowerCase().split(/\s+/).filter(word => word.length > 0);
+    
+    // Exact word matches
+    let exactWordMatches = 0;
+    for (const searchWord of searchWords) {
+      if (artistWords.includes(searchWord.toLowerCase())) {
+        exactWordMatches++;
+        score += 100;
+      }
+    }
+    
+    // Prefix matches (artist starts with search term)
+    if (artistName.toLowerCase().startsWith(searchTerm)) {
+      score += 200;
+    }
+    
+    // Word boundary prefix matches
+    for (const searchWord of searchWords) {
+      for (const artistWord of artistWords) {
+        if (artistWord.startsWith(searchWord.toLowerCase())) {
+          score += 50;
+        }
+      }
+    }
+    
+    // Substring matches within words
+    for (const searchWord of searchWords) {
+      for (const artistWord of artistWords) {
+        if (artistWord.includes(searchWord.toLowerCase()) && !artistWord.startsWith(searchWord.toLowerCase())) {
+          score += 25;
+        }
+      }
+    }
+    
+    // Length similarity bonus (closer lengths are better)
+    const lengthDiff = Math.abs(searchTerm.length - artistName.length);
+    const maxLength = Math.max(searchTerm.length, artistName.length);
+    const lengthSimilarity = 1 - (lengthDiff / maxLength);
+    score += lengthSimilarity * 30;
+    
+    // Character similarity using Levenshtein distance
+    const distance = this.levenshteinDistance(searchTerm, artistName.toLowerCase());
+    const maxLen = Math.max(searchTerm.length, artistName.length);
+    const similarity = 1 - (distance / maxLen);
+    score += similarity * 40;
+    
+    // Bonus for shorter artist names (often more popular/relevant)
+    if (artistName.length <= 15) {
+      score += 10;
+    }
+    
+    return Math.round(score);
+  }
+  
+  private levenshteinDistance(str1: string, str2: string): number {
+    const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+    
+    for (let i = 0; i <= str1.length; i++) {
+      matrix[0][i] = i;
+    }
+    
+    for (let j = 0; j <= str2.length; j++) {
+      matrix[j][0] = j;
+    }
+    
+    for (let j = 1; j <= str2.length; j++) {
+      for (let i = 1; i <= str1.length; i++) {
+        const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+        matrix[j][i] = Math.min(
+          matrix[j][i - 1] + 1, // deletion
+          matrix[j - 1][i] + 1, // insertion
+          matrix[j - 1][i - 1] + indicator // substitution
+        );
+      }
+    }
+    
+    return matrix[str2.length][str1.length];
   }
 }
 
