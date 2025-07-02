@@ -472,22 +472,43 @@ export default function NetworkVisualizer({
       })
       .on("click", function(event, d) {
         event.stopPropagation();
-        console.log(`🎯 [Frontend] Node clicked: "${d.name}" (type: ${d.type}, artistId: ${d.artistId})`);
-        console.log(`🎯 [Frontend] Environment: ${window.location.href}`);
+        console.log(`🎯 [CLICK DEBUG] ===== NODE CLICK EVENT =====`);
+        console.log(`🎯 [CLICK DEBUG] Node: "${d.name}"`);
+        console.log(`🎯 [CLICK DEBUG] Type: ${d.type}`);
+        console.log(`🎯 [CLICK DEBUG] Types: ${JSON.stringify(d.types)}`);
+        console.log(`🎯 [CLICK DEBUG] ArtistId: ${d.artistId}`);
+        console.log(`🎯 [CLICK DEBUG] Environment: ${window.location.href}`);
+        console.log(`🎯 [CLICK DEBUG] Event type: ${event.type}`);
+        console.log(`🎯 [CLICK DEBUG] Event target: ${event.target}`);
         
-        // Open Music Nerd for any node that has an artist role
-        if (d.type === 'artist' || (d.types && d.types.includes('artist'))) {
+        // Check if this is an artist node
+        const isArtistNode = d.type === 'artist' || (d.types && d.types.includes('artist'));
+        console.log(`🎯 [CLICK DEBUG] Is artist node: ${isArtistNode}`);
+        
+        if (isArtistNode) {
+          console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile...`);
+          
           // Check if this is the main artist (largest artist node)
           const isMainArtist = d === mainArtistNode;
+          console.log(`🎯 [CLICK DEBUG] Is main artist: ${isMainArtist}`);
           
-          // For main artist with artistId, go directly to their page (skip modal)
-          if (isMainArtist && d.artistId) {
-            openMusicNerdProfile(d.name, d.artistId);
-          } else {
-            // For other artists or main artist without artistId, use normal flow
-            openMusicNerdProfile(d.name, d.artistId);
+          try {
+            // For main artist with artistId, go directly to their page (skip modal)
+            if (isMainArtist && d.artistId) {
+              console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile for main artist with ID`);
+              openMusicNerdProfile(d.name, d.artistId);
+            } else {
+              console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile for regular flow`);
+              // For other artists or main artist without artistId, use normal flow
+              openMusicNerdProfile(d.name, d.artistId);
+            }
+          } catch (error) {
+            console.error(`🎯 [CLICK DEBUG] Error calling openMusicNerdProfile:`, error);
           }
+        } else {
+          console.log(`🎯 [CLICK DEBUG] Not an artist node, skipping action`);
         }
+        console.log(`🎯 [CLICK DEBUG] ===== END CLICK EVENT =====`);
       })
       .on("contextmenu", function(event, d) {
         event.preventDefault();
