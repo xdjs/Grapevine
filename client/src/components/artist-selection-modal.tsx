@@ -91,9 +91,9 @@ export default function ArtistSelectionModal({
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">{option.name}</CardTitle>
-                      {index < 3 && (
+                      {option.name.toLowerCase() === artistName.toLowerCase() && (
                         <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                          {index === 0 ? 'Best Match' : index === 1 ? 'Good Match' : 'Match'}
+                          Exact Match
                         </span>
                       )}
                     </div>

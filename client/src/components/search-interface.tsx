@@ -290,9 +290,9 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                       <CardHeader className="pb-2 pt-3 px-4">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-sm text-white">{artist.name}</CardTitle>
-                          {index < 3 && (
+                          {artist.name.toLowerCase() === searchQuery.toLowerCase() && (
                             <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                              {index === 0 ? 'Best' : index === 1 ? 'Good' : 'Match'}
+                              Exact Match
                             </span>
                           )}
                         </div>
@@ -412,9 +412,9 @@ export default function SearchInterface({ onNetworkData, showNetworkView, clearS
                         <CardHeader className="pb-1 pt-2 px-3">
                           <div className="flex items-center justify-between">
                             <CardTitle className="text-xs text-white">{artist.name}</CardTitle>
-                            {index < 3 && (
+                            {artist.name.toLowerCase() === searchQuery.toLowerCase() && (
                               <span className="text-xs px-1 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                                {index === 0 ? 'Best' : index === 1 ? 'Good' : 'Match'}
+                                Exact Match
                               </span>
                             )}
                           </div>

@@ -332,9 +332,11 @@ Changelog:
 - Optimized PostgreSQL database queries with smart query selection based on input length
 - Single-character searches now properly filter artists starting with that character
 - Added consistent pink (#FF69B4) color bars for all search recommendations across both search interfaces
-- Enhanced search dropdown with loading indicators, match quality badges, and empty states
+- Enhanced search dropdown with loading indicators and empty states
 - Applied identical instant search functionality to both home page and network view search bars
 - Improved search performance with length-based query optimization for faster results
+- Updated match badges to only show "Exact Match" when artist name exactly matches user input
+- Removed misleading "Best", "Good", "Match" badges for partial matches to ensure accuracy
 =======
 ### Supabase Caching System Integration (June 30, 2025)
 - Added webmapdata jsonb column to artists table for caching network visualization data
