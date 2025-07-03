@@ -559,6 +559,15 @@ export default function NetworkVisualizer({
       
       let content = `<strong>${d.name}</strong><br/>Role${roles.length > 1 ? 's' : ''}: ${roleDisplay}`;
 
+      // Debug: Log the node data to see what fields are available
+      console.log(`🔍 [Tooltip Debug] Node "${d.name}":`, {
+        roles: roles,
+        collaborations: d.collaborations,
+        hasCollaborations: !!d.collaborations,
+        collaborationsLength: d.collaborations?.length || 0,
+        allFields: Object.keys(d)
+      });
+
       // Show collaboration information for producers and songwriters
       const hasProducerRole = roles.includes('producer') || roles.includes('songwriter');
       if (hasProducerRole && d.collaborations && d.collaborations.length > 0) {
