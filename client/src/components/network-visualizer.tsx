@@ -677,6 +677,8 @@ export default function NetworkVisualizer({
         // Mobile-specific behavior: Show modal for all nodes
         if (currentIsMobile) {
           console.log(`📱 [Mobile] Showing mobile action modal for: ${d.name}`);
+          console.log(`📱 [Mobile] Node collaborations:`, d.collaborations);
+          console.log(`📱 [Mobile] Full node data:`, d);
           console.log(`📱 [Mobile] Setting selectedMobileNode and opening modal`);
           setSelectedMobileNode(d);
           setIsMobileModalOpen(true);

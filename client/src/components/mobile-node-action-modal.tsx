@@ -55,6 +55,7 @@ export default function MobileNodeActionModal({
     console.log(`📱 [Mobile Modal] Opening modal for: ${nodeData.name}`);
     console.log(`📱 [Mobile Modal] Node roles: ${nodeData.types || [nodeData.type]}`);
     console.log(`📱 [Mobile Modal] Node collaborations: ${nodeData.collaborations?.length || 0}`);
+    console.log(`📱 [Mobile Modal] Full nodeData:`, nodeData);
   }
 
   return (
