@@ -217,6 +217,7 @@
   .artist-dropdown-scroll {
     scrollbar-width: thin;
     scrollbar-color: #AE53FF #1a1a1a;
+    max-height: 95px !important;
   }
 
   .artist-dropdown-scroll::-webkit-scrollbar {

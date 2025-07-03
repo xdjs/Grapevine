@@ -300,7 +300,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 ref={dropdownRef}
                 className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
                 style={{ 
-                  maxHeight: '95px', // Height to align with red line position
+                  maxHeight: '95px !important', // Height to align with red line position - forced
                   bottom: 'auto'
                 }}
               >
