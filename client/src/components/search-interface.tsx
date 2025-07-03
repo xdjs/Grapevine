@@ -239,11 +239,19 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       >
         <div className="text-center w-full max-w-md">
           <div className="mb-4 sm:mb-6 flex justify-center">
-            <img 
-              src={musicNerdLogo} 
-              alt="MusicNerd Logo" 
-              className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
-            />
+            <a 
+              href="https://musicnerd.xyz" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:opacity-80 transition-opacity cursor-pointer"
+              title="Visit MusicNerd"
+            >
+              <img 
+                src={musicNerdLogo} 
+                alt="MusicNerd Logo" 
+                className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
+              />
+            </a>
           </div>
           
           <h1 className="text-xl sm:text-4xl font-bold mb-2 sm:mb-4 text-white">
@@ -275,7 +283,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                   setShowDropdown(false);
                 }, 150);
               }}
-              className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-12 sm:pr-16 text-base sm:text-lg rounded-xl"
+              className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-14 sm:pr-16 text-base sm:text-lg rounded-xl"
               disabled={isLoading}
             />
             <Button
@@ -284,7 +292,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 setArtistOptions([]);
                 handleSearch();
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10 p-0 bg-blue-600 hover:bg-blue-700 rounded-lg"
+              className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 sm:h-8 sm:w-8 p-0 bg-blue-600 hover:bg-blue-700 rounded-lg"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -408,7 +416,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                     setShowDropdown(false);
                   }, 150);
                 }}
-                className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-10 sm:pr-12 text-sm sm:text-base"
+                className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-11 sm:pr-12 text-sm sm:text-base"
                 disabled={isLoading}
               />
               <Button
@@ -417,7 +425,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                   setArtistOptions([]);
                   handleSearch();
                 }}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 bg-blue-600 hover:bg-blue-700 rounded-md"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0 bg-blue-600 hover:bg-blue-700 rounded-md"
                 disabled={isLoading}
               >
                 {isLoading ? (
