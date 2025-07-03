@@ -239,11 +239,19 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       >
         <div className="text-center w-full max-w-md">
           <div className="mb-4 sm:mb-6 flex justify-center">
-            <img 
-              src={musicNerdLogo} 
-              alt="MusicNerd Logo" 
-              className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
-            />
+            <a 
+              href="https://musicnerd.xyz" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:opacity-80 transition-opacity cursor-pointer"
+              title="Visit MusicNerd"
+            >
+              <img 
+                src={musicNerdLogo} 
+                alt="MusicNerd Logo" 
+                className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
+              />
+            </a>
           </div>
           
           <h1 className="text-xl sm:text-4xl font-bold mb-2 sm:mb-4 text-white">
