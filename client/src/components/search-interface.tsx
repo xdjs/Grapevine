@@ -300,7 +300,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 ref={dropdownRef}
                 className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
                 style={{ 
-                  maxHeight: '240px', // Reasonable height to prevent reaching bottom of page
+                  maxHeight: '180px', // Exact height for 3 cards only
                   bottom: 'auto'
                 }}
               >
@@ -432,7 +432,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 <div 
                   className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
                   style={{ 
-                    maxHeight: '200px', // Reasonable height for network view
+                    maxHeight: '160px', // Exact height for 3 cards in network view
                     bottom: 'auto'
                   }}
                 >
