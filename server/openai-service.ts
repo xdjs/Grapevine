@@ -70,7 +70,7 @@ Focus on real, verified collaborations from the music industry. Include up to 5 
           {
             role: "system",
             content:
-              "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations. Only include verified, authentic collaborations from the music industry. If there are no known collaborations, do not make any information",
+              "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations. Only include verified, authentic collaborations from the music industry. If there are no known collaborations, do not make any information up.",
           },
           {
             role: "user",
