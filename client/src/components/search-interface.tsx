@@ -300,7 +300,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 ref={dropdownRef}
                 className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
                 style={{ 
-                  maxHeight: '156px', // Fixed height for exactly 3 items (52px per item)
+                  maxHeight: '120px', // Fixed height for exactly 3 compact items
                   bottom: 'auto'
                 }}
               >
@@ -318,30 +318,25 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                         {artistOptions.length} artist{artistOptions.length !== 1 ? 's' : ''} found
                       </div>
                       {artistOptions.map((artist, index) => (
-                        <Card
+                        <div
                           key={artist.id}
-                          className="mb-2 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4"
-                          style={{
-                            borderLeftColor: '#FF69B4'
-                          }}
+                          className="px-3 py-2 cursor-pointer hover:bg-gray-700 transition-colors border-l-4 border-pink-500"
                           onClick={() => handleArtistSelect(artist)}
                         >
-                          <CardHeader className="pb-2 pt-3 px-4">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="text-sm text-white">{artist.name}</CardTitle>
-                              {artist.name.toLowerCase() === searchQuery.toLowerCase() && (
-                                <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                                  Exact Match
-                                </span>
-                              )}
-                            </div>
-                            {artist.bio && (
-                              <CardDescription className="text-xs text-gray-400 line-clamp-2">
-                                {artist.bio}
-                              </CardDescription>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-white font-medium">{artist.name}</span>
+                            {artist.name.toLowerCase() === searchQuery.toLowerCase() && (
+                              <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                                Exact Match
+                              </span>
                             )}
-                          </CardHeader>
-                        </Card>
+                          </div>
+                          {artist.bio && (
+                            <div className="text-xs text-gray-400 mt-1 line-clamp-1">
+                              {artist.bio}
+                            </div>
+                          )}
+                        </div>
                       ))}
                     </>
                   )}
@@ -432,7 +427,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 <div 
                   className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
                   style={{ 
-                    maxHeight: '156px', // Fixed height for exactly 3 items (52px per item)
+                    maxHeight: '120px', // Fixed height for exactly 3 compact items
                     bottom: 'auto'
                   }}
                 >
@@ -450,30 +445,25 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                           {artistOptions.length} artist{artistOptions.length !== 1 ? 's' : ''} found
                         </div>
                         {artistOptions.map((artist, index) => (
-                          <Card
+                          <div
                             key={artist.id}
-                            className="mb-1 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4"
-                            style={{
-                              borderLeftColor: '#FF69B4'
-                            }}
+                            className="px-3 py-2 cursor-pointer hover:bg-gray-700 transition-colors border-l-4 border-pink-500"
                             onClick={() => handleArtistSelect(artist)}
                           >
-                            <CardHeader className="pb-1 pt-2 px-3">
-                              <div className="flex items-center justify-between">
-                                <CardTitle className="text-xs text-white">{artist.name}</CardTitle>
-                                {artist.name.toLowerCase() === searchQuery.toLowerCase() && (
-                                  <span className="text-xs px-1 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                                    Exact Match
-                                  </span>
-                                )}
-                              </div>
-                              {artist.bio && (
-                                <CardDescription className="text-xs text-gray-400 line-clamp-1">
-                                  {artist.bio}
-                                </CardDescription>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-white font-medium">{artist.name}</span>
+                              {artist.name.toLowerCase() === searchQuery.toLowerCase() && (
+                                <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                                  Exact Match
+                                </span>
                               )}
-                            </CardHeader>
-                          </Card>
+                            </div>
+                            {artist.bio && (
+                              <div className="text-xs text-gray-400 mt-1 line-clamp-1">
+                                {artist.bio}
+                              </div>
+                            )}
+                          </div>
                         ))}
                       </>
                     )}
