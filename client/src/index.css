@@ -219,9 +219,9 @@
     scrollbar-color: #AE53FF #1a1a1a;
   }
 
-  /* Force dropdown height constraint */
+  /* Force dropdown height constraint for exactly 3 cards */
   .dropdown-height-constraint {
-    max-height: 95px !important;
+    max-height: 210px !important;
     overflow-y: auto !important;
   }
 
