@@ -561,9 +561,11 @@ export default function NetworkVisualizer({
 
       // Show collaboration information for producers and songwriters
       const hasProducerRole = roles.includes('producer') || roles.includes('songwriter');
-      if (hasProducerRole && d.collaborations && d.collaborations.length > 0) {
+      // Check both 'collaborations' and 'topCollaborators' fields for compatibility
+      const collaborationData = d.collaborations || (d as any).topCollaborators;
+      if (hasProducerRole && collaborationData && collaborationData.length > 0) {
         content += `<br/><br/><strong>Top Collaborations:</strong><br/>`;
-        content += d.collaborations.join("<br/>");
+        content += collaborationData.join("<br/>");
       }
 
       // Show general collaboration info for artists if available
