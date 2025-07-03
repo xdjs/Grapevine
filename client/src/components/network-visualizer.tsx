@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import ArtistSelectionModal from "./artist-selection-modal";
+import MobileNodeActionModal from "./mobile-node-action-modal";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -25,6 +27,82 @@ export default function NetworkVisualizer({
   const [showArtistModal, setShowArtistModal] = useState(false);
   const [selectedArtistName, setSelectedArtistName] = useState("");
   const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("");
+  
+  // Mobile-specific modal state
+  const isMobile = useIsMobile();
+  const [isMobileModalOpen, setIsMobileModalOpen] = useState(false);
+  const [selectedMobileNode, setSelectedMobileNode] = useState<NetworkNode | null>(null);
+
+  // Mobile node action handlers
+  const handleMobileGoToMusicNerd = async () => {
+    if (!selectedMobileNode) return;
+    
+    try {
+      console.log(`📱 [Mobile] Opening MusicNerd for: ${selectedMobileNode.name}`);
+      
+      // Inline the openMusicNerdProfile functionality for mobile
+      const artistName = selectedMobileNode.name;
+      const artistId = selectedMobileNode.artistId;
+      
+      // Always fetch the current base URL
+      let baseUrl;
+      try {
+        const configResponse = await fetch('/api/config');
+        if (configResponse.ok) {
+          const config = await configResponse.json();
+          baseUrl = config.musicNerdBaseUrl;
+        }
+      } catch (error) {
+        console.error('Error fetching config:', error);
+      }
+      
+      if (!baseUrl) {
+        console.error(`Cannot open MusicNerd profile for "${artistName}": Base URL not configured`);
+        return;
+      }
+      
+      let musicNerdUrl = baseUrl;
+      if (artistId) {
+        musicNerdUrl = `${baseUrl}/artist/${artistId}`;
+      }
+      
+      // Open the link
+      const newWindow = window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
+      if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+        const link = document.createElement('a');
+        link.href = musicNerdUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (error) {
+      console.error('Error opening MusicNerd profile:', error);
+    }
+  };
+
+  const handleMobileSeeNetworkMap = () => {
+    if (!selectedMobileNode || !onArtistSearch) return;
+    
+    console.log(`📱 [Mobile] Loading network map for: ${selectedMobileNode.name}`);
+    onArtistSearch(selectedMobileNode.name);
+  };
+
+  const handleArtistSelection = (artistId: string) => {
+    // Open the specific artist page with the selected ID
+    const musicNerdUrl = `${musicNerdBaseUrl}/artist/${artistId}`;
+    console.log(`🎵 Opening selected artist page: ${musicNerdUrl}`);
+    
+    const link = document.createElement('a');
+    link.href = musicNerdUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Fetch configuration on component mount
   useEffect(() => {
@@ -76,6 +154,107 @@ export default function NetworkVisualizer({
 
     // Create network group
     const networkGroup = svg.append("g").attr("class", "network-group");
+
+    // openMusicNerdProfile function within useEffect scope
+    async function openMusicNerdProfile(artistName: string, artistId?: string | null) {
+      console.log(`🎵 [Frontend] openMusicNerdProfile called for "${artistName}" with artistId: ${artistId}`);
+      
+      // If no specific artist ID provided, check for multiple options
+      if (!artistId) {
+        console.log(`🎵 [Frontend] No artistId provided, checking for multiple options`);
+        
+        try {
+          const response = await fetch(`/api/artist-options/${encodeURIComponent(artistName)}`);
+          const data = await response.json();
+          
+          if (data.options && data.options.length > 1) {
+            // Multiple artists found - show selection modal
+            console.log(`🎵 Multiple artists found for "${artistName}", showing selection modal`);
+            setSelectedArtistName(artistName);
+            setShowArtistModal(true);
+            return;
+          } else if (data.options && data.options.length === 1) {
+            // Single artist found - use its ID
+            artistId = data.options[0].artistId || data.options[0].id;
+            console.log(`🎵 Single artist found for "${artistName}": ${artistId}`);
+          }
+        } catch (error) {
+          console.error(`Error fetching artist options for "${artistName}":`, error);
+        }
+      } else {
+        console.log(`🎵 [Frontend] artistId provided (${artistId}), skipping lookup and going directly to page`);
+      }
+      
+      // Always fetch the current base URL to ensure we have the latest configuration
+      let baseUrl;
+      try {
+        console.log('🔧 [Config] Fetching current base URL from /api/config...');
+        const configResponse = await fetch('/api/config');
+        if (configResponse.ok) {
+          const config = await configResponse.json();
+          baseUrl = config.musicNerdBaseUrl;
+          console.log(`🔧 [Config] Retrieved base URL: ${baseUrl}`);
+          
+          // Update state for consistency
+          if (baseUrl !== musicNerdBaseUrl) {
+            setMusicNerdBaseUrl(baseUrl);
+          }
+        } else {
+          console.error('🔧 [Config] Failed to fetch config, status:', configResponse.status);
+        }
+      } catch (error) {
+        console.error('🔧 [Config] Error fetching config:', error);
+      }
+      
+      if (!baseUrl) {
+        console.error(`🎵 Cannot open MusicNerd profile for "${artistName}": Base URL not configured`);
+        return;
+      }
+      
+      // Use artist ID if available, otherwise go to main page
+      let musicNerdUrl = baseUrl;
+      
+      if (artistId) {
+        musicNerdUrl = `${baseUrl}/artist/${artistId}`;
+        console.log(`🎵 Opening MusicNerd artist page for "${artistName}": ${musicNerdUrl}`);
+      } else {
+        console.log(`🎵 No artist ID found for "${artistName}", opening main MusicNerd page`);
+      }
+      
+      // Try multiple approaches to open the link
+      try {
+        // Method 1: window.open (most reliable for user-initiated actions)
+        const newWindow = window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
+        
+        // Method 2: Fallback to link click if window.open fails
+        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+          console.log('🎵 Window.open blocked, trying link click method...');
+          const link = document.createElement('a');
+          link.href = musicNerdUrl;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          
+          // Append to body, click, and remove
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          console.log('🎵 Successfully opened new window');
+        }
+      } catch (error) {
+        console.error('🎵 Error opening MusicNerd page:', error);
+        // Final fallback: copy URL to clipboard and notify user
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(musicNerdUrl).then(() => {
+            alert(`Unable to open page automatically. URL copied to clipboard: ${musicNerdUrl}`);
+          }).catch(() => {
+            alert(`Please visit: ${musicNerdUrl}`);
+          });
+        } else {
+          alert(`Please visit: ${musicNerdUrl}`);
+        }
+      }
+    }
 
     // Create zoom behavior for mouse/touch interaction
     const zoom = d3
@@ -477,33 +656,38 @@ export default function NetworkVisualizer({
         console.log(`🎯 [CLICK DEBUG] Type: ${d.type}`);
         console.log(`🎯 [CLICK DEBUG] Types: ${JSON.stringify(d.types)}`);
         console.log(`🎯 [CLICK DEBUG] ArtistId: ${d.artistId}`);
-        console.log(`🎯 [CLICK DEBUG] Environment: ${window.location.href}`);
-        console.log(`🎯 [CLICK DEBUG] Event type: ${event.type}`);
-        console.log(`🎯 [CLICK DEBUG] Event target: ${event.target}`);
+        console.log(`🎯 [CLICK DEBUG] Is Mobile: ${isMobile}`);
         
         // Check if this is an artist node
         const isArtistNode = d.type === 'artist' || (d.types && d.types.includes('artist'));
         console.log(`🎯 [CLICK DEBUG] Is artist node: ${isArtistNode}`);
         
         if (isArtistNode) {
-          console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile...`);
-          
           // Check if this is the main artist (largest artist node)
           const isMainArtist = d === mainArtistNode;
           console.log(`🎯 [CLICK DEBUG] Is main artist: ${isMainArtist}`);
           
-          try {
-            // For main artist with artistId, go directly to their page (skip modal)
-            if (isMainArtist && d.artistId) {
-              console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile for main artist with ID`);
-              openMusicNerdProfile(d.name, d.artistId);
-            } else {
-              console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile for regular flow`);
-              // For other artists or main artist without artistId, use normal flow
-              openMusicNerdProfile(d.name, d.artistId);
+          // Mobile-specific behavior: Show choice modal for artist nodes
+          if (isMobile) {
+            console.log(`📱 [Mobile] Showing mobile action modal for: ${d.name}`);
+            setSelectedMobileNode(d);
+            setIsMobileModalOpen(true);
+          } else {
+            // Desktop behavior: Direct navigation
+            console.log(`🖥️ [Desktop] Direct navigation for: ${d.name}`);
+            try {
+              // For main artist with artistId, go directly to their page (skip modal)
+              if (isMainArtist && d.artistId) {
+                console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile for main artist with ID`);
+                openMusicNerdProfile(d.name, d.artistId);
+              } else {
+                console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile for regular flow`);
+                // For other artists or main artist without artistId, use normal flow
+                openMusicNerdProfile(d.name, d.artistId);
+              }
+            } catch (error) {
+              console.error(`🎯 [CLICK DEBUG] Error calling openMusicNerdProfile:`, error);
             }
-          } catch (error) {
-            console.error(`🎯 [CLICK DEBUG] Error calling openMusicNerdProfile:`, error);
           }
         } else {
           console.log(`🎯 [CLICK DEBUG] Not an artist node, skipping action`);
@@ -600,105 +784,7 @@ export default function NetworkVisualizer({
       tooltip.style("opacity", 0);
     }
 
-      async function openMusicNerdProfile(artistName: string, artistId?: string | null) {
-      console.log(`🎵 [Frontend] openMusicNerdProfile called for "${artistName}" with artistId: ${artistId}`);
-      
-      // If no specific artist ID provided, check for multiple options
-      if (!artistId) {
-        console.log(`🎵 [Frontend] No artistId provided, checking for multiple options`);
-        
-        try {
-          const response = await fetch(`/api/artist-options/${encodeURIComponent(artistName)}`);
-          const data = await response.json();
-          
-          if (data.options && data.options.length > 1) {
-            // Multiple artists found - show selection modal
-            console.log(`🎵 Multiple artists found for "${artistName}", showing selection modal`);
-            setSelectedArtistName(artistName);
-            setShowArtistModal(true);
-            return;
-          } else if (data.options && data.options.length === 1) {
-            // Single artist found - use its ID
-            artistId = data.options[0].artistId || data.options[0].id;
-            console.log(`🎵 Single artist found for "${artistName}": ${artistId}`);
-          }
-        } catch (error) {
-          console.error(`Error fetching artist options for "${artistName}":`, error);
-        }
-      } else {
-        console.log(`🎵 [Frontend] artistId provided (${artistId}), skipping lookup and going directly to page`);
-      }
-      
-      // Always fetch the current base URL to ensure we have the latest configuration
-      let baseUrl;
-      try {
-        console.log('🔧 [Config] Fetching current base URL from /api/config...');
-        const configResponse = await fetch('/api/config');
-        if (configResponse.ok) {
-          const config = await configResponse.json();
-          baseUrl = config.musicNerdBaseUrl;
-          console.log(`🔧 [Config] Retrieved base URL: ${baseUrl}`);
-          
-          // Update state for consistency
-          if (baseUrl !== musicNerdBaseUrl) {
-            setMusicNerdBaseUrl(baseUrl);
-          }
-        } else {
-          console.error('🔧 [Config] Failed to fetch config, status:', configResponse.status);
-        }
-      } catch (error) {
-        console.error('🔧 [Config] Error fetching config:', error);
-      }
-      
-      if (!baseUrl) {
-        console.error(`🎵 Cannot open MusicNerd profile for "${artistName}": Base URL not configured`);
-        return;
-      }
-      
-      // Use artist ID if available, otherwise go to main page
-      let musicNerdUrl = baseUrl;
-      
-      if (artistId) {
-        musicNerdUrl = `${baseUrl}/artist/${artistId}`;
-        console.log(`🎵 Opening MusicNerd artist page for "${artistName}": ${musicNerdUrl}`);
-      } else {
-        console.log(`🎵 No artist ID found for "${artistName}", opening main MusicNerd page`);
-      }
-      
-      // Try multiple approaches to open the link
-      try {
-        // Method 1: window.open (most reliable for user-initiated actions)
-        const newWindow = window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
-        
-        // Method 2: Fallback to link click if window.open fails
-        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-          console.log('🎵 Window.open blocked, trying link click method...');
-          const link = document.createElement('a');
-          link.href = musicNerdUrl;
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          
-          // Append to body, click, and remove
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        } else {
-          console.log('🎵 Successfully opened new window');
-        }
-      } catch (error) {
-        console.error('🎵 Error opening MusicNerd page:', error);
-        // Final fallback: copy URL to clipboard and notify user
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(musicNerdUrl).then(() => {
-            alert(`Unable to open page automatically. URL copied to clipboard: ${musicNerdUrl}`);
-          }).catch(() => {
-            alert(`Please visit: ${musicNerdUrl}`);
-          });
-        } else {
-          alert(`Please visit: ${musicNerdUrl}`);
-        }
-      }
-    }
+
     function dragstarted(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
       // Prevent event bubbling to avoid interfering with zoom behavior
       event.sourceEvent.stopPropagation();
@@ -864,22 +950,7 @@ export default function NetworkVisualizer({
     console.log('Zoom reset to 1.00');
   };
 
-  const handleArtistSelection = (artistId: string) => {
-    // Open the specific artist page with the selected ID
 
-    const musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
-
-    console.log(`🎵 Opening selected artist page: ${musicNerdUrl}`);
-    
-    const link = document.createElement('a');
-    link.href = musicNerdUrl;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   // Handle zoom controls with direct function calls
   useEffect(() => {
@@ -928,6 +999,15 @@ export default function NetworkVisualizer({
         onClose={() => setShowArtistModal(false)}
         artistName={selectedArtistName}
         onSelectArtist={handleArtistSelection}
+      />
+      
+      <MobileNodeActionModal
+        isOpen={isMobileModalOpen}
+        onClose={() => setIsMobileModalOpen(false)}
+        artistName={selectedMobileNode?.name || ''}
+        onGoToMusicNerd={handleMobileGoToMusicNerd}
+        onSeeNetworkMap={handleMobileSeeNetworkMap}
+        showNetworkOption={selectedMobileNode ? selectedMobileNode !== data.nodes.find(node => node.size === 20 && (node.type === 'artist' || (node.types && node.types.includes('artist')))) : false}
       />
     </div>
   );
