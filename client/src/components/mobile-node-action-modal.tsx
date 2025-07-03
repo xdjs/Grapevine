@@ -91,25 +91,28 @@ export default function MobileNodeActionModal({
           </div>
         )}
         
-        <div className="flex flex-col gap-3 mt-4">
-          <Button
-            onClick={handleGoToMusicNerd}
-            className="w-full bg-pink-600 hover:bg-pink-700 text-white font-medium py-3 flex items-center justify-center gap-2"
-          >
-            <ExternalLink className="w-4 h-4" />
-            Go to MusicNerd page
-          </Button>
-          
-          {showNetworkOption && (
+        {/* Action buttons only for artist nodes */}
+        {nodeInfo && nodeInfo.roles.includes('artist') && (
+          <div className="flex flex-col gap-3 mt-4">
             <Button
-              onClick={handleSeeNetworkMap}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 flex items-center justify-center gap-2"
+              onClick={handleGoToMusicNerd}
+              className="w-full bg-pink-600 hover:bg-pink-700 text-white font-medium py-3 flex items-center justify-center gap-2"
             >
-              <Network className="w-4 h-4" />
-              See their network map
+              <ExternalLink className="w-4 h-4" />
+              Go to MusicNerd page
             </Button>
-          )}
-        </div>
+            
+            {showNetworkOption && (
+              <Button
+                onClick={handleSeeNetworkMap}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 flex items-center justify-center gap-2"
+              >
+                <Network className="w-4 h-4" />
+                See their network map
+              </Button>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

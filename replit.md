@@ -422,6 +422,15 @@ Changelog:
 - Provides equivalent functionality to desktop right-click through mobile-friendly interface
 - Addresses touch device limitation where right-click context is not available
 
+### Enhanced Mobile Modal with Tooltip Information (July 3, 2025)
+- Extended mobile modal to work with all node types (artists, producers, songwriters)
+- Moved all hover tooltip information into mobile modal for better mobile experience
+- Disabled hover tooltips on mobile devices (under 768px width) to prevent conflicts
+- Mobile modal now displays: artist name, role(s), and collaboration details for all nodes
+- Producer and songwriter modals show information only (no navigation buttons)
+- Artist modals include both information and navigation options (MusicNerd page, network map)
+- Enhanced mobile user experience with same detailed information previously only available on hover
+
 
 
 

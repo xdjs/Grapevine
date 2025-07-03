@@ -669,29 +669,29 @@ export default function NetworkVisualizer({
         console.log(`🎯 [CLICK DEBUG] ArtistId: ${d.artistId}`);
         console.log(`🎯 [CLICK DEBUG] Is Mobile: ${isMobile}`);
         
-        // Check if this is an artist node
-        const isArtistNode = d.type === 'artist' || (d.types && d.types.includes('artist'));
-        console.log(`🎯 [CLICK DEBUG] Is artist node: ${isArtistNode}`);
+        // Check mobile status dynamically to ensure correct detection
+        const currentIsMobile = window.innerWidth < 768;
+        console.log(`🎯 [CLICK DEBUG] Current window width: ${window.innerWidth}`);
+        console.log(`🎯 [CLICK DEBUG] Current is mobile (< 768): ${currentIsMobile}`);
         
-        if (isArtistNode) {
-          // Check if this is the main artist (largest artist node)
-          const isMainArtist = d === mainArtistNode;
-          console.log(`🎯 [CLICK DEBUG] Is main artist: ${isMainArtist}`);
+        // Mobile-specific behavior: Show modal for all nodes
+        if (currentIsMobile) {
+          console.log(`📱 [Mobile] Showing mobile action modal for: ${d.name}`);
+          console.log(`📱 [Mobile] Setting selectedMobileNode and opening modal`);
+          setSelectedMobileNode(d);
+          setIsMobileModalOpen(true);
+          console.log(`📱 [Mobile] Modal state should now be open`);
+          return; // Exit early to prevent desktop behavior
+        } else {
+          // Desktop behavior: Only handle artist nodes
+          const isArtistNode = d.type === 'artist' || (d.types && d.types.includes('artist'));
+          console.log(`🎯 [CLICK DEBUG] Is artist node: ${isArtistNode}`);
           
-          // Mobile-specific behavior: Show choice modal for artist nodes
-          // Check mobile status dynamically to ensure correct detection
-          const currentIsMobile = window.innerWidth < 768;
-          console.log(`🎯 [CLICK DEBUG] Current window width: ${window.innerWidth}`);
-          console.log(`🎯 [CLICK DEBUG] Current is mobile (< 768): ${currentIsMobile}`);
-          
-          if (currentIsMobile) {
-            console.log(`📱 [Mobile] Showing mobile action modal for: ${d.name}`);
-            console.log(`📱 [Mobile] Setting selectedMobileNode and opening modal`);
-            setSelectedMobileNode(d);
-            setIsMobileModalOpen(true);
-            console.log(`📱 [Mobile] Modal state should now be open`);
-            return; // Exit early to prevent desktop behavior
-          } else {
+          if (isArtistNode) {
+            // Check if this is the main artist (largest artist node)
+            const isMainArtist = d === mainArtistNode;
+            console.log(`🎯 [CLICK DEBUG] Is main artist: ${isMainArtist}`);
+            
             // Desktop behavior: Direct navigation
             console.log(`🖥️ [Desktop] Direct navigation for: ${d.name}`);
             try {
@@ -707,9 +707,9 @@ export default function NetworkVisualizer({
             } catch (error) {
               console.error(`🎯 [CLICK DEBUG] Error calling openMusicNerdProfile:`, error);
             }
+          } else {
+            console.log(`🎯 [CLICK DEBUG] Not an artist node on desktop, skipping action`);
           }
-        } else {
-          console.log(`🎯 [CLICK DEBUG] Not an artist node, skipping action`);
         }
         console.log(`🎯 [CLICK DEBUG] ===== END CLICK EVENT =====`);
       })
