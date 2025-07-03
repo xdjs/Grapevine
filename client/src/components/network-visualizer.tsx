@@ -622,9 +622,20 @@ export default function NetworkVisualizer({
         d3.select(this).selectAll("circle, path")
           .attr("stroke", "white")
           .attr("stroke-width", 3);
-        showTooltip(event, d);
+        
+        // Only show tooltip on desktop devices
+        const currentIsMobile = window.innerWidth < 768;
+        if (!currentIsMobile) {
+          showTooltip(event, d);
+        }
       })
-      .on("mousemove", moveTooltip)
+      .on("mousemove", function(event) {
+        // Only move tooltip on desktop devices
+        const currentIsMobile = window.innerWidth < 768;
+        if (!currentIsMobile) {
+          moveTooltip(event);
+        }
+      })
       .on("mouseout", function(event, d) {
         // Reset the stroke colors for the entire node group
         const group = d3.select(this);
@@ -1013,6 +1024,7 @@ export default function NetworkVisualizer({
         isOpen={isMobileModalOpen}
         onClose={() => setIsMobileModalOpen(false)}
         artistName={selectedMobileNode?.name || ''}
+        nodeData={selectedMobileNode}
         onGoToMusicNerd={handleMobileGoToMusicNerd}
         onSeeNetworkMap={handleMobileSeeNetworkMap}
         showNetworkOption={selectedMobileNode ? selectedMobileNode !== data.nodes.find(node => node.size === 20 && (node.type === 'artist' || (node.types && node.types.includes('artist')))) : false}
