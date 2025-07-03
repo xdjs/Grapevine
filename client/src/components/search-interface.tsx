@@ -60,7 +60,21 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const networkSearchInputRef = useRef<HTMLInputElement>(null);
   const viewportHeight = useViewportHeight();
+  
+  // Calculate dynamic dropdown height based on available space
+  const calculateDropdownHeight = useCallback((baseHeight: number, isNetworkView: boolean = false) => {
+    const inputRef = isNetworkView ? networkSearchInputRef.current : searchInputRef.current;
+    if (!inputRef) return `${baseHeight}px`;
+    
+    const inputRect = inputRef.getBoundingClientRect();
+    const availableSpace = window.innerHeight - inputRect.bottom - 80; // 80px buffer for taskbar
+    const maxHeight = Math.min(baseHeight, Math.max(120, availableSpace)); // Minimum 120px
+    
+    return `${maxHeight}px`;
+  }, []);
 
   // Fetch artist options for instant search
   const fetchArtistOptions = useCallback(async (query: string) => {
@@ -241,6 +255,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
           
           <div className="relative mb-4 sm:mb-6 search-dropdown-container">
             <Input
+              ref={searchInputRef}
               type="text"
               placeholder="Enter artist name..."
               value={searchQuery}
@@ -285,7 +300,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 ref={dropdownRef}
                 className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
                 style={{ 
-                  maxHeight: 'min(210px, calc(100vh - 120px))',
+                  maxHeight: calculateDropdownHeight(210),
                   bottom: 'auto'
                 }}
               >
@@ -373,6 +388,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
             
             <div className="flex-1 relative search-dropdown-container">
               <Input
+                ref={networkSearchInputRef}
                 type="text"
                 placeholder="Search for a new artist..."
                 value={searchQuery}
@@ -416,7 +432,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 <div 
                   className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
                   style={{ 
-                    maxHeight: 'min(170px, calc(100vh - 120px))',
+                    maxHeight: calculateDropdownHeight(170, true),
                     bottom: 'auto'
                   }}
                 >
