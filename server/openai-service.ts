@@ -56,7 +56,7 @@ Please respond with JSON in this exact format:
   ]
 }
 
-Focus on real, verified collaborations from the music industry. Include up to 5 producers and 5 songwriters who have actually worked with ${artistName}. Each producer and songwriter should have exactly 3 top collaborating artists listed.`;
+Focus on real, verified collaborations from the music industry. Include up to 5 producers and 5 songwriters who have actually worked with ${artistName}. Each producer and songwriter should have exactly 3 top collaborating artists listed. If there are no known collaborations, return empty arrays for producers and songwriters.`;
 
       const response = await this.openai!.chat.completions.create({
         model: "gpt-4o",
