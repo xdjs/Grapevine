@@ -284,7 +284,10 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               <div 
                 ref={dropdownRef}
                 className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
-                style={{ maxHeight: '210px' }}
+                style={{ 
+                  maxHeight: 'min(210px, calc(100vh - 120px))',
+                  bottom: 'auto'
+                }}
               >
                 <div className="p-1">
                   {isLoadingOptions && (
@@ -412,7 +415,10 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               {(showDropdown || isLoadingOptions) && showNetworkView && isSearchFocused && (
                 <div 
                   className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
-                  style={{ maxHeight: '170px' }}
+                  style={{ 
+                    maxHeight: 'min(170px, calc(100vh - 120px))',
+                    bottom: 'auto'
+                  }}
                 >
                   <div className="p-1">
                     {isLoadingOptions && (
