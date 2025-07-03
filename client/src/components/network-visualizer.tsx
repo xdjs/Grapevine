@@ -668,10 +668,18 @@ export default function NetworkVisualizer({
           console.log(`🎯 [CLICK DEBUG] Is main artist: ${isMainArtist}`);
           
           // Mobile-specific behavior: Show choice modal for artist nodes
-          if (isMobile) {
+          // Check mobile status dynamically to ensure correct detection
+          const currentIsMobile = window.innerWidth < 768;
+          console.log(`🎯 [CLICK DEBUG] Current window width: ${window.innerWidth}`);
+          console.log(`🎯 [CLICK DEBUG] Current is mobile (< 768): ${currentIsMobile}`);
+          
+          if (currentIsMobile) {
             console.log(`📱 [Mobile] Showing mobile action modal for: ${d.name}`);
+            console.log(`📱 [Mobile] Setting selectedMobileNode and opening modal`);
             setSelectedMobileNode(d);
             setIsMobileModalOpen(true);
+            console.log(`📱 [Mobile] Modal state should now be open`);
+            return; // Exit early to prevent desktop behavior
           } else {
             // Desktop behavior: Direct navigation
             console.log(`🖥️ [Desktop] Direct navigation for: ${d.name}`);
