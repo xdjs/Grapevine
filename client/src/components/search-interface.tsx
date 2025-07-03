@@ -298,7 +298,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
             {(showDropdown || isLoadingOptions) && !showNetworkView && (
               <div 
                 ref={dropdownRef}
-                className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
+                className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll dropdown-height-constraint"
                 style={{ 
                   maxHeight: '95px !important', // Height to align with red line position - forced
                   bottom: 'auto'
@@ -430,7 +430,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               {/* Artist Options Dropdown - Network View */}
               {(showDropdown || isLoadingOptions) && showNetworkView && isSearchFocused && (
                 <div 
-                  className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
+                  className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll dropdown-height-constraint"
                   style={{ 
                     maxHeight: '85px', // Height to align with similar position in network view
                     bottom: 'auto'

@@ -217,7 +217,12 @@
   .artist-dropdown-scroll {
     scrollbar-width: thin;
     scrollbar-color: #AE53FF #1a1a1a;
+  }
+
+  /* Force dropdown height constraint */
+  .dropdown-height-constraint {
     max-height: 95px !important;
+    overflow-y: auto !important;
   }
 
   .artist-dropdown-scroll::-webkit-scrollbar {
