@@ -300,7 +300,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 ref={dropdownRef}
                 className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
                 style={{ 
-                  maxHeight: calculateDropdownHeight(350),
+                  maxHeight: '156px', // Fixed height for exactly 3 items (52px per item)
                   bottom: 'auto'
                 }}
               >
@@ -432,7 +432,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 <div 
                   className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll"
                   style={{ 
-                    maxHeight: calculateDropdownHeight(280, true),
+                    maxHeight: '156px', // Fixed height for exactly 3 items (52px per item)
                     bottom: 'auto'
                   }}
                 >
