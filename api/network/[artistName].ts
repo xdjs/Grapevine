@@ -205,6 +205,12 @@ Requirements:
             collabNode.types.push(collaborator.type);
             console.log(`🎭 [Vercel] Added ${collaborator.type} role to existing ${collaborator.name} node (now has ${collabNode.types.length} roles)`);
           }
+          // Update collaborations list
+          if (collaborator.topCollaborators && collaborator.topCollaborators.length > 0) {
+            const existingCollabs = collabNode.collaborations || [];
+            const newCollabs = collaborator.topCollaborators.filter(c => !existingCollabs.includes(c));
+            collabNode.collaborations = [...existingCollabs, ...newCollabs];
+          }
           // Update color for multi-role nodes (artist + songwriter = multi-color, producer + songwriter = purple)
           if (collabNode.types.includes('artist') && collabNode.types.includes('songwriter')) {
             collabNode.color = '#FF69B4'; // Keep artist color for artist-songwriters
@@ -221,7 +227,7 @@ Requirements:
             color: collaborator.type === 'producer' ? '#8A2BE2' : '#00CED1',
             size: 20,
             artistId: null,
-            topCollaborators: collaborator.topCollaborators || []
+            collaborations: collaborator.topCollaborators || []
           };
 
           // Look up MusicNerd ID for collaborator
