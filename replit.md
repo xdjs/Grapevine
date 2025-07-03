@@ -411,6 +411,26 @@ Changelog:
 - Ensures network maps display proper artist stylization as stored in MusicNerd database
 - Applied fix to both cached data retrieval and new network generation paths
 
+### Mobile-Specific Node Interaction Implementation (July 3, 2025)
+- Implemented mobile-specific node interaction mechanics for touch devices
+- Added `MobileNodeActionModal` component that shows choice dialog when mobile users tap artist nodes
+- Mobile behavior: Single tap opens choice modal with "Go to MusicNerd page" and "See their network map" options
+- Desktop behavior: Maintains existing left-click (MusicNerd page) and right-click (network map) functionality
+- Enhanced `NetworkNode` type definition to include `artistId` property for proper node linking
+- Integrated `useIsMobile` hook for accurate device detection (screens < 768px)
+- Mobile modal shows both navigation options for all artist nodes except main artist (which only shows MusicNerd option)
+- Provides equivalent functionality to desktop right-click through mobile-friendly interface
+- Addresses touch device limitation where right-click context is not available
+
+### Enhanced Mobile Modal with Tooltip Information (July 3, 2025)
+- Extended mobile modal to work with all node types (artists, producers, songwriters)
+- Moved all hover tooltip information into mobile modal for better mobile experience
+- Disabled hover tooltips on mobile devices (under 768px width) to prevent conflicts
+- Mobile modal now displays: artist name, role(s), and collaboration details for all nodes
+- Producer and songwriter modals show information only (no navigation buttons)
+- Artist modals include both information and navigation options (MusicNerd page, network map)
+- Enhanced mobile user experience with same detailed information previously only available on hover
+
 
 
 
