@@ -273,7 +273,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 setTimeout(() => {
                   setIsSearchFocused(false);
                   setShowDropdown(false);
-                }, 150);
+                }, 350);
               }}
               className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-12 sm:pr-16 text-base sm:text-lg rounded-xl"
               disabled={isLoading}
@@ -420,7 +420,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                   setTimeout(() => {
                     setIsSearchFocused(false);
                     setShowDropdown(false);
-                  }, 150);
+                  }, 350);
                 }}
                 className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-10 sm:pr-12 text-sm sm:text-base"
                 disabled={isLoading}
