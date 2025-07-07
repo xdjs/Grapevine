@@ -50,11 +50,11 @@ This is a full-stack web application that visualizes music collaboration network
 - **Legend**: Shows color coding for different artist types
 
 ### Real Music Database Integration
-Now integrates with multiple authentic sources for comprehensive collaboration data:
-- **MusicBrainz API**: Primary source for artist collaboration relationships
-- **Wikipedia API**: Secondary source for collaboration data when MusicBrainz lacks information
+Now integrates with authentic sources for comprehensive collaboration data:
+- **OpenAI API**: Primary source for music collaboration data with temperature 0.1-0.3 for factual accuracy
+- **MusicBrainz API**: Fallback source for artist collaboration relationships when OpenAI is unavailable
 - **Spotify Web API**: Provides artist profile images and additional metadata
-- **Intelligent Fallback**: Two-tier system (MusicBrainz → Wikipedia) with authentic data only
+- **Clean Architecture**: Pure API-driven system with no internal databases or hardcoded fallbacks
 - **Rate Limiting**: Proper API throttling for sustainable data access
 
 ## Data Flow
@@ -286,6 +286,17 @@ Changelog:
 - Maintains all existing features: MusicNerd artist page linking, Spotify images, and branching connections
 - Comprehensive error handling with intelligent fallback to MusicBrainz when OpenAI is unavailable
 - Fixed TypeScript variable scope issues and type safety for seamless integration
+
+### Clean API-Only Architecture Implementation (July 7, 2025)
+- Removed all internal databases and fallback systems for pure API-driven architecture
+- Eliminated Wikipedia service integration and all hardcoded collaboration mappings
+- Simplified data source priority to: 1) OpenAI → 2) MusicBrainz (no fallbacks)
+- Removed known collaborations database, multi-role artist mappings, and synthetic data generation
+- Cleaned up generateRealCollaborationNetwork method to use only authentic API data sources
+- Temperature settings optimized: OpenAI service (0.1), API endpoint (0.3) for factual music data
+- System now returns only main artist node if no real collaboration data found from APIs
+- Maintains caching system for performance while ensuring all data comes from authorized sources
+- Eliminates misleading artificial connections by using authentic data sources exclusively
 
 
 ### Multi-Role Node Consolidation (June 30, 2025)
