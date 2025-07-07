@@ -180,8 +180,8 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
-      // From albums (get track details)
-      for (const album of albums.slice(0, 5)) { // Limit to avoid rate limits
+      // From albums (get track details) - reduced for performance
+      for (const album of albums.slice(0, 3)) { // Limit to top 3 albums for performance
         try {
           const albumTracks = await spotifyService.getAlbumTracks(album.id);
           for (const track of albumTracks) {
@@ -214,7 +214,7 @@ export class DatabaseStorage implements IStorage {
     
     const classified: Array<{name: string, type: string}> = [];
     
-    for (const collaborator of collaborators.slice(0, 10)) { // Limit to top 10 for main collaborators
+    for (const collaborator of collaborators.slice(0, 8)) { // Limit to top 8 for better performance
       try {
         console.log(`🔍 [DEBUG] Classifying "${collaborator}" with MusicBrainz`);
         
@@ -318,7 +318,10 @@ export class DatabaseStorage implements IStorage {
       
       // Get collaborator's own collaborators from Spotify
       const branchingCollaborators = await this.getSpotifyCollaborators(collaborator.name);
-      const topBranchingCollaborators = branchingCollaborators.slice(0, 3); // Top 3
+      const topBranchingCollaborators = branchingCollaborators.slice(0, 2); // Top 2 for performance
+      
+      // Small delay to prevent rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       console.log(`🌿 [DEBUG] Found ${topBranchingCollaborators.length} branching collaborators for "${collaborator.name}"`);
 
@@ -426,46 +429,10 @@ export class DatabaseStorage implements IStorage {
     nodeMap: Map<string, NetworkNode>, 
     links: NetworkLink[]
   ): Promise<void> {
-    console.log(`🔗 [DEBUG] Checking for cross-collaborations between ${collaborators.length} collaborators`);
-    
-    // Check each pair of collaborators to see if they've worked together
-    for (let i = 0; i < collaborators.length; i++) {
-      for (let j = i + 1; j < collaborators.length; j++) {
-        const collaborator1 = collaborators[i];
-        const collaborator2 = collaborators[j];
-        
-        console.log(`🔍 [DEBUG] Checking if "${collaborator1.name}" has worked with "${collaborator2.name}"`);
-        
-        try {
-          // Get collaborator1's collaborators and see if collaborator2 is in there
-          const collaborator1Partners = await this.getSpotifyCollaborators(collaborator1.name);
-          
-          // Check if collaborator2's name appears in collaborator1's collaborators
-          const hasCollaborated = collaborator1Partners.some(partner => 
-            partner.toLowerCase().includes(collaborator2.name.toLowerCase()) ||
-            collaborator2.name.toLowerCase().includes(partner.toLowerCase())
-          );
-          
-          if (hasCollaborated) {
-            // Check if link already exists
-            const linkExists = links.some(link => 
-              (link.source === collaborator1.name && link.target === collaborator2.name) ||
-              (link.source === collaborator2.name && link.target === collaborator1.name)
-            );
-            
-            if (!linkExists) {
-              links.push({
-                source: collaborator1.name,
-                target: collaborator2.name,
-              });
-              console.log(`🌟 [DEBUG] Added cross-collaboration link: "${collaborator1.name}" ↔ "${collaborator2.name}"`);
-            }
-          }
-        } catch (error) {
-          console.log(`❌ [DEBUG] Error checking cross-collaboration between "${collaborator1.name}" and "${collaborator2.name}":`, error);
-        }
-      }
-    }
+    console.log(`🔗 [DEBUG] Skipping cross-collaboration detection for performance optimization`);
+    // Cross-collaboration detection disabled for faster performance
+    // Previously was making N*(N-1)/2 additional API calls which caused significant delays
+    return;
   }
 
   private async createSingleArtistNetwork(artistName: string): Promise<NetworkData> {
