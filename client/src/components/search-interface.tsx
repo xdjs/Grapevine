@@ -281,7 +281,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 setTimeout(() => {
                   setIsSearchFocused(false);
                   setShowDropdown(false);
-                }, 150);
+                }, 350);
               }}
               className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-14 sm:pr-16 text-base sm:text-lg rounded-xl"
               disabled={isLoading}
@@ -332,7 +332,21 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                           style={{
                             borderLeftColor: '#FF69B4'
                           }}
-                          onClick={() => handleArtistSelect(artist)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleArtistSelect(artist);
+                          }}
+                          onMouseUp={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleArtistSelect(artist);
+                          }}
+                          onTouchEnd={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleArtistSelect(artist);
+                          }}
                         >
                           <CardHeader className="pb-2 pt-3 px-4">
                             <div className="flex items-center justify-between">
@@ -414,7 +428,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                   setTimeout(() => {
                     setIsSearchFocused(false);
                     setShowDropdown(false);
-                  }, 150);
+                  }, 350);
                 }}
                 className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-11 sm:pr-12 text-sm sm:text-base"
                 disabled={isLoading}
@@ -464,7 +478,21 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                             style={{
                               borderLeftColor: '#FF69B4'
                             }}
-                            onClick={() => handleArtistSelect(artist)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleArtistSelect(artist);
+                            }}
+                            onMouseUp={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleArtistSelect(artist);
+                            }}
+                            onTouchEnd={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleArtistSelect(artist);
+                            }}
                           >
                             <CardHeader className="pb-1 pt-2 px-3">
                               <div className="flex items-center justify-between">
