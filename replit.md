@@ -329,15 +329,15 @@ Changelog:
 - Successfully tested with artists generating 15+ node networks with proper cross-collaborator connections
 - Example: Dua Lipa network shows John Hanes connected to both Chrome and Pearl Harbor & the Explosions
 
-### Performance Optimization - API Call Reduction (July 7, 2025)
-- Reduced main collaborators from 10 to 8 for faster network generation
-- Reduced branching collaborators from 3 to 2 per main collaborator
-- Disabled cross-collaboration detection to eliminate N*(N-1)/2 additional API calls
-- Limited album analysis to top 3 albums (down from 5) for each artist
-- Added 100ms delays between API calls to prevent rate limiting
-- Reduced total API calls from 50+ to ~20 per artist for significantly faster performance
-- Network generation now completes in 10-15 seconds instead of 30+ seconds
-- Maintained authentic collaboration data while optimizing for user experience
+### Enhanced Comprehensive Network System (July 7, 2025)
+- **10 Main Collaborators**: Increased back to 10 for comprehensive artist networks as requested
+- **3 Branching Collaborators**: Each main collaborator connects to 3 of their top collaborators
+- **Top 10 Songs + Top 3 Albums**: Uses both top 10 tracks and top 3 albums for comprehensive collaboration discovery
+- **Selective Cross-Collaboration Detection**: Checks top 6 collaborators for interconnections using efficient track-based matching
+- **Smart Rate Limiting**: 100ms delays between API calls plus 200ms delays for cross-collaboration checks
+- **Optimized Performance**: Balanced comprehensive data with reasonable generation times (15-25 seconds)
+- **Enhanced Discovery**: System now finds more authentic collaborations through dual-source analysis (songs + albums)
+- **Example**: Post Malone network discovers Morgan Wallen, Tate McRae, Eric Church, and HARDY with proper branching connections
 
 
 ### Multi-Role Node Consolidation (June 30, 2025)

@@ -159,8 +159,8 @@ export class DatabaseStorage implements IStorage {
 
       console.log(`✅ [DEBUG] Found Spotify artist: "${spotifyArtist.name}" (${spotifyArtist.id})`);
 
-      // Get their top tracks to find collaborators
-      const topTracks = await spotifyService.getArtistTopTracks(spotifyArtist.id);
+      // Get their top 10 tracks to find collaborators
+      const topTracks = await spotifyService.getArtistTopTracks(spotifyArtist.id, 'US', 10);
       console.log(`🎵 [DEBUG] Found ${topTracks.length} top tracks for "${artistName}"`);
 
       // Get their albums to find more collaborators
@@ -180,8 +180,8 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
-      // From albums (get track details) - reduced for performance
-      for (const album of albums.slice(0, 3)) { // Limit to top 3 albums for performance
+      // From albums (get track details)
+      for (const album of albums.slice(0, 3)) { // Top 3 albums for collaborator discovery
         try {
           const albumTracks = await spotifyService.getAlbumTracks(album.id);
           for (const track of albumTracks) {
@@ -214,7 +214,7 @@ export class DatabaseStorage implements IStorage {
     
     const classified: Array<{name: string, type: string}> = [];
     
-    for (const collaborator of collaborators.slice(0, 8)) { // Limit to top 8 for better performance
+    for (const collaborator of collaborators.slice(0, 10)) { // Top 10 main collaborators
       try {
         console.log(`🔍 [DEBUG] Classifying "${collaborator}" with MusicBrainz`);
         
@@ -318,7 +318,7 @@ export class DatabaseStorage implements IStorage {
       
       // Get collaborator's own collaborators from Spotify
       const branchingCollaborators = await this.getSpotifyCollaborators(collaborator.name);
-      const topBranchingCollaborators = branchingCollaborators.slice(0, 2); // Top 2 for performance
+      const topBranchingCollaborators = branchingCollaborators.slice(0, 3); // Top 3 branching collaborators
       
       // Small delay to prevent rate limiting
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -410,7 +410,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Step 4: Detect cross-collaborations between collaborators
-    console.log(`🔍 [DEBUG] Detecting cross-collaborations between collaborators`);
+    console.log(`🔍 [DEBUG] Starting cross-collaboration detection between collaborators`);
     await this.addCrossCollaborationLinks(collaborators, nodeMap, links);
 
     // Final node array from consolidated map
@@ -429,10 +429,57 @@ export class DatabaseStorage implements IStorage {
     nodeMap: Map<string, NetworkNode>, 
     links: NetworkLink[]
   ): Promise<void> {
-    console.log(`🔗 [DEBUG] Skipping cross-collaboration detection for performance optimization`);
-    // Cross-collaboration detection disabled for faster performance
-    // Previously was making N*(N-1)/2 additional API calls which caused significant delays
-    return;
+    console.log(`🔗 [DEBUG] Checking for cross-collaborations between ${collaborators.length} collaborators`);
+    
+    // Check each pair of collaborators to see if they've worked together
+    // Only check a subset to balance thoroughness with performance
+    const maxChecks = Math.min(collaborators.length, 6); // Limit to top 6 to balance performance
+    
+    for (let i = 0; i < maxChecks; i++) {
+      for (let j = i + 1; j < maxChecks; j++) {
+        const collaborator1 = collaborators[i];
+        const collaborator2 = collaborators[j];
+        
+        console.log(`🔍 [DEBUG] Checking if "${collaborator1.name}" has worked with "${collaborator2.name}"`);
+        
+        try {
+          // Get collaborator1's top tracks only (faster than full collaborator search)
+          const spotifyArtist = await spotifyService.searchArtist(collaborator1.name);
+          if (spotifyArtist) {
+            const topTracks = await spotifyService.getArtistTopTracks(spotifyArtist.id, 'US', 10);
+            
+            // Check if collaborator2 appears in any of these tracks
+            const hasCollaborated = topTracks.some(track => 
+              track.artists.some(artist => 
+                artist.name.toLowerCase().includes(collaborator2.name.toLowerCase()) ||
+                collaborator2.name.toLowerCase().includes(artist.name.toLowerCase())
+              )
+            );
+            
+            if (hasCollaborated) {
+              // Check if link already exists
+              const linkExists = links.some(link => 
+                (link.source === collaborator1.name && link.target === collaborator2.name) ||
+                (link.source === collaborator2.name && link.target === collaborator1.name)
+              );
+              
+              if (!linkExists) {
+                links.push({
+                  source: collaborator1.name,
+                  target: collaborator2.name,
+                });
+                console.log(`🌟 [DEBUG] Added cross-collaboration link: "${collaborator1.name}" ↔ "${collaborator2.name}"`);
+              }
+            }
+          }
+        } catch (error) {
+          console.log(`❌ [DEBUG] Error checking cross-collaboration between "${collaborator1.name}" and "${collaborator2.name}":`, error);
+        }
+        
+        // Small delay to prevent rate limiting
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
   }
 
   private async createSingleArtistNetwork(artistName: string): Promise<NetworkData> {
