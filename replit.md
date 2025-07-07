@@ -384,6 +384,20 @@ Changelog:
 
 - Complete elimination of staging URLs throughout the entire codebase
 
+### Environment Variable Consolidation (July 7, 2025)
+- Updated all API endpoints to prioritize MUSIC_BASE_URL over MUSICNERD_BASE_URL for consistency
+- Replaced all remaining hardcoded URLs in database-storage.ts with dynamic environment variables
+- Artist selection modal now uses dynamic base URL instead of hardcoded musicnerd.xyz
+- Added fallback chain: MUSIC_BASE_URL → MUSICNERD_BASE_URL → hardcoded fallback
+- Vercel API endpoints and Express server routes now use unified environment variable approach
+
+### Artist Not Found Dialog Implementation (July 7, 2025)
+- Created ArtistNotFoundDialog component for artist nodes without valid IDs
+- Added popup dialog with message "This artist has not been added to our database yet - feel free to add them and their socials!"
+- Dialog includes "Visit MusicNerd" button that opens MusicNerd homepage in new tab
+- Updated openMusicNerdProfile function to show dialog instead of doing nothing when no artist ID found
+- Fixed touchpad/mobile tap issue in search dropdowns by adding onTouchStart event handlers
+
 
 ### Fixed Main Artist Direct Navigation (July 2, 2025)
 - Fixed issue where clicking main artist node showed selection modal instead of going directly to their page
@@ -411,12 +425,34 @@ Changelog:
 - Ensures network maps display proper artist stylization as stored in MusicNerd database
 - Applied fix to both cached data retrieval and new network generation paths
 
+
 ### Enhanced OpenAI Prompt for Multi-Role Detection (July 7, 2025)
 - Updated OpenAI prompt to include explicit multi-role detection requirement
 - Added instruction to check if each artist/producer/songwriter has multiple roles (artist+songwriter, songwriter+producer)
 - Enhanced prompt specificity to ensure exactly 3 top collaborating artists for each producer and songwriter
 - Maintains focus on real, verified collaborations while improving role accuracy
 - Prompt now explicitly requests checking for dual roles to improve network node consolidation
+
+### Mobile-Specific Node Interaction Implementation (July 3, 2025)
+- Implemented mobile-specific node interaction mechanics for touch devices
+- Added `MobileNodeActionModal` component that shows choice dialog when mobile users tap artist nodes
+- Mobile behavior: Single tap opens choice modal with "Go to MusicNerd page" and "See their network map" options
+- Desktop behavior: Maintains existing left-click (MusicNerd page) and right-click (network map) functionality
+- Enhanced `NetworkNode` type definition to include `artistId` property for proper node linking
+- Integrated `useIsMobile` hook for accurate device detection (screens < 768px)
+- Mobile modal shows both navigation options for all artist nodes except main artist (which only shows MusicNerd option)
+- Provides equivalent functionality to desktop right-click through mobile-friendly interface
+- Addresses touch device limitation where right-click context is not available
+
+### Enhanced Mobile Modal with Tooltip Information (July 3, 2025)
+- Extended mobile modal to work with all node types (artists, producers, songwriters)
+- Moved all hover tooltip information into mobile modal for better mobile experience
+- Disabled hover tooltips on mobile devices (under 768px width) to prevent conflicts
+- Mobile modal now displays: artist name, role(s), and collaboration details for all nodes
+- Producer and songwriter modals show information only (no navigation buttons)
+- Artist modals include both information and navigation options (MusicNerd page, network map)
+- Enhanced mobile user experience with same detailed information previously only available on hover
+
 
 
 
