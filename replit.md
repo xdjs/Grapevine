@@ -384,6 +384,13 @@ Changelog:
 
 - Complete elimination of staging URLs throughout the entire codebase
 
+### Environment Variable Consolidation (July 7, 2025)
+- Updated all API endpoints to prioritize MUSIC_BASE_URL over MUSICNERD_BASE_URL for consistency
+- Replaced all remaining hardcoded URLs in database-storage.ts with dynamic environment variables
+- Artist selection modal now uses dynamic base URL instead of hardcoded musicnerd.xyz
+- Added fallback chain: MUSIC_BASE_URL → MUSICNERD_BASE_URL → hardcoded fallback
+- Vercel API endpoints and Express server routes now use unified environment variable approach
+
 
 ### Fixed Main Artist Direct Navigation (July 2, 2025)
 - Fixed issue where clicking main artist node showed selection modal instead of going directly to their page
