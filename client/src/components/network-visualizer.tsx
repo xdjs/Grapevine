@@ -606,7 +606,7 @@ export default function NetworkVisualizer({
       console.log(`🎵 [Frontend] openMusicNerdProfile called for "${artistName}" with artistId: ${artistId}`);
       
       // If no specific artist ID provided, check for multiple options
-      if (!artistId) {
+      if (!artistId || artistId === null || artistId === 'null') {
         console.log(`🎵 [Frontend] No artistId provided, checking for multiple options`);
         
         try {
@@ -629,6 +629,12 @@ export default function NetworkVisualizer({
         }
       } else {
         console.log(`🎵 [Frontend] artistId provided (${artistId}), skipping lookup and going directly to page`);
+      }
+      
+      // If still no artist ID found after checking options, do nothing
+      if (!artistId || artistId === null || artistId === 'null') {
+        console.log(`🎵 [Frontend] No artist ID found for "${artistName}", doing nothing when clicked`);
+        return;
       }
       
       // Always fetch the current base URL to ensure we have the latest configuration
@@ -657,15 +663,9 @@ export default function NetworkVisualizer({
         return;
       }
       
-      // Use artist ID if available, otherwise go to main page
-      let musicNerdUrl = baseUrl;
-      
-      if (artistId) {
-        musicNerdUrl = `${baseUrl}/artist/${artistId}`;
-        console.log(`🎵 Opening MusicNerd artist page for "${artistName}": ${musicNerdUrl}`);
-      } else {
-        console.log(`🎵 No artist ID found for "${artistName}", opening main MusicNerd page`);
-      }
+      // Use artist ID to create URL
+      const musicNerdUrl = `${baseUrl}/artist/${artistId}`;
+      console.log(`🎵 Opening MusicNerd artist page for "${artistName}": ${musicNerdUrl}`);
       
       // Try multiple approaches to open the link
       try {
