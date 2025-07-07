@@ -215,10 +215,10 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  private async classifyCollaboratorsWithMusicBrainz(collaborators: string[]): Promise<Array<{name: string, type: string}>> {
+  private async classifyCollaboratorsWithMusicBrainz(collaborators: string[]): Promise<Array<{name: string, type: string, types?: string[]}>> {
     console.log(`🎵 [DEBUG] Classifying ${collaborators.length} collaborators with MusicBrainz`);
     
-    const classified: Array<{name: string, type: string}> = [];
+    const classified: Array<{name: string, type: string, types?: string[]}> = [];
     
     for (const collaborator of collaborators.slice(0, 10)) { // Top 10 main collaborators
       try {
@@ -228,7 +228,7 @@ export class DatabaseStorage implements IStorage {
         const mbArtist = await musicBrainzService.searchArtist(collaborator);
         if (!mbArtist) {
           console.log(`❌ [DEBUG] "${collaborator}" not found in MusicBrainz, defaulting to 'artist'`);
-          classified.push({ name: collaborator, type: 'artist' });
+          classified.push({ name: collaborator, type: 'artist', types: ['artist'] });
           continue;
         }
 
@@ -236,7 +236,7 @@ export class DatabaseStorage implements IStorage {
         const detailedArtist = await musicBrainzService.getArtistWithRelations(mbArtist.id);
         if (!detailedArtist || !detailedArtist.relations) {
           console.log(`❌ [DEBUG] No relations found for "${collaborator}" in MusicBrainz, defaulting to 'artist'`);
-          classified.push({ name: collaborator, type: 'artist' });
+          classified.push({ name: collaborator, type: 'artist', types: ['artist'] });
           continue;
         }
 
@@ -260,19 +260,26 @@ export class DatabaseStorage implements IStorage {
           r.type === 'songwriter'
         );
 
-        // Classify based on relation counts
-        if (producerRelations.length > songwriterRelations.length && producerRelations.length > 0) {
-          type = 'producer';
-        } else if (songwriterRelations.length > 0) {
-          type = 'songwriter';
+        // Assign multiple roles based on relation counts
+        const roles = ['artist']; // Start with artist as base role
+        
+        if (producerRelations.length > 0) {
+          roles.push('producer');
         }
+        if (songwriterRelations.length > 0) {
+          roles.push('songwriter');
+        }
+        
+        // Remove duplicate 'artist' if we have other roles
+        const finalRoles = roles.length > 1 ? roles.filter(r => r !== 'artist') : roles;
+        const primaryType = finalRoles[0];
 
-        console.log(`✅ [DEBUG] Classified "${collaborator}" as "${type}" (${producerRelations.length} producer relations, ${songwriterRelations.length} songwriter relations)`);
-        classified.push({ name: collaborator, type });
+        console.log(`✅ [DEBUG] Classified "${collaborator}" with roles [${finalRoles.join(', ')}] (${producerRelations.length} producer relations, ${songwriterRelations.length} songwriter relations)`);
+        classified.push({ name: collaborator, type: primaryType, types: finalRoles });
 
       } catch (error) {
         console.log(`❌ [DEBUG] Error classifying "${collaborator}":`, error);
-        classified.push({ name: collaborator, type: 'artist' });
+        classified.push({ name: collaborator, type: 'artist', types: ['artist'] });
       }
     }
 
@@ -354,7 +361,7 @@ export class DatabaseStorage implements IStorage {
         id: collaborator.name,
         name: collaborator.name,
         type: collaborator.type as 'artist' | 'producer' | 'songwriter',
-        types: [collaborator.type as 'artist' | 'producer' | 'songwriter'],
+        types: collaborator.types || [collaborator.type as 'artist' | 'producer' | 'songwriter'], // Multi-role support
         size: 15,
         imageUrl: collaboratorImage,
         spotifyId: collaboratorSpotifyId,
@@ -363,7 +370,8 @@ export class DatabaseStorage implements IStorage {
       };
       
       nodeMap.set(collaborator.name, collaboratorNode);
-      console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from Spotify/MusicBrainz`);
+      const roleDisplay = collaborator.types ? collaborator.types.join(' + ') : collaborator.type;
+      console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${roleDisplay}) from Spotify/MusicBrainz`);
 
       // Create link from main artist to collaborator
       links.push({

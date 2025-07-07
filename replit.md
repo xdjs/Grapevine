@@ -346,6 +346,13 @@ Changelog:
 - **Enhanced Coverage**: Kendrick Lamar network discovers 36+ unique collaborators through comprehensive album analysis
 - **Clean Architecture**: System uses only verified Spotify collaboration data without synthetic supplements
 
+### Restored Multi-Role Node Visualization (July 7, 2025)
+- **Multi-Role Detection**: MusicBrainz classification now assigns multiple roles (producer + songwriter, artist + songwriter)
+- **Segmented Circle Display**: Nodes with multiple roles show colored ring segments for each role
+- **Enhanced Role Assignment**: Collaborators can be simultaneously classified as multiple types based on MusicBrainz relations
+- **Visual Distinction**: Single-role nodes display solid colored circles, multi-role nodes display segmented arcs
+- **Authentic Role Data**: All role assignments based on verified MusicBrainz relationship data
+
 
 ### Multi-Role Node Consolidation (June 30, 2025)
 - Implemented comprehensive multi-role support for people with multiple industry roles
