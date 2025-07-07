@@ -411,6 +411,13 @@ Changelog:
 - Ensures network maps display proper artist stylization as stored in MusicNerd database
 - Applied fix to both cached data retrieval and new network generation paths
 
+### Enhanced OpenAI Prompt for Multi-Role Detection (July 7, 2025)
+- Updated OpenAI prompt to include explicit multi-role detection requirement
+- Added instruction to check if each artist/producer/songwriter has multiple roles (artist+songwriter, songwriter+producer)
+- Enhanced prompt specificity to ensure exactly 3 top collaborating artists for each producer and songwriter
+- Maintains focus on real, verified collaborations while improving role accuracy
+- Prompt now explicitly requests checking for dual roles to improve network node consolidation
+
 
 
 
