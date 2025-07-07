@@ -391,6 +391,13 @@ Changelog:
 - Added fallback chain: MUSIC_BASE_URL → MUSICNERD_BASE_URL → hardcoded fallback
 - Vercel API endpoints and Express server routes now use unified environment variable approach
 
+### Artist Not Found Dialog Implementation (July 7, 2025)
+- Created ArtistNotFoundDialog component for artist nodes without valid IDs
+- Added popup dialog with message "This artist has not been added to our database yet - feel free to add them and their socials!"
+- Dialog includes "Visit MusicNerd" button that opens MusicNerd homepage in new tab
+- Updated openMusicNerdProfile function to show dialog instead of doing nothing when no artist ID found
+- Fixed touchpad/mobile tap issue in search dropdowns by adding onTouchStart event handlers
+
 
 ### Fixed Main Artist Direct Navigation (July 2, 2025)
 - Fixed issue where clicking main artist node showed selection modal instead of going directly to their page

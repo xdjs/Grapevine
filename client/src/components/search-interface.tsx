@@ -325,6 +325,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                             borderLeftColor: '#FF69B4'
                           }}
                           onClick={() => handleArtistSelect(artist)}
+                          onTouchStart={() => handleArtistSelect(artist)}
                         >
                           <CardHeader className="pb-2 pt-3 px-4">
                             <div className="flex items-center justify-between">
@@ -457,6 +458,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                               borderLeftColor: '#FF69B4'
                             }}
                             onClick={() => handleArtistSelect(artist)}
+                            onTouchStart={() => handleArtistSelect(artist)}
                           >
                             <CardHeader className="pb-1 pt-2 px-3">
                               <div className="flex items-center justify-between">
