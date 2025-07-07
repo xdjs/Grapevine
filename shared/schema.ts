@@ -39,6 +39,7 @@ export const networkNodeSchema = z.object({
   types: z.array(z.enum(['artist', 'producer', 'songwriter'])).optional(), // Support for multiple roles
   size: z.number(),
   collaborations: z.array(z.string()).optional(),
+  topCollaborations: z.array(z.string()).optional(),
   imageUrl: z.string().nullable().optional(),
   spotifyId: z.string().nullable().optional(),
   artistId: z.string().nullable().optional(), // MusicNerd artist ID for linking

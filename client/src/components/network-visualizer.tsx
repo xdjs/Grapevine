@@ -775,8 +775,8 @@ export default function NetworkVisualizer({
 
       // Show collaboration information for producers and songwriters
       const hasProducerRole = roles.includes('producer') || roles.includes('songwriter');
-      // Check both 'collaborations' and 'topCollaborators' fields for compatibility
-      const collaborationData = d.collaborations || (d as any).topCollaborators;
+      // Check both 'topCollaborations' and 'collaborations' fields for compatibility
+      const collaborationData = d.topCollaborations || d.collaborations;
       if (hasProducerRole && collaborationData && collaborationData.length > 0) {
         content += `<br/><br/><strong>Top Collaborations:</strong><br/>`;
         content += collaborationData.join("<br/>");

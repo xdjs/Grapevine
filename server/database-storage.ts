@@ -312,8 +312,16 @@ export class DatabaseStorage implements IStorage {
     nodeMap.set(artistName, mainArtistNode);
     const links: NetworkLink[] = [];
 
-    // Process collaborators
+    // Process collaborators and get their branching collaborators
     for (const collaborator of collaborators) {
+      console.log(`🔍 [DEBUG] Processing collaborator "${collaborator.name}" and finding their collaborators`);
+      
+      // Get collaborator's own collaborators from Spotify
+      const branchingCollaborators = await this.getSpotifyCollaborators(collaborator.name);
+      const topBranchingCollaborators = branchingCollaborators.slice(0, 3); // Top 3
+      
+      console.log(`🌿 [DEBUG] Found ${topBranchingCollaborators.length} branching collaborators for "${collaborator.name}"`);
+
       // Get collaborator's Spotify image and MusicNerd ID
       let collaboratorImage = null;
       let collaboratorSpotifyId = null;
@@ -342,16 +350,60 @@ export class DatabaseStorage implements IStorage {
         imageUrl: collaboratorImage,
         spotifyId: collaboratorSpotifyId,
         artistId: collaboratorMusicNerdId,
+        topCollaborations: topBranchingCollaborators, // For hover tooltips
       };
       
       nodeMap.set(collaborator.name, collaboratorNode);
       console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from Spotify/MusicBrainz`);
 
+      // Create link from main artist to collaborator
       links.push({
         source: artistName,
         target: collaborator.name,
       });
       console.log(`🔗 [DEBUG] Created link: "${artistName}" ↔ "${collaborator.name}"`);
+
+      // Add branching collaborators
+      for (const branchingCollaborator of topBranchingCollaborators) {
+        if (branchingCollaborator !== artistName && !nodeMap.has(branchingCollaborator)) {
+          // Get branching collaborator's Spotify image and MusicNerd ID
+          let branchingImage = null;
+          let branchingSpotifyId = null;
+          let branchingMusicNerdId = null;
+          
+          try {
+            const spotifyArtist = await spotifyService.searchArtist(branchingCollaborator);
+            if (spotifyArtist) {
+              branchingImage = spotifyService.getArtistImageUrl(spotifyArtist);
+              branchingSpotifyId = spotifyArtist.id;
+            }
+            branchingMusicNerdId = await musicNerdService.getArtistId(branchingCollaborator);
+          } catch (error) {
+            console.log(`Could not fetch metadata for branching collaborator ${branchingCollaborator}`);
+          }
+
+          const branchingNode: NetworkNode = {
+            id: branchingCollaborator,
+            name: branchingCollaborator,
+            type: 'artist', // Default to artist for branching collaborators
+            types: ['artist'],
+            size: 12,
+            imageUrl: branchingImage,
+            spotifyId: branchingSpotifyId,
+            artistId: branchingMusicNerdId,
+          };
+          
+          nodeMap.set(branchingCollaborator, branchingNode);
+          console.log(`🌿 [DEBUG] Added branching node: "${branchingCollaborator}" (artist) connected to "${collaborator.name}"`);
+
+          // Create link from collaborator to their branching collaborator
+          links.push({
+            source: collaborator.name,
+            target: branchingCollaborator,
+          });
+          console.log(`🔗 [DEBUG] Created branching link: "${collaborator.name}" ↔ "${branchingCollaborator}"`);
+        }
+      }
     }
 
     // Final node array from consolidated map
