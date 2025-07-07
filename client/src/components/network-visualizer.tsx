@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import ArtistSelectionModal from "./artist-selection-modal";
+import ArtistNotFoundDialog from "./artist-not-found-dialog";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -25,6 +26,8 @@ export default function NetworkVisualizer({
   const [showArtistModal, setShowArtistModal] = useState(false);
   const [selectedArtistName, setSelectedArtistName] = useState("");
   const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("");
+  const [showArtistNotFoundDialog, setShowArtistNotFoundDialog] = useState(false);
+  const [notFoundArtistName, setNotFoundArtistName] = useState("");
 
   // Fetch configuration on component mount
   useEffect(() => {
@@ -631,9 +634,11 @@ export default function NetworkVisualizer({
         console.log(`🎵 [Frontend] artistId provided (${artistId}), skipping lookup and going directly to page`);
       }
       
-      // If still no artist ID found after checking options, do nothing
+      // If still no artist ID found after checking options, show not found dialog
       if (!artistId || artistId === null || artistId === 'null') {
-        console.log(`🎵 [Frontend] No artist ID found for "${artistName}", doing nothing when clicked`);
+        console.log(`🎵 [Frontend] No artist ID found for "${artistName}", showing not found dialog`);
+        setNotFoundArtistName(artistName);
+        setShowArtistNotFoundDialog(true);
         return;
       }
       
@@ -930,6 +935,13 @@ export default function NetworkVisualizer({
         onClose={() => setShowArtistModal(false)}
         artistName={selectedArtistName}
         onSelectArtist={handleArtistSelection}
+      />
+      
+      <ArtistNotFoundDialog
+        isOpen={showArtistNotFoundDialog}
+        onClose={() => setShowArtistNotFoundDialog(false)}
+        artistName={notFoundArtistName}
+        baseUrl={musicNerdBaseUrl}
       />
     </div>
   );
