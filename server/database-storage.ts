@@ -286,7 +286,7 @@ export class DatabaseStorage implements IStorage {
     return classified;
   }
 
-  private async buildNetworkFromCollaborators(artistName: string, collaborators: Array<{name: string, type: string}>): Promise<NetworkData> {
+  private async buildNetworkFromCollaborators(artistName: string, collaborators: Array<{name: string, type: string, types?: string[]}>): Promise<NetworkData> {
     console.log(`🏗️ [DEBUG] Building network for "${artistName}" with ${collaborators.length} classified collaborators`);
     
     // Get main artist info
@@ -310,11 +310,38 @@ export class DatabaseStorage implements IStorage {
       console.log(`Could not fetch metadata for main artist ${artistName}`);
     }
 
+    // Detect multiple roles for main artist using MusicBrainz
+    let mainArtistRoles = ['artist'];
+    try {
+      const mbArtist = await musicBrainzService.searchArtist(artistName);
+      if (mbArtist) {
+        const detailedArtist = await musicBrainzService.getArtistWithRelations(mbArtist.id);
+        if (detailedArtist && detailedArtist.relations) {
+          const producerRelations = detailedArtist.relations.filter(r => 
+            r.type === 'producer' || r.type === 'mix' || r.type === 'recording engineer'
+          );
+          const songwriterRelations = detailedArtist.relations.filter(r => 
+            r.type === 'composer' || r.type === 'lyricist' || r.type === 'writer' || r.type === 'songwriter'
+          );
+          
+          if (producerRelations.length > 0) {
+            mainArtistRoles.push('producer');
+          }
+          if (songwriterRelations.length > 0) {
+            mainArtistRoles.push('songwriter');
+          }
+          console.log(`🎭 [DEBUG] Main artist "${artistName}" roles: [${mainArtistRoles.join(', ')}]`);
+        }
+      }
+    } catch (error) {
+      console.log(`❌ [DEBUG] Could not classify main artist roles for "${artistName}":`, error);
+    }
+
     const mainArtistNode: NetworkNode = {
       id: artistName,
       name: artistName,
       type: 'artist',
-      types: ['artist'],
+      types: mainArtistRoles,
       size: 20,
       imageUrl: mainArtistImage,
       spotifyId: null,

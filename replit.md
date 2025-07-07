@@ -352,6 +352,8 @@ Changelog:
 - **Enhanced Role Assignment**: Collaborators can be simultaneously classified as multiple types based on MusicBrainz relations
 - **Visual Distinction**: Single-role nodes display solid colored circles, multi-role nodes display segmented arcs
 - **Authentic Role Data**: All role assignments based on verified MusicBrainz relationship data
+- **Main Artist Multi-Role Support**: Main artist nodes also get role detection (e.g., Taylor Swift shows as artist + songwriter + producer)
+- **Complete System Coverage**: Both collaborators and main artists receive comprehensive multi-role classification
 
 
 ### Multi-Role Node Consolidation (June 30, 2025)
