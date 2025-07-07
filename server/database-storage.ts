@@ -214,7 +214,7 @@ export class DatabaseStorage implements IStorage {
     
     const classified: Array<{name: string, type: string}> = [];
     
-    for (const collaborator of collaborators.slice(0, 15)) { // Limit to avoid rate limits
+    for (const collaborator of collaborators.slice(0, 10)) { // Limit to top 10 for main collaborators
       try {
         console.log(`🔍 [DEBUG] Classifying "${collaborator}" with MusicBrainz`);
         
@@ -406,15 +406,66 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
+    // Step 4: Detect cross-collaborations between collaborators
+    console.log(`🔍 [DEBUG] Detecting cross-collaborations between collaborators`);
+    await this.addCrossCollaborationLinks(collaborators, nodeMap, links);
+
     // Final node array from consolidated map
-    const nodes = Array.from(nodeMap.values());
+    const finalNodes = Array.from(nodeMap.values());
     
     // Cache the generated network data
-    const networkData = { nodes, links };
-    console.log(`💾 [DEBUG] About to cache Spotify/MusicBrainz network data for "${artistName}" with ${nodes.length} nodes`);
+    const networkData = { nodes: finalNodes, links };
+    console.log(`💾 [DEBUG] About to cache Spotify/MusicBrainz network data for "${artistName}" with ${finalNodes.length} nodes and ${links.length} links`);
     await this.cacheNetworkData(artistName, networkData);
     
     return networkData;
+  }
+
+  private async addCrossCollaborationLinks(
+    collaborators: Array<{name: string, type: string}>, 
+    nodeMap: Map<string, NetworkNode>, 
+    links: NetworkLink[]
+  ): Promise<void> {
+    console.log(`🔗 [DEBUG] Checking for cross-collaborations between ${collaborators.length} collaborators`);
+    
+    // Check each pair of collaborators to see if they've worked together
+    for (let i = 0; i < collaborators.length; i++) {
+      for (let j = i + 1; j < collaborators.length; j++) {
+        const collaborator1 = collaborators[i];
+        const collaborator2 = collaborators[j];
+        
+        console.log(`🔍 [DEBUG] Checking if "${collaborator1.name}" has worked with "${collaborator2.name}"`);
+        
+        try {
+          // Get collaborator1's collaborators and see if collaborator2 is in there
+          const collaborator1Partners = await this.getSpotifyCollaborators(collaborator1.name);
+          
+          // Check if collaborator2's name appears in collaborator1's collaborators
+          const hasCollaborated = collaborator1Partners.some(partner => 
+            partner.toLowerCase().includes(collaborator2.name.toLowerCase()) ||
+            collaborator2.name.toLowerCase().includes(partner.toLowerCase())
+          );
+          
+          if (hasCollaborated) {
+            // Check if link already exists
+            const linkExists = links.some(link => 
+              (link.source === collaborator1.name && link.target === collaborator2.name) ||
+              (link.source === collaborator2.name && link.target === collaborator1.name)
+            );
+            
+            if (!linkExists) {
+              links.push({
+                source: collaborator1.name,
+                target: collaborator2.name,
+              });
+              console.log(`🌟 [DEBUG] Added cross-collaboration link: "${collaborator1.name}" ↔ "${collaborator2.name}"`);
+            }
+          }
+        } catch (error) {
+          console.log(`❌ [DEBUG] Error checking cross-collaboration between "${collaborator1.name}" and "${collaborator2.name}":`, error);
+        }
+      }
+    }
   }
 
   private async createSingleArtistNetwork(artistName: string): Promise<NetworkData> {
