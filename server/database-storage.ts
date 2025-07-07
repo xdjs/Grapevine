@@ -118,291 +118,294 @@ export class DatabaseStorage implements IStorage {
   }
 
   private async generateRealCollaborationNetwork(artistName: string): Promise<NetworkData> {
-    const links: NetworkLink[] = [];
-    const nodeMap = new Map<string, NetworkNode>();
+    console.log(`🎵 [DEBUG] Generating collaboration network for "${artistName}" using Spotify → MusicBrainz flow`);
     
-    // Get MusicNerd URL for main artist
-    const musicNerdBaseUrl = process.env.MUSIC_BASE_URL || process.env.MUSICNERD_BASE_URL || 'https://musicnerd.xyz';
-    let musicNerdUrl = musicNerdBaseUrl;
-    try {
-      const artistId = await musicNerdService.getArtistId(artistName);
-      if (artistId) {
-        musicNerdUrl = `${musicNerdBaseUrl}/artist/${artistId}`;
-      }
-    } catch (error) {
-      console.log(`📭 [DEBUG] No MusicNerd ID found for main artist ${artistName}`);
+    // Step 1: Use Spotify API to find collaborators
+    console.log(`🎧 [DEBUG] Step 1: Searching Spotify for "${artistName}" collaborators`);
+    const spotifyCollaborators = await this.getSpotifyCollaborators(artistName);
+    
+    if (spotifyCollaborators.length === 0) {
+      console.log(`❌ [DEBUG] No Spotify collaborators found for "${artistName}"`);
+      return await this.createSingleArtistNetwork(artistName);
     }
 
-    // Create main artist node
+    console.log(`✅ [DEBUG] Found ${spotifyCollaborators.length} Spotify collaborators for "${artistName}"`);
+
+    // Step 2: Use MusicBrainz to classify collaborators by type
+    console.log(`🎵 [DEBUG] Step 2: Classifying collaborators using MusicBrainz`);
+    const classifiedCollaborators = await this.classifyCollaboratorsWithMusicBrainz(spotifyCollaborators);
+    
+    console.log(`✅ [DEBUG] Classified ${classifiedCollaborators.length} collaborators with MusicBrainz`);
+
+    // Step 3: Build the network with classified collaborators
+    return await this.buildNetworkFromCollaborators(artistName, classifiedCollaborators);
+  }
+
+  private async getSpotifyCollaborators(artistName: string): Promise<string[]> {
+    console.log(`🎧 [DEBUG] Getting Spotify collaborators for "${artistName}"`);
+    
+    if (!spotifyService.isConfigured()) {
+      console.log(`❌ [DEBUG] Spotify service not configured`);
+      return [];
+    }
+
+    try {
+      // Search for the artist on Spotify
+      const spotifyArtist = await spotifyService.searchArtist(artistName);
+      if (!spotifyArtist) {
+        console.log(`❌ [DEBUG] Artist "${artistName}" not found on Spotify`);
+        return [];
+      }
+
+      console.log(`✅ [DEBUG] Found Spotify artist: "${spotifyArtist.name}" (${spotifyArtist.id})`);
+
+      // Get their top tracks to find collaborators
+      const topTracks = await spotifyService.getArtistTopTracks(spotifyArtist.id);
+      console.log(`🎵 [DEBUG] Found ${topTracks.length} top tracks for "${artistName}"`);
+
+      // Get their albums to find more collaborators
+      const albums = await spotifyService.getArtistAlbums(spotifyArtist.id);
+      console.log(`💿 [DEBUG] Found ${albums.length} albums for "${artistName}"`);
+
+      // Extract collaborators from tracks and albums
+      const collaborators = new Set<string>();
+      
+      // From top tracks
+      for (const track of topTracks) {
+        for (const artist of track.artists) {
+          if (artist.name !== artistName && artist.name !== spotifyArtist.name) {
+            collaborators.add(artist.name);
+            console.log(`🤝 [DEBUG] Found collaborator from track "${track.name}": "${artist.name}"`);
+          }
+        }
+      }
+
+      // From albums (get track details)
+      for (const album of albums.slice(0, 5)) { // Limit to avoid rate limits
+        try {
+          const albumTracks = await spotifyService.getAlbumTracks(album.id);
+          for (const track of albumTracks) {
+            if (track.artists) {
+              for (const artist of track.artists) {
+                if (artist.name !== artistName && artist.name !== spotifyArtist.name) {
+                  collaborators.add(artist.name);
+                  console.log(`🤝 [DEBUG] Found collaborator from album "${album.name}": "${artist.name}"`);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.log(`❌ [DEBUG] Error getting tracks for album "${album.name}":`, error);
+        }
+      }
+
+      const collaboratorList = Array.from(collaborators);
+      console.log(`✅ [DEBUG] Total unique Spotify collaborators found: ${collaboratorList.length}`);
+      return collaboratorList;
+
+    } catch (error) {
+      console.log(`❌ [DEBUG] Error getting Spotify collaborators for "${artistName}":`, error);
+      return [];
+    }
+  }
+
+  private async classifyCollaboratorsWithMusicBrainz(collaborators: string[]): Promise<Array<{name: string, type: string}>> {
+    console.log(`🎵 [DEBUG] Classifying ${collaborators.length} collaborators with MusicBrainz`);
+    
+    const classified: Array<{name: string, type: string}> = [];
+    
+    for (const collaborator of collaborators.slice(0, 15)) { // Limit to avoid rate limits
+      try {
+        console.log(`🔍 [DEBUG] Classifying "${collaborator}" with MusicBrainz`);
+        
+        // Search for the collaborator in MusicBrainz
+        const mbArtist = await musicBrainzService.searchArtist(collaborator);
+        if (!mbArtist) {
+          console.log(`❌ [DEBUG] "${collaborator}" not found in MusicBrainz, defaulting to 'artist'`);
+          classified.push({ name: collaborator, type: 'artist' });
+          continue;
+        }
+
+        // Get detailed artist information with relations
+        const detailedArtist = await musicBrainzService.getArtistWithRelations(mbArtist.id);
+        if (!detailedArtist || !detailedArtist.relations) {
+          console.log(`❌ [DEBUG] No relations found for "${collaborator}" in MusicBrainz, defaulting to 'artist'`);
+          classified.push({ name: collaborator, type: 'artist' });
+          continue;
+        }
+
+        // Classify based on MusicBrainz relations
+        let type = 'artist'; // Default type
+        const relations = detailedArtist.relations;
+        
+        // Check for producer relations
+        const producerRelations = relations.filter(r => 
+          r.type === 'producer' || 
+          r.type === 'mix' || 
+          r.type === 'recording engineer' || 
+          r.type === 'mastering engineer'
+        );
+        
+        // Check for songwriter relations  
+        const songwriterRelations = relations.filter(r => 
+          r.type === 'composer' || 
+          r.type === 'lyricist' || 
+          r.type === 'writer' ||
+          r.type === 'songwriter'
+        );
+
+        // Classify based on relation counts
+        if (producerRelations.length > songwriterRelations.length && producerRelations.length > 0) {
+          type = 'producer';
+        } else if (songwriterRelations.length > 0) {
+          type = 'songwriter';
+        }
+
+        console.log(`✅ [DEBUG] Classified "${collaborator}" as "${type}" (${producerRelations.length} producer relations, ${songwriterRelations.length} songwriter relations)`);
+        classified.push({ name: collaborator, type });
+
+      } catch (error) {
+        console.log(`❌ [DEBUG] Error classifying "${collaborator}":`, error);
+        classified.push({ name: collaborator, type: 'artist' });
+      }
+    }
+
+    return classified;
+  }
+
+  private async buildNetworkFromCollaborators(artistName: string, collaborators: Array<{name: string, type: string}>): Promise<NetworkData> {
+    console.log(`🏗️ [DEBUG] Building network for "${artistName}" with ${collaborators.length} classified collaborators`);
+    
+    // Get main artist info
+    const mainArtist = await this.getArtistByName(artistName);
+    if (!mainArtist) {
+      console.log(`❌ [DEBUG] Main artist "${artistName}" not found in database`);
+      throw new Error(`Artist "${artistName}" not found in database`);
+    }
+
+    // Get main artist's Spotify image and MusicNerd ID
+    let mainArtistImage = null;
+    let mainArtistMusicNerdId = null;
+    
+    try {
+      const spotifyArtist = await spotifyService.searchArtist(artistName);
+      if (spotifyArtist) {
+        mainArtistImage = spotifyService.getArtistImageUrl(spotifyArtist);
+      }
+      mainArtistMusicNerdId = await musicNerdService.getArtistId(artistName);
+    } catch (error) {
+      console.log(`Could not fetch metadata for main artist ${artistName}`);
+    }
+
     const mainArtistNode: NetworkNode = {
       id: artistName,
       name: artistName,
       type: 'artist',
       types: ['artist'],
-      size: 25,
-      musicNerdUrl,
+      size: 20,
+      imageUrl: mainArtistImage,
+      spotifyId: null,
+      artistId: mainArtistMusicNerdId,
     };
+
+    const nodeMap = new Map<string, NetworkNode>();
     nodeMap.set(artistName, mainArtistNode);
-    
-    console.log(`🔍 [DEBUG] Starting collaboration network generation for: "${artistName}"`);
-    console.log('📊 [DEBUG] Data source priority: 1) OpenAI → 2) MusicBrainz (no fallbacks)');
+    const links: NetworkLink[] = [];
 
-    try {
-      // First try OpenAI for collaboration data
-      if (openAIService.isServiceAvailable()) {
-        console.log(`🤖 [DEBUG] Querying OpenAI API for "${artistName}"...`);
-        
-        try {
-          const openAIData = await openAIService.getArtistCollaborations(artistName);
-          console.log(`✅ [DEBUG] OpenAI response:`, {
-            collaborators: openAIData.artists.length,
-            collaboratorList: openAIData.artists.map(a => `${a.name} (${a.type}, top collaborators: ${a.topCollaborators.length})`)
-          });
-
-          if (openAIData.artists.length > 0) {
-            // Process OpenAI data
-            for (const collaborator of openAIData.artists) {
-              // Get image from Spotify if available
-              let imageUrl: string | null = null;
-              let spotifyId: string | null = null;
-              if (spotifyService.isConfigured()) {
-                try {
-                  const spotifyArtist = await spotifyService.searchArtist(collaborator.name);
-                  if (spotifyArtist) {
-                    imageUrl = spotifyService.getArtistImageUrl(spotifyArtist, 'medium');
-                    spotifyId = spotifyArtist.id;
-                  }
-                } catch (error) {
-                  console.log(`🔒 [DEBUG] Spotify search failed for "${collaborator.name}"`);
-                }
-              }
-
-              const collaboratorNode = {
-                id: collaborator.name,
-                name: collaborator.name,
-                type: collaborator.type,
-                types: [collaborator.type],
-                size: 15,
-                imageUrl,
-                spotifyId,
-                collaborations: collaborator.topCollaborators || [],
-              };
-
-              // Get MusicNerd artist ID for the collaborator
-              let musicNerdUrl = musicNerdBaseUrl;
-              try {
-                const artistId = await musicNerdService.getArtistId(collaborator.name);
-                if (artistId) {
-                  musicNerdUrl = `${musicNerdBaseUrl}/artist/${artistId}`;
-                  console.log(`✅ [DEBUG] Found MusicNerd ID for ${collaborator.name}: ${artistId}`);
-                }
-              } catch (error) {
-                console.log(`📭 [DEBUG] No MusicNerd ID found for ${collaborator.name}`);
-              }
-
-              collaboratorNode.musicNerdUrl = musicNerdUrl;
-              nodeMap.set(collaborator.name, collaboratorNode);
-            }
-
-            // Process all nodes to create links and branching connections
-            const allNodes = Array.from(nodeMap.values());
-            const mainNode = nodeMap.get(artistName)!;
-            
-            for (const collaboratorNode of allNodes) {
-              // Skip self-processing for the main artist
-              if (collaboratorNode.name !== artistName) {
-                // Create main connection to collaborator
-                links.push({
-                  source: mainNode.id,
-                  target: collaboratorNode.id,
-                });
-
-                // Add branching connections for the top collaborators
-                const maxBranching = 3;
-                const branchingCount = Math.min(collaboratorNode.collaborations?.length || 0, maxBranching);
-                
-                for (let i = 0; i < branchingCount; i++) {
-                  const branchingArtist = collaboratorNode.collaborations![i];
-                  
-                  // Check if this branching artist is already in our main node map
-                  let branchingNode = nodeMap.get(branchingArtist);
-                  
-                  if (!branchingNode) {
-                    branchingNode = {
-                      id: branchingArtist,
-                      name: branchingArtist,
-                      type: 'artist',
-                      types: ['artist'],
-                      size: 15,
-                    };
-
-                    // Get MusicNerd ID for branching artist
-                    let branchingMusicNerdUrl = musicNerdBaseUrl;
-                    try {
-                      const branchingArtistId = await musicNerdService.getArtistId(branchingArtist);
-                      if (branchingArtistId) {
-                        branchingMusicNerdUrl = `${musicNerdBaseUrl}/artist/${branchingArtistId}`;
-                      }
-                    } catch (error) {
-                      console.log(`📭 [DEBUG] No MusicNerd ID found for branching artist ${branchingArtist}`);
-                    }
-
-                    branchingNode.musicNerdUrl = branchingMusicNerdUrl;
-                    nodeMap.set(branchingArtist, branchingNode);
-                  }
-                  
-                  // Create link between collaborator and their top collaborator
-                  links.push({
-                    source: collaboratorNode.name,
-                    target: branchingArtist,
-                  });
-
-                  console.log(`🌟 [DEBUG] Added branching artist "${branchingArtist}" connected to "${collaboratorNode.name}"`);
-                }
-
-                console.log(`➕ [DEBUG] Added ${collaboratorNode.type}: ${collaboratorNode.name} from OpenAI with ${branchingCount} branching connections`);
-              }
-            }
-
-            // Final node array from consolidated map
-            const nodes = Array.from(nodeMap.values());
-            console.log(`✅ [DEBUG] Successfully created network from OpenAI data: ${nodes.length} total nodes for "${artistName}"`);
-            
-            // Cache the generated network data
-            const finalNetworkData = { nodes, links };
-            console.log(`💾 [DEBUG] About to cache OpenAI network data for "${artistName}" with ${nodes.length} nodes`);
-            await this.cacheNetworkData(artistName, finalNetworkData);
-            
-            return finalNetworkData;
-          }
-        } catch (error) {
-          console.error(`❌ [DEBUG] OpenAI API error for "${artistName}":`, error);
-          console.log('🔄 [DEBUG] Falling back to MusicBrainz...');
-        }
-      } else {
-        console.log('⚠️ [DEBUG] OpenAI service not available, falling back to MusicBrainz...');
-      }
-
-      // Fallback to MusicBrainz if OpenAI fails or isn't available
-      console.log(`🎵 [DEBUG] Querying MusicBrainz API for "${artistName}"...`);
-      const collaborationData = await musicBrainzService.getArtistCollaborations(artistName);
-      console.log(`✅ [DEBUG] MusicBrainz response:`, {
-        artists: collaborationData.artists.length,
-        works: collaborationData.works.length,
-        artistList: collaborationData.artists.map(a => `${a.name} (${a.type}, relation: ${a.relation})`),
-        worksList: collaborationData.works.map(w => `${w.title} with [${w.collaborators.join(', ')}]`)
-      });
+    // Process collaborators
+    for (const collaborator of collaborators) {
+      // Get collaborator's Spotify image and MusicNerd ID
+      let collaboratorImage = null;
+      let collaboratorSpotifyId = null;
+      let collaboratorMusicNerdId = null;
       
-      // Get Spotify image for main artist
-      let mainArtistImage = null;
-      let mainArtistSpotifyId = null;
-      
-      if (spotifyService.isConfigured()) {
-        try {
-          const spotifyArtist = await spotifyService.searchArtist(artistName);
-          if (spotifyArtist) {
-            mainArtistImage = spotifyService.getArtistImageUrl(spotifyArtist, 'medium');
-            mainArtistSpotifyId = spotifyArtist.id;
-          }
-        } catch (error) {
-          console.warn(`Could not fetch Spotify data for ${artistName}`);
-        }
-      }
-
-      // Get MusicNerd artist ID for main artist
-      let mainArtistMusicNerdId = null;
       try {
-        mainArtistMusicNerdId = await musicNerdService.getArtistId(artistName);
-      } catch (error) {
-        console.log(`Could not fetch MusicNerd ID for ${artistName}`);
-      }
-
-      // Update main artist node with additional data
-      const mainArtistNode = nodeMap.get(artistName)!;
-      mainArtistNode.imageUrl = mainArtistImage;
-      mainArtistNode.spotifyId = mainArtistSpotifyId;
-      mainArtistNode.artistId = mainArtistMusicNerdId;
-
-      // Add collaborating artists from MusicBrainz - limit to top 5 producers and songwriters for performance
-      console.log(`🎨 [DEBUG] Processing ${collaborationData.artists.length} MusicBrainz collaborators...`);
-      
-      // Separate collaborators by type and limit producers/songwriters to top 5 each
-      const artists = collaborationData.artists.filter(c => c.type === 'artist');
-      const producers = collaborationData.artists.filter(c => c.type === 'producer').slice(0, 5);
-      const songwriters = collaborationData.artists.filter(c => c.type === 'songwriter').slice(0, 5);
-      
-      const limitedCollaborators = [...artists, ...producers, ...songwriters];
-      console.log(`⚡ [DEBUG] Limited to ${limitedCollaborators.length} collaborators (${producers.length} producers, ${songwriters.length} songwriters, ${artists.length} artists)`);
-      
-      for (const collaborator of limitedCollaborators) {
-        console.log(`👤 [DEBUG] Processing collaborator: "${collaborator.name}" (type: ${collaborator.type}, relation: ${collaborator.relation})`);
-        
-        // Get Spotify image for collaborator
-        let collaboratorImage = null;
-        let collaboratorSpotifyId = null;
-        
-        if (spotifyService.isConfigured()) {
-          try {
-            const spotifyCollaborator = await spotifyService.searchArtist(collaborator.name);
-            if (spotifyCollaborator) {
-              collaboratorImage = spotifyService.getArtistImageUrl(spotifyCollaborator, 'medium');
-              collaboratorSpotifyId = spotifyCollaborator.id;
-            }
-          } catch (error) {
-            console.log(`⚠️ [DEBUG] Spotify lookup failed for "${collaborator.name}"`);
-          }
+        const spotifyArtist = await spotifyService.searchArtist(collaborator.name);
+        if (spotifyArtist) {
+          collaboratorImage = spotifyService.getArtistImageUrl(spotifyArtist);
+          collaboratorSpotifyId = spotifyArtist.id;
         }
-
-        // Get MusicNerd artist ID for collaborators who are artists
-        let collaboratorMusicNerdId = null;
+        
         if (collaborator.type === 'artist') {
-          try {
-            collaboratorMusicNerdId = await musicNerdService.getArtistId(collaborator.name);
-          } catch (error) {
-            console.log(`Could not fetch MusicNerd ID for ${collaborator.name}`);
-          }
+          collaboratorMusicNerdId = await musicNerdService.getArtistId(collaborator.name);
         }
-
-        const collaboratorNode = {
-          id: collaborator.name,
-          name: collaborator.name,
-          type: collaborator.type as 'artist' | 'producer' | 'songwriter',
-          types: [collaborator.type as 'artist' | 'producer' | 'songwriter'],
-          size: 15,
-          imageUrl: collaboratorImage,
-          spotifyId: collaboratorSpotifyId,
-          artistId: collaboratorMusicNerdId,
-        };
-        nodeMap.set(collaborator.name, collaboratorNode);
-        
-        console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from MusicBrainz`);
-
-        links.push({
-          source: artistName,
-          target: collaborator.name,
-        });
-        console.log(`🔗 [DEBUG] Created link: "${artistName}" ↔ "${collaborator.name}"`);
+      } catch (error) {
+        console.log(`Could not fetch metadata for ${collaborator.name}`);
       }
 
-      // If no collaborations found from either source, return only main artist
-      if (collaborationData.artists.length === 0) {
-        console.log(`👤 [DEBUG] No collaborations found for "${artistName}" - returning main artist only`);
-      }
-
-      // Final node array from consolidated map
-      const nodes = Array.from(nodeMap.values());
+      const collaboratorNode: NetworkNode = {
+        id: collaborator.name,
+        name: collaborator.name,
+        type: collaborator.type as 'artist' | 'producer' | 'songwriter',
+        types: [collaborator.type as 'artist' | 'producer' | 'songwriter'],
+        size: 15,
+        imageUrl: collaboratorImage,
+        spotifyId: collaboratorSpotifyId,
+        artistId: collaboratorMusicNerdId,
+      };
       
-      // Cache the generated network data
-      const networkData = { nodes, links };
-      console.log(`💾 [DEBUG] About to cache MusicBrainz network data for "${artistName}" with ${nodes.length} nodes`);
-      await this.cacheNetworkData(artistName, networkData);
-      
-      return networkData;
+      nodeMap.set(collaborator.name, collaboratorNode);
+      console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from Spotify/MusicBrainz`);
 
-    } catch (error) {
-      console.error(`❌ [DEBUG] Error in generateRealCollaborationNetwork for "${artistName}":`, error);
-      throw error;
+      links.push({
+        source: artistName,
+        target: collaborator.name,
+      });
+      console.log(`🔗 [DEBUG] Created link: "${artistName}" ↔ "${collaborator.name}"`);
     }
+
+    // Final node array from consolidated map
+    const nodes = Array.from(nodeMap.values());
+    
+    // Cache the generated network data
+    const networkData = { nodes, links };
+    console.log(`💾 [DEBUG] About to cache Spotify/MusicBrainz network data for "${artistName}" with ${nodes.length} nodes`);
+    await this.cacheNetworkData(artistName, networkData);
+    
+    return networkData;
+  }
+
+  private async createSingleArtistNetwork(artistName: string): Promise<NetworkData> {
+    console.log(`👤 [DEBUG] Creating single artist network for "${artistName}"`);
+    
+    const mainArtist = await this.getArtistByName(artistName);
+    if (!mainArtist) {
+      console.log(`❌ [DEBUG] Main artist "${artistName}" not found in database`);
+      throw new Error(`Artist "${artistName}" not found in database`);
+    }
+
+    // Get main artist's Spotify image and MusicNerd ID
+    let mainArtistImage = null;
+    let mainArtistMusicNerdId = null;
+    
+    try {
+      const spotifyArtist = await spotifyService.searchArtist(artistName);
+      if (spotifyArtist) {
+        mainArtistImage = spotifyService.getArtistImageUrl(spotifyArtist);
+      }
+      mainArtistMusicNerdId = await musicNerdService.getArtistId(artistName);
+    } catch (error) {
+      console.log(`Could not fetch metadata for main artist ${artistName}`);
+    }
+
+    const mainArtistNode: NetworkNode = {
+      id: artistName,
+      name: artistName,
+      type: 'artist',
+      types: ['artist'],
+      size: 20,
+      imageUrl: mainArtistImage,
+      spotifyId: null,
+      artistId: mainArtistMusicNerdId,
+    };
+
+    const networkData = { nodes: [mainArtistNode], links: [] };
+    
+    // Cache the network data
+    console.log(`💾 [DEBUG] About to cache single-artist network data for "${artistName}"`);
+    await this.cacheNetworkData(artistName, networkData);
+    
+    return networkData;
   }
 
   private async cacheNetworkData(artistName: string, networkData: NetworkData): Promise<void> {

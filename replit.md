@@ -298,6 +298,16 @@ Changelog:
 - Maintains caching system for performance while ensuring all data comes from authorized sources
 - Eliminates misleading artificial connections by using authentic data sources exclusively
 
+### Spotify API Primary Source Implementation (July 7, 2025)
+- Implemented new data flow: Spotify API → MusicBrainz classification → optional OpenAI parsing
+- Spotify API now serves as primary source for discovering artist collaborators through tracks and albums
+- MusicBrainz API used for classifying collaborators by type (artist, producer, songwriter) based on relations
+- Enhanced Spotify service integration to extract collaborators from top tracks and album track listings
+- Intelligent classification system using MusicBrainz relation counts to determine collaborator roles
+- Maintains same JSON format output while using authentic collaboration data from Spotify's music database
+- All hardcoded arrays and fallback systems completely removed for pure API-driven architecture
+- System processes up to 15 collaborators to avoid rate limits while maintaining comprehensive coverage
+
 
 ### Multi-Role Node Consolidation (June 30, 2025)
 - Implemented comprehensive multi-role support for people with multiple industry roles
