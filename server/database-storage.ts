@@ -215,10 +215,10 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  private async classifyCollaboratorsWithMusicBrainz(collaborators: string[]): Promise<Array<{name: string, type: string, types?: string[]}>> {
+  private async classifyCollaboratorsWithMusicBrainz(collaborators: string[]): Promise<Array<{name: string, type: string, types: string[]}>> {
     console.log(`🎵 [DEBUG] Classifying ${collaborators.length} collaborators with MusicBrainz`);
     
-    const classified: Array<{name: string, type: string, types?: string[]}> = [];
+    const classified: Array<{name: string, type: string, types: string[]}> = [];
     
     for (const collaborator of collaborators.slice(0, 10)) { // Top 10 main collaborators
       try {
@@ -270,9 +270,18 @@ export class DatabaseStorage implements IStorage {
           roles.push('songwriter');
         }
         
-        // Remove duplicate 'artist' if we have other roles
-        const finalRoles = roles.length > 1 ? roles.filter(r => r !== 'artist') : roles;
-        const primaryType = finalRoles[0];
+        // Determine primary type and keep all roles
+        let primaryType = 'artist';
+        if (roles.includes('producer') && roles.includes('songwriter')) {
+          // If both producer and songwriter, use the one with more relations
+          primaryType = producerRelations.length >= songwriterRelations.length ? 'producer' : 'songwriter';
+        } else if (roles.includes('producer')) {
+          primaryType = 'producer';
+        } else if (roles.includes('songwriter')) {
+          primaryType = 'songwriter';
+        }
+        
+        const finalRoles = roles; // Keep all roles including 'artist'
 
         console.log(`✅ [DEBUG] Classified "${collaborator}" with roles [${finalRoles.join(', ')}] (${producerRelations.length} producer relations, ${songwriterRelations.length} songwriter relations)`);
         classified.push({ name: collaborator, type: primaryType, types: finalRoles });
@@ -286,7 +295,7 @@ export class DatabaseStorage implements IStorage {
     return classified;
   }
 
-  private async buildNetworkFromCollaborators(artistName: string, collaborators: Array<{name: string, type: string, types?: string[]}>): Promise<NetworkData> {
+  private async buildNetworkFromCollaborators(artistName: string, collaborators: Array<{name: string, type: string, types: string[]}>): Promise<NetworkData> {
     console.log(`🏗️ [DEBUG] Building network for "${artistName}" with ${collaborators.length} classified collaborators`);
     
     // Get main artist info
@@ -343,8 +352,6 @@ export class DatabaseStorage implements IStorage {
       type: 'artist',
       types: mainArtistRoles,
       size: 20,
-      imageUrl: mainArtistImage,
-      spotifyId: null,
       artistId: mainArtistMusicNerdId,
     };
 
@@ -365,23 +372,15 @@ export class DatabaseStorage implements IStorage {
       
       console.log(`🌿 [DEBUG] Found ${topBranchingCollaborators.length} branching collaborators for "${collaborator.name}"`);
 
-      // Get collaborator's Spotify image and MusicNerd ID
-      let collaboratorImage = null;
-      let collaboratorSpotifyId = null;
+      // Get collaborator's MusicNerd ID only (no image data)
       let collaboratorMusicNerdId = null;
       
       try {
-        const spotifyArtist = await spotifyService.searchArtist(collaborator.name);
-        if (spotifyArtist) {
-          collaboratorImage = spotifyService.getArtistImageUrl(spotifyArtist);
-          collaboratorSpotifyId = spotifyArtist.id;
-        }
-        
         if (collaborator.type === 'artist') {
           collaboratorMusicNerdId = await musicNerdService.getArtistId(collaborator.name);
         }
       } catch (error) {
-        console.log(`Could not fetch metadata for ${collaborator.name}`);
+        console.log(`Could not fetch MusicNerd ID for ${collaborator.name}`);
       }
 
       const collaboratorNode: NetworkNode = {
@@ -390,8 +389,6 @@ export class DatabaseStorage implements IStorage {
         type: collaborator.type as 'artist' | 'producer' | 'songwriter',
         types: collaborator.types || [collaborator.type as 'artist' | 'producer' | 'songwriter'], // Multi-role support
         size: 15,
-        imageUrl: collaboratorImage,
-        spotifyId: collaboratorSpotifyId,
         artistId: collaboratorMusicNerdId,
         topCollaborations: topBranchingCollaborators, // For hover tooltips
       };
@@ -410,20 +407,13 @@ export class DatabaseStorage implements IStorage {
       // Add branching collaborators
       for (const branchingCollaborator of topBranchingCollaborators) {
         if (branchingCollaborator !== artistName && !nodeMap.has(branchingCollaborator)) {
-          // Get branching collaborator's Spotify image and MusicNerd ID
-          let branchingImage = null;
-          let branchingSpotifyId = null;
+          // Get branching collaborator's MusicNerd ID only (no image data)
           let branchingMusicNerdId = null;
           
           try {
-            const spotifyArtist = await spotifyService.searchArtist(branchingCollaborator);
-            if (spotifyArtist) {
-              branchingImage = spotifyService.getArtistImageUrl(spotifyArtist);
-              branchingSpotifyId = spotifyArtist.id;
-            }
             branchingMusicNerdId = await musicNerdService.getArtistId(branchingCollaborator);
           } catch (error) {
-            console.log(`Could not fetch metadata for branching collaborator ${branchingCollaborator}`);
+            console.log(`Could not fetch MusicNerd ID for branching collaborator ${branchingCollaborator}`);
           }
 
           const branchingNode: NetworkNode = {
@@ -431,9 +421,7 @@ export class DatabaseStorage implements IStorage {
             name: branchingCollaborator,
             type: 'artist', // Default to artist for branching collaborators
             types: ['artist'],
-            size: 12,
-            imageUrl: branchingImage,
-            spotifyId: branchingSpotifyId,
+            size: 10,
             artistId: branchingMusicNerdId,
           };
           
