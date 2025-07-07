@@ -351,45 +351,8 @@ export class MemStorage implements IStorage {
       // Add collaborating artists from MusicBrainz
       console.log(`🎨 [DEBUG] Processing ${collaborationData.artists.length} MusicBrainz collaborators...`);
       
-      // Enhance producer/songwriter detection for all collaborators
-      const enhancedCollaborators = collaborationData.artists.map(collaborator => {
-        const knownProducers = [
-          'andrew watt', 'metro boomin', 'timbaland', 'pharrell williams',
-          'dr. dre', 'kanye west', 'rick rubin', 'max martin', 'jack antonoff',
-          'aaron dessner', 'diplo', 'skrillex', 'calvin harris', 'zedd',
-          'the neptunes', 'daft punk', 'disclosure', 'flume', 'benny blanco',
-          'finneas', 'mustard', 'lex luger', 'zaytoven', 'noah shebib',
-          'frank dukes', 'southside', 'wheezy', 'pierre bourne', 'london on da track',
-          'mike will made-it', 'j. cole', 'tay keith', 'cubeatz', 'illangelo',
-          'ronny j', 'cardo', 'pvlace', 'da internz', 'ovy on the drums',
-          'david guetta', 'will.i.am', 'afrojack', 'steve aoki', 'deadmau5',
-          'aviici', 'martin garrix', 'the chainsmokers', 'marshmello', 'tiësto'
-        ];
-        
-        const knownSongwriters = [
-          'diane warren', 'linda perry', 'ryan tedder', 'sia', 'ed sheeran',
-          'taylor swift', 'john mayer', 'alicia keys', 'john legend',
-          'carole king', 'paul mccartney', 'john lennon', 'charlie puth',
-          'julia michaels', 'justin tranter', 'mattman & robin', 'shellback',
-          'benjamin levin', 'cashmere cat', 'the weeknd', 'frank ocean',
-          'solange', 'lorde', 'halsey', 'billie eilish', 'olivia rodrigo'
-        ];
-        
-        const collaboratorNameLower = collaborator.name.toLowerCase();
-        
-        // Override type if collaborator is a known producer or songwriter
-        if (knownProducers.some(producer => collaboratorNameLower.includes(producer))) {
-          console.log(`🔄 [DEBUG] Reclassifying "${collaborator.name}" from ${collaborator.type} to producer`);
-          return { ...collaborator, type: 'producer' };
-        } else if (knownSongwriters.some(songwriter => collaboratorNameLower.includes(songwriter))) {
-          console.log(`🔄 [DEBUG] Reclassifying "${collaborator.name}" from ${collaborator.type} to songwriter`);
-          return { ...collaborator, type: 'songwriter' };
-        }
-        
-        return collaborator;
-      });
-      
-      for (const collaborator of enhancedCollaborators) {
+      // Use collaborator types directly from MusicBrainz API without hardcoded arrays
+      for (const collaborator of collaborationData.artists) {
         console.log(`👤 [DEBUG] Processing collaborator: "${collaborator.name}" (type: ${collaborator.type})`);
         // Get Spotify image for collaborator
         let collaboratorImage = null;

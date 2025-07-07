@@ -200,19 +200,7 @@ class MusicBrainzService {
           let relationType = this.mapRelationType(relation.type);
           
           if (relationType && !processedArtists.has(relation.artist.name)) {
-            // Reclassify known songwriter-producers as songwriters
-            const collaboratorNameLower = relation.artist.name.toLowerCase();
-            const knownSongwriters = [
-              'jack antonoff', 'max martin', 'aaron dessner', 'finneas',
-              'benny blanco', 'oscar holter', 'greg kurstin', 'ludwig göransson', 
-              'shellback', 'ali payami', 'patrik berger', 'sia', 'ed sheeran',
-              'ryan tedder', 'charlie puth', 'julia michaels', 'justin tranter'
-            ];
-            
-            if (knownSongwriters.some(songwriter => collaboratorNameLower.includes(songwriter))) {
-              relationType = 'songwriter';
-              console.log(`✨ [DEBUG] Reclassified "${relation.artist.name}" as songwriter`);
-            }
+            // Use relation type directly from MusicBrainz without hardcoded reclassification
             
             collaboratingArtists.push({
               name: relation.artist.name,
@@ -288,19 +276,7 @@ class MusicBrainzService {
               if (!processedArtists.has(collaboratorName)) {
                 let relationType = this.mapRelationType(relation.type);
                 if (relationType) {
-                  // Reclassify known songwriter-producers as songwriters
-                  const collaboratorNameLower = collaboratorName.toLowerCase();
-                  const knownSongwriters = [
-                    'jack antonoff', 'max martin', 'aaron dessner', 'finneas',
-                    'benny blanco', 'oscar holter', 'greg kurstin', 'ludwig göransson', 
-                    'shellback', 'ali payami', 'patrik berger', 'sia', 'ed sheeran',
-                    'ryan tedder', 'charlie puth', 'julia michaels', 'justin tranter'
-                  ];
-                  
-                  if (knownSongwriters.some(songwriter => collaboratorNameLower.includes(songwriter))) {
-                    relationType = 'songwriter';
-                    console.log(`✨ [DEBUG] Reclassified "${collaboratorName}" as songwriter`);
-                  }
+                  // Use relation type directly from MusicBrainz without hardcoded reclassification
                   
                   collaboratingArtists.push({
                     name: collaboratorName,
@@ -336,81 +312,8 @@ class MusicBrainzService {
                            joinPhrase.toLowerCase().includes('composed') ||
                            joinPhrase.toLowerCase().includes('lyrics')) {
                   type = 'songwriter';
-                } else {
-                  // Use context-based identification for known producer/songwriter names
-                  const knownProducers = [
-                    'andrew watt', 'metro boomin', 'timbaland', 'pharrell williams',
-                    'dr. dre', 'kanye west', 'rick rubin', 'max martin', 'jack antonoff',
-                    'aaron dessner', 'diplo', 'skrillex', 'calvin harris', 'zedd',
-                    'the neptunes', 'daft punk', 'disclosure', 'flume', 'benny blanco',
-                    'finneas', 'mustard', 'lex luger', 'zaytoven', 'noah shebib',
-                    'frank dukes', 'southside', 'wheezy', 'pierre bourne', 'london on da track',
-                    'mike will made-it', 'j. cole', 'tay keith', 'cubeatz', 'illangelo',
-                    'ronny j', 'cardo', 'pvlace', 'da internz', 'ovy on the drums',
-                    'david guetta', 'will.i.am', 'afrojack', 'steve aoki', 'deadmau5',
-                    'avicii', 'martin garrix', 'the chainsmokers', 'marshmello', 'tiësto',
-                    // Post Malone collaborators specifically
-                    'louis bell', 'tank god', 'frank dukes', 'brian lee', 'adam feeney',
-                    'matt dragstrem', 'billy walsh', 'kaan gunesberk', 'carter lang',
-                    'cashmere cat', 'dre moon', 'charlie handsome', 'joe london',
-                    'swae lee', 'ty dolla sign', 'quavo', '21 savage', 'dj mustard',
-                    // Additional common producers
-                    'hit-boy', 'lex luger', 'southside', 'tm88', 'metro thuggin',
-                    'wheezy', 'cubeatz', 'tay keith', 'ronny j', 'pierre bourne',
-                    'london on da track', 'mike will made-it', 'zaytoven', 'young thug'
-                  ];
-                  
-                  const knownSongwriters = [
-                    'diane warren', 'linda perry', 'ryan tedder', 'sia', 'ed sheeran',
-                    'taylor swift', 'john mayer', 'alicia keys', 'john legend',
-                    'carole king', 'paul mccartney', 'john lennon', 'charlie puth',
-                    'julia michaels', 'justin tranter', 'mattman & robin', 'shellback',
-                    'benjamin levin', 'cashmere cat', 'the weeknd', 'frank ocean',
-                    // Producer-songwriters who should be classified as songwriters
-                    'jack antonoff', 'max martin', 'aaron dessner', 'finneas',
-                    'benny blanco', 'oscar holter', 'greg kurstin', 'ludwig göransson',
-                    'jeff bhasker', 'hit-boy', 'pharrell williams', 'timbaland',
-                    'rick rubin', 'john hill', 'joel little', 'dan wilson',
-                    'bonnie mckee', 'ester dean', 'sean douglas', 'ilya salmanzadeh',
-                    'ali payami', 'patrik berger', 'klas åhlund', 'rami yacoub',
-                    'solange', 'lorde', 'halsey', 'billie eilish', 'olivia rodrigo'
-                  ];
-                  
-                  const collaboratorNameLower = collaboratorName.toLowerCase();
-                  console.log(`🔍 [DEBUG] Checking producer/songwriter status for: "${collaboratorNameLower}"`);
-                  
-                  // Pattern-based detection for common producer/songwriter indicators
-                  const producerPatterns = [
-                    'beats', 'beatz', 'producer', 'made', 'da track', 'on da', 'the beat',
-                    'muzik', 'sounds', 'records', 'tha', 'lil ', 'big ', 'young ', 'j. '
-                  ];
-                  
-                  const songwriterPatterns = [
-                    'wrote', 'writer', 'songwriter', 'composed', 'lyrics', 'pen',
-                    'words', 'music', 'melody', 'written', 'composition', 'lyricist',
-                    'author', 'co-write', 'co-writer', 'penned', 'crafted'
-                  ];
-                  
-                  // Check songwriter names first as they take priority
-                  if (knownSongwriters.some(songwriter => collaboratorNameLower.includes(songwriter))) {
-                    type = 'songwriter';
-                    console.log(`✅ [DEBUG] Matched as songwriter: "${collaboratorNameLower}"`);
-                  } else if (knownProducers.some(producer => collaboratorNameLower.includes(producer))) {
-                    type = 'producer';
-                    console.log(`✅ [DEBUG] Matched as producer: "${collaboratorNameLower}"`);
-                  } else if (songwriterPatterns.some(pattern => collaboratorNameLower.includes(pattern))) {
-                    type = 'songwriter';
-                    console.log(`✅ [DEBUG] Matched as songwriter by pattern: "${collaboratorNameLower}"`);
-                  } else if (producerPatterns.some(pattern => collaboratorNameLower.includes(pattern))) {
-                    type = 'producer';
-                    console.log(`✅ [DEBUG] Matched as producer by pattern: "${collaboratorNameLower}"`);
-                  } else if (songwriterPatterns.some(pattern => collaboratorNameLower.includes(pattern))) {
-                    type = 'songwriter';
-                    console.log(`✅ [DEBUG] Matched as songwriter by pattern: "${collaboratorNameLower}"`);
-                  } else {
-                    console.log(`❌ [DEBUG] No producer/songwriter match for: "${collaboratorNameLower}"`);
-                  }
                 }
+                // Use artist type as provided by MusicBrainz without hardcoded arrays
 
                 collaboratingArtists.push({
                   name: collaboratorName,
@@ -438,37 +341,7 @@ class MusicBrainzService {
 
       console.log(`✅ [DEBUG] Total collaborators found for ${artistName}: ${collaboratingArtists.length}`);
       
-      // Add known authentic songwriter collaborators for major artists if not already found
-      const artistNameLower = artistName.toLowerCase();
-      const knownCollaborations: { [key: string]: Array<{name: string, type: 'songwriter' | 'producer', relation: string}> } = {
-        'taylor swift': [
-          {name: 'Jack Antonoff', type: 'songwriter', relation: 'co-writer'},
-          {name: 'Max Martin', type: 'songwriter', relation: 'co-writer'},
-          {name: 'Shellback', type: 'songwriter', relation: 'co-writer'},
-          {name: 'Aaron Dessner', type: 'songwriter', relation: 'co-writer'},
-        ],
-        'ariana grande': [
-          {name: 'Victoria Monét', type: 'songwriter', relation: 'co-writer'},
-          {name: 'Tayla Parx', type: 'songwriter', relation: 'co-writer'},
-        ],
-        'billie eilish': [
-          {name: 'FINNEAS', type: 'songwriter', relation: 'co-writer'},
-        ],
-        'dua lipa': [
-          {name: 'Caroline Ailin', type: 'songwriter', relation: 'co-writer'},
-          {name: 'Emily Warren', type: 'songwriter', relation: 'co-writer'},
-        ]
-      };
-      
-      if (knownCollaborations[artistNameLower]) {
-        for (const collab of knownCollaborations[artistNameLower]) {
-          if (!processedArtists.has(collab.name)) {
-            collaboratingArtists.push(collab);
-            processedArtists.add(collab.name);
-            console.log(`✨ [DEBUG] Added known authentic collaborator: ${collab.name} (${collab.type})`);
-          }
-        }
-      }
+      // Using purely API-driven data - no hardcoded collaborations
       
       console.log(`✅ [DEBUG] Final collaborators count for ${artistName}: ${collaboratingArtists.length}`);
       return {
