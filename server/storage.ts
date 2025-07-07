@@ -1,7 +1,7 @@
 import { artists, collaborations, type Artist, type InsertArtist, type Collaboration, type InsertCollaboration, type NetworkData, type NetworkNode, type NetworkLink } from "../shared/schema.js";
 import { spotifyService } from "./spotify.js";
 import { musicBrainzService } from "./musicbrainz.js";
-import { wikipediaService } from "./wikipedia.js";
+// Wikipedia service removed - using pure API-only architecture
 import { musicNerdService } from "./musicnerd-service.js";
 
 export interface IStorage {
@@ -351,45 +351,8 @@ export class MemStorage implements IStorage {
       // Add collaborating artists from MusicBrainz
       console.log(`🎨 [DEBUG] Processing ${collaborationData.artists.length} MusicBrainz collaborators...`);
       
-      // Enhance producer/songwriter detection for all collaborators
-      const enhancedCollaborators = collaborationData.artists.map(collaborator => {
-        const knownProducers = [
-          'andrew watt', 'metro boomin', 'timbaland', 'pharrell williams',
-          'dr. dre', 'kanye west', 'rick rubin', 'max martin', 'jack antonoff',
-          'aaron dessner', 'diplo', 'skrillex', 'calvin harris', 'zedd',
-          'the neptunes', 'daft punk', 'disclosure', 'flume', 'benny blanco',
-          'finneas', 'mustard', 'lex luger', 'zaytoven', 'noah shebib',
-          'frank dukes', 'southside', 'wheezy', 'pierre bourne', 'london on da track',
-          'mike will made-it', 'j. cole', 'tay keith', 'cubeatz', 'illangelo',
-          'ronny j', 'cardo', 'pvlace', 'da internz', 'ovy on the drums',
-          'david guetta', 'will.i.am', 'afrojack', 'steve aoki', 'deadmau5',
-          'aviici', 'martin garrix', 'the chainsmokers', 'marshmello', 'tiësto'
-        ];
-        
-        const knownSongwriters = [
-          'diane warren', 'linda perry', 'ryan tedder', 'sia', 'ed sheeran',
-          'taylor swift', 'john mayer', 'alicia keys', 'john legend',
-          'carole king', 'paul mccartney', 'john lennon', 'charlie puth',
-          'julia michaels', 'justin tranter', 'mattman & robin', 'shellback',
-          'benjamin levin', 'cashmere cat', 'the weeknd', 'frank ocean',
-          'solange', 'lorde', 'halsey', 'billie eilish', 'olivia rodrigo'
-        ];
-        
-        const collaboratorNameLower = collaborator.name.toLowerCase();
-        
-        // Override type if collaborator is a known producer or songwriter
-        if (knownProducers.some(producer => collaboratorNameLower.includes(producer))) {
-          console.log(`🔄 [DEBUG] Reclassifying "${collaborator.name}" from ${collaborator.type} to producer`);
-          return { ...collaborator, type: 'producer' };
-        } else if (knownSongwriters.some(songwriter => collaboratorNameLower.includes(songwriter))) {
-          console.log(`🔄 [DEBUG] Reclassifying "${collaborator.name}" from ${collaborator.type} to songwriter`);
-          return { ...collaborator, type: 'songwriter' };
-        }
-        
-        return collaborator;
-      });
-      
-      for (const collaborator of enhancedCollaborators) {
+      // Use collaborator types directly from MusicBrainz API without hardcoded arrays
+      for (const collaborator of collaborationData.artists) {
         console.log(`👤 [DEBUG] Processing collaborator: "${collaborator.name}" (type: ${collaborator.type})`);
         // Get Spotify image for collaborator
         let collaboratorImage = null;
@@ -468,68 +431,9 @@ export class MemStorage implements IStorage {
         });
       }
 
-      // If no real collaborations found, try Wikipedia
+      // If no real collaborations found from MusicBrainz, return only the main artist
       if (collaborationData.artists.length === 0) {
-        console.log(`No MusicBrainz collaborations found for ${artistName}, trying Wikipedia`);
-        
-        try {
-          const wikipediaCollaborators = await wikipediaService.getArtistCollaborations(artistName);
-          
-          if (wikipediaCollaborators.length > 0) {
-            // Add Wikipedia collaborators to the network
-            for (const collaborator of wikipediaCollaborators) {
-              // Get Spotify image for collaborator
-              let collaboratorImage = null;
-              let collaboratorSpotifyId = null;
-              
-              if (spotifyService.isConfigured()) {
-                try {
-                  const spotifyCollaborator = await spotifyService.searchArtist(collaborator.name);
-                  if (spotifyCollaborator) {
-                    collaboratorImage = spotifyService.getArtistImageUrl(spotifyCollaborator, 'medium');
-                    collaboratorSpotifyId = spotifyCollaborator.id;
-                  }
-                } catch (error) {
-                  // Continue without image
-                }
-              }
-
-              // Get MusicNerd artist ID for Wikipedia collaborators who are artists
-              let collaboratorMusicNerdId = null;
-              if (collaborator.type === 'artist') {
-                try {
-                  collaboratorMusicNerdId = await musicNerdService.getArtistId(collaborator.name);
-                } catch (error) {
-                  console.log(`Could not fetch MusicNerd ID for ${collaborator.name}`);
-                }
-              }
-
-              const collaboratorNode: NetworkNode = {
-                id: collaborator.name,
-                name: collaborator.name,
-                type: collaborator.type,
-                size: 15,
-                imageUrl: collaboratorImage,
-                spotifyId: collaboratorSpotifyId,
-                artistId: collaboratorMusicNerdId,
-              };
-              nodes.push(collaboratorNode);
-
-              links.push({
-                source: artistName,
-                target: collaborator.name,
-              });
-            }
-            
-            console.log(`Found ${wikipediaCollaborators.length} collaborators from Wikipedia for ${artistName}`);
-            return { nodes, links };
-          }
-        } catch (error) {
-          console.error('Error fetching Wikipedia collaborations:', error);
-        }
-        
-        // If both MusicBrainz and Wikipedia fail, return only the main artist
-        console.log(`No real collaboration data found for ${artistName}, returning only main artist`);
+        console.log(`No MusicBrainz collaborations found for ${artistName} - returning main artist only`);
         return { nodes, links };
       }
 
