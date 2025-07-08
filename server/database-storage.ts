@@ -333,11 +333,15 @@ export class DatabaseStorage implements IStorage {
     };
 
     console.log(`🔍 [DEBUG] Starting collaboration network generation for: "${artistName}"`);
-    console.log('📊 [DEBUG] Data source priority: 1) OpenAI → 2) MusicBrainz → 3) Wikipedia → 4) Known collaborations fallback');
+    console.log('📊 [DEBUG] Data source priority: 1) MusicBrainz → 2) Wikipedia → 3) Main artist only (no synthetic data)');
 
     try {
-      // First try OpenAI for collaboration data
-      if (openAIService.isServiceAvailable()) {
+      // Skip OpenAI to ensure only authentic data is used
+      // OpenAI generates artificial collaborations, so we'll use only MusicBrainz and Wikipedia
+      console.log(`🎯 [DEBUG] Skipping OpenAI for authentic data only - using MusicBrainz and Wikipedia sources`);
+      
+      // Proceed directly to MusicBrainz for authentic collaboration data
+      if (false) { // Disabled OpenAI
         console.log(`🤖 [DEBUG] Querying OpenAI API for "${artistName}"...`);
         console.log(`🔍 [DEBUG] About to call openAIService.getArtistCollaborations for main artist: ${artistName}`);
         
@@ -928,74 +932,11 @@ export class DatabaseStorage implements IStorage {
           console.error(`⚠️ [DEBUG] Error fetching Wikipedia collaborations for "${artistName}":`, error);
         }
         
-        // If both MusicBrainz and Wikipedia fail, add known authentic collaborators as fallback
+        // If both MusicBrainz and Wikipedia fail, return only the main artist node
         console.log(`🚨 [DEBUG] No real collaboration data found for "${artistName}" from either MusicBrainz or Wikipedia`);
+        console.log(`👤 [DEBUG] Returning only the main artist node without any collaborators`);
         
-        // Add known authentic songwriter collaborators for major artists
-        const artistNameLower = artistName.toLowerCase();
-        const knownCollaborations: { [key: string]: Array<{name: string, type: 'songwriter' | 'producer', relation: string}> } = {
-          'taylor swift': [
-            {name: 'Jack Antonoff', type: 'songwriter', relation: 'co-writer'},
-            {name: 'Max Martin', type: 'songwriter', relation: 'co-writer'},
-            {name: 'Shellback', type: 'songwriter', relation: 'co-writer'},
-            {name: 'Aaron Dessner', type: 'songwriter', relation: 'co-writer'},
-          ]
-        };
-        
-        if (knownCollaborations[artistNameLower]) {
-          console.log(`✨ [DEBUG] Adding known authentic collaborators for "${artistName}"`);
-          const fallbackArtists = knownCollaborations[artistNameLower];
-          
-          for (const collab of fallbackArtists) {
-            // Check if we already have this person (for multi-role support)
-            let collaboratorNode = nodeMap.get(collab.name);
-            
-            if (collaboratorNode) {
-              // Person already exists - add the new role to their types array
-              if (!collaboratorNode.types) {
-                collaboratorNode.types = [collaboratorNode.type];
-              }
-              if (!collaboratorNode.types.includes(collab.type)) {
-                collaboratorNode.types.push(collab.type);
-                console.log(`🎭 [DEBUG] Added ${collab.type} role to existing ${collab.name} node (now has ${collaboratorNode.types.length} roles)`);
-              }
-            } else {
-              // Create new node for this person
-              collaboratorNode = {
-                id: collab.name,
-                name: collab.name,
-                type: collab.type,
-                types: [collab.type],
-                size: 15,
-              };
-              
-              // Get MusicNerd artist ID for the collaborator
-
-              let musicNerdUrl = 'https://musicnerd.xyz';
-              try {
-                const artistId = await musicNerdService.getArtistId(collab.name);
-                if (artistId) {
-                  musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
-
-                  console.log(`✅ [DEBUG] Found MusicNerd ID for ${collab.name}: ${artistId}`);
-                }
-              } catch (error) {
-                console.log(`📭 [DEBUG] No MusicNerd ID found for ${collab.name}`);
-              }
-              
-              collaboratorNode.musicNerdUrl = musicNerdUrl;
-              nodeMap.set(collab.name, collaboratorNode);
-            }
-            links.push({
-              source: mainArtistNode.id,
-              target: collaboratorNode.id,
-            });
-            
-            console.log(`✨ [DEBUG] Added known authentic collaborator: ${collab.name} (${collab.type})`);
-          }
-        } else {
-          console.log(`👤 [DEBUG] Returning only the main artist node without any collaborators`);
-        }
+        // No fallback collaborators - authentic data only
         
 
         // Final node array from consolidated map
@@ -1069,6 +1010,7 @@ export class DatabaseStorage implements IStorage {
     console.log(`💾 [DEBUG] Checking for cached webmapdata for "${artistName}"`);
     const cachedArtist = await this.getArtistByName(artistName);
     
+    // Check cache for existing network data
     if (cachedArtist?.webmapdata) {
       console.log(`✅ [DEBUG] Found cached webmapdata for "${cachedArtist.name}" - using cached data`);
       return cachedArtist.webmapdata as NetworkData;

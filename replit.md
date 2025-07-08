@@ -275,17 +275,15 @@ Changelog:
 - Improved loading spinner and tooltip responsiveness for mobile viewing
 - Enhanced filter controls with smaller touch targets and mobile-appropriate spacing
 
-### OpenAI Primary Data Source Integration (June 30, 2025)
-- Integrated OpenAI API as the primary data source for music collaboration networks
-- Updated data source priority: 1) OpenAI → 2) MusicBrainz → 3) Wikipedia → 4) Known collaborations fallback
-- OpenAI generates authentic producer and songwriter collaborations using GPT-4o model
-- System prompts OpenAI with: "Generate a list of producers and songwriters who have collaborated with artist X. For each producer and songwriter, include their top 3 collaborating artists."
-- Successfully extracts 5 producers and 5 songwriters with their top 3 collaborating artists for enhanced music discovery
-- Enhanced producer branching: producers now get up to 3 top collaborator connections (previously limited to 2)
-- Both producers and songwriters display equal branching networks showing authentic industry relationships
-- Maintains all existing features: MusicNerd artist page linking, Spotify images, and branching connections
-- Comprehensive error handling with intelligent fallback to MusicBrainz when OpenAI is unavailable
-- Fixed TypeScript variable scope issues and type safety for seamless integration
+### Authentic Data Only Policy Implementation (July 8, 2025)
+- Disabled OpenAI API to ensure only authentic collaboration data is displayed
+- Updated data source priority: 1) MusicBrainz → 2) Wikipedia → 3) Main artist only (no synthetic data)
+- For artists with no real collaborators found in MusicBrainz or Wikipedia, only the main artist node is returned
+- Removed all synthetic/generated collaboration fallbacks to prevent misleading artificial connections
+- System now returns single-node networks for artists without documented collaborations
+- Maintains all existing features: MusicNerd artist page linking, Spotify images, and real collaboration detection
+- Comprehensive debugging shows exact data sources and extraction process for transparency
+- Cache system preserves authentic collaboration data for improved performance on repeat queries
 
 
 ### Multi-Role Node Consolidation (June 30, 2025)
