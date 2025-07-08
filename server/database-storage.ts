@@ -141,6 +141,27 @@ export class DatabaseStorage implements IStorage {
     return await this.buildNetworkFromCollaborators(artistName, classifiedCollaborators);
   }
 
+
+    console.log(`🔍 [DEBUG] Starting collaboration network generation for: "${artistName}"`);
+    console.log('📊 [DEBUG] Data source priority: 1) MusicBrainz → 2) Wikipedia → 3) Main artist only (no synthetic data)');
+
+    try {
+      // Skip OpenAI to ensure only authentic data is used
+      // OpenAI generates artificial collaborations, so we'll use only MusicBrainz and Wikipedia
+      console.log(`🎯 [DEBUG] Skipping OpenAI for authentic data only - using MusicBrainz and Wikipedia sources`);
+      
+      // Proceed directly to MusicBrainz for authentic collaboration data
+      if (false) { // Disabled OpenAI
+        console.log(`🤖 [DEBUG] Querying OpenAI API for "${artistName}"...`);
+        console.log(`🔍 [DEBUG] About to call openAIService.getArtistCollaborations for main artist: ${artistName}`);
+        
+        try {
+          const openAIData = await openAIService.getArtistCollaborations(artistName);
+          console.log(`✅ [DEBUG] OpenAI response:`, {
+            collaborators: openAIData.artists.length,
+            collaboratorList: openAIData.artists.map(a => `${a.name} (${a.type}, top collaborators: ${a.topCollaborators.length})`)
+          });
+
   private async getSpotifyCollaborators(artistName: string): Promise<string[]> {
     console.log(`🎧 [DEBUG] Getting Spotify collaborators for "${artistName}"`);
     
@@ -156,6 +177,7 @@ export class DatabaseStorage implements IStorage {
         console.log(`❌ [DEBUG] Artist "${artistName}" not found on Spotify`);
         return [];
       }
+
 
       console.log(`✅ [DEBUG] Found Spotify artist: "${spotifyArtist.name}" (${spotifyArtist.id})`);
 
@@ -469,6 +491,13 @@ export class DatabaseStorage implements IStorage {
         const collaborator1 = collaborators[i];
         const collaborator2 = collaborators[j];
         
+
+        // If both MusicBrainz and Wikipedia fail, return only the main artist node
+        console.log(`🚨 [DEBUG] No real collaboration data found for "${artistName}" from either MusicBrainz or Wikipedia`);
+        console.log(`👤 [DEBUG] Returning only the main artist node without any collaborators`);
+        
+        // No fallback collaborators - authentic data only
+
         console.log(`🔍 [DEBUG] Checking if "${collaborator1.name}" has worked with "${collaborator2.name}"`);
         
         try {
@@ -504,6 +533,7 @@ export class DatabaseStorage implements IStorage {
         } catch (error) {
           console.log(`❌ [DEBUG] Error checking cross-collaboration between "${collaborator1.name}" and "${collaborator2.name}":`, error);
         }
+
         
         // Small delay to prevent rate limiting
         await new Promise(resolve => setTimeout(resolve, 200));
@@ -589,11 +619,18 @@ export class DatabaseStorage implements IStorage {
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
     console.log(`🔍 [DEBUG] Getting network data for: "${artistName}"`);
     
+
+    // Check cache for existing network data
+    if (cachedArtist?.webmapdata) {
+      console.log(`✅ [DEBUG] Found cached webmapdata for "${cachedArtist.name}" - using cached data`);
+      return cachedArtist.webmapdata as NetworkData;
+
     // Check if artist exists in database first
     const existingArtist = await this.getArtistByName(artistName);
     if (!existingArtist) {
       console.log(`❌ [DEBUG] Artist "${artistName}" not found in database`);
       return null;
+
     }
 
     // Check for cached data
