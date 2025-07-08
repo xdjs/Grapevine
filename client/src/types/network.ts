@@ -5,6 +5,7 @@ export interface NetworkNode {
   types?: ('artist' | 'producer' | 'songwriter')[];
   size: number;
   collaborations?: string[];
+  artistId?: string;
   x?: number;
   y?: number;
   fx?: number | null;
