@@ -225,7 +225,7 @@ Requirements:
             type: collaborator.type,
             types: [collaborator.type],
             color: collaborator.type === 'producer' ? '#8A2BE2' : '#00CED1',
-            size: 20,
+            size: 15, // Smaller size for collaborators
             artistId: null,
             collaborations: collaborator.topCollaborators || []
           };

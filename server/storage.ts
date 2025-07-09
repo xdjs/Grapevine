@@ -177,7 +177,7 @@ export class MemStorage implements IStorage {
       id: artistName,
       name: artistName,
       type: 'artist',
-      size: 20,
+      size: 30, // Larger size for main artist
     };
     nodes.push(mainArtistNode);
 
@@ -251,7 +251,7 @@ export class MemStorage implements IStorage {
       id: artistName,
       name: artistName,
       type: 'artist',
-      size: 20,
+      size: 30, // Larger size for main artist
       imageUrl: mainArtistImage,
       spotifyId: mainArtistSpotifyId,
     };
@@ -341,7 +341,7 @@ export class MemStorage implements IStorage {
         id: artistName,
         name: artistName,
         type: 'artist',
-        size: 20,
+        size: 30, // Larger size for main artist
         imageUrl: mainArtistImage,
         spotifyId: mainArtistSpotifyId,
         artistId: mainArtistMusicNerdId,
@@ -576,7 +576,7 @@ export class MemStorage implements IStorage {
       id: mainArtist.name,
       name: mainArtist.name,
       type: 'artist',
-      size: 20,
+      size: 30, // Larger size for main artist
       artistId: mainArtistMusicNerdId,
     };
     nodes.push(mainArtistNode);

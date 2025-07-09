@@ -411,6 +411,14 @@ Changelog:
 - Ensures network maps display proper artist stylization as stored in MusicNerd database
 - Applied fix to both cached data retrieval and new network generation paths
 
+### Standardized Main Artist Node Size (July 9, 2025)
+- Fixed inconsistent main artist node sizing across all network generation files
+- Updated main artist node size from varying sizes (20-30) to consistent size 30 across all files
+- Collaborator nodes remain at size 15, branching nodes at size 10
+- Updated server/database-storage.ts, server/storage.ts, and api/network/[artistName].ts for consistency
+- Main artist now appears consistently larger than all other nodes in the network visualization
+- Size hierarchy: Main artist (30) > Collaborators (15) > Branching nodes (10)
+
 
 
 

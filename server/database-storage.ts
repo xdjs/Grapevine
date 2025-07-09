@@ -265,7 +265,7 @@ export class DatabaseStorage implements IStorage {
       name: artistName,
       type: mainArtistTypes[0], // Primary type
       types: mainArtistTypes, // All roles
-      size: 25,
+      size: 30, // Larger size for main artist
       musicNerdUrl,
     };
     nodeMap.set(artistName, mainArtistNode);
@@ -469,7 +469,7 @@ export class DatabaseStorage implements IStorage {
                       name: branchingArtist,
                       type: enhancedBranchingRoles[0], // Primary role
                       types: enhancedBranchingRoles, // All roles
-                      size: 15,
+                      size: 10, // Smallest size for branching nodes
                     };
 
                     // Get MusicNerd ID for branching artist
@@ -722,7 +722,7 @@ export class DatabaseStorage implements IStorage {
                     name: branchingArtist,
                     type: enhancedBranchingRoles[0], // Primary role
                     types: enhancedBranchingRoles, // All roles
-                    size: 12, // Smaller size for branching nodes
+                    size: 10, // Smallest size for branching nodes
                     imageUrl: null,
                     spotifyId: null,
                     artistId: branchingArtistId,
