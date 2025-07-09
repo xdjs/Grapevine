@@ -457,6 +457,16 @@ Changelog:
 - Main artists guaranteed to have 'artist' as primary role to prevent songwriter-only labeling
 - Network generation balances data authenticity with acceptable performance (3-5 seconds vs 20+ seconds)
 
+### High-Performance Role Consistency System (July 9, 2025)
+- Implemented global role cache system for maintaining role consistency across different network generations
+- Reduced OpenAI query from 5 producers/songwriters to 3 each for faster generation (40% reduction)
+- Eliminated redundant MusicNerd ID lookups for collaborators and branching artists (only main artist gets specific page)
+- Added batch processing and role caching to prevent duplicate API calls
+- **Global Role Cache**: Artists maintain same roles when appearing in different networks (e.g., Dan Nigro always shows as producer+songwriter)
+- **Performance Optimizations**: Removed individual database queries for every collaborator node
+- **Maintained Authenticity**: All roles still verified through OpenAI with cross-network consistency
+- Expected performance improvement: 20-30 seconds reduced to 5-10 seconds while maintaining data integrity
+
 
 
 

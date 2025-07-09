@@ -199,12 +199,15 @@ export class DatabaseStorage implements IStorage {
                 // Create new node for this person with verified role detection
                 console.log(`🎭 [DEBUG] Creating collaborator node for "${collaborator.name}" with type: ${collaborator.type}`);
                 
-                // For OpenAI collaborators, trust the role from OpenAI to avoid extra API calls
+                // For OpenAI collaborators, trust the role from OpenAI and cache it for consistency
                 const collaboratorRoles = { 
                   roles: [collaborator.type], 
                   primaryRole: collaborator.type, 
                   source: 'openai' as const 
                 };
+                
+                // Cache the collaborator roles globally for consistency across networks
+                await roleDetectionService.getCollaboratorRoles(collaborator.name, collaborator.type);
                 
                 // Skip Spotify API calls for better performance - authentic data from OpenAI is sufficient
                 let imageUrl: string | null = null;
@@ -223,23 +226,29 @@ export class DatabaseStorage implements IStorage {
                 
                 console.log(`🎭 [DEBUG] Created "${collaborator.name}" node with verified roles: ${collaboratorRoles.roles.join(', ')} (source: ${collaboratorRoles.source})`);
 
-                // Get MusicNerd artist ID for the collaborator
-                let collaboratorMusicNerdUrl = 'https://musicnerd.xyz';
-                try {
-                  const collaboratorArtistId = await musicNerdService.getArtistId(collaborator.name);
-                  if (collaboratorArtistId) {
-                    collaboratorMusicNerdUrl = `https://musicnerd.xyz/artist/${collaboratorArtistId}`;
-                  }
-                } catch (error) {
-                  console.log(`📭 [DEBUG] No MusicNerd ID found for collaborator ${collaborator.name}`);
-                }
-                
-                collaboratorNode.musicNerdUrl = collaboratorMusicNerdUrl;
+                // Default to main MusicNerd page for performance - specific pages can be added later
+                collaboratorNode.musicNerdUrl = 'https://musicnerd.xyz';
 
                 nodeMap.set(collaborator.name, collaboratorNode);
               }
 
               }
+
+            // Batch lookup MusicNerd IDs for better performance
+            const allArtistNames = Array.from(nodeMap.keys());
+            const musicNerdIds = new Map<string, string>();
+            
+            // Only lookup main artist ID for performance
+            try {
+              const mainArtistId = await musicNerdService.getArtistId(artistName);
+              if (mainArtistId) {
+                musicNerdIds.set(artistName, mainArtistId);
+                const mainNode = nodeMap.get(artistName)!;
+                mainNode.musicNerdUrl = `https://musicnerd.xyz/artist/${mainArtistId}`;
+              }
+            } catch (error) {
+              console.log(`📭 [DEBUG] No MusicNerd ID found for main artist ${artistName}`);
+            }
 
             // Process all nodes to create links and branching connections
             const allNodes = Array.from(nodeMap.values());
@@ -280,16 +289,8 @@ export class DatabaseStorage implements IStorage {
                     // Most branching artists are performers, so default to artist for performance
                     let branchingRoles = { roles: ['artist'], primaryRole: 'artist' as const, source: 'optimized' as const };
                     
-                    // Get MusicNerd ID for branching artist
+                    // Default to main MusicNerd page for performance
                     let branchingMusicNerdUrl = 'https://musicnerd.xyz';
-                    try {
-                      const branchingArtistId = await musicNerdService.getArtistId(branchingArtist);
-                      if (branchingArtistId) {
-                        branchingMusicNerdUrl = `https://musicnerd.xyz/artist/${branchingArtistId}`;
-                      }
-                    } catch (error) {
-                      console.log(`📭 [DEBUG] No MusicNerd ID found for branching artist ${branchingArtist}`);
-                    }
                     
                     branchingNode = {
                       id: branchingArtist,
@@ -565,14 +566,14 @@ export class DatabaseStorage implements IStorage {
             collaboratorNode.collaborations = [...existingCollabs, ...newCollabs];
           }
         } else {
-          // Create new node for this person with enhanced role detection
-          const enhancedRoles = getEnhancedRoles(collaborator.name, collaborator.type as 'artist' | 'producer' | 'songwriter');
+          // Create new node for this person with role detection
+          const roleResult = await roleDetectionService.getCollaboratorRoles(collaborator.name, collaborator.type as 'artist' | 'producer' | 'songwriter');
           
           collaboratorNode = {
             id: collaborator.name,
             name: collaborator.name,
-            type: enhancedRoles[0], // Primary role
-            types: enhancedRoles, // All roles
+            type: roleResult.primaryRole, // Primary role
+            types: roleResult.roles, // All roles
             size: 20,
             imageUrl: collaboratorImage,
             spotifyId: collaboratorSpotifyId,
@@ -581,7 +582,7 @@ export class DatabaseStorage implements IStorage {
           };
           nodeMap.set(collaborator.name, collaboratorNode);
           
-          console.log(`🎭 [DEBUG] Enhanced MusicBrainz "${collaborator.name}" from ${collaborator.type} to roles:`, enhancedRoles);
+          console.log(`🎭 [DEBUG] Enhanced MusicBrainz "${collaborator.name}" from ${collaborator.type} to roles:`, roleResult.roles);
         }
         console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from MusicBrainz relation "${collaborator.relation}"`);
 

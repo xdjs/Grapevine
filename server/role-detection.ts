@@ -9,13 +9,21 @@ export interface RoleDetectionResult {
 
 class RoleDetectionService {
   private roleCache = new Map<string, RoleDetectionResult>();
+  private static globalRoleCache = new Map<string, RoleDetectionResult>();
 
   /**
    * Get verified roles for any artist from authentic data sources
    * Optimized for performance with intelligent role detection
    */
   async getVerifiedRoles(artistName: string, isMainArtist: boolean = false): Promise<RoleDetectionResult> {
-    // Check cache first
+    // Check global cache first for cross-network consistency
+    const globalCached = RoleDetectionService.globalRoleCache.get(artistName.toLowerCase());
+    if (globalCached) {
+      console.log(`🎭 [RoleDetection] Using global cached roles for "${artistName}":`, globalCached.roles);
+      return globalCached;
+    }
+
+    // Check local cache
     const cached = this.roleCache.get(artistName.toLowerCase());
     if (cached) {
       console.log(`🎭 [RoleDetection] Using cached roles for "${artistName}":`, cached.roles);
@@ -94,8 +102,9 @@ class RoleDetectionService {
       source
     };
 
-    // Cache the result
+    // Cache the result in both local and global caches
     this.roleCache.set(artistName.toLowerCase(), result);
+    RoleDetectionService.globalRoleCache.set(artistName.toLowerCase(), result);
     console.log(`🎭 [RoleDetection] Cached roles for "${artistName}":`, result);
 
     return result;
@@ -106,7 +115,14 @@ class RoleDetectionService {
    * This should match their main artist roles for consistency
    */
   async getCollaboratorRoles(collaboratorName: string, contextRole: 'artist' | 'producer' | 'songwriter'): Promise<RoleDetectionResult> {
-    // Check cache first for performance
+    // Check global cache first for cross-network consistency
+    const globalCached = RoleDetectionService.globalRoleCache.get(collaboratorName.toLowerCase());
+    if (globalCached) {
+      console.log(`🎭 [RoleDetection] Using global cached collaborator roles for "${collaboratorName}":`, globalCached.roles);
+      return globalCached;
+    }
+
+    // Check local cache
     const cached = this.roleCache.get(collaboratorName.toLowerCase());
     if (cached) {
       console.log(`🎭 [RoleDetection] Using cached collaborator roles for "${collaboratorName}":`, cached.roles);
@@ -121,11 +137,21 @@ class RoleDetectionService {
       source: 'openai'
     };
 
-    // Cache the result for consistency
+    // Cache the result in both local and global caches for consistency
     this.roleCache.set(collaboratorName.toLowerCase(), result);
+    RoleDetectionService.globalRoleCache.set(collaboratorName.toLowerCase(), result);
     console.log(`🎭 [RoleDetection] Cached collaborator roles for "${collaboratorName}":`, result.roles);
     
     return result;
+  }
+
+  /**
+   * Cache roles for an artist without verification (for performance)
+   */
+  cacheRoles(artistName: string, roles: RoleDetectionResult): void {
+    this.roleCache.set(artistName.toLowerCase(), roles);
+    RoleDetectionService.globalRoleCache.set(artistName.toLowerCase(), roles);
+    console.log(`🎭 [RoleDetection] Cached roles for "${artistName}":`, roles.roles);
   }
 
   /**
@@ -133,6 +159,7 @@ class RoleDetectionService {
    */
   clearCache(): void {
     this.roleCache.clear();
+    RoleDetectionService.globalRoleCache.clear();
     console.log('🧹 [RoleDetection] Cache cleared');
   }
 }
