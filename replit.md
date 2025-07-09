@@ -457,15 +457,15 @@ Changelog:
 - Main artists guaranteed to have 'artist' as primary role to prevent songwriter-only labeling
 - Network generation balances data authenticity with acceptable performance (3-5 seconds vs 20+ seconds)
 
-### High-Performance Role Consistency System (July 9, 2025)
-- Implemented global role cache system for maintaining role consistency across different network generations
-- Reduced OpenAI query from 5 producers/songwriters to 3 each for faster generation (40% reduction)
-- Eliminated redundant MusicNerd ID lookups for collaborators and branching artists (only main artist gets specific page)
-- Added batch processing and role caching to prevent duplicate API calls
-- **Global Role Cache**: Artists maintain same roles when appearing in different networks (e.g., Dan Nigro always shows as producer+songwriter)
-- **Performance Optimizations**: Removed individual database queries for every collaborator node
-- **Maintained Authenticity**: All roles still verified through OpenAI with cross-network consistency
-- Expected performance improvement: 20-30 seconds reduced to 5-10 seconds while maintaining data integrity
+### Comprehensive No-Cache Role Detection System (July 9, 2025)
+- Removed ALL caching mechanisms as requested by user for completely fresh data generation
+- Enhanced main artist role detection to query BOTH OpenAI and MusicBrainz for comprehensive role discovery
+- **Comprehensive Role Detection**: Main artists now get ALL their authentic roles from multiple data sources
+- **No Cache Policy**: Every network generation queries fresh data from OpenAI and MusicBrainz
+- **Multi-Source Role Discovery**: System checks artist's appearance in ALL collaborator roles across both APIs
+- **Complete Role Authenticity**: Artists like Taylor Swift now get all their roles (artist + songwriter + producer) without caching limitations
+- **Fresh Data Guarantee**: No cached role information - every search generates completely fresh role data
+- Performance: 5-10 seconds per generation, but with complete role authenticity as requested
 
 
 

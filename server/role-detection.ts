@@ -16,19 +16,7 @@ class RoleDetectionService {
    * Optimized for performance with intelligent role detection
    */
   async getVerifiedRoles(artistName: string, isMainArtist: boolean = false): Promise<RoleDetectionResult> {
-    // Check global cache first for cross-network consistency
-    const globalCached = RoleDetectionService.globalRoleCache.get(artistName.toLowerCase());
-    if (globalCached) {
-      console.log(`🎭 [RoleDetection] Using global cached roles for "${artistName}":`, globalCached.roles);
-      return globalCached;
-    }
-
-    // Check local cache
-    const cached = this.roleCache.get(artistName.toLowerCase());
-    if (cached) {
-      console.log(`🎭 [RoleDetection] Using cached roles for "${artistName}":`, cached.roles);
-      return cached;
-    }
+    // No caching - always generate fresh roles as requested
 
     const roles: Set<'artist' | 'producer' | 'songwriter'> = new Set();
     let source: 'openai' | 'musicbrainz' | 'default' = 'default';
@@ -36,17 +24,17 @@ class RoleDetectionService {
     // For main artists, always ensure they have the 'artist' role
     if (isMainArtist) {
       roles.add('artist');
-      source = 'verified';
+      source = 'default';
       console.log(`🎭 [RoleDetection] Main artist "${artistName}" automatically assigned 'artist' role`);
     }
 
-    // Try OpenAI for additional role detection (but skip if rate limited)
+    // Try OpenAI for comprehensive role detection 
     if (openAIService.isServiceAvailable()) {
       try {
-        console.log(`🤖 [RoleDetection] Querying OpenAI for roles of "${artistName}"`);
+        console.log(`🤖 [RoleDetection] Querying OpenAI for comprehensive roles of "${artistName}"`);
         const openAIData = await openAIService.getArtistCollaborations(artistName);
         
-        // Check if they appear as a collaborator in their own network
+        // Check ALL collaborators to find this artist in different roles
         const collaboratorRoles = openAIData.artists
           .filter(a => a.name.toLowerCase() === artistName.toLowerCase())
           .map(a => a.type);
@@ -62,22 +50,24 @@ class RoleDetectionService {
       }
     }
 
-    // Skip MusicBrainz if we already have roles (for performance)
-    if (roles.size === 0) {
-      try {
-        console.log(`🎵 [RoleDetection] Querying MusicBrainz for roles of "${artistName}"`);
-        const mbData = await musicBrainzService.getArtistCollaborations(artistName);
-        
-        // Check if this person appears in their own collaboration data
-        const selfEntry = mbData.artists.find(a => a.name.toLowerCase() === artistName.toLowerCase());
-        if (selfEntry) {
-          roles.add(selfEntry.type);
-          source = 'musicbrainz';
-          console.log(`✅ [RoleDetection] MusicBrainz found "${artistName}" as ${selfEntry.type}`);
-        }
-      } catch (error) {
-        console.log(`⚠️ [RoleDetection] MusicBrainz failed for "${artistName}":`, error);
+    // Always try MusicBrainz to get additional roles (don't skip even if OpenAI found some)
+    try {
+      console.log(`🎵 [RoleDetection] Querying MusicBrainz for additional roles of "${artistName}"`);
+      const mbData = await musicBrainzService.getArtistCollaborations(artistName);
+      
+      // Check ALL collaborators to find this person in different roles  
+      const mbRoles = mbData.artists
+        .filter(a => a.name.toLowerCase() === artistName.toLowerCase())
+        .map(a => a.type);
+      
+      mbRoles.forEach(role => roles.add(role));
+      
+      if (mbRoles.length > 0) {
+        if (source === 'default') source = 'musicbrainz';
+        console.log(`✅ [RoleDetection] MusicBrainz detected additional roles for "${artistName}":`, mbRoles);
       }
+    } catch (error) {
+      console.log(`⚠️ [RoleDetection] MusicBrainz failed for "${artistName}":`, error);
     }
 
     // Default to artist if no roles found
@@ -102,10 +92,8 @@ class RoleDetectionService {
       source
     };
 
-    // Cache the result in both local and global caches
-    this.roleCache.set(artistName.toLowerCase(), result);
-    RoleDetectionService.globalRoleCache.set(artistName.toLowerCase(), result);
-    console.log(`🎭 [RoleDetection] Cached roles for "${artistName}":`, result);
+    // No caching - return fresh result each time
+    console.log(`🎭 [RoleDetection] Fresh roles for "${artistName}":`, result);
 
     return result;
   }
@@ -115,19 +103,7 @@ class RoleDetectionService {
    * This should match their main artist roles for consistency
    */
   async getCollaboratorRoles(collaboratorName: string, contextRole: 'artist' | 'producer' | 'songwriter'): Promise<RoleDetectionResult> {
-    // Check global cache first for cross-network consistency
-    const globalCached = RoleDetectionService.globalRoleCache.get(collaboratorName.toLowerCase());
-    if (globalCached) {
-      console.log(`🎭 [RoleDetection] Using global cached collaborator roles for "${collaboratorName}":`, globalCached.roles);
-      return globalCached;
-    }
-
-    // Check local cache
-    const cached = this.roleCache.get(collaboratorName.toLowerCase());
-    if (cached) {
-      console.log(`🎭 [RoleDetection] Using cached collaborator roles for "${collaboratorName}":`, cached.roles);
-      return cached;
-    }
+    // No caching - always generate fresh roles for consistency
 
     // For collaborators, use a lighter approach to avoid excessive API calls
     // We'll use the OpenAI context role but cache it for consistency
@@ -137,30 +113,25 @@ class RoleDetectionService {
       source: 'openai'
     };
 
-    // Cache the result in both local and global caches for consistency
-    this.roleCache.set(collaboratorName.toLowerCase(), result);
-    RoleDetectionService.globalRoleCache.set(collaboratorName.toLowerCase(), result);
-    console.log(`🎭 [RoleDetection] Cached collaborator roles for "${collaboratorName}":`, result.roles);
+    // No caching - return fresh result each time
+    console.log(`🎭 [RoleDetection] Fresh collaborator roles for "${collaboratorName}":`, result.roles);
     
     return result;
   }
 
   /**
-   * Cache roles for an artist without verification (for performance)
+   * Cache functionality disabled as requested by user
    */
   cacheRoles(artistName: string, roles: RoleDetectionResult): void {
-    this.roleCache.set(artistName.toLowerCase(), roles);
-    RoleDetectionService.globalRoleCache.set(artistName.toLowerCase(), roles);
-    console.log(`🎭 [RoleDetection] Cached roles for "${artistName}":`, roles.roles);
+    // No caching - disabled as requested
   }
 
   /**
    * Clear cache for testing or when roles might have changed
    */
   clearCache(): void {
-    this.roleCache.clear();
-    RoleDetectionService.globalRoleCache.clear();
-    console.log('🧹 [RoleDetection] Cache cleared');
+    // No caching - nothing to clear
+    console.log('🧹 [RoleDetection] No cache to clear (caching disabled)');
   }
 }
 

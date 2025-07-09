@@ -206,8 +206,7 @@ export class DatabaseStorage implements IStorage {
                   source: 'openai' as const 
                 };
                 
-                // Cache the collaborator roles globally for consistency across networks
-                await roleDetectionService.getCollaboratorRoles(collaborator.name, collaborator.type);
+                // No caching - fresh roles every time
                 
                 // Skip Spotify API calls for better performance - authentic data from OpenAI is sufficient
                 let imageUrl: string | null = null;
