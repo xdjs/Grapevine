@@ -7,6 +7,7 @@ import { musicBrainzService } from "./musicbrainz.js";
 import { wikipediaService } from "./wikipedia.js";
 import { musicNerdService } from "./musicnerd-service.js";
 import { IStorage } from './storage.js';
+import { roleDetectionService } from "./role-detection.js";
 
 export class DatabaseStorage implements IStorage {
   constructor() {
@@ -137,27 +138,23 @@ export class DatabaseStorage implements IStorage {
       console.log(`📭 [DEBUG] No MusicNerd ID found for main artist ${artistName}`);
     }
 
-    // Main artist starts with artist role - additional roles will be determined from data sources
-    const mainArtistTypes = ['artist'];
-
-    // Create main artist node with enhanced role detection
+    // Get verified roles for main artist from external data sources
+    const mainArtistRoleData = await roleDetectionService.getVerifiedRoles(artistName);
+    
+    // Create main artist node with verified roles
     const mainArtistNode: NetworkNode = {
       id: artistName,
       name: artistName,
-      type: mainArtistTypes[0], // Primary type
-      types: mainArtistTypes, // All roles
+      type: mainArtistRoleData.primaryRole,
+      types: mainArtistRoleData.roles,
       size: 30, // Larger size for main artist
       musicNerdUrl,
     };
     nodeMap.set(artistName, mainArtistNode);
     
-    console.log(`🎭 [DEBUG] Main artist "${artistName}" has ${mainArtistTypes.length} roles:`, mainArtistTypes);
+    console.log(`🎭 [DEBUG] Main artist "${artistName}" has ${mainArtistRoleData.roles.length} verified roles from ${mainArtistRoleData.source}:`, mainArtistRoleData.roles);
 
-    // Helper function to determine roles based only on data from external sources
-    const getEnhancedRoles = (personName: string, defaultRole: 'artist' | 'producer' | 'songwriter'): ('artist' | 'producer' | 'songwriter')[] => {
-      // Only use the role provided by the data source - no hardcoded information
-      return [defaultRole];
-    };
+    // All role detection now handled by roleDetectionService for consistency
 
     console.log(`🔍 [DEBUG] Starting collaboration network generation for: "${artistName}"`);
     console.log('📊 [DEBUG] Data source priority: 1) OpenAI → 2) MusicBrainz → 3) Wikipedia → 4) Known collaborations fallback');
@@ -202,8 +199,8 @@ export class DatabaseStorage implements IStorage {
                 }
                 continue; // Skip creating new node since we're updating existing one
               } else {
-                // Create new node for this person with enhanced role detection
-                const enhancedRoles = getEnhancedRoles(collaborator.name, collaborator.type);
+                // Create new node for this person with verified role detection
+                const collaboratorRoleData = await roleDetectionService.getCollaboratorRoles(collaborator.name, collaborator.type);
                 
                 // Get image from Spotify if available
                 let imageUrl: string | null = null;
@@ -223,15 +220,15 @@ export class DatabaseStorage implements IStorage {
                 collaboratorNode = {
                   id: collaborator.name,
                   name: collaborator.name,
-                  type: enhancedRoles[0], // Primary role
-                  types: enhancedRoles, // All roles
+                  type: collaboratorRoleData.primaryRole,
+                  types: collaboratorRoleData.roles,
                   size: 20,
                   imageUrl,
                   spotifyId,
                   collaborations: collaborator.topCollaborators || [],
                 };
                 
-                console.log(`🎭 [DEBUG] Enhanced "${collaborator.name}" from ${collaborator.type} to roles:`, enhancedRoles);
+                console.log(`🎭 [DEBUG] Enhanced "${collaborator.name}" from ${collaborator.type} to verified roles (${collaboratorRoleData.source}):`, collaboratorRoleData.roles);
 
                 // Get MusicNerd artist ID for the collaborator
 
@@ -288,15 +285,15 @@ export class DatabaseStorage implements IStorage {
                     // Ensure primary type remains as first one for compatibility
                     branchingNode.type = branchingNode.types[0];
                   } else {
-                    // Create new branching node with enhanced role detection
-                    const enhancedBranchingRoles = getEnhancedRoles(branchingArtist, 'artist');
+                    // Create new branching node with verified role detection
+                    const branchingRoleData = await roleDetectionService.getCollaboratorRoles(branchingArtist, 'artist');
                     
                     branchingNode = {
                       id: branchingArtist,
                       name: branchingArtist,
-                      type: enhancedBranchingRoles[0], // Primary role
-                      types: enhancedBranchingRoles, // All roles
-                      size: 15, // Branching nodes size
+                      type: branchingRoleData.primaryRole,
+                      types: branchingRoleData.roles,
+                      size: 16, // Branching nodes size
                     };
 
                     // Get MusicNerd ID for branching artist
@@ -315,7 +312,7 @@ export class DatabaseStorage implements IStorage {
                     branchingNode.musicNerdUrl = branchingMusicNerdUrl;
                     nodeMap.set(branchingArtist, branchingNode);
                     
-                    console.log(`🎭 [DEBUG] Enhanced OpenAI branching "${branchingArtist}" to roles:`, enhancedBranchingRoles);
+                    console.log(`🎭 [DEBUG] Enhanced OpenAI branching "${branchingArtist}" to verified roles (${branchingRoleData.source}):`, branchingRoleData.roles);
                   }
                   
                   // Create link between collaborator and their top collaborator

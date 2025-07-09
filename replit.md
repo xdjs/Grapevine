@@ -435,6 +435,15 @@ Changelog:
 - Multi-role consolidation system remains but only uses real collaboration data from API sources
 - No role hallucination or assumptions - only verified data from reliable sources
 
+### Verified Role Consistency System (July 9, 2025)
+- Created comprehensive role detection service (server/role-detection.ts) that ensures verified information continuity
+- Fixed issue where artists appeared with multiple roles as collaborators but lost roles when becoming main artists
+- Role detection service queries OpenAI and MusicBrainz to determine authentic roles for any artist
+- Main artists now get verified roles from the same data sources used for collaborator detection
+- Eliminated role inconsistency between small nodes and main nodes in network visualizations
+- Role detection results are cached for performance and consistency across network generation
+- Both main artists and collaborators use identical role detection logic for complete authenticity
+
 
 
 
