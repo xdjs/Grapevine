@@ -108,21 +108,26 @@ class RoleDetectionService {
    * This should match their main artist roles for consistency
    */
   async getCollaboratorRoles(collaboratorName: string, contextRole: 'artist' | 'producer' | 'songwriter'): Promise<RoleDetectionResult> {
-    // Get their verified roles as if they were a main artist
-    const verifiedRoles = await this.getVerifiedRoles(collaboratorName);
-    
-    // If they have verified roles, use those
-    if (verifiedRoles.roles.length > 1 || verifiedRoles.source !== 'default') {
-      console.log(`🎭 [RoleDetection] Using verified roles for collaborator "${collaboratorName}":`, verifiedRoles.roles);
-      return verifiedRoles;
+    // Check cache first for performance
+    const cached = this.roleCache.get(collaboratorName.toLowerCase());
+    if (cached) {
+      console.log(`🎭 [RoleDetection] Using cached collaborator roles for "${collaboratorName}":`, cached.roles);
+      return cached;
     }
 
-    // Otherwise, use the context role but still check for consistency
-    return {
+    // For collaborators, use a lighter approach to avoid excessive API calls
+    // We'll use the OpenAI context role but cache it for consistency
+    const result: RoleDetectionResult = {
       roles: [contextRole],
       primaryRole: contextRole,
-      source: 'default'
+      source: 'openai'
     };
+
+    // Cache the result for consistency
+    this.roleCache.set(collaboratorName.toLowerCase(), result);
+    console.log(`🎭 [RoleDetection] Cached collaborator roles for "${collaboratorName}":`, result.roles);
+    
+    return result;
   }
 
   /**
