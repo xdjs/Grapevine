@@ -6,8 +6,8 @@ import { fetchNetworkData } from "@/lib/network-data";
 import { NetworkData } from "@/types/network";
 import { Search } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import grapevineLogoLarge from "@assets/Grapevine Logo_1752103296007.png";
-import grapevineLogoSmall from "@assets/Grapevine Logo_1752103296007.png";
+import grapevineLogoLarge from "@assets/Grapevine Logo_1752103516040.png";
+import grapevineLogoSmall from "@assets/Grapevine Logo_1752103516040.png";
 
 interface SearchInterfaceProps {
   onNetworkData: (data: NetworkData) => void;
