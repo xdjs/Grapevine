@@ -1065,13 +1065,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
-    // First, check if we have cached webmapdata for this artist (applies to ALL artists)
-    console.log(`💾 [DEBUG] Checking for cached webmapdata for "${artistName}"`);
-    const cachedArtist = await this.getArtistByName(artistName);
+    // TEMPORARY: Force cache invalidation for main artist size fix
+    // Remove this section after all cached data is regenerated
+    const forceRegenerationArtists = ['Taylor Swift', 'DNCE', 'Post Malone', 'Ariana Grande', 'Billie Eilish', 'The Weeknd', 'Drake'];
+    const shouldForceRegeneration = forceRegenerationArtists.includes(artistName);
     
-    if (cachedArtist?.webmapdata) {
-      console.log(`✅ [DEBUG] Found cached webmapdata for "${cachedArtist.name}" - using cached data`);
-      return cachedArtist.webmapdata as NetworkData;
+    if (!shouldForceRegeneration) {
+      // First, check if we have cached webmapdata for this artist (applies to ALL artists)
+      console.log(`💾 [DEBUG] Checking for cached webmapdata for "${artistName}"`);
+      const cachedArtist = await this.getArtistByName(artistName);
+      
+      if (cachedArtist?.webmapdata) {
+        console.log(`✅ [DEBUG] Found cached webmapdata for "${cachedArtist.name}" - using cached data`);
+        return cachedArtist.webmapdata as NetworkData;
+      }
+    } else {
+      console.log(`🔄 [DEBUG] Force regenerating network data for "${artistName}" due to size standardization`);
     }
     
     console.log(`🆕 [DEBUG] No cached data found for "${artistName}" - generating new network data`);
@@ -1111,7 +1120,7 @@ export class DatabaseStorage implements IStorage {
       id: mainArtist.name,
       name: mainArtist.name,
       type: mainArtist.type as 'artist' | 'producer' | 'songwriter',
-      size: 20,
+      size: 30,
       imageUrl: mainArtist.imageUrl,
       spotifyId: mainArtist.spotifyId,
     };
