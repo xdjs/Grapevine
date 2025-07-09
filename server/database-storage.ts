@@ -788,9 +788,8 @@ export class DatabaseStorage implements IStorage {
         // Final node array from consolidated map
         const nodes = Array.from(nodeMap.values());
         
-        // Cache the generated network data
+        // No caching - return fresh network data
         const networkData = { nodes, links };
-        await this.cacheNetworkData(artistName, networkData);
         return networkData;
 
       } else {
@@ -800,55 +799,23 @@ export class DatabaseStorage implements IStorage {
       // Final node array from consolidated map
       const nodes = Array.from(nodeMap.values());
       
-      // Cache the generated network data
+      // No caching - return fresh network data
       const networkData = { nodes, links };
-      await this.cacheNetworkData(artistName, networkData);
       return networkData;
     } catch (error) {
       console.error('Error generating real collaboration network:', error);
       // Return just the main artist if everything fails
       const nodes = Array.from(nodeMap.values());
       
-      // Cache the generated network data
+      // No caching - return fresh network data
       const networkData = { nodes, links };
-      await this.cacheNetworkData(artistName, networkData);
       return networkData;
     }
   }
 
   private async cacheNetworkData(artistName: string, networkData: NetworkData): Promise<void> {
-    if (!db) {
-      console.log(`⚠️ [DEBUG] Database not available - skipping cache for "${artistName}"`);
-      return;
-    }
-
-    try {
-      console.log(`💾 [DEBUG] Caching webmapdata for "${artistName}"`);
-      
-      // Check if artist already exists in database
-      const existingArtist = await this.getArtistByName(artistName);
-      
-      if (existingArtist) {
-        // Update existing artist with webMapData
-        // Update existing artist with webmapdata using raw SQL since schema doesn't match MusicNerd DB
-        await db.execute(sql`
-          UPDATE artists 
-          SET webmapdata = ${JSON.stringify(networkData)}::jsonb 
-          WHERE name = ${artistName}
-        `);
-        console.log(`✅ [DEBUG] Updated webmapdata cache for existing artist "${artistName}"`);
-      } else {
-        // Don't create new artists - only cache data for existing artists
-        console.log(`❌ [DEBUG] Artist "${artistName}" does not exist in database - skipping cache creation`);
-      }
-    } catch (error: any) {
-      console.error(`❌ [DEBUG] Error caching webmapdata for "${artistName}":`, error);
-      console.error(`❌ [DEBUG] Full error details:`, {
-        message: error?.message,
-        code: error?.code,
-        detail: error?.detail
-      });
-    }
+    // Caching disabled as requested by user - no cache storage
+    console.log(`🚫 [DEBUG] Caching disabled - not storing webmapdata for "${artistName}"`);
   }
 
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
