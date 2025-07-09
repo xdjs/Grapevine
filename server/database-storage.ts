@@ -398,7 +398,7 @@ export class DatabaseStorage implements IStorage {
                   name: collaborator.name,
                   type: enhancedRoles[0], // Primary role
                   types: enhancedRoles, // All roles
-                  size: 15,
+                  size: 20,
                   imageUrl,
                   spotifyId,
                   collaborations: collaborator.topCollaborators || [],
@@ -469,7 +469,7 @@ export class DatabaseStorage implements IStorage {
                       name: branchingArtist,
                       type: enhancedBranchingRoles[0], // Primary role
                       types: enhancedBranchingRoles, // All roles
-                      size: 10, // Smallest size for branching nodes
+                      size: 15, // Branching nodes size
                     };
 
                     // Get MusicNerd ID for branching artist
@@ -722,7 +722,7 @@ export class DatabaseStorage implements IStorage {
                     name: branchingArtist,
                     type: enhancedBranchingRoles[0], // Primary role
                     types: enhancedBranchingRoles, // All roles
-                    size: 10, // Smallest size for branching nodes
+                    size: 15, // Branching nodes size
                     imageUrl: null,
                     spotifyId: null,
                     artistId: branchingArtistId,
@@ -786,7 +786,7 @@ export class DatabaseStorage implements IStorage {
             name: collaborator.name,
             type: enhancedRoles[0], // Primary role
             types: enhancedRoles, // All roles
-            size: 15,
+            size: 20,
             imageUrl: collaboratorImage,
             spotifyId: collaboratorSpotifyId,
             artistId: collaboratorMusicNerdId,
@@ -890,7 +890,7 @@ export class DatabaseStorage implements IStorage {
                   name: collaborator.name,
                   type: enhancedRoles[0], // Primary role
                   types: enhancedRoles, // All roles
-                  size: 15,
+                  size: 20,
                   imageUrl: collaboratorImage,
                   spotifyId: collaboratorSpotifyId,
                   artistId: collaboratorMusicNerdId,
@@ -966,7 +966,7 @@ export class DatabaseStorage implements IStorage {
                 name: collab.name,
                 type: collab.type,
                 types: [collab.type],
-                size: 15,
+                size: 20,
               };
               
               // Get MusicNerd artist ID for the collaborator
@@ -1136,7 +1136,7 @@ export class DatabaseStorage implements IStorage {
           id: collaborator.name,
           name: collaborator.name,
           type: collaborator.type as 'artist' | 'producer' | 'songwriter',
-          size: 15,
+          size: 20,
           imageUrl: collaborator.imageUrl,
           spotifyId: collaborator.spotifyId,
         };

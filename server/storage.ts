@@ -196,7 +196,7 @@ export class MemStorage implements IStorage {
         id: collaboratorName,
         name: collaboratorName,
         type: collaboratorType,
-        size: 12,
+        size: 18,
       };
       
       nodes.push(collaboratorNode);
@@ -284,7 +284,7 @@ export class MemStorage implements IStorage {
         id: collaborator.name,
         name: collaborator.name,
         type: collaborator.type,
-        size: 15,
+        size: 20,
         imageUrl: collaboratorImage,
         spotifyId: collaboratorSpotifyId,
       };
@@ -453,7 +453,7 @@ export class MemStorage implements IStorage {
           id: collaborator.name,
           name: collaborator.name,
           type: collaborator.type as 'artist' | 'producer' | 'songwriter',
-          size: 15,
+          size: 20,
           imageUrl: collaboratorImage,
           spotifyId: collaboratorSpotifyId,
           artistId: collaboratorMusicNerdId,
@@ -508,7 +508,7 @@ export class MemStorage implements IStorage {
                 id: collaborator.name,
                 name: collaborator.name,
                 type: collaborator.type,
-                size: 15,
+                size: 20,
                 imageUrl: collaboratorImage,
                 spotifyId: collaboratorSpotifyId,
                 artistId: collaboratorMusicNerdId,
@@ -602,7 +602,7 @@ export class MemStorage implements IStorage {
           id: collaborator.name,
           name: collaborator.name,
           type: collaborator.type as 'artist' | 'producer' | 'songwriter',
-          size: 15,
+          size: 20,
           artistId: collaboratorMusicNerdId,
         };
         nodes.push(collaboratorNode);
@@ -651,7 +651,7 @@ export class MemStorage implements IStorage {
               id: other.name,
               name: other.name,
               type: other.type as 'artist' | 'producer' | 'songwriter',
-              size: 10,
+              size: 16,
               artistId: otherMusicNerdId,
             };
             nodes.push(otherNode);

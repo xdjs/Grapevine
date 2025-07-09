@@ -419,6 +419,13 @@ Changelog:
 - Main artist now appears consistently larger than all other nodes in the network visualization
 - Size hierarchy: Main artist (30) > Collaborators (15) > Branching nodes (10)
 
+### Enhanced Node Visibility with Improved Size Hierarchy (July 9, 2025)
+- Increased collaborator node sizes from 15 to 20 for better visibility while maintaining clear hierarchy
+- Increased branching node sizes from 10 to 16 for improved readability
+- Updated all backend files to use consistent sizing: server/database-storage.ts, server/storage.ts, api/network/[artistName].ts
+- New size hierarchy: Main artist (30) > Collaborators (20) > Branching nodes (16)
+- All nodes now have better visibility while maintaining proper visual hierarchy
+
 
 
 
