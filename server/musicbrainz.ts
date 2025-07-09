@@ -200,19 +200,7 @@ class MusicBrainzService {
           let relationType = this.mapRelationType(relation.type);
           
           if (relationType && !processedArtists.has(relation.artist.name)) {
-            // Reclassify known songwriter-producers as songwriters
-            const collaboratorNameLower = relation.artist.name.toLowerCase();
-            const knownSongwriters = [
-              'jack antonoff', 'max martin', 'aaron dessner', 'finneas',
-              'benny blanco', 'oscar holter', 'greg kurstin', 'ludwig göransson', 
-              'shellback', 'ali payami', 'patrik berger', 'sia', 'ed sheeran',
-              'ryan tedder', 'charlie puth', 'julia michaels', 'justin tranter'
-            ];
-            
-            if (knownSongwriters.some(songwriter => collaboratorNameLower.includes(songwriter))) {
-              relationType = 'songwriter';
-              console.log(`✨ [DEBUG] Reclassified "${relation.artist.name}" as songwriter`);
-            }
+            // Use authentic relation type only - no hardcoded reclassification
             
             collaboratingArtists.push({
               name: relation.artist.name,
@@ -288,19 +276,7 @@ class MusicBrainzService {
               if (!processedArtists.has(collaboratorName)) {
                 let relationType = this.mapRelationType(relation.type);
                 if (relationType) {
-                  // Reclassify known songwriter-producers as songwriters
-                  const collaboratorNameLower = collaboratorName.toLowerCase();
-                  const knownSongwriters = [
-                    'jack antonoff', 'max martin', 'aaron dessner', 'finneas',
-                    'benny blanco', 'oscar holter', 'greg kurstin', 'ludwig göransson', 
-                    'shellback', 'ali payami', 'patrik berger', 'sia', 'ed sheeran',
-                    'ryan tedder', 'charlie puth', 'julia michaels', 'justin tranter'
-                  ];
-                  
-                  if (knownSongwriters.some(songwriter => collaboratorNameLower.includes(songwriter))) {
-                    relationType = 'songwriter';
-                    console.log(`✨ [DEBUG] Reclassified "${collaboratorName}" as songwriter`);
-                  }
+                  // Use authentic MusicBrainz relation type only
                   
                   collaboratingArtists.push({
                     name: collaboratorName,
@@ -337,9 +313,8 @@ class MusicBrainzService {
                            joinPhrase.toLowerCase().includes('lyrics')) {
                   type = 'songwriter';
                 } else {
-                  // Use context-based identification for known producer/songwriter names
                   // Use only the role data from MusicBrainz relation types - no hardcoded classifications
-                  console.log(`🔍 [DEBUG] Using MusicBrainz relation type for: "${collaboratorName}"`)
+                  console.log(`🔍 [DEBUG] Using MusicBrainz relation type for: "${collaboratorName}"`);
                 }
 
                 collaboratingArtists.push({
@@ -367,8 +342,6 @@ class MusicBrainzService {
       }
 
       console.log(`✅ [DEBUG] Total collaborators found for ${artistName}: ${collaboratingArtists.length}`);
-      
-      // Use only data from MusicBrainz API - no hardcoded collaborations
       
       console.log(`✅ [DEBUG] Final collaborators count for ${artistName}: ${collaboratingArtists.length}`);
       return {

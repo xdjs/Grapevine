@@ -939,9 +939,6 @@ export class DatabaseStorage implements IStorage {
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
     console.log(`🆕 [DEBUG] Generating fresh network data for "${artistName}" (no caching as requested)`);
     
-    // For demo artists with rich mock data, use real MusicBrainz to showcase enhanced producer/songwriter extraction
-    const enhancedMusicBrainzArtists: string[] = ['Post Malone', 'The Weeknd', 'Ariana Grande', 'Billie Eilish', 'Taylor Swift', 'Drake'];
-    
     const mainArtist = await this.getArtistByName(artistName);
     if (!mainArtist) {
       // Artist doesn't exist in database - return error instead of creating new entry
@@ -949,59 +946,8 @@ export class DatabaseStorage implements IStorage {
       throw new Error(`Artist "${artistName}" not found in database. Please search for an existing artist.`);
     }
 
-    // Check if this is an enhanced demo artist using the correct database name
-    if (enhancedMusicBrainzArtists.includes(mainArtist.name)) {
-      console.log(`🎵 [DEBUG] Using enhanced MusicBrainz data for "${mainArtist.name}" to showcase deep producer/songwriter networks`);
-      const networkData = await this.generateRealCollaborationNetwork(mainArtist.name);
-      return networkData;
-    }
-
-    // If artist exists in MusicNerd database (UUID ID), skip collaboration lookup 
-    // and generate real collaboration data instead since MusicNerd doesn't have our collaborations table
-    const artistId = String(mainArtist.id);
-    if (artistId.includes('-')) {
-      console.log(`🎵 [DEBUG] Found MusicNerd artist "${mainArtist.name}" - generating real collaboration network`);
-      const networkData = await this.generateRealCollaborationNetwork(mainArtist.name);
-      return networkData;
-    }
-
-    // Artist exists in our own database, build network from stored data
-    const nodes: NetworkNode[] = [];
-    const links: NetworkLink[] = [];
-    
-    const mainArtistNode: NetworkNode = {
-      id: mainArtist.name,
-      name: mainArtist.name,
-      type: mainArtist.type as 'artist' | 'producer' | 'songwriter',
-      size: 30,
-      imageUrl: mainArtist.imageUrl,
-      spotifyId: mainArtist.spotifyId,
-    };
-    nodes.push(mainArtistNode);
-
-    // Get collaborations from database (only for integer IDs)
-    const artistCollaborations = await this.getCollaborationsByArtist(mainArtist.id as number);
-    
-    for (const collab of artistCollaborations) {
-      const collaborator = await this.getArtist(collab.toArtistId);
-      if (collaborator) {
-        const collaboratorNode: NetworkNode = {
-          id: collaborator.name,
-          name: collaborator.name,
-          type: collaborator.type as 'artist' | 'producer' | 'songwriter',
-          size: 20,
-          imageUrl: collaborator.imageUrl,
-          spotifyId: collaborator.spotifyId,
-        };
-        nodes.push(collaboratorNode);
-
-        links.push({
-          source: mainArtist.name,
-          target: collaborator.name,
-        });
-      }
-    }
-
-    return { nodes, links };
+    // All artists use the same collaboration network generation - no special handling
+    const networkData = await this.generateRealCollaborationNetwork(mainArtist.name);
+    return networkData;
   }
 }
