@@ -1,4 +1,4 @@
-# Music Collaboration Network Visualizer
+# Grapevine - Music Collaboration Network Visualizer
 
 ## Overview
 
@@ -410,6 +410,15 @@ Changelog:
 - All OpenAI prompts, cache operations, and node creation now use authentic database artist names
 - Ensures network maps display proper artist stylization as stored in MusicNerd database
 - Applied fix to both cached data retrieval and new network generation paths
+
+### Updated Application Branding to "Grapevine" (July 9, 2025)
+- Changed application name from "Music Collaboration Network" to "Grapevine"
+- Updated main title on home page to display "Grapevine" 
+- Updated top navigation bar to show "Grapevine" on both desktop and mobile
+- Updated HTML page title to "Grapevine - Music Collaboration Network"
+- Updated README.md and documentation to reflect new branding
+- Replaced all logo images with new pink/purple Grapevine logo design
+- Maintained all existing functionality while updating visual branding throughout
 
 
 

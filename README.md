@@ -1,4 +1,4 @@
-# Music Collaboration Network Visualizer
+# Grapevine - Music Collaboration Network Visualizer
 
 An interactive web application that visualizes music collaboration networks between artists, producers, and songwriters using authentic industry data from multiple sources.
 

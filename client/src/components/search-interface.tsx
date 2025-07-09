@@ -247,7 +247,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
           </div>
           
           <h1 className="text-xl sm:text-4xl font-bold mb-2 sm:mb-4 text-white">
-            Music Collaboration Network
+            Grapevine
           </h1>
           <p className="text-sm sm:text-lg text-gray-300 mb-6 sm:mb-8">
             Discover connections between artists, producers, and songwriters
@@ -381,8 +381,8 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 />
               </button>
               <h2 className="text-sm sm:text-xl font-semibold text-white truncate">
-                <span className="hidden sm:inline">Music Collaboration Network</span>
-                <span className="sm:hidden">MusicNerd</span>
+                <span className="hidden sm:inline">Grapevine</span>
+                <span className="sm:hidden">Grapevine</span>
               </h2>
             </div>
             
