@@ -12,9 +12,9 @@ class RoleDetectionService {
 
   /**
    * Get verified roles for any artist from authentic data sources
-   * This ensures role consistency whether they're a main artist or collaborator
+   * Optimized for performance with intelligent role detection
    */
-  async getVerifiedRoles(artistName: string): Promise<RoleDetectionResult> {
+  async getVerifiedRoles(artistName: string, isMainArtist: boolean = false): Promise<RoleDetectionResult> {
     // Check cache first
     const cached = this.roleCache.get(artistName.toLowerCase());
     if (cached) {
@@ -25,22 +25,20 @@ class RoleDetectionService {
     const roles: Set<'artist' | 'producer' | 'songwriter'> = new Set();
     let source: 'openai' | 'musicbrainz' | 'default' = 'default';
 
-    // Try OpenAI first for role detection
+    // For main artists, always ensure they have the 'artist' role
+    if (isMainArtist) {
+      roles.add('artist');
+      source = 'verified';
+      console.log(`🎭 [RoleDetection] Main artist "${artistName}" automatically assigned 'artist' role`);
+    }
+
+    // Try OpenAI for additional role detection (but skip if rate limited)
     if (openAIService.isServiceAvailable()) {
       try {
         console.log(`🤖 [RoleDetection] Querying OpenAI for roles of "${artistName}"`);
         const openAIData = await openAIService.getArtistCollaborations(artistName);
         
-        // If this person appears in their own collaboration data, use those roles
-        const selfEntry = openAIData.artists.find(a => a.name.toLowerCase() === artistName.toLowerCase());
-        if (selfEntry) {
-          roles.add(selfEntry.type);
-          source = 'openai';
-          console.log(`✅ [RoleDetection] OpenAI found "${artistName}" as ${selfEntry.type}`);
-        }
-
-        // Also check if they appear as a collaborator in their own network
-        // This can reveal multiple roles (e.g., artist who also produces/writes)
+        // Check if they appear as a collaborator in their own network
         const collaboratorRoles = openAIData.artists
           .filter(a => a.name.toLowerCase() === artistName.toLowerCase())
           .map(a => a.type);
@@ -49,14 +47,14 @@ class RoleDetectionService {
         
         if (collaboratorRoles.length > 0) {
           source = 'openai';
-          console.log(`✅ [RoleDetection] OpenAI detected multiple roles for "${artistName}":`, collaboratorRoles);
+          console.log(`✅ [RoleDetection] OpenAI detected roles for "${artistName}":`, collaboratorRoles);
         }
       } catch (error) {
         console.log(`⚠️ [RoleDetection] OpenAI failed for "${artistName}":`, error);
       }
     }
 
-    // Try MusicBrainz as fallback
+    // Skip MusicBrainz if we already have roles (for performance)
     if (roles.size === 0) {
       try {
         console.log(`🎵 [RoleDetection] Querying MusicBrainz for roles of "${artistName}"`);

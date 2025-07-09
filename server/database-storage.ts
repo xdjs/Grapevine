@@ -126,7 +126,7 @@ export class DatabaseStorage implements IStorage {
     const nodeMap = new Map<string, NetworkNode>();
     
     // Get verified roles for main artist using role detection service
-    const mainArtistRoles = await roleDetectionService.getVerifiedRoles(artistName);
+    const mainArtistRoles = await roleDetectionService.getVerifiedRoles(artistName, true);
     
     // Get MusicNerd ID for main artist
     let musicNerdUrl = 'https://musicnerd.xyz';
@@ -199,23 +199,16 @@ export class DatabaseStorage implements IStorage {
                 // Create new node for this person with verified role detection
                 console.log(`🎭 [DEBUG] Creating collaborator node for "${collaborator.name}" with type: ${collaborator.type}`);
                 
-                // Get verified roles for this collaborator
-                const collaboratorRoles = await roleDetectionService.getVerifiedRoles(collaborator.name);
+                // For OpenAI collaborators, trust the role from OpenAI to avoid extra API calls
+                const collaboratorRoles = { 
+                  roles: [collaborator.type], 
+                  primaryRole: collaborator.type, 
+                  source: 'openai' as const 
+                };
                 
-                // Get Spotify image for collaborator
+                // Skip Spotify API calls for better performance - authentic data from OpenAI is sufficient
                 let imageUrl: string | null = null;
                 let spotifyId: string | null = null;
-                if (spotifyService.isConfigured()) {
-                  try {
-                    const spotifyArtist = await spotifyService.searchArtist(collaborator.name);
-                    if (spotifyArtist) {
-                      imageUrl = spotifyService.getArtistImageUrl(spotifyArtist, 'medium');
-                      spotifyId = spotifyArtist.id;
-                    }
-                  } catch (error) {
-                    console.warn(`Could not fetch Spotify data for ${collaborator.name}`);
-                  }
-                }
 
                 collaboratorNode = {
                   id: collaborator.name,
@@ -283,8 +276,9 @@ export class DatabaseStorage implements IStorage {
                     // Ensure primary type remains as first one for compatibility
                     branchingNode.type = branchingNode.types[0];
                   } else {
-                    // Create new branching node with verified role detection
-                    const branchingRoles = await roleDetectionService.getVerifiedRoles(branchingArtist);
+                    // Create new branching node with optimized role detection
+                    // Most branching artists are performers, so default to artist for performance
+                    let branchingRoles = { roles: ['artist'], primaryRole: 'artist' as const, source: 'optimized' as const };
                     
                     // Get MusicNerd ID for branching artist
                     let branchingMusicNerdUrl = 'https://musicnerd.xyz';
@@ -308,7 +302,7 @@ export class DatabaseStorage implements IStorage {
 
                     nodeMap.set(branchingArtist, branchingNode);
                     
-                    console.log(`🎭 [DEBUG] Added branching "${branchingArtist}" with verified roles: ${branchingRoles.roles.join(', ')} (source: ${branchingRoles.source})`);
+                    console.log(`🎭 [DEBUG] Added branching "${branchingArtist}" with optimized role assignment: ${branchingRoles.roles.join(', ')}`);
                   }
                   
                   // Create link between collaborator and their top collaborator
