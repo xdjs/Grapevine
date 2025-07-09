@@ -154,10 +154,128 @@ export class DatabaseStorage implements IStorage {
     // All role detection now handled by roleDetectionService for consistency
 
     console.log(`🔍 [DEBUG] Starting collaboration network generation for: "${artistName}"`);
-    console.log('📊 [DEBUG] Data source priority: 1) OpenAI → 2) MusicBrainz → 3) Wikipedia → 4) Known collaborations fallback');
+    console.log('📊 [DEBUG] Data source priority: 1) MusicBrainz → 2) Wikipedia → 3) OpenAI fallback only');
 
     try {
-      // First try OpenAI for collaboration data
+      // First try MusicBrainz for authentic collaboration data
+      try {
+        console.log(`🎵 [DEBUG] Querying MusicBrainz for authentic collaborations with "${artistName}"`);
+        const collaborationData = await musicBrainzService.getArtistCollaborations(artistName);
+        
+        if (collaborationData.artists.length > 0) {
+          console.log(`✅ [DEBUG] MusicBrainz found ${collaborationData.artists.length} authentic collaborators for "${artistName}"`);
+          
+          // Process MusicBrainz data - this is authentic recording credit data
+          for (const collab of collaborationData.artists) {
+            let collaboratorNode = nodeMap.get(collab.name);
+            
+            if (collaboratorNode) {
+              if (!collaboratorNode.types) {
+                collaboratorNode.types = [collaboratorNode.type];
+              }
+              if (!collaboratorNode.types.includes(collab.type)) {
+                collaboratorNode.types.push(collab.type);
+              }
+              console.log(`🎭 [DEBUG] Added ${collab.type} role to existing ${collab.name} node (now has ${collaboratorNode.types.length} roles)`);
+            } else {
+              collaboratorNode = {
+                id: collab.name,
+                name: collab.name,
+                type: collab.type,
+                types: [collab.type],
+                size: 20,
+              };
+              
+              let musicNerdUrl = 'https://musicnerd.xyz';
+              try {
+                const artistId = await musicNerdService.getArtistId(collab.name);
+                if (artistId) {
+                  musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
+                  console.log(`✅ [DEBUG] Found MusicNerd ID for ${collab.name}: ${artistId}`);
+                }
+              } catch (error) {
+                console.log(`📭 [DEBUG] No MusicNerd ID found for ${collab.name}`);
+              }
+              
+              collaboratorNode.musicNerdUrl = musicNerdUrl;
+              nodeMap.set(collab.name, collaboratorNode);
+            }
+            links.push({
+              source: mainArtistNode.id,
+              target: collaboratorNode.id,
+            });
+            
+            console.log(`✨ [DEBUG] Added authentic MusicBrainz collaborator: ${collab.name} (${collab.type})`);
+          }
+          
+          const nodes = Array.from(nodeMap.values());
+          const networkData = { nodes, links };
+          return networkData;
+        } else {
+          console.log(`👤 [DEBUG] No MusicBrainz collaborations found for "${artistName}"`);
+        }
+      } catch (error) {
+        console.log(`⚠️ [DEBUG] MusicBrainz failed for "${artistName}":`, error);
+      }
+
+      // Try Wikipedia if MusicBrainz has no data
+      try {
+        console.log(`📖 [DEBUG] Querying Wikipedia for collaborations with "${artistName}"`);
+        const wikiCollaborators = await wikipediaService.getArtistCollaborations(artistName);
+        
+        if (wikiCollaborators.length > 0) {
+          console.log(`✅ [DEBUG] Wikipedia found ${wikiCollaborators.length} collaborators for "${artistName}"`);
+          
+          for (const collab of wikiCollaborators) {
+            let collaboratorNode = nodeMap.get(collab.name);
+            
+            if (collaboratorNode) {
+              if (!collaboratorNode.types) {
+                collaboratorNode.types = [collaboratorNode.type];
+              }
+              if (!collaboratorNode.types.includes(collab.type)) {
+                collaboratorNode.types.push(collab.type);
+              }
+            } else {
+              collaboratorNode = {
+                id: collab.name,
+                name: collab.name,
+                type: collab.type,
+                types: [collab.type],
+                size: 20,
+                musicNerdUrl: 'https://musicnerd.xyz',
+              };
+              nodeMap.set(collab.name, collaboratorNode);
+            }
+            links.push({
+              source: mainArtistNode.id,
+              target: collaboratorNode.id,
+            });
+            
+            console.log(`✨ [DEBUG] Added Wikipedia collaborator: ${collab.name} (${collab.type})`);
+          }
+          
+          const nodes = Array.from(nodeMap.values());
+          const networkData = { nodes, links };
+          return networkData;
+        } else {
+          console.log(`👤 [DEBUG] No Wikipedia collaborations found for "${artistName}"`);
+        }
+      } catch (error) {
+        console.log(`⚠️ [DEBUG] Wikipedia failed for "${artistName}":`, error);
+      }
+
+      // Only use OpenAI as last resort fallback
+      if (openAIService.isServiceAvailable()) {
+        console.log(`🤖 [DEBUG] Using OpenAI as fallback for "${artistName}" (no authentic data found)`);
+      } else {
+        console.log(`👤 [DEBUG] No data sources available - returning only main artist for "${artistName}"`);
+        const nodes = Array.from(nodeMap.values());
+        const networkData = { nodes, links };
+        return networkData;
+      }
+
+      // OpenAI fallback code (only if no authentic data found)
       if (openAIService.isServiceAvailable()) {
         console.log(`🤖 [DEBUG] Querying OpenAI API for "${artistName}"...`);
         console.log(`🔍 [DEBUG] About to call openAIService.getArtistCollaborations for main artist: ${artistName}`);
