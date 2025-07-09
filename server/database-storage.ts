@@ -137,127 +137,8 @@ export class DatabaseStorage implements IStorage {
       console.log(`📭 [DEBUG] No MusicNerd ID found for main artist ${artistName}`);
     }
 
-    // Enhanced role detection system for main artist
-    const knownMultiRoleArtists = new Map<string, ('artist' | 'producer' | 'songwriter')[]>([
-      // Major Artist-Producer-Songwriters
-      ['Taylor Swift', ['artist', 'songwriter', 'producer']],
-      ['Kanye West', ['artist', 'producer', 'songwriter']],
-      ['Jay-Z', ['artist', 'producer', 'songwriter']],
-      ['Drake', ['artist', 'songwriter', 'producer']],
-      ['The Weeknd', ['artist', 'songwriter', 'producer']],
-      ['Frank Ocean', ['artist', 'songwriter', 'producer']],
-      ['Tyler, The Creator', ['artist', 'producer', 'songwriter']],
-      ['Mac Miller', ['artist', 'producer', 'songwriter']],
-      ['Childish Gambino', ['artist', 'songwriter', 'producer']],
-      ['Pharrell Williams', ['artist', 'producer', 'songwriter']],
-      ['Timbaland', ['producer', 'artist', 'songwriter']],
-      ['Dr. Dre', ['producer', 'artist']],
-      ['Eminem', ['artist', 'songwriter', 'producer']],
-      ['Lorde', ['artist', 'songwriter', 'producer']],
-      ['Grimes', ['artist', 'producer', 'songwriter']],
-      ['FKA twigs', ['artist', 'songwriter', 'producer']],
-      ['James Blake', ['artist', 'producer', 'songwriter']],
-      ['Bon Iver', ['artist', 'producer', 'songwriter']],
-      ['Tame Impala', ['artist', 'producer', 'songwriter']],
-      ['Billie Eilish', ['artist', 'songwriter']],
-      ['Finneas', ['producer', 'songwriter', 'artist']],
-      ['Charlie Puth', ['artist', 'songwriter', 'producer']],
-      ['John Mayer', ['artist', 'songwriter', 'producer']],
-      ['Bruno Mars', ['artist', 'songwriter', 'producer']],
-      ['Anderson .Paak', ['artist', 'producer', 'songwriter']],
-      ['SZA', ['artist', 'songwriter']],
-      ['Daniel Caesar', ['artist', 'songwriter', 'producer']],
-      ['Rex Orange County', ['artist', 'songwriter', 'producer']],
-      ['Kali Uchis', ['artist', 'songwriter']],
-      ['Omar Apollo', ['artist', 'songwriter']],
-      ['Clairo', ['artist', 'songwriter', 'producer']],
-      ['Still Woozy', ['artist', 'producer', 'songwriter']],
-      ['Cuco', ['artist', 'songwriter', 'producer']],
-      ['Snoh Aalegra', ['artist', 'songwriter']],
-      ['Jorja Smith', ['artist', 'songwriter']],
-      ['Kehlani', ['artist', 'songwriter']],
-      ['Summer Walker', ['artist', 'songwriter']],
-      ['Jhené Aiko', ['artist', 'songwriter']],
-      ['Tinashe', ['artist', 'songwriter', 'producer']],
-      ['Solange', ['artist', 'songwriter', 'producer']],
-      ['SiR', ['artist', 'songwriter']],
-      ['Brent Faiyaz', ['artist', 'songwriter', 'producer']],
-      
-      // Major Songwriters
-      ['Ed Sheeran', ['artist', 'songwriter']],
-      ['Adele', ['artist', 'songwriter']],
-      ['Alicia Keys', ['artist', 'songwriter', 'producer']],
-      ['Lady Gaga', ['artist', 'songwriter']],
-      ['Olivia Rodrigo', ['artist', 'songwriter']],
-      ['Phoebe Bridgers', ['artist', 'songwriter']],
-      ['Lana Del Rey', ['artist', 'songwriter']],
-      ['H.E.R.', ['artist', 'songwriter', 'producer']],
-      
-      // Producer-Songwriters
-      ['Max Martin', ['producer', 'songwriter']],
-      ['Dr. Luke', ['producer', 'songwriter']],
-      ['Benny Blanco', ['producer', 'songwriter']],
-      ['Jack Antonoff', ['producer', 'songwriter']],
-      ['Rick Rubin', ['producer']],
-      ['Quincy Jones', ['producer', 'songwriter']],
-      ['Mark Ronson', ['producer', 'songwriter']],
-      ['Diplo', ['producer', 'artist']],
-      ['Skrillex', ['producer', 'artist']],
-      ['Calvin Harris', ['producer', 'artist', 'songwriter']],
-      ['The Chainsmokers', ['producer', 'artist']],
-      ['Zedd', ['producer', 'artist']],
-      ['David Guetta', ['producer', 'artist']],
-      ['Marshmello', ['producer', 'artist']],
-      ['Flume', ['producer', 'artist']],
-      ['ODESZA', ['producer', 'artist']],
-      ['Porter Robinson', ['producer', 'artist', 'songwriter']],
-      ['Madeon', ['producer', 'artist', 'songwriter']],
-      ['What So Not', ['producer', 'artist']],
-      ['RL Grime', ['producer', 'artist']],
-      ['Baauer', ['producer', 'artist']],
-      ['Flying Lotus', ['producer', 'artist']],
-      ['Kaytranada', ['producer', 'artist']],
-      ['TOKiMONSTA', ['producer', 'artist']],
-      ['SBTRKT', ['producer', 'artist']],
-      ['Burial', ['producer', 'artist']],
-      ['Four Tet', ['producer', 'artist']],
-      ['Jamie xx', ['producer', 'artist']],
-      ['Bonobo', ['producer', 'artist']],
-      ['RJD2', ['producer', 'artist']],
-      ['Pretty Lights', ['producer', 'artist']],
-      ['GRiZ', ['producer', 'artist']],
-      ['Gramatik', ['producer', 'artist']],
-      ['Big Gigantic', ['producer', 'artist']],
-      ['SoDown', ['producer', 'artist']],
-      
-      // Specific to current searches
-      ['Dan Nigro', ['producer', 'songwriter']],
-      ['Aaron Dessner', ['producer', 'songwriter', 'artist']],
-      ['Alexander 23', ['artist', 'songwriter', 'producer']],
-      ['Casey Smith', ['songwriter', 'producer']],
-      ['Ludwig Göransson', ['producer', 'songwriter']],
-      ['Andrew Watt', ['producer', 'songwriter']],
-      ['Ali Payami', ['producer', 'songwriter']],
-      ['Shellback', ['producer', 'songwriter']],
-      ['Metro Boomin', ['producer', 'songwriter']],
-      ['Mike Dean', ['producer', 'songwriter']],
-      ['Noah "40" Shebib', ['producer', 'songwriter']],
-      ['Hit-Boy', ['producer', 'songwriter']],
-      ['Mustard', ['producer', 'songwriter']],
-      ['London on da Track', ['producer', 'songwriter']],
-      ['TM88', ['producer', 'songwriter']],
-      ['Southside', ['producer', 'songwriter']],
-      ['Wheezy', ['producer', 'songwriter']],
-      ['Pierre Bourne', ['producer', 'songwriter']],
-      ['Kenny Beats', ['producer', 'songwriter']],
-      ['Alchemist', ['producer', 'songwriter']],
-      ['Madlib', ['producer', 'songwriter']],
-      ['J Dilla', ['producer', 'songwriter']],
-      ['Nujabes', ['producer', 'songwriter']],
-    ]);
-
-    // Get enhanced roles for main artist  
-    const mainArtistTypes = knownMultiRoleArtists.get(artistName) || ['artist'];
+    // Main artist starts with artist role - additional roles will be determined from data sources
+    const mainArtistTypes = ['artist'];
 
     // Create main artist node with enhanced role detection
     const mainArtistNode: NetworkNode = {
@@ -272,63 +153,9 @@ export class DatabaseStorage implements IStorage {
     
     console.log(`🎭 [DEBUG] Main artist "${artistName}" has ${mainArtistTypes.length} roles:`, mainArtistTypes);
 
-    // Helper function to get enhanced roles for any person
+    // Helper function to determine roles based only on data from external sources
     const getEnhancedRoles = (personName: string, defaultRole: 'artist' | 'producer' | 'songwriter'): ('artist' | 'producer' | 'songwriter')[] => {
-      const knownRoles = knownMultiRoleArtists.get(personName);
-      if (knownRoles) {
-        return knownRoles;
-      }
-      
-      // If not in known list, check for common patterns
-      const lowerName = personName.toLowerCase();
-      
-      // Common producer-songwriter patterns
-      if (lowerName.includes('martin') || lowerName.includes('max') || 
-          lowerName.includes('antonoff') || lowerName.includes('jack') ||
-          lowerName.includes('nigro') || lowerName.includes('dessner') ||
-          lowerName.includes('rubin') || lowerName.includes('rick') ||
-          lowerName.includes('quincy') || lowerName.includes('jones') ||
-          lowerName.includes('ronson') || lowerName.includes('mark') ||
-          lowerName.includes('blanco') || lowerName.includes('benny') ||
-          lowerName.includes('ludwig') || lowerName.includes('watt') ||
-          lowerName.includes('payami') || lowerName.includes('ali') ||
-          lowerName.includes('shellback') || lowerName.includes('metro') ||
-          lowerName.includes('boomin') || lowerName.includes('dean') ||
-          lowerName.includes('mike') || lowerName.includes('40') ||
-          lowerName.includes('shebib') || lowerName.includes('noah') ||
-          lowerName.includes('hit-boy') || lowerName.includes('mustard') ||
-          lowerName.includes('london') || lowerName.includes('track') ||
-          lowerName.includes('tm88') || lowerName.includes('southside') ||
-          lowerName.includes('wheezy') || lowerName.includes('pierre') ||
-          lowerName.includes('bourne') || lowerName.includes('kenny') ||
-          lowerName.includes('beats') || lowerName.includes('alchemist') ||
-          lowerName.includes('madlib') || lowerName.includes('dilla') ||
-          lowerName.includes('nujabes')) {
-        if (defaultRole === 'producer') {
-          return ['producer', 'songwriter'];
-        }
-        if (defaultRole === 'songwriter') {
-          return ['songwriter', 'producer'];
-        }
-      }
-      
-      // Common artist-songwriter patterns
-      if (lowerName.includes('swift') || lowerName.includes('taylor') ||
-          lowerName.includes('sheeran') || lowerName.includes('ed') ||
-          lowerName.includes('adele') || lowerName.includes('keys') ||
-          lowerName.includes('alicia') || lowerName.includes('gaga') ||
-          lowerName.includes('rodrigo') || lowerName.includes('olivia') ||
-          lowerName.includes('bridgers') || lowerName.includes('phoebe') ||
-          lowerName.includes('lana') || lowerName.includes('del') ||
-          lowerName.includes('rey') || lowerName.includes('h.e.r.')) {
-        if (defaultRole === 'artist') {
-          return ['artist', 'songwriter'];
-        }
-        if (defaultRole === 'songwriter') {
-          return ['songwriter', 'artist'];
-        }
-      }
-      
+      // Only use the role provided by the data source - no hardcoded information
       return [defaultRole];
     };
 
@@ -538,33 +365,7 @@ export class DatabaseStorage implements IStorage {
         worksList: collaborationData.works.map(w => `${w.title} with [${w.collaborators.join(', ')}]`)
       });
       
-      // Add known authentic songwriter collaborators for major artists if not already found
-      const artistNameLower = artistName.toLowerCase();
-      const processedNames = new Set(collaborationData.artists.map(a => a.name));
-      const knownCollaborations: { [key: string]: Array<{name: string, type: 'songwriter' | 'producer', relation: string}> } = {
-        'taylor swift': [
-          {name: 'Jack Antonoff', type: 'songwriter', relation: 'co-writer'},
-          {name: 'Max Martin', type: 'songwriter', relation: 'co-writer'},
-          {name: 'Shellback', type: 'songwriter', relation: 'co-writer'},
-          {name: 'Aaron Dessner', type: 'songwriter', relation: 'co-writer'},
-        ],
-        'ariana grande': [
-          {name: 'Victoria Monét', type: 'songwriter', relation: 'co-writer'},
-          {name: 'Tayla Parx', type: 'songwriter', relation: 'co-writer'},
-        ],
-        'billie eilish': [
-          {name: 'FINNEAS', type: 'songwriter', relation: 'co-writer'},
-        ]
-      };
-      
-      if (knownCollaborations[artistNameLower]) {
-        for (const collab of knownCollaborations[artistNameLower]) {
-          if (!processedNames.has(collab.name)) {
-            collaborationData.artists.push(collab);
-            console.log(`✨ [DEBUG] Added known authentic collaborator: ${collab.name} (${collab.type})`);
-          }
-        }
-      }
+      // Only use data from external sources - no hardcoded collaborations
       
       // Get Spotify image for main artist
       let mainArtistImage = null;

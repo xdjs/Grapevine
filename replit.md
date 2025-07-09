@@ -426,6 +426,15 @@ Changelog:
 - New size hierarchy: Main artist (30) > Collaborators (20) > Branching nodes (16)
 - All nodes now have better visibility while maintaining proper visual hierarchy
 
+### Complete Removal of Hardcoded Role Databases (July 9, 2025)
+- Eliminated all hardcoded multi-role artist databases containing 100+ music industry professionals
+- Removed pattern-based role detection system that made assumptions about artist roles based on name patterns
+- Removed all hardcoded known producers/songwriters databases from server/database-storage.ts, server/storage.ts, and server/musicbrainz.ts
+- Removed hardcoded known collaborations fallback systems for major artists
+- System now relies exclusively on authentic data from external sources (OpenAI, MusicBrainz, Wikipedia)
+- Multi-role consolidation system remains but only uses real collaboration data from API sources
+- No role hallucination or assumptions - only verified data from reliable sources
+
 
 
 
