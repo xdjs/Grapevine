@@ -6,8 +6,8 @@ import { fetchNetworkData } from "@/lib/network-data";
 import { NetworkData } from "@/types/network";
 import { Search } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import musicNerdLogo from "@assets/musicNerdLogo_1751389187695.png";
-import musicNerdLogoSmall from "@assets/musicNerdLogo_1751389498769.png";
+import grapevineLogoLarge from "@assets/Grapevine Logo_1752103296007.png";
+import grapevineLogoSmall from "@assets/Grapevine Logo_1752103296007.png";
 
 interface SearchInterfaceProps {
   onNetworkData: (data: NetworkData) => void;
@@ -240,8 +240,8 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         <div className="text-center w-full max-w-md">
           <div className="mb-4 sm:mb-6 flex justify-center">
             <img 
-              src={musicNerdLogo} 
-              alt="MusicNerd Logo" 
+              src={grapevineLogoLarge} 
+              alt="Grapevine Logo" 
               className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
             />
           </div>
@@ -375,8 +375,8 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 title="Clear All"
               >
                 <img 
-                  src={musicNerdLogoSmall} 
-                  alt="MusicNerd Logo - Click to Clear" 
+                  src={grapevineLogoSmall} 
+                  alt="Grapevine Logo - Click to Clear" 
                   className="w-6 h-6 sm:w-8 sm:h-8 object-contain"
                 />
               </button>
