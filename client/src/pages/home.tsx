@@ -142,6 +142,17 @@ export default function Home() {
             
             <div className="text-gray-500 text-xs">
               <p className="mb-1 sm:mb-2">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
+              <p className="mb-1 sm:mb-2">
+                Powered by{' '}
+                <a 
+                  href="https://musicnerd.xyz" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-pink-400 hover:text-pink-300 transition-colors underline"
+                >
+                  Music Nerd
+                </a>
+              </p>
               <p>Click on artist nodes to visit their MusicNerd profiles</p>
             </div>
           </div>
