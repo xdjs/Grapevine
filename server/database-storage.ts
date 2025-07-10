@@ -73,9 +73,7 @@ export class DatabaseStorage implements IStorage {
         .insert(artists)
         .values({
           name: insertArtist.name,
-          type: insertArtist.type,
-          imageUrl: insertArtist.imageUrl || null,
-          spotifyId: insertArtist.spotifyId || null
+          type: insertArtist.type || 'artist'
         })
         .returning();
       
@@ -502,7 +500,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
             console.log(`⚠️ [DEBUG] No collaborators found for "${artistName}" from OpenAI, returning single node`);
             // Return just the main artist node
             const finalNetworkData = { 
-              nodes: [mainArtistNode], 
+              nodes: [nodeMap.get(artistName)!], 
               links: []
             };
             await this.cacheNetworkData(artistName, finalNetworkData);
@@ -555,10 +553,10 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       }
 
       // Update main artist node with additional data
-      const mainArtistNode = nodeMap.get(artistName)!;
-      mainArtistNode.imageUrl = mainArtistImage;
-      mainArtistNode.spotifyId = mainArtistSpotifyId;
-      mainArtistNode.artistId = mainArtistMusicNerdId;
+      const mainArtistNodeFromMap = nodeMap.get(artistName)!;
+      mainArtistNodeFromMap.imageUrl = mainArtistImage;
+      mainArtistNodeFromMap.spotifyId = mainArtistSpotifyId;
+      mainArtistNodeFromMap.artistId = mainArtistMusicNerdId;
 
       // Add collaborating artists from MusicBrainz - limit to top 5 producers and songwriters for performance
       console.log(`🎨 [DEBUG] Processing ${collaborationData.artists.length} MusicBrainz collaborators...`);
@@ -951,7 +949,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
               nodeMap.set(collab.name, collaboratorNode);
             }
             links.push({
-              source: mainArtistNode.id,
+              source: artistName,
               target: collaboratorNode.id,
             });
             
