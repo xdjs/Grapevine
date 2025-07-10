@@ -498,7 +498,16 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
           <Button
             onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
-            className="font-medium py-0.5 px-3 rounded-md transition-colors text-xs bg-blue-600 hover:bg-blue-700 text-white"
+            className="font-medium py-0.5 px-3 rounded-md transition-colors text-xs text-white"
+            style={{
+              backgroundColor: '#b427b4',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#9c1f9c';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#b427b4';
+            }}
           >
             Visit Music Nerd
           </Button>
