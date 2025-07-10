@@ -81,12 +81,103 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // No cached data, need to generate network using the artist's exact name
       console.log(`🆕 [Vercel] No cached data for "${artistName}" (ID: ${artistId}) - generating new network`);
 
-      // Import necessary services for network generation
-      const { openAIService } = await import('../../server/openai-service');
-      const { musicBrainzService } = await import('../../server/musicbrainz');
-      const { wikipediaService } = await import('../../server/wikipedia');
-      const { spotifyService } = await import('../../server/spotify');
-      const { musicNerdService } = await import('../../server/musicnerd-service');
+      // Check if OpenAI is available for network generation
+      const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+      
+      if (!OPENAI_API_KEY) {
+        console.error(`❌ [Vercel] OpenAI API key not configured for ${artistName}`);
+        await client.end();
+        return res.status(503).json({ 
+          error: 'OpenAI API key not configured',
+          message: 'Network generation requires OpenAI API key. Please set OPENAI_API_KEY environment variable.',
+          artist: artistName,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Generate new network data using OpenAI
+      console.log(`🤖 [Vercel] Generating network for ${artistName} using OpenAI`);
+      
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({
+        apiKey: OPENAI_API_KEY,
+      });
+
+      const prompt = `Generate a list of producers and songwriters who have collaborated with ${artistName}. Return ONLY valid JSON with no additional text, markdown, or formatting.
+
+Required format:
+{
+  "artists": [
+    {
+      "name": "Producer Name",
+      "type": "producer", 
+      "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
+    },
+    {
+      "name": "Songwriter Name",
+      "type": "songwriter",
+      "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
+    }
+  ]
+}
+
+Requirements:
+- Provide exactly 5 producers and 5 songwriters who have actually worked with ${artistName}
+- Use only real music industry collaborations
+- Return ONLY the JSON object, no other text
+- Ensure all JSON is properly formatted and valid`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.3,
+        max_tokens: 2000,
+      });
+
+      let collaborationData;
+      try {
+        const openaiContent = completion.choices[0]?.message?.content;
+        console.log(`🤖 [Vercel] OpenAI response length: ${openaiContent?.length || 0} characters`);
+        
+        if (!openaiContent) {
+          console.error('❌ [Vercel] OpenAI returned empty response');
+          await client.end();
+          return res.status(500).json({ 
+            error: 'OpenAI returned empty response',
+            message: 'Failed to generate collaboration data',
+            artist: artistName,
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        // Clean the response - remove markdown formatting if present
+        const cleanedResponse = openaiContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        console.log(`🤖 [Vercel] Cleaned OpenAI response: ${cleanedResponse.substring(0, 200)}...`);
+        
+        collaborationData = JSON.parse(cleanedResponse);
+        console.log(`🤖 [Vercel] OpenAI returned ${collaborationData?.artists?.length || 0} collaborators for "${artistName}"`);
+        
+        if (!collaborationData?.artists || collaborationData.artists.length === 0) {
+          console.error('❌ [Vercel] OpenAI returned no collaborators');
+          await client.end();
+          return res.status(500).json({ 
+            error: 'No collaborators found',
+            message: 'OpenAI could not find collaboration data for this artist',
+            artist: artistName,
+            timestamp: new Date().toISOString()
+          });
+        }
+      } catch (jsonError) {
+        console.error('❌ [Vercel] Failed to parse OpenAI response as JSON:', jsonError);
+        console.error('❌ [Vercel] Raw OpenAI response:', openaiContent);
+        await client.end();
+        return res.status(500).json({ 
+          error: 'Failed to parse OpenAI response',
+          message: 'OpenAI returned invalid JSON format',
+          artist: artistName,
+          timestamp: new Date().toISOString()
+        });
+      }
 
       // Build network data structure with multi-role consolidation
       const nodeMap = new Map();
@@ -106,90 +197,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       nodeMap.set(artistName, mainNode);
       console.log(`🎨 [Vercel] Created main artist node for "${artistName}" (ID: ${artistId})`);
 
-      // Generate collaboration network using OpenAI as primary source
-      let collaborationData = null;
+      // Process collaborators
+      const limitedCollaborators = collaborationData.artists.slice(0, 10); // Limit for performance
       
-      if (openAIService.isServiceAvailable()) {
-        try {
-          console.log(`🤖 [Vercel] Generating OpenAI collaboration data for "${artistName}"`);
-          collaborationData = await openAIService.getArtistCollaborations(artistName);
-          console.log(`🤖 [Vercel] OpenAI returned ${collaborationData.artists.length} collaborators for "${artistName}"`);
-        } catch (error) {
-          console.log(`❌ [Vercel] OpenAI generation failed for "${artistName}":`, error);
-        }
-      }
-
-      // If OpenAI fails, try MusicBrainz
-      if (!collaborationData || collaborationData.artists.length === 0) {
-        try {
-          console.log(`🎵 [Vercel] Falling back to MusicBrainz for "${artistName}"`);
-          const musicBrainzData = await musicBrainzService.getArtistCollaborations(artistName);
-          if (musicBrainzData && musicBrainzData.artists.length > 0) {
-            // Convert MusicBrainz format to OpenAI format
-            collaborationData = {
-              artists: musicBrainzData.artists.map(artist => ({
-                name: artist.name,
-                type: artist.type,
-                topCollaborators: [] // MusicBrainz doesn't provide this
-              }))
-            };
-          }
-        } catch (error) {
-          console.log(`❌ [Vercel] MusicBrainz fallback failed for "${artistName}":`, error);
-        }
-      }
-
-      // Process collaborators if we have any
-      if (collaborationData && collaborationData.artists.length > 0) {
-        const limitedCollaborators = collaborationData.artists.slice(0, 10); // Limit for performance
+      for (const collaborator of limitedCollaborators) {
+        console.log(`👤 [Vercel] Processing collaborator: "${collaborator.name}" (type: ${collaborator.type})`);
         
-        for (const collaborator of limitedCollaborators) {
-          console.log(`👤 [Vercel] Processing collaborator: "${collaborator.name}" (type: ${collaborator.type})`);
-          
-          // Check if we already have this person (for multi-role support)
-          let collaboratorNode = nodeMap.get(collaborator.name);
-          
-          if (collaboratorNode) {
-            // Person already exists - add the new role to their types array
-            if (!collaboratorNode.types) {
-              collaboratorNode.types = [collaboratorNode.type];
-            }
-            if (!collaboratorNode.types.includes(collaborator.type)) {
-              collaboratorNode.types.push(collaborator.type);
-              console.log(`🎭 [Vercel] Added ${collaborator.type} role to existing ${collaborator.name} node`);
-            }
-          } else {
-            // Create new node for this person
-            collaboratorNode = {
-              id: collaborator.name,
-              name: collaborator.name,
-              type: collaborator.type,
-              types: [collaborator.type],
-              size: 15,
-              collaborations: collaborator.topCollaborators || []
-            };
-            
-            // Try to get MusicNerd artist ID if they're an artist
-            if (collaborator.type === 'artist') {
-              try {
-                const collaboratorArtistId = await musicNerdService.getArtistId(collaborator.name);
-                if (collaboratorArtistId) {
-                  collaboratorNode.artistId = collaboratorArtistId;
-                }
-              } catch (error) {
-                console.log(`Could not fetch MusicNerd ID for ${collaborator.name}`);
-              }
-            }
-            
-            nodeMap.set(collaborator.name, collaboratorNode);
+        // Check if we already have this person (for multi-role support)
+        let collaboratorNode = nodeMap.get(collaborator.name);
+        
+        if (collaboratorNode) {
+          // Person already exists - add the new role to their types array
+          if (!collaboratorNode.types) {
+            collaboratorNode.types = [collaboratorNode.type];
           }
-
-          links.push({
-            source: artistName,
-            target: collaborator.name,
-          });
-          console.log(`🔗 [Vercel] Created link: "${artistName}" ↔ "${collaborator.name}"`);
+          if (!collaboratorNode.types.includes(collaborator.type)) {
+            collaboratorNode.types.push(collaborator.type);
+            console.log(`🎭 [Vercel] Added ${collaborator.type} role to existing ${collaborator.name} node`);
+          }
+        } else {
+          // Create new node for this person
+          collaboratorNode = {
+            id: collaborator.name,
+            name: collaborator.name,
+            type: collaborator.type,
+            types: [collaborator.type],
+            size: 15,
+            collaborations: collaborator.topCollaborators || []
+          };
+          
+          // Try to get MusicNerd artist ID if they're an artist
+          if (collaborator.type === 'artist') {
+            try {
+              const collaboratorQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
+              const collaboratorResult = await client.query(collaboratorQuery, [collaborator.name]);
+              if (collaboratorResult.rows.length > 0) {
+                collaboratorNode.artistId = collaboratorResult.rows[0].id;
+              }
+            } catch (error) {
+              console.log(`Could not fetch MusicNerd ID for ${collaborator.name}`);
+            }
+          }
+          
+          nodeMap.set(collaborator.name, collaboratorNode);
         }
+
+        links.push({
+          source: artistName,
+          target: collaborator.name,
+        });
+        console.log(`🔗 [Vercel] Created link: "${artistName}" ↔ "${collaborator.name}"`);
       }
 
       // Final node array from consolidated map
