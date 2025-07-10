@@ -4,21 +4,21 @@ import { storage } from "./storage.js";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get network data for an artist
-  app.get("/api/network/:artistName", async (req, res) => {
+  // Get network data for an artist by ID
+  app.get("/api/network/:artistId", async (req, res) => {
     try {
-      const artistName = req.params.artistName;
+      const artistId = req.params.artistId;
       
       // Check if data is cached first
       let isCached = false;
-      if ('getArtistByName' in storage) {
-        const cachedArtist = await storage.getArtistByName(artistName);
+      if ('getArtist' in storage) {
+        const cachedArtist = await storage.getArtist(parseInt(artistId));
         if (cachedArtist && 'webmapdata' in cachedArtist && cachedArtist.webmapdata) {
           isCached = true;
         }
       }
       
-      const networkData = await storage.getNetworkData(artistName);
+      const networkData = await storage.getNetworkDataById(parseInt(artistId));
       
       // Include cache status in response
       res.json({
