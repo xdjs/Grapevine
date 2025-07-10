@@ -16,7 +16,6 @@ export interface IStorage {
   
   // Network data methods
   getNetworkData(artistName: string): Promise<NetworkData | null>;
-  getNetworkDataById(artistId: number): Promise<NetworkData | null>;
 }
 
 export class MemStorage implements IStorage {
@@ -557,31 +556,6 @@ export class MemStorage implements IStorage {
     // For all other artists, use real collaboration data from MusicBrainz
     console.log(`🎵 [DEBUG] Using real collaboration data path for "${artistName}"`);
     return this.generateRealCollaborationNetwork(artistName);
-  }
-
-  async getNetworkDataById(artistId: number): Promise<NetworkData | null> {
-    const artist = await this.getArtist(artistId);
-    if (!artist) {
-      throw new Error(`Artist with ID ${artistId} not found in database`);
-    }
-    
-    // If the artist has cached webmapdata, return it
-    if (artist.webmapdata) {
-      console.log(`✅ [MemStorage] Found cached webmapdata for artist ID: ${artistId}`);
-      return artist.webmapdata as NetworkData;
-    }
-    
-    // Otherwise, generate network data by name and cache it under artist ID
-    console.log(`🆕 [MemStorage] No cached data found for artist ID: ${artistId}, generating network for "${artist.name}"`);
-    const networkData = await this.getNetworkData(artist.name);
-    
-    // Cache the generated data under the artist ID
-    if (networkData) {
-      artist.webmapdata = networkData;
-      console.log(`💾 [MemStorage] Cached network data for artist ID: ${artistId}`);
-    }
-    
-    return networkData;
   }
 
 

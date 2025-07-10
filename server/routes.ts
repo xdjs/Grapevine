@@ -37,30 +37,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get network data for an artist by ID (alternative endpoint)
-  app.get("/api/network-by-id/:artistId", async (req, res) => {
-    try {
-      const artistId = req.params.artistId;
-      
-      const networkData = await storage.getNetworkDataById(parseInt(artistId));
-      
-      if (networkData) {
-        res.json(networkData);
-      } else {
-        res.status(404).json({ error: 'Network data not found' });
-      }
-    } catch (error) {
-      console.error("Error fetching network data by ID:", error);
-      
-      // Check if it's a "not found" error
-      if (error instanceof Error && error.message.includes('not found in database')) {
-        return res.status(404).json({ message: error.message });
-      }
-      
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
   // Search for artists by name - Returns multiple suggestions for dropdown
   app.get("/api/search", async (req, res) => {
     try {
