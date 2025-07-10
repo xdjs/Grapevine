@@ -360,7 +360,18 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
           <div className="mt-4">
             <Button
               onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
-              className="w-full bg-pink-400 hover:bg-pink-500 text-white font-medium py-3 px-6 rounded-xl transition-colors"
+              className="w-full font-medium py-3 px-6 rounded-xl transition-colors"
+              style={{
+                backgroundColor: '#F8BBD9',
+                color: '#A855F7',
+                borderColor: '#A855F7'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#F5A9D0';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#F8BBD9';
+              }}
             >
               Visit Music Nerd
             </Button>
