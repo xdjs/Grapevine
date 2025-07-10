@@ -355,6 +355,16 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               </div>
             )}
           </div>
+          
+          {/* Music Nerd Button - Only show in initial view */}
+          <div className="mt-4">
+            <Button
+              onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
+              className="w-full bg-pink-600 hover:bg-pink-700 text-white font-medium py-3 px-6 rounded-xl transition-colors"
+            >
+              Visit Music Nerd
+            </Button>
+          </div>
         </div>
       </div>
 
