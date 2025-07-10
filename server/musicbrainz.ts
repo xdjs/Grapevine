@@ -186,8 +186,8 @@ class MusicBrainzService {
 
       console.log(`🔍 [DEBUG] Found ${detailedArtist.relations.length} relations for ${artistName}`);
 
-      // Process artist relations (limit to prevent infinite loops)
-      const maxRelationsToProcess = 100; // Limit relations processing to prevent timeout
+      // Process artist relations (increased limit for comprehensive data)
+      const maxRelationsToProcess = 500; // Increased limit to capture more authentic collaborations
       const relationsToProcess = detailedArtist.relations.slice(0, maxRelationsToProcess);
       
       for (const relation of relationsToProcess) {

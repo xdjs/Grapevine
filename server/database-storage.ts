@@ -159,11 +159,13 @@ export class DatabaseStorage implements IStorage {
     try {
       // First try MusicBrainz for authentic collaboration data
       try {
-        console.log(`🎵 [DEBUG] Querying MusicBrainz for authentic collaborations with "${artistName}"`);
+        console.log(`🎵 [DEBUG] STARTING MusicBrainz query for authentic collaborations with "${artistName}"`);
         const collaborationData = await musicBrainzService.getArtistCollaborations(artistName);
+        console.log(`🎵 [DEBUG] MusicBrainz query completed for "${artistName}": ${collaborationData.artists.length} collaborators found`);
         
         if (collaborationData.artists.length > 0) {
           console.log(`✅ [DEBUG] MusicBrainz found ${collaborationData.artists.length} authentic collaborators for "${artistName}"`);
+          console.log(`🔍 [DEBUG] MusicBrainz collaborators:`, collaborationData.artists.map(a => `${a.name} (${a.type})`));
           
           // Process MusicBrainz data - this is authentic recording credit data
           for (const collab of collaborationData.artists) {
@@ -200,16 +202,24 @@ export class DatabaseStorage implements IStorage {
               collaboratorNode.musicNerdUrl = musicNerdUrl;
               nodeMap.set(collab.name, collaboratorNode);
             }
+            
+            // Create link between main artist and collaborator
+            const mainArtist = nodeMap.get(artistName);
+            if (!mainArtist) {
+              console.log(`❌ [DEBUG] Main artist node not found in nodeMap for ${artistName}`);
+              throw new Error(`Main artist node not found: ${artistName}`);
+            }
+            
             links.push({
-              source: mainArtistNode.id,
+              source: mainArtist.id,
               target: collaboratorNode.id,
             });
-            
             console.log(`✨ [DEBUG] Added authentic MusicBrainz collaborator: ${collab.name} (${collab.type})`);
           }
           
           const nodes = Array.from(nodeMap.values());
           const networkData = { nodes, links };
+          console.log(`🎉 [DEBUG] RETURNING MusicBrainz network data with ${nodes.length} nodes for "${artistName}"`);
           return networkData;
         } else {
           console.log(`👤 [DEBUG] No MusicBrainz collaborations found for "${artistName}"`);
