@@ -442,6 +442,15 @@ Changelog:
 - Ensures complete removal of any previously cached data that may have contained hardcoded fallbacks
 - System now provides purely authentic collaboration data for all network visualizations
 
+### Role Persistence System Implementation (July 9, 2025)
+- Implemented comprehensive role detection system for main artists using OpenAI API
+- When generating artist's own network, system now queries OpenAI to detect their actual roles (artist, producer, songwriter)
+- Main artists maintain consistent multi-role information across different network generations
+- Role detection ensures Taylor Swift appears as "artist + songwriter" in both her own network and when appearing in others' networks
+- Added intelligent role ordering: 'artist' role prioritized first for main artists, then additional roles
+- Applied role persistence to both local server (database-storage.ts) and Vercel API endpoints for consistency
+- All role information derived from authentic OpenAI responses, no hardcoded role assignments
+
 
 
 

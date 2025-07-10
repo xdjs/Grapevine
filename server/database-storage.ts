@@ -137,21 +137,65 @@ export class DatabaseStorage implements IStorage {
       console.log(`📭 [DEBUG] No MusicNerd ID found for main artist ${artistName}`);
     }
 
-    // Main artist starts with artist role - additional roles will be determined from data sources
-    const mainArtistTypes = ['artist'];
+    // Detect main artist's roles by querying OpenAI about their roles specifically
+    let mainArtistTypes = ['artist']; // Default to artist
+    
+    // Query OpenAI to determine if main artist has multiple roles
+    if (openAIService.isServiceAvailable()) {
+      try {
+        console.log(`🔍 [DEBUG] Detecting roles for main artist "${artistName}"...`);
+        const roleDetectionPrompt = `What roles does ${artistName} have in the music industry? Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. Return ONLY the JSON array, no other text.`;
+        
+        const OpenAI = await import('openai');
+        const openai = new OpenAI.default({
+          apiKey: process.env.OPENAI_API_KEY,
+        });
 
-    // Create main artist node with enhanced role detection
+        const roleCompletion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [{ role: "user", content: roleDetectionPrompt }],
+          temperature: 0.1,
+          max_tokens: 100,
+        });
+
+        const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
+        if (roleContent) {
+          try {
+            const detectedRoles = JSON.parse(roleContent);
+            if (Array.isArray(detectedRoles) && detectedRoles.length > 0) {
+              // Ensure 'artist' is first for main artists
+              const validRoles = detectedRoles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
+              if (validRoles.length > 0) {
+                // Put 'artist' first if present, otherwise use detected order
+                if (validRoles.includes('artist')) {
+                  mainArtistTypes = ['artist', ...validRoles.filter(r => r !== 'artist')];
+                } else {
+                  mainArtistTypes = validRoles;
+                }
+                console.log(`✅ [DEBUG] Detected multiple roles for "${artistName}":`, mainArtistTypes);
+              }
+            }
+          } catch (parseError) {
+            console.log(`⚠️ [DEBUG] Could not parse role detection response for "${artistName}", using default`);
+          }
+        }
+      } catch (error) {
+        console.log(`⚠️ [DEBUG] Role detection failed for "${artistName}", using default roles`);
+      }
+    }
+
+    // Create main artist node with detected roles
     const mainArtistNode: NetworkNode = {
       id: artistName,
       name: artistName,
       type: mainArtistTypes[0], // Primary type
-      types: mainArtistTypes, // All roles
+      types: mainArtistTypes, // All detected roles
       size: 30, // Larger size for main artist
       musicNerdUrl,
     };
     nodeMap.set(artistName, mainArtistNode);
     
-    console.log(`🎭 [DEBUG] Main artist "${artistName}" has ${mainArtistTypes.length} roles:`, mainArtistTypes);
+    console.log(`🎭 [DEBUG] Main artist "${artistName}" initialized with ${mainArtistTypes.length} roles:`, mainArtistTypes);
 
     // Helper function to determine roles based only on data from external sources
     const getEnhancedRoles = (personName: string, defaultRole: 'artist' | 'producer' | 'songwriter'): ('artist' | 'producer' | 'songwriter')[] => {
