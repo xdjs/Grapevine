@@ -605,10 +605,8 @@ export default function NetworkVisualizer({
       async function openMusicNerdProfile(artistName: string, artistId?: string | null) {
       console.log(`🎵 [Frontend] openMusicNerdProfile called for "${artistName}" with artistId: ${artistId}`);
       
-      // If artistId is provided, go directly to the page without checking for multiple options
-      if (artistId) {
-        console.log(`🎵 [Frontend] artistId provided (${artistId}), going directly to page`);
-      } else {
+      // If no specific artist ID provided, check for multiple options
+      if (!artistId) {
         console.log(`🎵 [Frontend] No artistId provided, checking for multiple options`);
         
         try {
@@ -629,6 +627,8 @@ export default function NetworkVisualizer({
         } catch (error) {
           console.error(`Error fetching artist options for "${artistName}":`, error);
         }
+      } else {
+        console.log(`🎵 [Frontend] artistId provided (${artistId}), skipping lookup and going directly to page`);
       }
       
       // Always fetch the current base URL to ensure we have the latest configuration
