@@ -1064,6 +1064,32 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  private async cacheNetworkDataById(artistId: string, networkData: NetworkData): Promise<void> {
+    if (!db) {
+      console.log(`⚠️ [DEBUG] Database not available - skipping cache for artist ID "${artistId}"`);
+      return;
+    }
+
+    try {
+      console.log(`💾 [DEBUG] Caching webmapdata for artist ID "${artistId}"`);
+      
+      // Update artist with webmapdata using ID directly
+      await db.execute(sql`
+        UPDATE artists 
+        SET webmapdata = ${JSON.stringify(networkData)}::jsonb 
+        WHERE id = ${artistId}
+      `);
+      console.log(`✅ [DEBUG] Updated webmapdata cache for artist ID "${artistId}"`);
+    } catch (error: any) {
+      console.error(`❌ [DEBUG] Error caching webmapdata for artist ID "${artistId}":`, error);
+      console.error(`❌ [DEBUG] Full error details:`, {
+        message: error?.message,
+        code: error?.code,
+        detail: error?.detail
+      });
+    }
+  }
+
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
     // First, check if we have cached webmapdata for this artist (applies to ALL artists)
     console.log(`💾 [DEBUG] Checking for cached webmapdata for "${artistName}"`);
@@ -1176,7 +1202,12 @@ export class DatabaseStorage implements IStorage {
       
       // If no cached data, generate new network data using the artist's name
       console.log(`🔄 [DEBUG] No cached data found for artist ID "${artistId}" (${artist.name}), generating new network...`);
-      return await this.getNetworkData(artist.name);
+      const networkData = await this.generateRealCollaborationNetwork(artist.name);
+      
+      // Cache the result with the correct artist ID
+      await this.cacheNetworkDataById(artistId, networkData);
+      
+      return networkData;
       
     } catch (error) {
       console.error(`❌ [DEBUG] Error fetching network data for artist ID "${artistId}":`, error);
