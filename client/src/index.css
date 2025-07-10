@@ -319,38 +319,35 @@
     scrollbar-color: #AE53FF #1a1a1a;
   }
   
-  /* Music Nerd button disguised as link */
-  .music-nerd-button {
-    all: unset !important;
-    color: #ec4899 !important;
-    text-decoration: underline !important;
-    cursor: pointer !important;
+  /* Music Nerd link button */
+  .music-nerd-link {
+    display: inline-block !important;
+    padding: 8px 16px !important;
+    background-color: #ffa2e3 !important;
+    color: #1f2937 !important;
+    text-decoration: none !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
     font-weight: 500 !important;
-    display: inline !important;
-    background: none !important;
-    border: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    font-size: inherit !important;
-    font-family: inherit !important;
-    line-height: inherit !important;
+    cursor: pointer !important;
     pointer-events: auto !important;
-    position: relative !important;
     z-index: 10000 !important;
+    position: relative !important;
+    transition: background-color 0.2s ease !important;
   }
   
-  .music-nerd-button:hover {
-    color: #f9a8d4 !important;
-    text-decoration: underline !important;
+  .music-nerd-link:hover {
+    background-color: #e085cc !important;
+    text-decoration: none !important;
   }
   
-  .music-nerd-button:focus {
-    outline: 2px solid #ec4899 !important;
+  .music-nerd-link:focus {
+    outline: 2px solid #b427b4 !important;
     outline-offset: 2px !important;
   }
   
-  .music-nerd-button:active {
-    color: #db2777 !important;
+  .music-nerd-link:active {
+    background-color: #d075bb !important;
   }
   
   /* Webkit scrollbar styling for main page */
