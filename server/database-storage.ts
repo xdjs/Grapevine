@@ -196,9 +196,47 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       return globalRoleMap.get(personName) || [defaultRole];
     };
 
-    // Use simple default roles for main artist to speed up generation
-    console.log(`🔍 [DEBUG] Using default roles for main artist "${artistName}" for speed optimization...`);
-    let mainArtistTypes = ['artist']; // Fast default - role detection will happen in batch later
+    // Pre-detect roles for main artist with dedicated detection
+    console.log(`🔍 [DEBUG] Detecting roles for main artist "${artistName}"...`);
+    let mainArtistTypes = ['artist']; // Default
+    
+    if (openAIService.isServiceAvailable()) {
+      try {
+        const mainArtistRolePrompt = `What roles does ${artistName} have in the music industry? Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. Return ONLY the JSON array, no other text.`;
+        
+        const OpenAI = await import('openai');
+        const openai = new OpenAI.default({
+          apiKey: process.env.OPENAI_API_KEY,
+        });
+
+        const roleCompletion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [{ role: "user", content: mainArtistRolePrompt }],
+          temperature: 0.1,
+          max_tokens: 100,
+        });
+
+        const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
+        if (roleContent) {
+          try {
+            const detectedRoles = JSON.parse(roleContent);
+            if (Array.isArray(detectedRoles) && detectedRoles.length > 0) {
+              const validRoles = detectedRoles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
+              if (validRoles.length > 0) {
+                mainArtistTypes = validRoles;
+                console.log(`✅ [DEBUG] Detected main artist roles for "${artistName}":`, mainArtistTypes);
+                // Cache for consistency
+                globalRoleMap.set(artistName, mainArtistTypes);
+              }
+            }
+          } catch (parseError) {
+            console.log(`⚠️ [DEBUG] Could not parse main artist role detection for "${artistName}", using default`);
+          }
+        }
+      } catch (error) {
+        console.log(`⚠️ [DEBUG] Main artist role detection failed for "${artistName}", using default`);
+      }
+    }
     
     // Ensure 'artist' is first for main artists if they have that role
     const orderedMainArtistTypes = mainArtistTypes.includes('artist') 
@@ -270,9 +308,8 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
               return finalNetworkData;
             }
             
-            // Collect all people for batch role detection including main artist
+            // Collect all people for batch role detection
             const allPeople = new Set<string>();
-            allPeople.add(artistName); // Include main artist for comprehensive role detection
             for (const collaborator of authenticCollaborators) {
               allPeople.add(collaborator.name);
               for (const branchingArtist of collaborator.topCollaborators || []) {
@@ -283,27 +320,8 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
             }
             
             // Batch detect roles for all people at once for performance
-            console.log(`🎭 [DEBUG] Batch detecting roles for ${allPeople.size} people including main artist...`);
+            console.log(`🎭 [DEBUG] Batch detecting roles for ${allPeople.size} people...`);
             await batchDetectRoles([...allPeople]);
-            
-            // Update main artist roles from batch detection
-            const detectedMainArtistRoles = globalRoleMap.get(artistName);
-            if (detectedMainArtistRoles && detectedMainArtistRoles.length > 0) {
-              // Ensure 'artist' is first for main artists if they have that role
-              const orderedRoles = detectedMainArtistRoles.includes('artist') 
-                ? ['artist', ...detectedMainArtistRoles.filter(r => r !== 'artist')]
-                : detectedMainArtistRoles;
-              mainArtistTypes = orderedRoles;
-              console.log(`✅ [DEBUG] Updated main artist "${artistName}" roles from batch:`, mainArtistTypes);
-              
-              // Update the main artist node with the batch-detected roles
-              const mainNode = nodeMap.get(artistName);
-              if (mainNode) {
-                mainNode.type = mainArtistTypes[0];
-                mainNode.types = mainArtistTypes;
-                console.log(`🎭 [DEBUG] Updated main artist node "${artistName}" with batch-detected roles:`, mainArtistTypes);
-              }
-            }
             
             // Process OpenAI data and merge with main artist node map
             for (const collaborator of authenticCollaborators) {

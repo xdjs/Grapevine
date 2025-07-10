@@ -235,9 +235,44 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         return globalRoleMap.get(personName) || [defaultRole];
       };
 
-      // Use simple default roles for main artist to speed up generation
-      console.log(`🔍 [Vercel] Using default roles for main artist "${correctArtistName}" for speed optimization...`);
-      let mainArtistTypes = ['artist']; // Fast default - role detection will happen in batch later
+      // Pre-detect roles for main artist with dedicated detection
+      console.log(`🔍 [Vercel] Detecting roles for main artist "${correctArtistName}"...`);
+      let mainArtistTypes = ['artist']; // Default
+      
+      try {
+        const mainArtistRolePrompt = `What roles does ${correctArtistName} have in the music industry? Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. Return ONLY the JSON array, no other text.`;
+        
+        const openai = new OpenAI({
+          apiKey: OPENAI_API_KEY,
+        });
+
+        const roleCompletion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [{ role: "user", content: mainArtistRolePrompt }],
+          temperature: 0.1,
+          max_tokens: 100,
+        });
+
+        const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
+        if (roleContent) {
+          try {
+            const detectedRoles = JSON.parse(roleContent);
+            if (Array.isArray(detectedRoles) && detectedRoles.length > 0) {
+              const validRoles = detectedRoles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
+              if (validRoles.length > 0) {
+                mainArtistTypes = validRoles;
+                console.log(`✅ [Vercel] Detected main artist roles for "${correctArtistName}":`, mainArtistTypes);
+                // Cache for consistency
+                globalRoleMap.set(correctArtistName, mainArtistTypes);
+              }
+            }
+          } catch (parseError) {
+            console.log(`⚠️ [Vercel] Could not parse main artist role detection for "${correctArtistName}", using default`);
+          }
+        }
+      } catch (error) {
+        console.log(`⚠️ [Vercel] Main artist role detection failed for "${correctArtistName}", using default`);
+      }
       
       // Ensure 'artist' is first for main artists if they have that role
       const orderedMainArtistTypes = mainArtistTypes.includes('artist') 
@@ -261,7 +296,6 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       // Transform new format to expected format and collect all people for batch role detection
       const collaborators = [];
       const allPeople = new Set<string>();
-      allPeople.add(correctArtistName); // Include main artist for comprehensive role detection
       
       if (collaborationData.collaborators) {
         for (const person of collaborationData.collaborators) {
@@ -296,28 +330,9 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         }
       }
       
-      // Batch detect roles for all people at once for performance including main artist
-      console.log(`🎭 [Vercel] Batch detecting roles for ${allPeople.size} people including main artist...`);
+      // Batch detect roles for all people at once for performance
+      console.log(`🎭 [Vercel] Batch detecting roles for ${allPeople.size} people...`);
       await batchDetectRoles([...allPeople]);
-      
-      // Update main artist roles from batch detection
-      const detectedMainArtistRoles = globalRoleMap.get(correctArtistName);
-      if (detectedMainArtistRoles && detectedMainArtistRoles.length > 0) {
-        // Ensure 'artist' is first for main artists if they have that role
-        const orderedRoles = detectedMainArtistRoles.includes('artist') 
-          ? ['artist', ...detectedMainArtistRoles.filter(r => r !== 'artist')]
-          : detectedMainArtistRoles;
-        mainArtistTypes = orderedRoles;
-        console.log(`✅ [Vercel] Updated main artist "${correctArtistName}" roles from batch:`, mainArtistTypes);
-        
-        // Update the main artist node with the batch-detected roles
-        const mainNode = nodeMap.get(correctArtistName);
-        if (mainNode) {
-          mainNode.type = mainArtistTypes[0];
-          mainNode.types = mainArtistTypes;
-          console.log(`🎭 [Vercel] Updated main artist node "${correctArtistName}" with batch-detected roles:`, mainArtistTypes);
-        }
-      }
 
       // Process producers and songwriters with multi-role consolidation
       for (const collaborator of collaborators) {

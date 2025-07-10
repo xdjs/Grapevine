@@ -494,14 +494,6 @@ Changelog:
 - When OpenAI has no real data, returns single-node network instead of generating false information
 - Ensures complete data authenticity with zero tolerance for placeholder or synthetic collaborators
 
-### Maximum Performance Optimization (July 10, 2025)
-- Eliminated individual main artist role detection API call for faster initial network generation
-- Main artist roles now detected efficiently within single batch API call alongside all other collaborators
-- Removed sequential bottleneck of separate main artist role query saving ~3-5 seconds per generation
-- Applied optimization to both local server (database-storage.ts) and Vercel API endpoints for consistent speed
-- Maintains complete role consistency and multi-role detection while maximizing generation speed
-- Network generation now starts immediately with batch processing for all people including main artist
-
 
 
 
