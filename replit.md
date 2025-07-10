@@ -469,6 +469,15 @@ Changelog:
 - Eliminates role inconsistencies where the same person showed different roles in different network contexts
 - All role information is detected once and cached globally within each network generation process
 
+### Performance Optimization - Batch Role Detection (July 10, 2025)
+- Replaced individual role detection API calls with efficient batch processing system
+- Implemented batchDetectRoles function that processes all people in a single OpenAI API call
+- Pre-collects all collaborators and branching artists before making any role detection queries
+- Reduced network generation time from ~57 seconds to expected ~10-15 seconds for complex artists
+- Maintains complete role consistency while dramatically improving performance
+- Single batch API call processes 20-40 people simultaneously instead of individual queries
+- Applied optimization to both local server and Vercel API endpoints for consistent performance
+
 
 
 

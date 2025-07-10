@@ -177,61 +177,68 @@ Important guidelines:
       const nodeMap = new Map();
       const links = [];
 
-      // Create comprehensive role lookup system for consistency across maps
+      // Create optimized batch role detection system for performance
       const globalRoleMap = new Map<string, string[]>();
       
-      // Helper function to detect and cache roles for any person
-      const getComprehensiveRoles = async (personName: string, defaultRole: 'artist' | 'producer' | 'songwriter'): Promise<string[]> => {
-        // Check if we already have roles for this person
-        if (globalRoleMap.has(personName)) {
-          const cachedRoles = globalRoleMap.get(personName)!;
-          console.log(`🎭 [Vercel] Using cached roles for "${personName}":`, cachedRoles);
-          return cachedRoles;
-        }
+      // Batch role detection function for better performance
+      const batchDetectRoles = async (peopleList: string[]): Promise<void> => {
+        if (peopleList.length === 0) return;
         
-        // Query OpenAI to determine this person's roles
-        let detectedRoles = [defaultRole];
         try {
-          const roleDetectionPrompt = `What roles does ${personName} have in the music industry? Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. Return ONLY the JSON array, no other text.`;
+          const peopleListStr = peopleList.map(name => `"${name}"`).join(', ');
+          const batchRolePrompt = `For each of these music industry professionals: ${peopleListStr}
           
+Return their roles as JSON in this exact format:
+{
+  "Person Name 1": ["artist", "songwriter"],
+  "Person Name 2": ["producer", "songwriter"],
+  "Person Name 3": ["artist"]
+}
+
+Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has. Return ONLY the JSON object, no other text.`;
+
           const openai = new OpenAI({
             apiKey: OPENAI_API_KEY,
           });
 
           const roleCompletion = await openai.chat.completions.create({
             model: "gpt-4o",
-            messages: [{ role: "user", content: roleDetectionPrompt }],
+            messages: [{ role: "user", content: batchRolePrompt }],
             temperature: 0.1,
-            max_tokens: 100,
+            max_tokens: 1000,
           });
 
           const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
           if (roleContent) {
             try {
-              const parsedRoles = JSON.parse(roleContent);
-              if (Array.isArray(parsedRoles) && parsedRoles.length > 0) {
-                const validRoles = parsedRoles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
-                if (validRoles.length > 0) {
-                  detectedRoles = validRoles;
-                  console.log(`✅ [Vercel] Detected roles for "${personName}":`, detectedRoles);
+              const rolesData = JSON.parse(roleContent);
+              for (const [personName, roles] of Object.entries(rolesData)) {
+                if (Array.isArray(roles) && roles.length > 0) {
+                  const validRoles = roles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
+                  if (validRoles.length > 0) {
+                    globalRoleMap.set(personName, validRoles);
+                    console.log(`✅ [Vercel] Batch detected roles for "${personName}":`, validRoles);
+                  }
                 }
               }
             } catch (parseError) {
-              console.log(`⚠️ [Vercel] Could not parse role detection for "${personName}", using default`);
+              console.log(`⚠️ [Vercel] Could not parse batch role detection, falling back to defaults`);
             }
           }
         } catch (error) {
-          console.log(`⚠️ [Vercel] Role detection failed for "${personName}", using default`);
+          console.log(`⚠️ [Vercel] Batch role detection failed, falling back to defaults`);
         }
-        
-        // Cache the detected roles for consistency
-        globalRoleMap.set(personName, detectedRoles);
-        return detectedRoles;
+      };
+      
+      // Quick role lookup with fallback to default
+      const getOptimizedRoles = (personName: string, defaultRole: 'artist' | 'producer' | 'songwriter'): string[] => {
+        return globalRoleMap.get(personName) || [defaultRole];
       };
 
-      // Detect main artist's roles with comprehensive detection
+      // Pre-detect roles for main artist only
       console.log(`🔍 [Vercel] Detecting roles for main artist "${correctArtistName}"...`);
-      const mainArtistTypes = await getComprehensiveRoles(correctArtistName, 'artist');
+      await batchDetectRoles([correctArtistName]);
+      const mainArtistTypes = getOptimizedRoles(correctArtistName, 'artist');
       
       // Ensure 'artist' is first for main artists if they have that role
       const orderedMainArtistTypes = mainArtistTypes.includes('artist') 
@@ -252,10 +259,13 @@ Important guidelines:
       
       console.log(`🎭 [Vercel] Main artist "${correctArtistName}" initialized with ${orderedMainArtistTypes.length} roles:`, orderedMainArtistTypes);
 
-      // Transform new format to expected format and process collaborators
+      // Transform new format to expected format and collect all people for batch role detection
       const collaborators = [];
+      const allPeople = new Set<string>();
+      
       if (collaborationData.collaborators) {
         for (const person of collaborationData.collaborators) {
+          allPeople.add(person.name);
           const roles = person.roles || ['producer'];
           for (const role of roles) {
             if (role === 'producer' || role === 'songwriter') {
@@ -264,13 +274,31 @@ Important guidelines:
                 type: role,
                 topCollaborators: person.topCollaborators || []
               });
+              // Add branching artists to the batch
+              for (const branchingArtist of person.topCollaborators || []) {
+                if (branchingArtist !== correctArtistName) {
+                  allPeople.add(branchingArtist);
+                }
+              }
             }
           }
         }
       } else if (collaborationData.artists) {
         // Fallback for old format
         collaborators.push(...collaborationData.artists);
+        for (const collaborator of collaborationData.artists) {
+          allPeople.add(collaborator.name);
+          for (const branchingArtist of collaborator.topCollaborators || []) {
+            if (branchingArtist !== correctArtistName) {
+              allPeople.add(branchingArtist);
+            }
+          }
+        }
       }
+      
+      // Batch detect roles for all people at once for performance
+      console.log(`🎭 [Vercel] Batch detecting roles for ${allPeople.size} people...`);
+      await batchDetectRoles([...allPeople]);
 
       // Process producers and songwriters with multi-role consolidation
       for (const collaborator of collaborators) {
@@ -296,8 +324,8 @@ Important guidelines:
             collabNode.color = '#8A2BE2'; // Keep producer color for producer-songwriters
           }
         } else {
-          // Create new node with comprehensive role detection
-          const enhancedRoles = await getComprehensiveRoles(collaborator.name, collaborator.type);
+          // Create new node with optimized role detection
+          const enhancedRoles = getOptimizedRoles(collaborator.name, collaborator.type);
           const color = enhancedRoles.includes('producer') ? '#8A2BE2' : '#00CED1';
           collabNode = {
             id: collaborator.name,
@@ -332,7 +360,7 @@ Important guidelines:
         // Add branching artists
         for (const branchingArtist of collaborator.topCollaborators || []) {
           if (branchingArtist !== correctArtistName && !nodeMap.has(branchingArtist)) {
-            const branchingRoles = await getComprehensiveRoles(branchingArtist, 'artist');
+            const branchingRoles = getOptimizedRoles(branchingArtist, 'artist');
             const branchNode = {
               id: branchingArtist,
               name: branchingArtist,
