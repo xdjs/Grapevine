@@ -220,6 +220,67 @@ export class DatabaseStorage implements IStorage {
             console.log(`✨ [DEBUG] Added authentic MusicBrainz collaborator: ${collab.name} (${collab.type})`);
           }
           
+          // Add branching connections using OpenAI for producers/songwriters
+          const producersAndSongwriters = Array.from(nodeMap.values())
+            .filter(node => node.type === 'producer' || node.type === 'songwriter');
+          
+          console.log(`🔍 [DEBUG] Found ${producersAndSongwriters.length} producers/songwriters for branching:`, producersAndSongwriters.map(n => `${n.name} (${n.type})`));
+          
+          if (producersAndSongwriters.length > 0 && openAIService.isServiceAvailable()) {
+            console.log(`🌟 [DEBUG] Adding branching connections via OpenAI for ${producersAndSongwriters.length} producers/songwriters`);
+            
+            try {
+              // Get OpenAI data for the main artist to find producer/songwriter matches
+              const openAIData = await openAIService.getArtistCollaborations(artistName);
+              
+              if (openAIData.artists.length > 0) {
+                // For each producer/songwriter we found in MusicBrainz
+                for (const producerNode of producersAndSongwriters) {
+                  console.log(`🎯 [DEBUG] Looking for branching connections for "${producerNode.name}"`);
+                  
+                  // Find matching collaborator in OpenAI data  
+                  const matchingCollaborator = openAIData.artists.find(c => 
+                    c.name.toLowerCase().includes(producerNode.name.toLowerCase()) ||
+                    producerNode.name.toLowerCase().includes(c.name.toLowerCase()) ||
+                    c.name === producerNode.name
+                  );
+                  
+                  if (matchingCollaborator && matchingCollaborator.topCollaborators) {
+                    const maxBranching = 3;
+                    const branchingArtists = matchingCollaborator.topCollaborators.slice(0, maxBranching);
+                    
+                    console.log(`✨ [DEBUG] Found ${branchingArtists.length} branching artists for "${producerNode.name}":`, branchingArtists);
+                    
+                    for (const branchingArtist of branchingArtists) {
+                      if (!nodeMap.has(branchingArtist) && branchingArtist !== artistName) {
+                        const branchingNode = {
+                          id: branchingArtist,
+                          name: branchingArtist,
+                          type: 'artist' as const,
+                          types: ['artist' as const],
+                          size: 16,
+                          musicNerdUrl: 'https://musicnerd.xyz',
+                        };
+                        nodeMap.set(branchingArtist, branchingNode);
+                        
+                        links.push({
+                          source: producerNode.id,
+                          target: branchingArtist,
+                        });
+                        
+                        console.log(`🌟 [DEBUG] Added branching artist "${branchingArtist}" connected to "${producerNode.name}"`);
+                      }
+                    }
+                  } else {
+                    console.log(`⚠️ [DEBUG] No matching OpenAI collaborator found for "${producerNode.name}"`);
+                  }
+                }
+              }
+            } catch (error) {
+              console.log(`⚠️ [DEBUG] Error adding branching connections:`, error);
+            }
+          }
+          
           const nodes = Array.from(nodeMap.values());
           const networkData = { nodes, links };
           console.log(`🎉 [DEBUG] RETURNING MusicBrainz network data with ${nodes.length} nodes for "${artistName}"`);
