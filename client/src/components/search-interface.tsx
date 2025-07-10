@@ -363,7 +363,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               className="w-full font-medium py-3 px-6 rounded-xl transition-colors"
               style={{
                 backgroundColor: '#ffa2e3',
-                color: '#b427b4',
+                color: '#1f2937',
                 borderColor: '#b427b4'
               }}
               onMouseEnter={(e) => {
