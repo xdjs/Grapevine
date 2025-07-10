@@ -1143,27 +1143,4 @@ export class DatabaseStorage implements IStorage {
     return { nodes, links };
   }
 
-  async getNetworkDataById(artistId: number): Promise<NetworkData | null> {
-    const artist = await this.getArtist(artistId);
-    if (!artist) {
-      throw new Error(`Artist with ID ${artistId} not found in database`);
-    }
-    
-    // If the artist has cached webmapdata, return it
-    if (artist.webmapdata) {
-      console.log(`✅ [DatabaseStorage] Found cached webmapdata for artist ID: ${artistId}`);
-      return artist.webmapdata as NetworkData;
-    }
-    
-    // Otherwise, generate network data by name
-    console.log(`🆕 [DatabaseStorage] No cached data found for artist ID: ${artistId}, generating network for "${artist.name}"`);
-    const networkData = await this.getNetworkData(artist.name);
-    
-    // Cache the generated data
-    if (networkData) {
-      await this.cacheNetworkData(artist.name, networkData);
-    }
-    
-    return networkData;
-  }
 }

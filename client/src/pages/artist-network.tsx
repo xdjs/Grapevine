@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useRoute } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import SearchInterface from "@/components/search-interface";
 import NetworkVisualizer from "@/components/network-visualizer";
 import ZoomControls from "@/components/zoom-controls";
@@ -12,11 +11,11 @@ import { Home, ArrowLeft } from "lucide-react";
 import { NetworkData, FilterState } from "@/types/network";
 import { Loader2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { fetchNetworkDataById } from "@/lib/network-data";
 
 export default function ArtistNetwork() {
-  const [match, params] = useRoute("/artist/:artistId");
-  const artistId = params?.artistId;
+  const [, setLocation] = useLocation();
+  const [networkData, setNetworkData] = useState<NetworkData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
   const [clearSearchField, setClearSearchField] = useState(false);
   const [filterState, setFilterState] = useState<FilterState>({
@@ -26,13 +25,6 @@ export default function ArtistNetwork() {
   });
   const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
   const isMobile = useIsMobile();
-
-  // Fetch network data for the artist ID
-  const { data: networkData, isLoading, error } = useQuery({
-    queryKey: [`/api/network/${artistId}`],
-    queryFn: () => fetchNetworkDataById(artistId!),
-    enabled: !!artistId,
-  });
 
   // Navigate back to home
   const handleGoHome = () => {
@@ -70,18 +62,12 @@ export default function ArtistNetwork() {
   };
 
   const handleNetworkData = useCallback((data: NetworkData) => {
-    // When search interface generates new data, we could navigate to that artist's page
-    // For now, we'll just update the current view
-    console.log("New network data received:", data);
+    setNetworkData(data);
   }, []);
 
   const handleLoadingChange = useCallback((loading: boolean) => {
-    console.log("Loading state changed:", loading);
+    setIsLoading(loading);
   }, []);
-
-  if (!artistId) {
-    return <div>Artist ID not found</div>;
-  }
 
   return (
     <div className="relative w-full min-h-screen bg-black text-white">
@@ -112,7 +98,7 @@ export default function ArtistNetwork() {
       {/* Network Visualization */}
       {networkData && (
         <NetworkVisualizer
-          key={`network-${artistId}-${Date.now()}`}
+          key={`network-${Date.now()}`}
           data={networkData}
           visible={true}
           filterState={filterState}
@@ -128,24 +114,8 @@ export default function ArtistNetwork() {
             <Loader2 className="h-10 w-10 sm:h-12 sm:w-12 animate-spin text-pink-500" />
             <p className="text-base sm:text-lg font-medium text-white text-center">Loading collaboration network...</p>
             <p className="text-xs sm:text-sm text-gray-400 text-center">
-              Retrieving authentic collaboration data for artist ID: {artistId}
+              Retrieving authentic collaboration data from multiple sources...
             </p>
-          </div>
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-30 p-4">
-          <div className="bg-black/80 rounded-lg p-4 sm:p-8 flex flex-col items-center space-y-3 sm:space-y-4 max-w-sm sm:max-w-md">
-            <p className="text-base sm:text-lg font-medium text-red-400 text-center">Error loading network</p>
-            <p className="text-xs sm:text-sm text-gray-400 text-center">
-              {error instanceof Error ? error.message : "Failed to load collaboration network"}
-            </p>
-            <Button onClick={handleGoHome} variant="outline" className="mt-4">
-              <Home className="h-4 w-4 mr-2" />
-              Go Home
-            </Button>
           </div>
         </div>
       )}

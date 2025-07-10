@@ -16,7 +16,6 @@ export interface IStorage {
   
   // Network data methods
   getNetworkData(artistName: string): Promise<NetworkData | null>;
-  getNetworkDataById(artistId: number): Promise<NetworkData | null>;
 }
 
 export class MemStorage implements IStorage {
@@ -559,21 +558,7 @@ export class MemStorage implements IStorage {
     return this.generateRealCollaborationNetwork(artistName);
   }
 
-  async getNetworkDataById(artistId: number): Promise<NetworkData | null> {
-    const artist = await this.getArtist(artistId);
-    if (!artist) {
-      throw new Error(`Artist with ID ${artistId} not found in database`);
-    }
-    
-    // If the artist has cached webmapdata, return it
-    if (artist.webmapdata) {
-      console.log(`✅ [MemStorage] Found cached webmapdata for artist ID: ${artistId}`);
-      return artist.webmapdata as NetworkData;
-    }
-    
-    // Otherwise, generate network data by name
-    return this.getNetworkData(artist.name);
-  }
+
 
   private async generateEnhancedDemoNetwork(mainArtist: Artist): Promise<NetworkData> {
     const nodes: NetworkNode[] = [];

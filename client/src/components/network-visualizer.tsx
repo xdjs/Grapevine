@@ -517,14 +517,7 @@ export default function NetworkVisualizer({
         if ((d.type === 'artist' || (d.types && d.types.includes('artist'))) && onArtistSearch) {
           const mainArtistNode = data.nodes.find(node => node.size === 20 && node.type === 'artist');
           if (d !== mainArtistNode) {
-            // Get the artist ID from the node data or find it via search
-            if (d.artistId) {
-              console.log(`🔍 [Right-click] Navigating to artist ID: ${d.artistId}`);
-              window.location.href = `/artist/${d.artistId}`;
-            } else {
-              // Fallback to name-based search
-              onArtistSearch(d.name);
-            }
+            onArtistSearch(d.name);
           }
         }
       })
