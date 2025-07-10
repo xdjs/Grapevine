@@ -72,9 +72,7 @@ export class DatabaseStorage implements IStorage {
         .insert(artists)
         .values({
           name: insertArtist.name,
-          type: insertArtist.type,
-          imageUrl: insertArtist.imageUrl || null,
-          spotifyId: insertArtist.spotifyId || null
+          type: insertArtist.type || 'artist'
         })
         .returning();
       
@@ -281,7 +279,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       // Proceed directly to MusicBrainz for authentic collaboration data
       if (false) { // Disabled OpenAI
         console.log(`🤖 [DEBUG] Querying OpenAI API for "${artistName}"...`);
-        console.log(`🔍 [DEBUG] About to call openAIService.getArtistCollaborations for main artist: ${artistName}`);
+        console.log(`🔍 [DEBUG] About to call openAIService.getArtistCollaborations for main artist:`, artistName);
         
         try {
           const openAIData = await openAIService.getArtistCollaborations(artistName);
@@ -651,7 +649,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
             console.log(`⚠️ [DEBUG] No collaborators found for "${artistName}" from OpenAI, returning single node`);
             // Return just the main artist node
             const finalNetworkData = { 
-              nodes: [mainArtistNode], 
+              nodes: [nodeMap.get(artistName)!], 
               links: []
             };
             await this.cacheNetworkData(artistName, finalNetworkData);
@@ -752,9 +750,17 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       artistId: mainArtistMusicNerdId,
     };
 
+
+      // Update main artist node with additional data
+      const mainArtistNodeFromMap = nodeMap.get(artistName)!;
+      mainArtistNodeFromMap.imageUrl = mainArtistImage;
+      mainArtistNodeFromMap.spotifyId = mainArtistSpotifyId;
+      mainArtistNodeFromMap.artistId = mainArtistMusicNerdId;
+
     const nodeMap = new Map<string, NetworkNode>();
     nodeMap.set(artistName, mainArtistNode);
     const links: NetworkLink[] = [];
+
 
     // Process collaborators and get their branching collaborators
     for (const collaborator of collaborators) {
@@ -1154,6 +1160,15 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
                 console.log(`🌟 [DEBUG] Added cross-collaboration link: "${collaborator1.name}" ↔ "${collaborator2.name}"`);
               }
             }
+
+            links.push({
+              source: artistName,
+              target: collaboratorNode.id,
+            });
+            
+            console.log(`✨ [DEBUG] Added known authentic collaborator: ${collab.name} (${collab.type})`);
+
+
           }
         } catch (error) {
           console.log(`❌ [DEBUG] Error checking cross-collaboration between "${collaborator1.name}" and "${collaborator2.name}":`, error);
