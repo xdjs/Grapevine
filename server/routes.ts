@@ -123,10 +123,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/config", async (req, res) => {
     try {
       // Use production URL from environment variable
-      const musicNerdBaseUrl = process.env.MUSIC_BASE_URL || process.env.MUSICNERD_BASE_URL;
+      const musicNerdBaseUrl = process.env.MUSICNERD_BASE_URL;
       
       if (!musicNerdBaseUrl) {
-        console.error("🔧 [CRITICAL] MUSIC_BASE_URL environment variable is not set");
+        console.error("🔧 [CRITICAL] MUSICNERD_BASE_URL environment variable is not set");
         res.status(500).json({ message: "MusicNerd base URL not configured" });
         return;
       }

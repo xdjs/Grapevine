@@ -36,10 +36,13 @@ export const networkNodeSchema = z.object({
   id: z.string(),
   name: z.string(),
   type: z.enum(['artist', 'producer', 'songwriter']),
-  types: z.array(z.enum(['artist', 'producer', 'songwriter'])), // Support for multiple roles
+  types: z.array(z.enum(['artist', 'producer', 'songwriter'])).optional(), // Support for multiple roles
   size: z.number(),
-  topCollaborations: z.array(z.string()).optional(),
+  collaborations: z.array(z.string()).optional(),
+  imageUrl: z.string().nullable().optional(),
+  spotifyId: z.string().nullable().optional(),
   artistId: z.string().nullable().optional(), // MusicNerd artist ID for linking
+  musicNerdUrl: z.string().optional(), // Direct URL to MusicNerd artist page
 });
 
 export const networkLinkSchema = z.object({
