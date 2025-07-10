@@ -148,7 +148,12 @@ export default function Home() {
                   href="https://www.musicnerd.xyz" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-pink-400 hover:text-pink-300 transition-colors underline"
+                  className="text-pink-400 hover:text-pink-300 transition-colors underline cursor-pointer z-50 relative"
+                  onClick={(e) => {
+                    console.log('Music Nerd link clicked');
+                    e.preventDefault();
+                    window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer');
+                  }}
                 >
                   Music Nerd
                 </a>
