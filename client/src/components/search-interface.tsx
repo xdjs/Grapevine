@@ -503,7 +503,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               backgroundColor: '#b427b4',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#d946ef';
+              e.currentTarget.style.backgroundColor = '#8f1c8f';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = '#b427b4';
