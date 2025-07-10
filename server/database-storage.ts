@@ -1192,9 +1192,35 @@ export class DatabaseStorage implements IStorage {
     // Use the artist's exact name from database for network generation
     const networkData = await this.generateRealCollaborationNetwork(cachedArtist.name);
     
-    // Cache the newly generated data
-    await this.cacheNetworkData(cachedArtist.name, networkData);
+    // Cache the newly generated data using artist ID instead of name to ensure precision
+    await this.cacheNetworkDataById(artistId, networkData);
     
     return networkData;
+  }
+
+  private async cacheNetworkDataById(artistId: string, networkData: NetworkData): Promise<void> {
+    if (!db) {
+      console.log(`⚠️ [DEBUG] Database not available - skipping cache for artist ID "${artistId}"`);
+      return;
+    }
+
+    try {
+      console.log(`💾 [DEBUG] Caching webmapdata for artist ID "${artistId}"`);
+      
+      // Update artist by ID to ensure we're updating the correct artist
+      await db.execute(sql`
+        UPDATE artists 
+        SET webmapdata = ${JSON.stringify(networkData)}::jsonb 
+        WHERE id = ${artistId}
+      `);
+      console.log(`✅ [DEBUG] Updated webmapdata cache for artist ID "${artistId}"`);
+    } catch (error: any) {
+      console.error(`❌ [DEBUG] Error caching webmapdata for artist ID "${artistId}":`, error);
+      console.error(`❌ [DEBUG] Full error details:`, {
+        message: error?.message,
+        code: error?.code,
+        detail: error?.detail
+      });
+    }
   }
 }
