@@ -145,7 +145,7 @@ export default function Home() {
               <p className="mb-1 sm:mb-2">
                 Powered by{' '}
                 <a 
-                  href="https://musicnerd.xyz" 
+                  href="https://www.musicnerd.xyz" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-pink-400 hover:text-pink-300 transition-colors underline"
