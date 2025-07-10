@@ -324,49 +324,19 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
                 // Create new node for this person with optimized role detection
                 const enhancedRoles = getOptimizedRoles(collaborator.name, collaborator.type);
                 
-                // Get image from Spotify if available
-                let imageUrl: string | null = null;
-                let spotifyId: string | null = null;
-                if (spotifyService.isConfigured()) {
-                  try {
-                    const spotifyArtist = await spotifyService.searchArtist(collaborator.name);
-                    if (spotifyArtist) {
-                      imageUrl = spotifyService.getArtistImageUrl(spotifyArtist, 'medium');
-                      spotifyId = spotifyArtist.id;
-                    }
-                  } catch (error) {
-                    console.log(`🔒 [DEBUG] Spotify search failed for "${collaborator.name}"`);
-                  }
-                }
-
                 collaboratorNode = {
                   id: collaborator.name,
                   name: collaborator.name,
                   type: enhancedRoles[0], // Primary role
                   types: enhancedRoles, // All roles
                   size: 20,
-                  imageUrl,
-                  spotifyId,
+                  imageUrl: null, // Will be set in batch
+                  spotifyId: null, // Will be set in batch
                   collaborations: collaborator.topCollaborators || [],
+                  musicNerdUrl: 'https://musicnerd.xyz', // Will be set in batch
                 };
                 
                 console.log(`🎭 [DEBUG] Enhanced "${collaborator.name}" from ${collaborator.type} to roles:`, enhancedRoles);
-
-                // Get MusicNerd artist ID for the collaborator
-
-                let musicNerdUrl = 'https://musicnerd.xyz';
-                try {
-                  const artistId = await musicNerdService.getArtistId(collaborator.name);
-                  if (artistId) {
-                    musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
-
-                    console.log(`✅ [DEBUG] Found MusicNerd ID for ${collaborator.name}: ${artistId}`);
-                  }
-                } catch (error) {
-                  console.log(`📭 [DEBUG] No MusicNerd ID found for ${collaborator.name}`);
-                }
-
-                collaboratorNode.musicNerdUrl = musicNerdUrl;
                 nodeMap.set(collaborator.name, collaboratorNode);
               }
 
@@ -416,22 +386,8 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
                       type: enhancedBranchingRoles[0], // Primary role
                       types: enhancedBranchingRoles, // All roles
                       size: 16, // Branching nodes size (updated from 15 to 16)
+                      musicNerdUrl: 'https://musicnerd.xyz', // Will be set in batch
                     };
-
-                    // Get MusicNerd ID for branching artist
-
-                    let branchingMusicNerdUrl = 'https://musicnerd.xyz';
-                    try {
-                      const branchingArtistId = await musicNerdService.getArtistId(branchingArtist);
-                      if (branchingArtistId) {
-                        branchingMusicNerdUrl = `https://musicnerd.xyz/artist/${branchingArtistId}`;
-
-                      }
-                    } catch (error) {
-                      console.log(`📭 [DEBUG] No MusicNerd ID found for branching artist ${branchingArtist}`);
-                    }
-
-                    branchingNode.musicNerdUrl = branchingMusicNerdUrl;
                     nodeMap.set(branchingArtist, branchingNode);
                     
                     console.log(`🎭 [DEBUG] Enhanced OpenAI branching "${branchingArtist}" to roles:`, enhancedBranchingRoles);
@@ -452,6 +408,59 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
             }
 
 
+            // Batch process all external API calls for performance optimization
+            console.log(`⚡ [DEBUG] Batch processing external APIs for ${nodeMap.size} nodes...`);
+            const allNodesForBatch = Array.from(nodeMap.values());
+            const nodeNames = allNodesForBatch.map(node => node.name);
+            
+            // Parallel batch operations
+            const [spotifyResults, musicNerdResults] = await Promise.all([
+              // Batch Spotify searches
+              spotifyService.isConfigured() ? 
+                Promise.allSettled(nodeNames.map(async name => {
+                  try {
+                    const artist = await spotifyService.searchArtist(name);
+                    return { name, artist };
+                  } catch (error) {
+                    return { name, artist: null };
+                  }
+                })) : 
+                Promise.resolve([]),
+              
+              // Batch MusicNerd ID lookups
+              Promise.allSettled(nodeNames.map(async name => {
+                try {
+                  const artistId = await musicNerdService.getArtistId(name);
+                  return { name, artistId };
+                } catch (error) {
+                  return { name, artistId: null };
+                }
+              }))
+            ]);
+            
+            // Apply Spotify results
+            if (spotifyResults.length > 0) {
+              for (const result of spotifyResults) {
+                if (result.status === 'fulfilled' && result.value.artist) {
+                  const node = nodeMap.get(result.value.name);
+                  if (node) {
+                    node.imageUrl = spotifyService.getArtistImageUrl(result.value.artist, 'medium');
+                    node.spotifyId = result.value.artist.id;
+                  }
+                }
+              }
+            }
+            
+            // Apply MusicNerd results
+            for (const result of musicNerdResults) {
+              if (result.status === 'fulfilled' && result.value.artistId) {
+                const node = nodeMap.get(result.value.name);
+                if (node) {
+                  node.musicNerdUrl = `https://musicnerd.xyz/artist/${result.value.artistId}`;
+                }
+              }
+            }
+            
             // Final node array from consolidated map
             const nodes = Array.from(nodeMap.values());
             console.log(`✅ [DEBUG] Successfully created network from OpenAI data: ${nodes.length} total nodes (including main artist) for "${artistName}"`);
