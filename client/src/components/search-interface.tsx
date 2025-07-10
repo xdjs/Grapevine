@@ -360,7 +360,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
           <div className="mt-4">
             <Button
               onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
-              className="w-full bg-pink-600 hover:bg-pink-700 text-white font-medium py-3 px-6 rounded-xl transition-colors"
+              className="w-full bg-pink-400 hover:bg-pink-500 text-white font-medium py-3 px-6 rounded-xl transition-colors"
             >
               Visit Music Nerd
             </Button>
