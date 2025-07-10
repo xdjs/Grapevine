@@ -367,7 +367,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 borderColor: '#b427b4'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#ff8fd9';
+                e.currentTarget.style.backgroundColor = '#f598dc';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = '#ffa2e3';
