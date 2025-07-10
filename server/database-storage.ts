@@ -280,9 +280,37 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
           });
 
           if (openAIData.artists.length > 0) {
+            // Filter out any generic/fake names that might slip through
+            const authenticCollaborators = openAIData.artists.filter(collaborator => {
+              const name = collaborator.name.toLowerCase();
+              // Filter out obviously fake or generic names
+              const fakePatterns = [
+                'john doe', 'jane doe', 'john smith', 'jane smith',
+                'producer x', 'songwriter y', 'artist a', 'artist b',
+                'unknown', 'anonymous', 'various', 'n/a', 'tbd',
+                'placeholder', 'example', 'sample'
+              ];
+              return !fakePatterns.some(pattern => name.includes(pattern)) &&
+                     !name.match(/^(artist|producer|songwriter)\s+[a-z]$/i) &&
+                     !name.match(/^[a-z]{1,2}$/i); // Single letters or very short generic names
+            });
+            
+            console.log(`🔍 [DEBUG] Filtered ${openAIData.artists.length} to ${authenticCollaborators.length} authentic collaborators`);
+            
+            if (authenticCollaborators.length === 0) {
+              console.log(`⚠️ [DEBUG] No authentic collaborators found for "${artistName}" from OpenAI, returning single node`);
+              // Return just the main artist node
+              const finalNetworkData = { 
+                nodes: [mainArtistNode], 
+                links: []
+              };
+              await this.cacheNetworkData(artistName, finalNetworkData);
+              return finalNetworkData;
+            }
+            
             // Collect all people for batch role detection
             const allPeople = new Set<string>();
-            for (const collaborator of openAIData.artists) {
+            for (const collaborator of authenticCollaborators) {
               allPeople.add(collaborator.name);
               for (const branchingArtist of collaborator.topCollaborators || []) {
                 if (branchingArtist !== artistName) {
@@ -296,7 +324,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
             await batchDetectRoles([...allPeople]);
             
             // Process OpenAI data and merge with main artist node map
-            for (const collaborator of openAIData.artists) {
+            for (const collaborator of authenticCollaborators) {
               // Check if we already have a node for this person (including main artist)
               let collaboratorNode = nodeMap.get(collaborator.name);
               
@@ -471,7 +499,15 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
             await this.cacheNetworkData(artistName, finalNetworkData);
             
             return finalNetworkData;
-
+          } else {
+            console.log(`⚠️ [DEBUG] No collaborators found for "${artistName}" from OpenAI, returning single node`);
+            // Return just the main artist node
+            const finalNetworkData = { 
+              nodes: [mainArtistNode], 
+              links: []
+            };
+            await this.cacheNetworkData(artistName, finalNetworkData);
+            return finalNetworkData;
           }
         } catch (error) {
           console.error(`❌ [DEBUG] OpenAI API error for "${artistName}":`, error);

@@ -38,7 +38,9 @@ class OpenAIService {
     console.log(`🤖 [DEBUG] Querying OpenAI for collaborations with "${artistName}"`);
 
     try {
-      const prompt = `Generate a comprehensive list of music industry professionals who have collaborated with ${artistName}. Include people who work as producers, songwriters, or both. For each person, specify all their roles and their top 3 collaborating artists.
+      const prompt = `If ${artistName} is a real artist with known music industry collaborations, provide a comprehensive list of music industry professionals who have collaborated with them. Include people who work as producers, songwriters, or both.
+
+IMPORTANT: If ${artistName} is not a well-known artist or you have no authentic collaboration data for them, return an empty collaborators array. Do NOT create fake or placeholder collaborators.
 
 Please respond with JSON in this exact format:
 {
@@ -47,21 +49,17 @@ Please respond with JSON in this exact format:
       "name": "Person Name",
       "roles": ["producer", "songwriter"], 
       "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
-    },
-    {
-      "name": "Another Person",
-      "roles": ["songwriter"],
-      "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
     }
   ]
 }
 
-Important guidelines:
-- Include up to 10 music industry professionals who have actually worked with ${artistName}
-- For each person, list ALL their roles from: ["producer", "songwriter", "artist"]
-- Many professionals have multiple roles (e.g., Jack Antonoff is both producer and songwriter)
-- Include their top 3 collaborating artists for each person
-- Focus on real, verified collaborations from the music industry`;
+Guidelines:
+- Only include real, verified music industry professionals who have actually worked with ${artistName}
+- If you don't have authentic data, return: {"collaborators": []}
+- For each real person, list ALL their roles from: ["producer", "songwriter", "artist"]
+- Include their top 3 real collaborating artists
+- Never use generic names like "John Doe", "Producer X", or placeholder data
+- Maximum 10 real collaborators if they exist`;
 
       const response = await this.openai!.chat.completions.create({
         model: "gpt-4o",
