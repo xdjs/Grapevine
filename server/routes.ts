@@ -4,7 +4,7 @@ import { storage } from "./storage.js";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get network data for an artist
+  // Get network data for an artist by name
   app.get("/api/network/:artistName", async (req, res) => {
     try {
       const artistName = req.params.artistName;
@@ -27,6 +27,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error fetching network data:", error);
+      
+      // Check if it's a "not found" error
+      if (error instanceof Error && error.message.includes('not found in database')) {
+        return res.status(404).json({ message: error.message });
+      }
+      
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get network data for an artist by ID
+  app.get("/api/network-by-id/:artistId", async (req, res) => {
+    try {
+      const artistId = req.params.artistId;
+      
+      // Check if the storage supports ID-based lookups
+      if (!('getNetworkDataById' in storage) || !storage.getNetworkDataById) {
+        return res.status(501).json({ message: "ID-based network lookup not supported" });
+      }
+      
+      // Check if data is cached first
+      let isCached = false;
+      const cachedArtist = await storage.getArtist(artistId);
+      if (cachedArtist && 'webmapdata' in cachedArtist && cachedArtist.webmapdata) {
+        isCached = true;
+      }
+      
+      const networkData = await storage.getNetworkDataById(artistId);
+      
+      // Include cache status in response
+      res.json({
+        ...networkData,
+        cached: isCached
+      });
+    } catch (error) {
+      console.error("Error fetching network data by ID:", error);
       
       // Check if it's a "not found" error
       if (error instanceof Error && error.message.includes('not found in database')) {

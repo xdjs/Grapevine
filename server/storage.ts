@@ -6,7 +6,7 @@ import { musicNerdService } from "./musicnerd-service.js";
 
 export interface IStorage {
   // Artist methods
-  getArtist(id: number): Promise<Artist | undefined>;
+  getArtist(id: number | string): Promise<Artist | undefined>;
   getArtistByName(name: string): Promise<Artist | undefined>;
   createArtist(artist: InsertArtist): Promise<Artist>;
   
@@ -16,6 +16,7 @@ export interface IStorage {
   
   // Network data methods
   getNetworkData(artistName: string): Promise<NetworkData | null>;
+  getNetworkDataById?(artistId: string): Promise<NetworkData | null>;
 }
 
 export class MemStorage implements IStorage {
@@ -130,7 +131,17 @@ export class MemStorage implements IStorage {
     await this.createCollaboration({ fromArtistId: clairo.id, toArtistId: jacksonFoote.id, collaborationType: "songwriting" });
   }
 
-  async getArtist(id: number): Promise<Artist | undefined> {
+  async getArtist(id: number | string): Promise<Artist | undefined> {
+    // Handle both numeric and string IDs for compatibility
+    if (typeof id === 'string') {
+      // For string IDs, search by converting to number if possible
+      const numericId = parseInt(id);
+      if (!isNaN(numericId)) {
+        return this.artists.get(numericId);
+      }
+      // For UUID-style string IDs, search by name as fallback
+      return Array.from(this.artists.values()).find(artist => String(artist.id) === id);
+    }
     return this.artists.get(id);
   }
 
@@ -556,6 +567,26 @@ export class MemStorage implements IStorage {
     // For all other artists, use real collaboration data from MusicBrainz
     console.log(`🎵 [DEBUG] Using real collaboration data path for "${artistName}"`);
     return this.generateRealCollaborationNetwork(artistName);
+  }
+
+  async getNetworkDataById(artistId: string): Promise<NetworkData | null> {
+    console.log(`🔍 [MemStorage] Generating network for artist ID "${artistId}"`);
+    const artist = await this.getArtist(artistId);
+    if (!artist) {
+      throw new Error(`Artist with ID "${artistId}" not found in database`);
+    }
+    
+    // Use the same logic as getNetworkData but with the found artist
+    const demoArtists = ['Taylor Swift', 'Drake', 'Billie Eilish', 'Ed Sheeran'];
+    
+    if (demoArtists.includes(artist.name)) {
+      console.log(`🎵 [DEBUG] Using enhanced demo data for "${artist.name}" (ID: ${artistId}) to showcase producer/songwriter networks`);
+      return this.generateEnhancedDemoNetwork(artist);
+    }
+    
+    // For all other artists, use real collaboration data from MusicBrainz
+    console.log(`🎵 [DEBUG] Using real collaboration data path for "${artist.name}" (ID: ${artistId})`);
+    return this.generateRealCollaborationNetwork(artist.name);
   }
 
   private async generateEnhancedDemoNetwork(mainArtist: Artist): Promise<NetworkData> {

@@ -15,7 +15,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getArtist(id: number): Promise<Artist | undefined> {
+  async getArtist(id: number | string): Promise<Artist | undefined> {
     if (!db) return undefined;
     
     try {
@@ -25,7 +25,19 @@ export class DatabaseStorage implements IStorage {
         .where(eq(artists.id, id))
         .limit(1);
       
-      return result[0];
+      const artist = result[0];
+      if (artist) {
+        // Add default type field since MusicNerd database doesn't have it
+        return {
+          id: artist.id,
+          name: artist.name,
+          type: 'artist' as const,
+          imageUrl: null,
+          spotifyId: null,
+          webmapdata: artist.webmapdata
+        };
+      }
+      return undefined;
     } catch (error) {
       console.error('Error fetching artist:', error);
       return undefined;
@@ -1141,5 +1153,28 @@ export class DatabaseStorage implements IStorage {
     }
 
     return { nodes, links };
+  }
+
+  // New method to get network data by artist ID instead of name
+  async getNetworkDataById(artistId: string): Promise<NetworkData | null> {
+    console.log(`💾 [DEBUG] Checking for cached webmapdata for artist ID "${artistId}"`);
+    
+    // Query by ID instead of name for precise matching
+    const cachedArtist = await this.getArtist(artistId as unknown as number);
+    
+    if (cachedArtist?.webmapdata) {
+      console.log(`✅ [DEBUG] Found cached webmapdata for "${cachedArtist.name}" (ID: ${artistId}) - using cached data`);
+      return cachedArtist.webmapdata as NetworkData;
+    }
+    
+    console.log(`🆕 [DEBUG] No cached data found for artist ID "${artistId}" - generating new network data`);
+    
+    if (!cachedArtist) {
+      console.log(`❌ [DEBUG] Artist ID "${artistId}" does not exist in database - cannot generate network`);
+      throw new Error(`Artist with ID "${artistId}" not found in database. Please search for an existing artist.`);
+    }
+
+    // Use the artist's exact name from database for network generation
+    return this.generateRealCollaborationNetwork(cachedArtist.name);
   }
 }

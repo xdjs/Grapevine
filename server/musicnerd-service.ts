@@ -61,39 +61,80 @@ class MusicNerdService {
           
           await client.connect();
           
-          // Optimized search with smart query selection based on input length
+          // Optimized search with exact case matching prioritization
           let query: string;
           let params: string[];
           
           if (artistName.length === 1) {
-            // For single character: only show names starting with that character
+            // For single character: prioritize exact case matches
             query = `
               SELECT id, name FROM artists 
-              WHERE LOWER(name) LIKE LOWER($1)
-              ORDER BY LENGTH(name), name 
+              WHERE name LIKE $1 OR LOWER(name) LIKE LOWER($2)
+              ORDER BY 
+                CASE WHEN name = $3 THEN 1
+                     WHEN name LIKE $4 THEN 2
+                     WHEN LOWER(name) = LOWER($5) THEN 3
+                     WHEN LOWER(name) LIKE LOWER($6) THEN 4
+                     ELSE 5 END,
+                LENGTH(name), name 
               LIMIT 100
             `;
-            params = [`${artistName.toLowerCase()}%`];
+            params = [`${artistName}%`, `${artistName.toLowerCase()}%`, artistName, `${artistName}%`, artistName, `${artistName.toLowerCase()}%`];
           } else if (artistName.length <= 3) {
-            // For short inputs: prefix matching with secondary contains matching
+            // For short inputs: exact case matching first, then case-insensitive
             query = `
               SELECT id, name FROM artists 
-              WHERE LOWER(name) LIKE LOWER($1) OR LOWER(name) LIKE LOWER($2)
+              WHERE name = $1 
+                 OR name LIKE $2 
+                 OR name LIKE $3
+                 OR LOWER(name) = LOWER($4) 
+                 OR LOWER(name) LIKE LOWER($5) 
+                 OR LOWER(name) LIKE LOWER($6)
               ORDER BY 
                 CASE 
-                  WHEN LOWER(name) LIKE LOWER($1) THEN 1 
-                  WHEN LOWER(name) LIKE LOWER($3) THEN 2
-                  ELSE 3 
+                  WHEN name = $7 THEN 1                     -- Exact case match
+                  WHEN name LIKE $8 THEN 2                  -- Starts with exact case
+                  WHEN name LIKE $9 THEN 3                  -- Contains exact case
+                  WHEN LOWER(name) = LOWER($10) THEN 4      -- Exact case-insensitive
+                  WHEN LOWER(name) LIKE LOWER($11) THEN 5   -- Starts with case-insensitive
+                  WHEN LOWER(name) LIKE LOWER($12) THEN 6   -- Contains case-insensitive
+                  ELSE 7 
                 END,
                 LENGTH(name),
                 name 
               LIMIT 150
             `;
-            params = [`${artistName.toLowerCase()}%`, `%${artistName.toLowerCase()}%`, `${artistName.toLowerCase()}%`];
+            params = [
+              artistName, `${artistName}%`, `%${artistName}%`, 
+              artistName, `${artistName.toLowerCase()}%`, `%${artistName.toLowerCase()}%`,
+              artistName, `${artistName}%`, `%${artistName}%`,
+              artistName, `${artistName.toLowerCase()}%`, `%${artistName.toLowerCase()}%`
+            ];
           } else {
-            // For longer inputs: comprehensive fuzzy matching
-            query = 'SELECT id, name FROM artists WHERE LOWER(name) LIKE LOWER($1) ORDER BY LENGTH(name), name LIMIT 200';
-            params = [`%${artistName.toLowerCase()}%`];
+            // For longer inputs: comprehensive exact case prioritization
+            query = `
+              SELECT id, name FROM artists 
+              WHERE name = $1 
+                 OR name LIKE $2 
+                 OR name LIKE $3
+                 OR LOWER(name) = LOWER($4)
+                 OR LOWER(name) LIKE LOWER($5) 
+              ORDER BY 
+                CASE WHEN name = $6 THEN 1
+                     WHEN name LIKE $7 THEN 2
+                     WHEN name LIKE $8 THEN 3
+                     WHEN LOWER(name) = LOWER($9) THEN 4
+                     WHEN LOWER(name) LIKE LOWER($10) THEN 5
+                     ELSE 6 END,
+                LENGTH(name), name 
+              LIMIT 200
+            `;
+            params = [
+              artistName, `${artistName}%`, `%${artistName}%`,
+              artistName, `%${artistName.toLowerCase()}%`,
+              artistName, `${artistName}%`, `%${artistName}%`,
+              artistName, `%${artistName.toLowerCase()}%`
+            ];
           }
           
           console.log(`🔍 [DEBUG] Optimized query for "${artistName}" (length: ${artistName.length})`);
