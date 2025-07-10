@@ -46,8 +46,12 @@ Please respond with JSON in this exact format:
 {
   "collaborators": [
     {
+
       "name": "Person Name",
       "roles": ["producer", "songwriter"], 
+
+      "name": "Songwriter Name",
+
       "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
     }
   ]
@@ -60,6 +64,9 @@ Guidelines:
 - Include their top 3 real collaborating artists
 - Never use generic names like "John Doe", "Producer X", or placeholder data
 - Maximum 10 real collaborators if they exist`;
+
+Focus on real, verified collaborations from the music industry. Include up to 5 producers and 5 songwriters who have actually worked with ${artistName}. Each producer and songwriter should have exactly 3 top collaborating artists listed. Check each artist/producer/songwriter if they have multiple roles, like being an artist and songwriter or songwriter and producer.`;
+
 
       const response = await this.openai!.chat.completions.create({
         model: "gpt-4o",
