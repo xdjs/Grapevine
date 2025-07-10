@@ -319,6 +319,33 @@
     scrollbar-color: #AE53FF #1a1a1a;
   }
   
+  /* Music Nerd link button styling */
+  .music-nerd-link {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-family: inherit !important;
+    font-size: inherit !important;
+    color: #ec4899 !important; /* pink-400 */
+    text-decoration: underline !important;
+    cursor: pointer !important;
+    pointer-events: all !important;
+    display: inline !important;
+    position: relative !important;
+    z-index: 999999 !important;
+    transition: color 0.2s ease !important;
+  }
+  
+  .music-nerd-link:hover {
+    color: #f9a8d4 !important; /* pink-300 */
+    text-decoration: underline !important;
+  }
+  
+  .music-nerd-link:focus {
+    outline: none !important;
+  }
+  
   /* Webkit scrollbar styling for main page */
   html::-webkit-scrollbar,
   body::-webkit-scrollbar {

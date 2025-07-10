@@ -106,7 +106,7 @@ export default function Home() {
   };
 
   return (
-    <div className={`relative w-full min-h-screen bg-black text-white ${!showNetworkView ? 'overflow-x-hidden' : ''}`}>
+    <div className={`relative w-full min-h-screen bg-black text-white ${!showNetworkView ? 'overflow-x-hidden' : ''}`} style={{ pointerEvents: 'auto' }}>
       {/* Search Interface */}
       <SearchInterface
         onNetworkData={handleNetworkData}
@@ -146,11 +146,14 @@ export default function Home() {
                 Powered by{' '}
                 <button 
                   type="button"
-                  className="text-pink-400 hover:text-pink-300 transition-colors underline cursor-pointer font-medium bg-transparent border-none p-0 m-0 inline text-xs"
-                  onClick={() => {
+                  className="music-nerd-link font-medium"
+                  onClick={(e) => {
                     console.log('Music Nerd button clicked!');
+                    console.log('Event:', e);
+                    e.stopPropagation();
                     window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer');
                   }}
+                  onMouseOver={() => console.log('Hovering over Music Nerd button')}
                 >
                   Music Nerd
                 </button>
