@@ -140,16 +140,16 @@ export default function Home() {
               </div>
             </div>
             
-            <div className="text-gray-500 text-xs" style={{ pointerEvents: 'auto' }}>
+            <div className="text-gray-500 text-xs">
               <p className="mb-1 sm:mb-2">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
               <p className="mb-1 sm:mb-2">
                 Powered by{' '}
-                <button 
-                  className="music-nerd-button"
-                  onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
+                <span 
+                  className="text-pink-400 underline cursor-pointer hover:text-pink-300"
+                  onClick={() => window.open('https://www.musicnerd.xyz', '_blank')}
                 >
                   Music Nerd
-                </button>
+                </span>
               </p>
               <p>Click on artist nodes to visit their MusicNerd profiles</p>
             </div>
