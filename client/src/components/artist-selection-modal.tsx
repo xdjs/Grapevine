@@ -79,11 +79,9 @@ export default function ArtistSelectionModal({
   };
 
   const handleOpenMainPage = () => {
-    if (musicNerdBaseUrl) {
-      window.open(musicNerdBaseUrl, '_blank');
-    } else {
-      console.error('MusicNerd base URL not configured');
-    }
+
+    window.open('https://musicnerd.xyz/', '_blank');
+
     onClose();
   };
 

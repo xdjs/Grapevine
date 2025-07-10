@@ -1,0 +1,59 @@
+[13:16:22.213] Running build in Washington, D.C., USA (East) – iad1
+[13:16:22.214] Build machine configuration: 4 cores, 8 GB
+[13:16:22.227] Cloning github.com/xdjs/ArtistWebMap (Branch: casey/multi-role-fix2, Commit: 15e5781)
+[13:16:22.673] Cloning completed: 446.000ms
+[13:16:22.711] Found .vercelignore
+[13:16:22.716] Removed 25 ignored files defined in .vercelignore
+[13:16:22.716]   /.git/config
+[13:16:22.716]   /.git/description
+[13:16:22.717]   /.git/FETCH_HEAD
+[13:16:22.717]   /.git/HEAD
+[13:16:22.717]   /.git/hooks/applypatch-msg.sample
+[13:16:22.717]   /.git/hooks/commit-msg.sample
+[13:16:22.717]   /.git/hooks/fsmonitor-watchman.sample
+[13:16:22.717]   /.git/hooks/post-update.sample
+[13:16:22.717]   /.git/hooks/pre-applypatch.sample
+[13:16:22.717]   /.git/hooks/pre-commit.sample
+[13:16:24.066] Restored build cache from previous deployment (Evt4c2K4TxF3FP5vpSR2BFzojyMQ)
+[13:16:24.841] Running "vercel build"
+[13:16:25.281] Vercel CLI 44.3.0
+[13:16:26.092] Installing dependencies...
+[13:16:27.695] 
+[13:16:27.695] up to date in 1s
+[13:16:27.695] 
+[13:16:27.696] 74 packages are looking for funding
+[13:16:27.696]   run `npm fund` for details
+[13:16:27.838] 
+[13:16:27.838] > rest-express@1.0.0 build
+[13:16:27.839] > vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+[13:16:27.839] 
+[13:16:28.131] [36mvite v5.4.19 [32mbuilding for production...[36m[39m
+[13:16:28.478] transforming...
+[13:16:28.528] Browserslist: browsers data (caniuse-lite) is 9 months old. Please run:
+[13:16:28.528]   npx update-browserslist-db@latest
+[13:16:28.528]   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+[13:16:33.370] [32m✓[39m 2291 modules transformed.
+[13:16:33.695] rendering chunks...
+[13:16:33.707] computing gzip size...
+[13:16:33.763] [2m../dist/public/[22m[32mindex.html                                       [39m[1m[2m  1.61 kB[22m[1m[22m[2m │ gzip:   0.76 kB[22m
+[13:16:33.764] [2m../dist/public/[22m[2massets/[22m[32mmusicNerdLogo_1751389187695-9eldQ2et.png  [39m[1m[2m 77.19 kB[22m[1m[22m
+[13:16:33.764] [2m../dist/public/[22m[2massets/[22m[35mindex-DAj_JftS.css                        [39m[1m[2m 68.36 kB[22m[1m[22m[2m │ gzip:  12.03 kB[22m
+[13:16:33.764] [2m../dist/public/[22m[2massets/[22m[36mindex-CyH8dC10.js                         [39m[1m[2m416.06 kB[22m[1m[22m[2m │ gzip: 134.39 kB[22m
+[13:16:33.764] [32m✓ built in 5.32s[39m
+[13:16:33.830] ✘ [ERROR] Expected ";" but found "."
+[13:16:33.830] 
+[13:16:33.830]     server/database-storage.ts:273:11:
+[13:16:33.830]       273 │     console.log(`🔍 [DEBUG] Starting collaboration network gene...
+[13:16:33.830]           │            ^
+[13:16:33.830]           ╵            ;
+[13:16:33.830] 
+[13:16:33.830] ✘ [ERROR] Unexpected "catch"
+[13:16:33.831] 
+[13:16:33.831]     server/storage.ts:510:6:
+[13:16:33.831]       510 │     } catch (error) {
+[13:16:33.831]           ╵       ~~~~~
+[13:16:33.831] 
+[13:16:33.831] 2 errors
+[13:16:33.842] Error: Command "npm run build && ./copy-favicon.sh" exited with 1
+[13:16:34.126] 
+[13:16:36.919] Exiting build container

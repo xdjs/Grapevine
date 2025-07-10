@@ -15,7 +15,7 @@ export default function handler(req, res) {
 
   try {
     // Use production URL from environment variable
-    const musicNerdBaseUrl = process.env.MUSIC_BASE_URL || process.env.MUSICNERD_BASE_URL;
+    const musicNerdBaseUrl = process.env.MUSICNERD_BASE_URL || 'https://www.musicnerd.xyz';
     
     console.log(`🔧 [Vercel Config] Returning musicNerdBaseUrl: ${musicNerdBaseUrl}`);
     

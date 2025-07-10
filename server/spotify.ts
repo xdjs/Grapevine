@@ -97,7 +97,7 @@ class SpotifyService {
     }
   }
 
-  async getArtistTopTracks(artistId: string, market: string = 'US', limit: number = 10): Promise<SpotifyTrack[]> {
+  async getArtistTopTracks(artistId: string, market: string = 'US'): Promise<SpotifyTrack[]> {
     try {
       const token = await this.getAccessToken();
       
