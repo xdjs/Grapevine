@@ -125,27 +125,33 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     setShowDropdown(false);
     setArtistOptions([]);
     
-    // Trigger search immediately
-    try {
-      setIsLoading(true);
-      onLoadingChange?.(true);
-      
-      const data = await fetchNetworkData(artist.name.trim());
-      onNetworkData(data);
-      
-      toast({
-        title: "Network Generated",
-        description: `Found collaboration network for ${artist.name}`,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to fetch network data",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-      onLoadingChange?.(false);
+    // Navigate to artist page using their ID
+    if (artist.id) {
+      console.log(`🔍 [Frontend] Navigating to artist ID: ${artist.id}`);
+      window.location.href = `/artist/${artist.id}`;
+    } else {
+      // Fallback to old behavior if no ID
+      try {
+        setIsLoading(true);
+        onLoadingChange?.(true);
+        
+        const data = await fetchNetworkData(artist.name.trim());
+        onNetworkData(data);
+        
+        toast({
+          title: "Network Generated",
+          description: `Found collaboration network for ${artist.name}`,
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to fetch network data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+        onLoadingChange?.(false);
+      }
     }
   };
 
