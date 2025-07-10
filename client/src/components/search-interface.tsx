@@ -498,7 +498,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
           <Button
             onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
-            className="font-medium py-3 px-6 rounded-xl transition-colors"
+            className="font-medium py-2 px-4 rounded-lg transition-colors text-sm"
             style={{
               backgroundColor: '#ffa2e3',
               color: '#1f2937',
