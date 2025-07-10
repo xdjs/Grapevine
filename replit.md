@@ -460,6 +460,15 @@ Changelog:
 - Applied enhanced prompt to both local server and Vercel API endpoints for consistent multi-role detection
 - Significantly improved role accuracy while maintaining performance efficiency
 
+### Comprehensive Role Consistency System (July 10, 2025)
+- Implemented global role caching system to ensure identical role information across all network generations
+- Added getComprehensiveRoles function that queries OpenAI once per person and caches results for consistency
+- Role detection now works for all nodes: main artists, collaborators, and branching artists
+- When Julia Michaels appears as "artist + songwriter" in her own map, she maintains the same roles when appearing in other artists' maps
+- Applied comprehensive role detection to both local server (database-storage.ts) and Vercel API endpoints
+- Eliminates role inconsistencies where the same person showed different roles in different network contexts
+- All role information is detected once and cached globally within each network generation process
+
 
 
 

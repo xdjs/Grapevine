@@ -173,66 +173,84 @@ Important guidelines:
         });
       }
 
-      // Build network data structure with multi-role consolidation
+      // Build network data structure with comprehensive role consistency
       const nodeMap = new Map();
       const links = [];
 
-      // Detect main artist's roles using OpenAI
-      let mainArtistTypes = ['artist']; // Default to artist
+      // Create comprehensive role lookup system for consistency across maps
+      const globalRoleMap = new Map<string, string[]>();
       
-      try {
-        console.log(`🔍 [Vercel] Detecting roles for main artist "${correctArtistName}"...`);
-        const roleDetectionPrompt = `What roles does ${correctArtistName} have in the music industry? Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. Return ONLY the JSON array, no other text.`;
-        
-        const openai = new OpenAI({
-          apiKey: OPENAI_API_KEY,
-        });
-
-        const roleCompletion = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [{ role: "user", content: roleDetectionPrompt }],
-          temperature: 0.1,
-          max_tokens: 100,
-        });
-
-        const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
-        if (roleContent) {
-          try {
-            const detectedRoles = JSON.parse(roleContent);
-            if (Array.isArray(detectedRoles) && detectedRoles.length > 0) {
-              // Ensure 'artist' is first for main artists
-              const validRoles = detectedRoles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
-              if (validRoles.length > 0) {
-                // Put 'artist' first if present, otherwise use detected order
-                if (validRoles.includes('artist')) {
-                  mainArtistTypes = ['artist', ...validRoles.filter(r => r !== 'artist')];
-                } else {
-                  mainArtistTypes = validRoles;
-                }
-                console.log(`✅ [Vercel] Detected multiple roles for "${correctArtistName}":`, mainArtistTypes);
-              }
-            }
-          } catch (parseError) {
-            console.log(`⚠️ [Vercel] Could not parse role detection response for "${correctArtistName}", using default`);
-          }
+      // Helper function to detect and cache roles for any person
+      const getComprehensiveRoles = async (personName: string, defaultRole: 'artist' | 'producer' | 'songwriter'): Promise<string[]> => {
+        // Check if we already have roles for this person
+        if (globalRoleMap.has(personName)) {
+          const cachedRoles = globalRoleMap.get(personName)!;
+          console.log(`🎭 [Vercel] Using cached roles for "${personName}":`, cachedRoles);
+          return cachedRoles;
         }
-      } catch (error) {
-        console.log(`⚠️ [Vercel] Role detection failed for "${correctArtistName}", using default roles`);
-      }
+        
+        // Query OpenAI to determine this person's roles
+        let detectedRoles = [defaultRole];
+        try {
+          const roleDetectionPrompt = `What roles does ${personName} have in the music industry? Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. Return ONLY the JSON array, no other text.`;
+          
+          const openai = new OpenAI({
+            apiKey: OPENAI_API_KEY,
+          });
+
+          const roleCompletion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: roleDetectionPrompt }],
+            temperature: 0.1,
+            max_tokens: 100,
+          });
+
+          const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
+          if (roleContent) {
+            try {
+              const parsedRoles = JSON.parse(roleContent);
+              if (Array.isArray(parsedRoles) && parsedRoles.length > 0) {
+                const validRoles = parsedRoles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
+                if (validRoles.length > 0) {
+                  detectedRoles = validRoles;
+                  console.log(`✅ [Vercel] Detected roles for "${personName}":`, detectedRoles);
+                }
+              }
+            } catch (parseError) {
+              console.log(`⚠️ [Vercel] Could not parse role detection for "${personName}", using default`);
+            }
+          }
+        } catch (error) {
+          console.log(`⚠️ [Vercel] Role detection failed for "${personName}", using default`);
+        }
+        
+        // Cache the detected roles for consistency
+        globalRoleMap.set(personName, detectedRoles);
+        return detectedRoles;
+      };
+
+      // Detect main artist's roles with comprehensive detection
+      console.log(`🔍 [Vercel] Detecting roles for main artist "${correctArtistName}"...`);
+      const mainArtistTypes = await getComprehensiveRoles(correctArtistName, 'artist');
+      
+      // Ensure 'artist' is first for main artists if they have that role
+      const orderedMainArtistTypes = mainArtistTypes.includes('artist') 
+        ? ['artist', ...mainArtistTypes.filter(r => r !== 'artist')]
+        : mainArtistTypes;
 
       // Add main artist node using correct capitalization from database and detected roles
       const mainNode = {
         id: correctArtistName,
         name: correctArtistName,
-        type: mainArtistTypes[0],
-        types: mainArtistTypes,
+        type: orderedMainArtistTypes[0],
+        types: orderedMainArtistTypes,
         color: '#FF69B4',
         size: 30,
         artistId: artistExistsResult.rows[0].id
       };
       nodeMap.set(correctArtistName, mainNode);
       
-      console.log(`🎭 [Vercel] Main artist "${correctArtistName}" initialized with ${mainArtistTypes.length} roles:`, mainArtistTypes);
+      console.log(`🎭 [Vercel] Main artist "${correctArtistName}" initialized with ${orderedMainArtistTypes.length} roles:`, orderedMainArtistTypes);
 
       // Transform new format to expected format and process collaborators
       const collaborators = [];
@@ -278,13 +296,15 @@ Important guidelines:
             collabNode.color = '#8A2BE2'; // Keep producer color for producer-songwriters
           }
         } else {
-          // Create new node
+          // Create new node with comprehensive role detection
+          const enhancedRoles = await getComprehensiveRoles(collaborator.name, collaborator.type);
+          const color = enhancedRoles.includes('producer') ? '#8A2BE2' : '#00CED1';
           collabNode = {
             id: collaborator.name,
             name: collaborator.name,
-            type: collaborator.type,
-            types: [collaborator.type],
-            color: collaborator.type === 'producer' ? '#8A2BE2' : '#00CED1',
+            type: enhancedRoles[0],
+            types: enhancedRoles,
+            color: color,
             size: 20, // Smaller size for collaborators
             artistId: null,
             collaborations: collaborator.topCollaborators || []
@@ -312,11 +332,12 @@ Important guidelines:
         // Add branching artists
         for (const branchingArtist of collaborator.topCollaborators || []) {
           if (branchingArtist !== correctArtistName && !nodeMap.has(branchingArtist)) {
+            const branchingRoles = await getComprehensiveRoles(branchingArtist, 'artist');
             const branchNode = {
               id: branchingArtist,
               name: branchingArtist,
-              type: 'artist',
-              types: ['artist'],
+              type: branchingRoles[0],
+              types: branchingRoles,
               color: '#FF69B4',
               size: 16,
               artistId: null
