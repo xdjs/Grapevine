@@ -140,8 +140,14 @@ export default function Home() {
               </div>
             </div>
             
+            <div className="text-gray-500 text-xs">
+              <p className="mb-1 sm:mb-2">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
+              <p className="mb-1 sm:mb-2">Powered by Music Nerd</p>
+              <p className="mb-3 sm:mb-4">Click on artist nodes to visit their MusicNerd profiles</p>
+            </div>
+            
             {/* Music Nerd Button */}
-            <div className="flex justify-center mb-4">
+            <div className="flex justify-center">
               <button
                 onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
                 className="font-medium py-2 px-4 rounded-lg transition-colors text-sm"
@@ -159,12 +165,6 @@ export default function Home() {
               >
                 Visit Music Nerd
               </button>
-            </div>
-            
-            <div className="text-gray-500 text-xs">
-              <p className="mb-1 sm:mb-2">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
-              <p className="mb-1 sm:mb-2">Powered by Music Nerd</p>
-              <p>Click on artist nodes to visit their MusicNerd profiles</p>
             </div>
           </div>
         </div>
