@@ -1143,4 +1143,45 @@ export class DatabaseStorage implements IStorage {
     return { nodes, links };
   }
 
+  async getNetworkDataById(artistId: string): Promise<NetworkData | null> {
+    if (!db) return null;
+    
+    try {
+      console.log(`🔍 [DEBUG] Fetching network data for artist ID: "${artistId}"`);
+      
+      // First, get the artist by ID
+      const result = await db
+        .select({
+          id: artists.id,
+          name: artists.name,
+          webmapdata: artists.webmapdata
+        })
+        .from(artists)
+        .where(eq(artists.id, artistId))
+        .limit(1);
+      
+      const artist = result[0];
+      if (!artist) {
+        console.log(`❌ [DEBUG] Artist not found with ID: "${artistId}"`);
+        return null;
+      }
+      
+      console.log(`✅ [DEBUG] Found artist: "${artist.name}" (ID: ${artistId})`);
+      
+      // Check if we have cached network data
+      if (artist.webmapdata) {
+        console.log(`💾 [DEBUG] Found cached webmapdata for artist ID "${artistId}" (${artist.name})`);
+        return artist.webmapdata;
+      }
+      
+      // If no cached data, generate new network data using the artist's name
+      console.log(`🔄 [DEBUG] No cached data found for artist ID "${artistId}" (${artist.name}), generating new network...`);
+      return await this.getNetworkData(artist.name);
+      
+    } catch (error) {
+      console.error(`❌ [DEBUG] Error fetching network data for artist ID "${artistId}":`, error);
+      return null;
+    }
+  }
+
 }

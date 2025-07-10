@@ -29,6 +29,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get network data for an artist by ID
+  app.get("/api/network-by-id/:artistId", async (req, res) => {
+    try {
+      const artistId = req.params.artistId;
+      console.log(`🔍 [Server] Fetching network data for artist ID: "${artistId}"`);
+      
+      if (storage.getNetworkDataById) {
+        const networkData = await storage.getNetworkDataById(artistId);
+        
+        if (!networkData) {
+          return res.status(404).json({ message: `No network data found for artist ID: ${artistId}` });
+        }
+        
+        res.json(networkData);
+      } else {
+        return res.status(501).json({ 
+          error: "Method not implemented",
+          message: "Network data by ID is not supported by the current storage implementation"
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching network data by ID:", error);
+      
+      // Check if it's a "not found" error
+      if (error instanceof Error && error.message.includes('not found in database')) {
+        return res.status(404).json({ message: error.message });
+      }
+      
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Search for artists by name - Returns multiple suggestions for dropdown
   app.get("/api/search", async (req, res) => {
     try {

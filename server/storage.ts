@@ -16,6 +16,7 @@ export interface IStorage {
   
   // Network data methods
   getNetworkData(artistName: string): Promise<NetworkData | null>;
+  getNetworkDataById?(artistId: string): Promise<NetworkData | null>;
 }
 
 export class MemStorage implements IStorage {
