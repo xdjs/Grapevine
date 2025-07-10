@@ -362,15 +362,15 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
               className="w-full font-medium py-3 px-6 rounded-xl transition-colors"
               style={{
-                backgroundColor: '#F8BBD9',
-                color: '#A855F7',
-                borderColor: '#A855F7'
+                backgroundColor: '#ffa2e3',
+                color: '#b427b4',
+                borderColor: '#b427b4'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#F5A9D0';
+                e.currentTarget.style.backgroundColor = '#ff8fd9';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#F8BBD9';
+                e.currentTarget.style.backgroundColor = '#ffa2e3';
               }}
             >
               Visit Music Nerd
