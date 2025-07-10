@@ -131,7 +131,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       onLoadingChange?.(true);
       
       let data;
-      if (artist.artistId && artist.artistId !== artist.id) {
+      if (artist.artistId) {
         // Use ID-based lookup for exact artist identification
         console.log(`🔍 [Frontend] Using ID-based lookup for artist: ${artist.name} (ID: ${artist.artistId})`);
         data = await fetchNetworkDataById(artist.artistId);

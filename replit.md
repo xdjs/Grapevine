@@ -229,6 +229,15 @@ Changelog:
 - System now properly identifies songwriter nodes (cyan) in addition to producer nodes (purple)
 - Comprehensive songwriter pattern matching in recording analysis for complete coverage
 
+### Fixed Artist ID-Based Search System (July 10, 2025)
+- Implemented ID-based network lookup system to distinguish between artists with similar names
+- Added fetchNetworkDataById function and API endpoint for precise artist identification
+- Updated search interface to prioritize database ID lookups over name-based matching
+- Fixed issue where "LISA" (BLACKPINK) and "LiSA" (Japanese artist) were getting confused
+- Enhanced UUID/numeric ID support across DatabaseStorage and MemStorage classes
+- System now uses exact artist IDs from database for accurate network generation
+- Resolves artist disambiguation issues for names with similar spellings or capitalizations
+
 ### Fixed Songwriter Node Display Issue (June 30, 2025)
 - Resolved critical issue where songwriter nodes weren't appearing in UI despite system finding songwriter data
 - Added producer-songwriter reclassification logic to correctly identify dual-role artists
