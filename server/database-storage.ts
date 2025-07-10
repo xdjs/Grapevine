@@ -19,8 +19,13 @@ export class DatabaseStorage implements IStorage {
     if (!db) return undefined;
     
     try {
+      // Only select columns that exist in MusicNerd database
       const result = await db
-        .select()
+        .select({
+          id: artists.id,
+          name: artists.name,
+          webmapdata: artists.webmapdata
+        })
         .from(artists)
         .where(eq(artists.id, id))
         .limit(1);
@@ -81,17 +86,27 @@ export class DatabaseStorage implements IStorage {
     if (!db) throw new Error('Database not available');
     
     try {
+      // Only insert columns that exist in MusicNerd database (only name)
       const result = await db
         .insert(artists)
         .values({
-          name: insertArtist.name,
-          type: insertArtist.type,
-          imageUrl: insertArtist.imageUrl || null,
-          spotifyId: insertArtist.spotifyId || null
+          name: insertArtist.name
         })
-        .returning();
+        .returning({
+          id: artists.id,
+          name: artists.name,
+          webmapdata: artists.webmapdata
+        });
       
-      return result[0];
+      // Return with default values for missing columns
+      return {
+        id: result[0].id,
+        name: result[0].name,
+        type: 'artist' as const,
+        imageUrl: null,
+        spotifyId: null,
+        webmapdata: result[0].webmapdata
+      };
     } catch (error) {
       console.error('Error creating artist:', error);
       throw error;
