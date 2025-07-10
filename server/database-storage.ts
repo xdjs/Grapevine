@@ -510,10 +510,9 @@ export class DatabaseStorage implements IStorage {
             const nodes = Array.from(nodeMap.values());
             console.log(`✅ [DEBUG] Successfully created network from OpenAI data: ${nodes.length} total nodes (including main artist) for "${artistName}"`);
             
-            // Cache the generated network data
+            // Return the generated network data (caching handled by caller)
             const finalNetworkData = { nodes, links };
-            console.log(`💾 [DEBUG] About to cache OpenAI network data for "${artistName}" with ${nodes.length} nodes`);
-            await this.cacheNetworkData(artistName, finalNetworkData);
+            console.log(`✅ [DEBUG] Generated OpenAI network data for "${artistName}" with ${nodes.length} nodes (caching handled by caller)`);
             
             return finalNetworkData;
 
@@ -914,10 +913,9 @@ export class DatabaseStorage implements IStorage {
             // Final node array from consolidated map
             const nodes = Array.from(nodeMap.values());
             
-            // Cache the generated network data
+            // Return the generated network data (caching handled by caller)
             const networkData = { nodes, links };
-            console.log(`💾 [DEBUG] About to cache Wikipedia network data for "${artistName}" with ${nodes.length} nodes`);
-            await this.cacheNetworkData(artistName, networkData);
+            console.log(`✅ [DEBUG] Generated Wikipedia network data for "${artistName}" with ${nodes.length} nodes (caching handled by caller)`);
             
             return networkData;
 
@@ -1001,9 +999,8 @@ export class DatabaseStorage implements IStorage {
         // Final node array from consolidated map
         const nodes = Array.from(nodeMap.values());
         
-        // Cache the generated network data
+        // Return the generated network data (caching handled by caller)
         const networkData = { nodes, links };
-        await this.cacheNetworkData(artistName, networkData);
         return networkData;
 
       } else {
@@ -1013,18 +1010,16 @@ export class DatabaseStorage implements IStorage {
       // Final node array from consolidated map
       const nodes = Array.from(nodeMap.values());
       
-      // Cache the generated network data
+      // Return the generated network data (caching handled by caller)
       const networkData = { nodes, links };
-      await this.cacheNetworkData(artistName, networkData);
       return networkData;
     } catch (error) {
       console.error('Error generating real collaboration network:', error);
       // Return just the main artist if everything fails
       const nodes = Array.from(nodeMap.values());
       
-      // Cache the generated network data
+      // Return the generated network data (caching handled by caller)
       const networkData = { nodes, links };
-      await this.cacheNetworkData(artistName, networkData);
       return networkData;
     }
   }
