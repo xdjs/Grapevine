@@ -144,7 +144,7 @@ export default function Home() {
             <div className="flex justify-center mb-4">
               <button
                 onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
-                className="font-medium py-3 px-6 rounded-xl transition-colors"
+                className="font-medium py-2 px-4 rounded-lg transition-colors text-sm"
                 style={{
                   backgroundColor: '#ffa2e3',
                   color: '#1f2937',
