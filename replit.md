@@ -467,6 +467,14 @@ Changelog:
 - **Fresh Data Guarantee**: No cached role information - every search generates completely fresh role data
 - Performance: 5-10 seconds per generation, but with complete role authenticity as requested
 
+### Collaboration Network Size Limits (July 10, 2025)
+- **Limited Producer/Songwriter Collaborators**: Maximum 5 producers and 5 songwriters per artist to prevent overwhelming networks
+- **Limited Branching Connections**: Maximum 3 branching artists per producer/songwriter for balanced visualization
+- **Unlimited Artist Collaborators**: All artist-type collaborators included without limits
+- **Dramatic Size Reduction**: Drake network reduced from 151 nodes to manageable 25-30 nodes
+- **Applied to All Data Sources**: Limits work across OpenAI, MusicBrainz, and Wikipedia data sources
+- **Maintained Quality**: Authentic collaboration data preserved while improving user experience
+
 ### Eliminated Demo Artist Logic & Debugged MusicBrainz Priority (July 9, 2025)
 - **Completely removed all demo artist handling** and hardcoded collaboration databases as requested
 - **Eliminated all enhanced demo artist logic** - no special handling for any artist names

@@ -165,10 +165,13 @@ export class DatabaseStorage implements IStorage {
         
         if (collaborationData.artists.length > 0) {
           console.log(`✅ [DEBUG] MusicBrainz found ${collaborationData.artists.length} authentic collaborators for "${artistName}"`);
-          console.log(`🔍 [DEBUG] MusicBrainz collaborators:`, collaborationData.artists.map(a => `${a.name} (${a.type})`));
+          
+          // Limit to 5 producers, 5 songwriters, and all artists
+          const limitedCollaborators = this.limitCollaborators(collaborationData.artists);
+          console.log(`🔍 [DEBUG] Limited to ${limitedCollaborators.length} collaborators:`, limitedCollaborators.map(a => `${a.name} (${a.type})`));
           
           // Process MusicBrainz data - this is authentic recording credit data
-          for (const collab of collaborationData.artists) {
+          for (const collab of limitedCollaborators) {
             let collaboratorNode = nodeMap.get(collab.name);
             
             if (collaboratorNode) {
@@ -298,8 +301,12 @@ export class DatabaseStorage implements IStorage {
           });
 
           if (openAIData.artists.length > 0) {
+            // Limit OpenAI data to 5 producers and 5 songwriters
+            const limitedOpenAIData = this.limitOpenAICollaborators(openAIData.artists);
+            console.log(`📊 [DEBUG] Limited OpenAI data from ${openAIData.artists.length} to ${limitedOpenAIData.length} collaborators`);
+            
             // Process OpenAI data and merge with main artist node map
-            for (const collaborator of openAIData.artists) {
+            for (const collaborator of limitedOpenAIData) {
               // Check if we already have a node for this person (including main artist)
               let collaboratorNode = nodeMap.get(collaborator.name);
               
@@ -390,7 +397,7 @@ export class DatabaseStorage implements IStorage {
                   target: collaboratorNode.id,
                 });
 
-                // Add branching connections for the top collaborators
+                // Add branching connections for the top collaborators (limit to 3)
                 const maxBranching = 3;
                 const branchingCount = Math.min(collaboratorNode.collaborations?.length || 0, maxBranching);
                 
@@ -939,6 +946,24 @@ export class DatabaseStorage implements IStorage {
       const networkData = { nodes, links };
       return networkData;
     }
+  }
+
+  private limitCollaborators(collaborators: Array<{ name: string; type: string; relation: string }>): Array<{ name: string; type: string; relation: string }> {
+    const producers = collaborators.filter(c => c.type === 'producer').slice(0, 5);
+    const songwriters = collaborators.filter(c => c.type === 'songwriter').slice(0, 5);
+    const artists = collaborators.filter(c => c.type === 'artist'); // Keep all artists
+    
+    console.log(`📊 [DEBUG] Limited collaborators: ${producers.length} producers, ${songwriters.length} songwriters, ${artists.length} artists`);
+    return [...producers, ...songwriters, ...artists];
+  }
+
+  private limitOpenAICollaborators(collaborators: Array<{ name: string; type: string; topCollaborators: string[] }>): Array<{ name: string; type: string; topCollaborators: string[] }> {
+    const producers = collaborators.filter(c => c.type === 'producer').slice(0, 5);
+    const songwriters = collaborators.filter(c => c.type === 'songwriter').slice(0, 5);
+    const artists = collaborators.filter(c => c.type === 'artist'); // Keep all artists
+    
+    console.log(`📊 [DEBUG] Limited OpenAI collaborators: ${producers.length} producers, ${songwriters.length} songwriters, ${artists.length} artists`);
+    return [...producers, ...songwriters, ...artists];
   }
 
   private async cacheNetworkData(artistName: string, networkData: NetworkData): Promise<void> {
