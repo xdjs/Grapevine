@@ -88,6 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         apiKey: OPENAI_API_KEY,
       });
 
+
       const prompt = `Generate a comprehensive list of music industry professionals who have collaborated with ${correctArtistName}. Include people who work as producers, songwriters, or both. For each person, specify all their roles and their top 3 collaborating artists.
 
 Please respond with JSON in this exact format:
@@ -96,15 +97,31 @@ Please respond with JSON in this exact format:
     {
       "name": "Person Name",
       "roles": ["producer", "songwriter"], 
-      "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
-    },
+
+      const prompt = `Generate a list of producers and songwriters who have collaborated with artist ${correctArtistName}. For each producer and songwriter, include their top 3 collaborating artists (biggest artists they have worked with).
+
+Please respond with JSON in this exact format:
+{
+  "producers": [
     {
+      "name": "Producer Name",
+
+      "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
+    }
+  ],
+  "songwriters": [
+    {
+
       "name": "Another Person",
       "roles": ["songwriter"],
+
+      "name": "Songwriter Name",
+
       "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
     }
   ]
 }
+
 
 Important guidelines:
 - Include up to 10 music industry professionals who have actually worked with ${correctArtistName}
@@ -113,6 +130,9 @@ Important guidelines:
 - Include their top 3 collaborating artists for each person
 - Focus on real, verified collaborations from the music industry
 - Return ONLY the JSON object, no other text`;
+
+Focus on real, verified collaborations from the music industry. Include up to 5 producers and 5 songwriters who have actually worked with ${correctArtistName}. Each producer and songwriter should have exactly 3 top collaborating artists listed. Check each artist/producer/songwriter if they have multiple roles, like being an artist and songwriter or songwriter and producer.`;
+
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -157,9 +177,13 @@ Important guidelines:
         } catch (firstParseError) {
           // Fallback: try to create a minimal valid structure if parsing fails
           console.warn('❌ [Vercel] Primary JSON parse failed, trying fallback');
-          collaborationData = { artists: [] };
+          collaborationData = { producers: [], songwriters: [] };
         }
         console.log(`✅ [Vercel] Parsed collaboration data with ${collaborationData.collaborators?.length || collaborationData.artists?.length || 0} collaborators`);
+
+        const totalCollaborators = (collaborationData.producers?.length || 0) + (collaborationData.songwriters?.length || 0);
+        console.log(`✅ [Vercel] Parsed collaboration data with ${totalCollaborators} collaborators`);
+
       } catch (parseError) {
         console.error('❌ [Vercel] Failed to parse OpenAI response:', parseError);
         console.error('❌ [Vercel] Raw OpenAI content:', completion.choices[0]?.message?.content);
@@ -335,7 +359,16 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       await batchDetectRoles([...allPeople]);
 
       // Process producers and songwriters with multi-role consolidation
+
       for (const collaborator of collaborators) {
+
+      const allCollaborators = [
+        ...(collaborationData.producers || []).map(p => ({ ...p, type: 'producer' })),
+        ...(collaborationData.songwriters || []).map(s => ({ ...s, type: 'songwriter' }))
+      ];
+      
+      for (const collaborator of allCollaborators) {
+
         // Check if we already have a node for this person
         let collabNode = nodeMap.get(collaborator.name);
         
