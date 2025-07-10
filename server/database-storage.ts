@@ -4,7 +4,6 @@ import { artists, collaborations, type Artist, type InsertArtist, type Collabora
 import { spotifyService } from "./spotify.js";
 import { openAIService } from "./openai-service.js";
 import { musicBrainzService } from "./musicbrainz.js";
-import { wikipediaService } from "./wikipedia.js";
 import { musicNerdService } from "./musicnerd-service.js";
 import { IStorage } from './storage.js';
 
@@ -119,23 +118,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   private async generateRealCollaborationNetwork(artistName: string): Promise<NetworkData> {
-    const links: NetworkLink[] = [];
-
-    // Initialize node map with main artist - we'll merge roles as we find them
-    const nodeMap = new Map<string, NetworkNode>();
+    console.log(`🎵 [DEBUG] Generating collaboration network for "${artistName}" using Spotify → MusicBrainz flow`);
     
-    // Get MusicNerd URL for main artist
-
-    let musicNerdUrl = 'https://musicnerd.xyz';
-    try {
-      const artistId = await musicNerdService.getArtistId(artistName);
-      if (artistId) {
-        musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
-
-      }
-    } catch (error) {
-      console.log(`📭 [DEBUG] No MusicNerd ID found for main artist ${artistName}`);
+    // Step 1: Use Spotify API to find collaborators
+    console.log(`🎧 [DEBUG] Step 1: Searching Spotify for "${artistName}" collaborators`);
+    const spotifyCollaborators = await this.getSpotifyCollaborators(artistName);
+    
+    if (spotifyCollaborators.length === 0) {
+      console.log(`❌ [DEBUG] No Spotify collaborators found for "${artistName}"`);
+      return await this.createSingleArtistNetwork(artistName);
     }
+
 
     // Create optimized batch role detection system for performance
     const globalRoleMap = new Map<string, string[]>();
@@ -263,12 +256,30 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       return [defaultRole];
     };
 
+    console.log(`✅ [DEBUG] Found ${spotifyCollaborators.length} Spotify collaborators for "${artistName}"`);
+
+    // Step 2: Use MusicBrainz to classify collaborators by type
+    console.log(`🎵 [DEBUG] Step 2: Classifying collaborators using MusicBrainz`);
+    const classifiedCollaborators = await this.classifyCollaboratorsWithMusicBrainz(spotifyCollaborators);
+    
+    console.log(`✅ [DEBUG] Classified ${classifiedCollaborators.length} collaborators with MusicBrainz`);
+
+    // Step 3: Build the network with classified collaborators
+    return await this.buildNetworkFromCollaborators(artistName, classifiedCollaborators);
+  }
+
+
+
     console.log(`🔍 [DEBUG] Starting collaboration network generation for: "${artistName}"`);
-    console.log('📊 [DEBUG] Data source priority: 1) OpenAI → 2) MusicBrainz → 3) Wikipedia → 4) Known collaborations fallback');
+    console.log('📊 [DEBUG] Data source priority: 1) MusicBrainz → 2) Wikipedia → 3) Main artist only (no synthetic data)');
 
     try {
-      // First try OpenAI for collaboration data
-      if (openAIService.isServiceAvailable()) {
+      // Skip OpenAI to ensure only authentic data is used
+      // OpenAI generates artificial collaborations, so we'll use only MusicBrainz and Wikipedia
+      console.log(`🎯 [DEBUG] Skipping OpenAI for authentic data only - using MusicBrainz and Wikipedia sources`);
+      
+      // Proceed directly to MusicBrainz for authentic collaboration data
+      if (false) { // Disabled OpenAI
         console.log(`🤖 [DEBUG] Querying OpenAI API for "${artistName}"...`);
         console.log(`🔍 [DEBUG] About to call openAIService.getArtistCollaborations for main artist: ${artistName}`);
         
@@ -278,6 +289,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
             collaborators: openAIData.artists.length,
             collaboratorList: openAIData.artists.map(a => `${a.name} (${a.type}, top collaborators: ${a.topCollaborators.length})`)
           });
+
 
           if (openAIData.artists.length > 0) {
             // Filter out any generic/fake names that might slip through
@@ -368,20 +380,72 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
                 nodeMap.set(collaborator.name, collaboratorNode);
               }
 
-              }
+  private async getSpotifyCollaborators(artistName: string): Promise<string[]> {
+    console.log(`🎧 [DEBUG] Getting Spotify collaborators for "${artistName}"`);
+    
+    if (!spotifyService.isConfigured()) {
+      console.log(`❌ [DEBUG] Spotify service not configured`);
+      return [];
+    }
 
-            // Process all nodes to create links and branching connections
-            const allNodes = Array.from(nodeMap.values());
-            const mainNode = nodeMap.get(artistName)!;
-            
-            for (const collaboratorNode of allNodes) {
-              // Skip self-processing for the main artist
-              if (collaboratorNode.name !== artistName) {
-                // Create main connection to collaborator
-                links.push({
-                  source: mainNode.id,
-                  target: collaboratorNode.id,
-                });
+    try {
+      // Search for the artist on Spotify
+      const spotifyArtist = await spotifyService.searchArtist(artistName);
+      if (!spotifyArtist) {
+        console.log(`❌ [DEBUG] Artist "${artistName}" not found on Spotify`);
+        return [];
+      }
+
+
+      console.log(`✅ [DEBUG] Found Spotify artist: "${spotifyArtist.name}" (${spotifyArtist.id})`);
+
+      // Get their top 10 tracks to find collaborators
+      const topTracks = await spotifyService.getArtistTopTracks(spotifyArtist.id, 'US', 10);
+      console.log(`🎵 [DEBUG] Found ${topTracks.length} top tracks for "${artistName}"`);
+
+      // Get their albums to find more collaborators
+      const albums = await spotifyService.getArtistAlbums(spotifyArtist.id);
+      console.log(`💿 [DEBUG] Found ${albums.length} albums for "${artistName}"`);
+
+
+      // Extract collaborators from tracks and albums
+      const collaborators = new Set<string>();
+      
+      // From top tracks
+      for (const track of topTracks) {
+        for (const artist of track.artists) {
+          if (artist.name !== artistName && artist.name !== spotifyArtist.name) {
+            collaborators.add(artist.name);
+            console.log(`🤝 [DEBUG] Found collaborator from track "${track.name}": "${artist.name}"`);
+          }
+        }
+      }
+
+      // From albums (get track details) - expanded search for main artists
+      const albumLimit = collaborators.size < 7 ? 8 : 3; // Use more albums if few collaborators found
+      for (const album of albums.slice(0, albumLimit)) {
+        try {
+          const albumTracks = await spotifyService.getAlbumTracks(album.id);
+          for (const track of albumTracks) {
+            if (track.artists) {
+              for (const artist of track.artists) {
+                if (artist.name !== artistName && artist.name !== spotifyArtist.name) {
+                  collaborators.add(artist.name);
+                  console.log(`🤝 [DEBUG] Found collaborator from album "${album.name}": "${artist.name}"`);
+                }
+              }
+            }
+          }
+          
+          // Small delay to prevent rate limiting when checking many albums
+          if (albumLimit > 3) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        } catch (error) {
+          console.log(`❌ [DEBUG] Error getting tracks for album "${album.name}":`, error);
+        }
+      }
+
 
                 // Add branching connections for the top collaborators
                 const maxBranching = 3;
@@ -427,13 +491,96 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
                     target: branchingArtist,
                   });
 
-                  console.log(`🌟 [DEBUG] Added branching artist "${branchingArtist}" connected to multi-role "${collaboratorNode.name}"`);
-                }
+      const collaboratorList = Array.from(collaborators);
+      console.log(`✅ [DEBUG] Total unique Spotify collaborators found: ${collaboratorList.length}`);
+      return collaboratorList;
 
-                const rolesList = collaboratorNode.types?.join(' + ') || collaboratorNode.type;
-                console.log(`➕ [DEBUG] Added ${rolesList}: ${collaboratorNode.name} from OpenAI with ${branchingCount} branching connections`);
-              }
-            }
+    } catch (error) {
+      console.log(`❌ [DEBUG] Error getting Spotify collaborators for "${artistName}":`, error);
+      return [];
+    }
+  }
+
+  private async classifyCollaboratorsWithMusicBrainz(collaborators: string[]): Promise<Array<{name: string, type: string, types: string[]}>> {
+    console.log(`🎵 [DEBUG] Classifying ${collaborators.length} collaborators with MusicBrainz`);
+    
+    const classified: Array<{name: string, type: string, types: string[]}> = [];
+    
+    for (const collaborator of collaborators.slice(0, 10)) { // Top 10 main collaborators
+      try {
+        console.log(`🔍 [DEBUG] Classifying "${collaborator}" with MusicBrainz`);
+        
+        // Search for the collaborator in MusicBrainz
+        const mbArtist = await musicBrainzService.searchArtist(collaborator);
+        if (!mbArtist) {
+          console.log(`❌ [DEBUG] "${collaborator}" not found in MusicBrainz, defaulting to 'artist'`);
+          classified.push({ name: collaborator, type: 'artist', types: ['artist'] });
+          continue;
+        }
+
+        // Get detailed artist information with relations
+        const detailedArtist = await musicBrainzService.getArtistWithRelations(mbArtist.id);
+        if (!detailedArtist || !detailedArtist.relations) {
+          console.log(`❌ [DEBUG] No relations found for "${collaborator}" in MusicBrainz, defaulting to 'artist'`);
+          classified.push({ name: collaborator, type: 'artist', types: ['artist'] });
+          continue;
+        }
+
+        // Classify based on MusicBrainz relations
+        let type = 'artist'; // Default type
+        const relations = detailedArtist.relations;
+        
+        // Check for producer relations
+        const producerRelations = relations.filter(r => 
+          r.type === 'producer' || 
+          r.type === 'mix' || 
+          r.type === 'recording engineer' || 
+          r.type === 'mastering engineer'
+        );
+        
+        // Check for songwriter relations  
+        const songwriterRelations = relations.filter(r => 
+          r.type === 'composer' || 
+          r.type === 'lyricist' || 
+          r.type === 'writer' ||
+          r.type === 'songwriter'
+        );
+
+        // Assign multiple roles based on relation counts
+        const roles = ['artist']; // Start with artist as base role
+        
+        if (producerRelations.length > 0) {
+          roles.push('producer');
+        }
+        if (songwriterRelations.length > 0) {
+          roles.push('songwriter');
+        }
+        
+        // Determine primary type and keep all roles
+        let primaryType = 'artist';
+        if (roles.includes('producer') && roles.includes('songwriter')) {
+          // If both producer and songwriter, use the one with more relations
+          primaryType = producerRelations.length >= songwriterRelations.length ? 'producer' : 'songwriter';
+        } else if (roles.includes('producer')) {
+          primaryType = 'producer';
+        } else if (roles.includes('songwriter')) {
+          primaryType = 'songwriter';
+        }
+        
+        const finalRoles = roles; // Keep all roles including 'artist'
+
+
+        console.log(`✅ [DEBUG] Classified "${collaborator}" with roles [${finalRoles.join(', ')}] (${producerRelations.length} producer relations, ${songwriterRelations.length} songwriter relations)`);
+        classified.push({ name: collaborator, type: primaryType, types: finalRoles });
+
+      } catch (error) {
+        console.log(`❌ [DEBUG] Error classifying "${collaborator}":`, error);
+        classified.push({ name: collaborator, type: 'artist', types: ['artist'] });
+      }
+    }
+
+    return classified;
+  }
 
 
             // Batch process all external API calls for performance optimization
@@ -515,7 +662,32 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         }
       } else {
         console.log('⚠️ [DEBUG] OpenAI service not available, falling back to MusicBrainz...');
+
+  private async buildNetworkFromCollaborators(artistName: string, collaborators: Array<{name: string, type: string, types: string[]}>): Promise<NetworkData> {
+    console.log(`🏗️ [DEBUG] Building network for "${artistName}" with ${collaborators.length} classified collaborators`);
+    
+    // Get main artist info
+    const mainArtist = await this.getArtistByName(artistName);
+    if (!mainArtist) {
+      console.log(`❌ [DEBUG] Main artist "${artistName}" not found in database`);
+      throw new Error(`Artist "${artistName}" not found in database`);
+    }
+
+    // Get main artist's Spotify image and MusicNerd ID
+    let mainArtistImage = null;
+    let mainArtistMusicNerdId = null;
+    
+    try {
+      const spotifyArtist = await spotifyService.searchArtist(artistName);
+      if (spotifyArtist) {
+        mainArtistImage = spotifyService.getArtistImageUrl(spotifyArtist);
+
       }
+      mainArtistMusicNerdId = await musicNerdService.getArtistId(artistName);
+    } catch (error) {
+      console.log(`Could not fetch metadata for main artist ${artistName}`);
+    }
+
 
       // Fallback to MusicBrainz if OpenAI fails or isn't available
       console.log(`🎵 [DEBUG] Querying MusicBrainz API for "${artistName}"...`);
@@ -541,76 +713,101 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
           if (spotifyArtist) {
             mainArtistImage = spotifyService.getArtistImageUrl(spotifyArtist, 'medium');
             mainArtistSpotifyId = spotifyArtist.id;
+
+    // Detect multiple roles for main artist using MusicBrainz
+    let mainArtistRoles = ['artist'];
+    try {
+      const mbArtist = await musicBrainzService.searchArtist(artistName);
+      if (mbArtist) {
+        const detailedArtist = await musicBrainzService.getArtistWithRelations(mbArtist.id);
+        if (detailedArtist && detailedArtist.relations) {
+          const producerRelations = detailedArtist.relations.filter(r => 
+            r.type === 'producer' || r.type === 'mix' || r.type === 'recording engineer'
+          );
+          const songwriterRelations = detailedArtist.relations.filter(r => 
+            r.type === 'composer' || r.type === 'lyricist' || r.type === 'writer' || r.type === 'songwriter'
+          );
+          
+          if (producerRelations.length > 0) {
+            mainArtistRoles.push('producer');
           }
-        } catch (error) {
-          console.warn(`Could not fetch Spotify data for ${artistName}`);
+          if (songwriterRelations.length > 0) {
+            mainArtistRoles.push('songwriter');
+
+          }
+          console.log(`🎭 [DEBUG] Main artist "${artistName}" roles: [${mainArtistRoles.join(', ')}]`);
         }
       }
+    } catch (error) {
+      console.log(`❌ [DEBUG] Could not classify main artist roles for "${artistName}":`, error);
+    }
 
-      // Get MusicNerd artist ID for main artist
-      let mainArtistMusicNerdId = null;
+    const mainArtistNode: NetworkNode = {
+      id: artistName,
+      name: artistName,
+      type: 'artist',
+      types: mainArtistRoles,
+      size: 20,
+      artistId: mainArtistMusicNerdId,
+    };
+
+    const nodeMap = new Map<string, NetworkNode>();
+    nodeMap.set(artistName, mainArtistNode);
+    const links: NetworkLink[] = [];
+
+    // Process collaborators and get their branching collaborators
+    for (const collaborator of collaborators) {
+      console.log(`🔍 [DEBUG] Processing collaborator "${collaborator.name}" and finding their collaborators`);
+      
+      // Get collaborator's own collaborators from Spotify
+      const branchingCollaborators = await this.getSpotifyCollaborators(collaborator.name);
+      const topBranchingCollaborators = branchingCollaborators.slice(0, 3); // Top 3 branching collaborators
+      
+      // Small delay to prevent rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      console.log(`🌿 [DEBUG] Found ${topBranchingCollaborators.length} branching collaborators for "${collaborator.name}"`);
+
+      // Get collaborator's MusicNerd ID only (no image data)
+      let collaboratorMusicNerdId = null;
+      
       try {
-        mainArtistMusicNerdId = await musicNerdService.getArtistId(artistName);
+        if (collaborator.type === 'artist') {
+          collaboratorMusicNerdId = await musicNerdService.getArtistId(collaborator.name);
+        }
       } catch (error) {
-        console.log(`Could not fetch MusicNerd ID for ${artistName}`);
+        console.log(`Could not fetch MusicNerd ID for ${collaborator.name}`);
       }
 
-      // Update main artist node with additional data
-      const mainArtistNode = nodeMap.get(artistName)!;
-      mainArtistNode.imageUrl = mainArtistImage;
-      mainArtistNode.spotifyId = mainArtistSpotifyId;
-      mainArtistNode.artistId = mainArtistMusicNerdId;
-
-      // Add collaborating artists from MusicBrainz - limit to top 5 producers and songwriters for performance
-      console.log(`🎨 [DEBUG] Processing ${collaborationData.artists.length} MusicBrainz collaborators...`);
+      const collaboratorNode: NetworkNode = {
+        id: collaborator.name,
+        name: collaborator.name,
+        type: collaborator.type as 'artist' | 'producer' | 'songwriter',
+        types: collaborator.types || [collaborator.type as 'artist' | 'producer' | 'songwriter'], // Multi-role support
+        size: 15,
+        artistId: collaboratorMusicNerdId,
+        topCollaborations: topBranchingCollaborators, // For hover tooltips
+      };
       
-      // Separate collaborators by type and limit producers/songwriters to top 5 each
-      const artists = collaborationData.artists.filter(c => c.type === 'artist');
-      const producers = collaborationData.artists.filter(c => c.type === 'producer').slice(0, 5);
-      const songwriters = collaborationData.artists.filter(c => c.type === 'songwriter').slice(0, 5);
-      
-      const limitedCollaborators = [...artists, ...producers, ...songwriters];
-      console.log(`⚡ [DEBUG] Limited to ${limitedCollaborators.length} collaborators (${producers.length} producers, ${songwriters.length} songwriters, ${artists.length} artists)`);
-      
-      for (const collaborator of limitedCollaborators) {
-        console.log(`👤 [DEBUG] Processing collaborator: "${collaborator.name}" (type: ${collaborator.type}, relation: ${collaborator.relation})`);
-        
-        // Get Spotify image for collaborator
-        let collaboratorImage = null;
-        let collaboratorSpotifyId = null;
-        
-        if (spotifyService.isConfigured()) {
-          try {
-            console.log(`🎧 [DEBUG] Fetching Spotify data for "${collaborator.name}"...`);
-            const spotifyCollaborator = await spotifyService.searchArtist(collaborator.name);
-            if (spotifyCollaborator) {
-              collaboratorImage = spotifyService.getArtistImageUrl(spotifyCollaborator, 'medium');
-              collaboratorSpotifyId = spotifyCollaborator.id;
-              console.log(`✅ [DEBUG] Found Spotify profile for "${collaborator.name}": ${collaboratorSpotifyId}`);
-            } else {
-              console.log(`❌ [DEBUG] No Spotify profile found for "${collaborator.name}"`);
-            }
-          } catch (error) {
-            console.log(`⚠️ [DEBUG] Spotify lookup failed for "${collaborator.name}": ${error}`);
-          }
-        } else {
-          console.log(`🔒 [DEBUG] Spotify not configured, skipping image lookup for "${collaborator.name}"`);
-        }
+      nodeMap.set(collaborator.name, collaboratorNode);
+      const roleDisplay = collaborator.types ? collaborator.types.join(' + ') : collaborator.type;
+      console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${roleDisplay}) from Spotify/MusicBrainz`);
 
-        // Get MusicNerd artist ID for collaborators who are artists
-        let collaboratorMusicNerdId = null;
-        if (collaborator.type === 'artist') {
-          try {
-            collaboratorMusicNerdId = await musicNerdService.getArtistId(collaborator.name);
-          } catch (error) {
-            console.log(`Could not fetch MusicNerd ID for ${collaborator.name}`);
-          }
-        }
+      // Create link from main artist to collaborator
+      links.push({
+        source: artistName,
+        target: collaborator.name,
+      });
+      console.log(`🔗 [DEBUG] Created link: "${artistName}" ↔ "${collaborator.name}"`);
 
-        // For producers and songwriters, fetch their authentic collaboration history from MusicBrainz
-        let topCollaborators: string[] = [];
-        if (collaborator.type === 'producer' || collaborator.type === 'songwriter') {
+      // Add branching collaborators
+      for (const branchingCollaborator of topBranchingCollaborators) {
+        if (branchingCollaborator !== artistName && !nodeMap.has(branchingCollaborator)) {
+          // Get branching collaborator's MusicNerd ID only (no image data)
+          let branchingMusicNerdId = null;
+          
           try {
+
             console.log(`🔍 [DEBUG] Fetching authentic collaborations for ${collaborator.type} "${collaborator.name}"`);
             const producerCollaborations = await musicBrainzService.getArtistCollaborations(collaborator.name);
             
@@ -713,16 +910,13 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
               topCollaborators = Array.from(new Set(topCollaborators)).slice(0, 3);
               console.log(`📝 [DEBUG] Enhanced collaborations for "${collaborator.name}" with main artist:`, topCollaborators);
             }
+
+            branchingMusicNerdId = await musicNerdService.getArtistId(branchingCollaborator);
+
           } catch (error) {
-            console.log(`❌ [DEBUG] Error fetching collaborations for "${collaborator.name}":`, error);
-            // Fallback to current network collaborators
-            const networkCollaborators = collaborationData.artists
-              .filter(c => c.name !== collaborator.name && c.name !== artistName)
-              .map(c => c.name);
-            topCollaborators = [artistName, ...networkCollaborators.slice(0, 2)];
-            console.log(`🔄 [DEBUG] Using network fallback for "${collaborator.name}":`, topCollaborators);
+            console.log(`Could not fetch MusicNerd ID for branching collaborator ${branchingCollaborator}`);
           }
-        }
+
 
         // Check if we already have this person (for multi-role support)
         let collaboratorNode = nodeMap.get(collaborator.name);
@@ -756,30 +950,26 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
             spotifyId: collaboratorSpotifyId,
             artistId: collaboratorMusicNerdId,
             collaborations: topCollaborators.length > 0 ? topCollaborators : undefined,
+
+          const branchingNode: NetworkNode = {
+            id: branchingCollaborator,
+            name: branchingCollaborator,
+            type: 'artist', // Default to artist for branching collaborators
+            types: ['artist'],
+            size: 10,
+            artistId: branchingMusicNerdId,
+
           };
-          nodeMap.set(collaborator.name, collaboratorNode);
           
-          console.log(`🎭 [DEBUG] Enhanced MusicBrainz "${collaborator.name}" from ${collaborator.type} to roles:`, enhancedRoles);
-        }
-        console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from MusicBrainz relation "${collaborator.relation}"`);
+          nodeMap.set(branchingCollaborator, branchingNode);
+          console.log(`🌿 [DEBUG] Added branching node: "${branchingCollaborator}" (artist) connected to "${collaborator.name}"`);
 
-        links.push({
-          source: artistName,
-          target: collaborator.name,
-        });
-        console.log(`🔗 [DEBUG] Created link: "${artistName}" ↔ "${collaborator.name}"`);
-      }
-
-      // If no real collaborations found, try Wikipedia
-      if (collaborationData.artists.length === 0) {
-        console.log(`🔍 [DEBUG] No MusicBrainz collaborations found for "${artistName}", trying Wikipedia fallback...`);
-        
-        try {
-          const wikipediaCollaborators = await wikipediaService.getArtistCollaborations(artistName);
-          console.log(`📖 [DEBUG] Wikipedia response for "${artistName}":`, {
-            collaborators: wikipediaCollaborators.length,
-            collaboratorList: wikipediaCollaborators.map(c => `${c.name} (${c.type}, context: "${c.context.substring(0, 50)}...")`)
+          // Create link from collaborator to their branching collaborator
+          links.push({
+            source: collaborator.name,
+            target: branchingCollaborator,
           });
+
           
           if (wikipediaCollaborators.length > 0) {
             console.log(`✅ [DEBUG] Using Wikipedia data - found ${wikipediaCollaborators.length} collaborators`);
@@ -867,54 +1057,59 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
               }
               console.log(`➕ [DEBUG] Added node: "${collaborator.name}" (${collaborator.type}) from Wikipedia context`);
 
-              links.push({
-                source: artistName,
-                target: collaborator.name,
-              });
-              console.log(`🔗 [DEBUG] Created link: "${artistName}" ↔ "${collaborator.name}" (Wikipedia source)`);
-            }
-            
-            console.log(`✅ [DEBUG] Successfully created network from Wikipedia data: ${wikipediaCollaborators.length} collaborators for "${artistName}"`);
-
-            // Final node array from consolidated map
-            const nodes = Array.from(nodeMap.values());
-            
-            // Cache the generated network data
-            const networkData = { nodes, links };
-            console.log(`💾 [DEBUG] About to cache Wikipedia network data for "${artistName}" with ${nodes.length} nodes`);
-            await this.cacheNetworkData(artistName, networkData);
-            
-            return networkData;
-
-          } else {
-            console.log(`❌ [DEBUG] Wikipedia returned 0 collaborators for "${artistName}"`);
-          }
-        } catch (error) {
-          console.error(`⚠️ [DEBUG] Error fetching Wikipedia collaborations for "${artistName}":`, error);
+          console.log(`🔗 [DEBUG] Created branching link: "${collaborator.name}" ↔ "${branchingCollaborator}"`);
         }
+      }
+    }
+
+
+    // Step 4: Detect cross-collaborations between collaborators
+    console.log(`🔍 [DEBUG] Starting cross-collaboration detection between collaborators`);
+    await this.addCrossCollaborationLinks(collaborators, nodeMap, links);
+
+    // Final node array from consolidated map
+    const finalNodes = Array.from(nodeMap.values());
+    
+    // Cache the generated network data
+    const networkData = { nodes: finalNodes, links };
+    console.log(`💾 [DEBUG] About to cache Spotify/MusicBrainz network data for "${artistName}" with ${finalNodes.length} nodes and ${links.length} links`);
+    await this.cacheNetworkData(artistName, networkData);
+    
+    return networkData;
+  }
+
+  private async addCrossCollaborationLinks(
+    collaborators: Array<{name: string, type: string}>, 
+    nodeMap: Map<string, NetworkNode>, 
+    links: NetworkLink[]
+  ): Promise<void> {
+    console.log(`🔗 [DEBUG] Checking for cross-collaborations between ${collaborators.length} collaborators`);
+    
+    // Check each pair of collaborators to see if they've worked together
+    // Only check a subset to balance thoroughness with performance
+    const maxChecks = Math.min(collaborators.length, 6); // Limit to top 6 to balance performance
+    
+    for (let i = 0; i < maxChecks; i++) {
+      for (let j = i + 1; j < maxChecks; j++) {
+        const collaborator1 = collaborators[i];
+        const collaborator2 = collaborators[j];
         
-        // If both MusicBrainz and Wikipedia fail, add known authentic collaborators as fallback
+
+        // If both MusicBrainz and Wikipedia fail, return only the main artist node
         console.log(`🚨 [DEBUG] No real collaboration data found for "${artistName}" from either MusicBrainz or Wikipedia`);
+        console.log(`👤 [DEBUG] Returning only the main artist node without any collaborators`);
         
-        // Add known authentic songwriter collaborators for major artists
-        const artistNameLower = artistName.toLowerCase();
-        const knownCollaborations: { [key: string]: Array<{name: string, type: 'songwriter' | 'producer', relation: string}> } = {
-          'taylor swift': [
-            {name: 'Jack Antonoff', type: 'songwriter', relation: 'co-writer'},
-            {name: 'Max Martin', type: 'songwriter', relation: 'co-writer'},
-            {name: 'Shellback', type: 'songwriter', relation: 'co-writer'},
-            {name: 'Aaron Dessner', type: 'songwriter', relation: 'co-writer'},
-          ]
-        };
+        // No fallback collaborators - authentic data only
+
+        console.log(`🔍 [DEBUG] Checking if "${collaborator1.name}" has worked with "${collaborator2.name}"`);
         
-        if (knownCollaborations[artistNameLower]) {
-          console.log(`✨ [DEBUG] Adding known authentic collaborators for "${artistName}"`);
-          const fallbackArtists = knownCollaborations[artistNameLower];
-          
-          for (const collab of fallbackArtists) {
-            // Check if we already have this person (for multi-role support)
-            let collaboratorNode = nodeMap.get(collab.name);
+        try {
+          // Get collaborator1's top tracks only (faster than full collaborator search)
+          const spotifyArtist = await spotifyService.searchArtist(collaborator1.name);
+          if (spotifyArtist) {
+            const topTracks = await spotifyService.getArtistTopTracks(spotifyArtist.id, 'US', 10);
             
+
             if (collaboratorNode) {
               // Person already exists - add the new role to their types array
               if (!collaboratorNode.types) {
@@ -933,65 +1128,86 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
                 types: [collab.type],
                 size: 20,
               };
-              
-              // Get MusicNerd artist ID for the collaborator
 
-              let musicNerdUrl = 'https://musicnerd.xyz';
-              try {
-                const artistId = await musicNerdService.getArtistId(collab.name);
-                if (artistId) {
-                  musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
-
-                  console.log(`✅ [DEBUG] Found MusicNerd ID for ${collab.name}: ${artistId}`);
-                }
-              } catch (error) {
-                console.log(`📭 [DEBUG] No MusicNerd ID found for ${collab.name}`);
-              }
-              
-              collaboratorNode.musicNerdUrl = musicNerdUrl;
-              nodeMap.set(collab.name, collaboratorNode);
-            }
-            links.push({
-              source: mainArtistNode.id,
-              target: collaboratorNode.id,
-            });
+            // Check if collaborator2 appears in any of these tracks
+            const hasCollaborated = topTracks.some(track => 
+              track.artists.some(artist => 
+                artist.name.toLowerCase().includes(collaborator2.name.toLowerCase()) ||
+                collaborator2.name.toLowerCase().includes(artist.name.toLowerCase())
+              )
+            );
             
-            console.log(`✨ [DEBUG] Added known authentic collaborator: ${collab.name} (${collab.type})`);
+            if (hasCollaborated) {
+              // Check if link already exists
+              const linkExists = links.some(link => 
+                (link.source === collaborator1.name && link.target === collaborator2.name) ||
+                (link.source === collaborator2.name && link.target === collaborator1.name)
+              );
+
+              
+              if (!linkExists) {
+                links.push({
+                  source: collaborator1.name,
+                  target: collaborator2.name,
+                });
+                console.log(`🌟 [DEBUG] Added cross-collaboration link: "${collaborator1.name}" ↔ "${collaborator2.name}"`);
+              }
+            }
           }
-        } else {
-          console.log(`👤 [DEBUG] Returning only the main artist node without any collaborators`);
+        } catch (error) {
+          console.log(`❌ [DEBUG] Error checking cross-collaboration between "${collaborator1.name}" and "${collaborator2.name}":`, error);
         }
-        
 
-        // Final node array from consolidated map
-        const nodes = Array.from(nodeMap.values());
         
-        // Cache the generated network data
-        const networkData = { nodes, links };
-        await this.cacheNetworkData(artistName, networkData);
-        return networkData;
-
-      } else {
-        console.log(`✅ [DEBUG] Successfully created network from MusicBrainz data: ${collaborationData.artists.length} collaborators for "${artistName}"`);
+        // Small delay to prevent rate limiting
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
-
-      // Final node array from consolidated map
-      const nodes = Array.from(nodeMap.values());
-      
-      // Cache the generated network data
-      const networkData = { nodes, links };
-      await this.cacheNetworkData(artistName, networkData);
-      return networkData;
-    } catch (error) {
-      console.error('Error generating real collaboration network:', error);
-      // Return just the main artist if everything fails
-      const nodes = Array.from(nodeMap.values());
-      
-      // Cache the generated network data
-      const networkData = { nodes, links };
-      await this.cacheNetworkData(artistName, networkData);
-      return networkData;
     }
+  }
+
+
+
+  private async createSingleArtistNetwork(artistName: string): Promise<NetworkData> {
+    console.log(`👤 [DEBUG] Creating single artist network for "${artistName}"`);
+    
+    const mainArtist = await this.getArtistByName(artistName);
+    if (!mainArtist) {
+      console.log(`❌ [DEBUG] Main artist "${artistName}" not found in database`);
+      throw new Error(`Artist "${artistName}" not found in database`);
+    }
+
+    // Get main artist's Spotify image and MusicNerd ID
+    let mainArtistImage = null;
+    let mainArtistMusicNerdId = null;
+    
+    try {
+      const spotifyArtist = await spotifyService.searchArtist(artistName);
+      if (spotifyArtist) {
+        mainArtistImage = spotifyService.getArtistImageUrl(spotifyArtist);
+      }
+      mainArtistMusicNerdId = await musicNerdService.getArtistId(artistName);
+    } catch (error) {
+      console.log(`Could not fetch metadata for main artist ${artistName}`);
+    }
+
+    const mainArtistNode: NetworkNode = {
+      id: artistName,
+      name: artistName,
+      type: 'artist',
+      types: ['artist'],
+      size: 20,
+      imageUrl: mainArtistImage,
+      spotifyId: null,
+      artistId: mainArtistMusicNerdId,
+    };
+
+    const networkData = { nodes: [mainArtistNode], links: [] };
+    
+    // Cache the network data
+    console.log(`💾 [DEBUG] About to cache single-artist network data for "${artistName}"`);
+    await this.cacheNetworkData(artistName, networkData);
+    
+    return networkData;
   }
 
   private async cacheNetworkData(artistName: string, networkData: NetworkData): Promise<void> {
@@ -1007,29 +1223,25 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       const existingArtist = await this.getArtistByName(artistName);
       
       if (existingArtist) {
-        // Update existing artist with webMapData
-        // Update existing artist with webmapdata using raw SQL since schema doesn't match MusicNerd DB
-        await db.execute(sql`
-          UPDATE artists 
-          SET webmapdata = ${JSON.stringify(networkData)}::jsonb 
-          WHERE name = ${artistName}
-        `);
-        console.log(`✅ [DEBUG] Updated webmapdata cache for existing artist "${artistName}"`);
+        // Update existing artist with webmapdata
+        await db
+          .update(artists)
+          .set({ 
+            webmapdata: networkData
+          })
+          .where(eq(artists.id, existingArtist.id));
+        
+        console.log(`✅ [DEBUG] Successfully cached webmapdata for existing artist "${artistName}"`);
       } else {
-        // Don't create new artists - only cache data for existing artists
-        console.log(`❌ [DEBUG] Artist "${artistName}" does not exist in database - skipping cache creation`);
+        console.log(`⚠️ [DEBUG] Artist "${artistName}" not found in database - skipping cache`);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error(`❌ [DEBUG] Error caching webmapdata for "${artistName}":`, error);
-      console.error(`❌ [DEBUG] Full error details:`, {
-        message: error?.message,
-        code: error?.code,
-        detail: error?.detail
-      });
     }
   }
 
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
+
     // Force fresh generation for all artists to use new data-only approach
     console.log(`🔄 [DEBUG] Force regenerating network data for "${artistName}" with data-only approach (cache cleared)`);
     
@@ -1052,22 +1264,23 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       throw new Error(`Artist "${artistName}" not found in database. Please search for an existing artist.`);
     }
 
-    // Check if this is an enhanced demo artist using the correct database name
-    if (enhancedMusicBrainzArtists.includes(mainArtist.name)) {
-      console.log(`🎵 [DEBUG] Using enhanced MusicBrainz data for "${mainArtist.name}" to showcase deep producer/songwriter networks`);
-      const networkData = await this.generateRealCollaborationNetwork(mainArtist.name);
-      // Cache the result
-      await this.cacheNetworkData(mainArtist.name, networkData);
-      return networkData;
+    console.log(`🔍 [DEBUG] Getting network data for: "${artistName}"`);
+    
+
+    // Check cache for existing network data
+    if (cachedArtist?.webmapdata) {
+      console.log(`✅ [DEBUG] Found cached webmapdata for "${cachedArtist.name}" - using cached data`);
+      return cachedArtist.webmapdata as NetworkData;
+
+
+    // Check if artist exists in database first
+    const existingArtist = await this.getArtistByName(artistName);
+    if (!existingArtist) {
+      console.log(`❌ [DEBUG] Artist "${artistName}" not found in database`);
+      return null;
+
     }
 
-    // If artist exists in MusicNerd database (UUID ID), skip collaboration lookup 
-    // and generate real collaboration data instead since MusicNerd doesn't have our collaborations table
-    const artistId = String(mainArtist.id);
-    if (artistId.includes('-')) {
-      console.log(`🎵 [DEBUG] Found MusicNerd artist "${mainArtist.name}" - generating real collaboration network`);
-      return this.generateRealCollaborationNetwork(mainArtist.name);
-    }
 
     // Artist exists in our own database, build network from stored data
     const nodes: NetworkNode[] = [];
@@ -1104,8 +1317,16 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
           target: collaborator.name,
         });
       }
+
+    // Check for cached data
+    if (existingArtist.webmapdata) {
+      console.log(`✅ [DEBUG] Found cached webmapdata for "${artistName}"`);
+      return existingArtist.webmapdata as NetworkData;
+
     }
 
-    return { nodes, links };
+    // Generate new network data
+    console.log(`🔄 [DEBUG] No cached data found for "${artistName}" - generating new network...`);
+    return await this.generateRealCollaborationNetwork(artistName);
   }
 }
