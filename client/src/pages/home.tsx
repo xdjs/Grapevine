@@ -153,7 +153,7 @@ export default function Home() {
                     window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer');
                   }}
                 >
-                  Music Nerd
+                  www.musicnerd.xyz
                 </span>
               </p>
               <p>Click on artist nodes to visit their MusicNerd profiles</p>
