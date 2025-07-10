@@ -144,19 +144,17 @@ export default function Home() {
               <p className="mb-1 sm:mb-2">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
               <p className="mb-1 sm:mb-2">
                 Powered by{' '}
-                <a 
-                  href="https://www.musicnerd.xyz" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-pink-400 hover:text-pink-300 transition-colors underline cursor-pointer z-50 relative"
+                <span 
+                  className="text-pink-400 hover:text-pink-300 transition-colors underline cursor-pointer font-medium"
+                  style={{ pointerEvents: 'auto', display: 'inline-block' }}
                   onClick={(e) => {
                     console.log('Music Nerd link clicked');
-                    e.preventDefault();
+                    e.stopPropagation();
                     window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer');
                   }}
                 >
                   Music Nerd
-                </a>
+                </span>
               </p>
               <p>Click on artist nodes to visit their MusicNerd profiles</p>
             </div>
