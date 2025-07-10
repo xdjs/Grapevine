@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
+import { fetchNetworkData } from "@/lib/network-data";
 import { NetworkData } from "@/types/network";
 import { Search } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -130,9 +130,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       setIsLoading(true);
       onLoadingChange?.(true);
       
-      const data = artist.artistId || artist.id 
-        ? await fetchNetworkDataById(artist.artistId || artist.id)
-        : await fetchNetworkData(artist.name.trim());
+      const data = await fetchNetworkData(artist.name.trim());
       onNetworkData(data);
       
       toast({
