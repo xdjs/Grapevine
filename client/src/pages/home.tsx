@@ -148,21 +148,19 @@ export default function Home() {
             
             {/* Music Nerd Button */}
             <div className="flex justify-center" style={{ pointerEvents: 'auto', zIndex: 1000 }}>
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.log('Music Nerd button clicked!');
-                  window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer');
-                }}
-                className="font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+              <a
+                href="https://www.musicnerd.xyz"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium py-2 px-4 rounded-lg transition-colors text-sm inline-block text-center no-underline"
                 style={{
                   backgroundColor: '#ffa2e3',
                   color: '#1f2937',
                   borderColor: '#b427b4',
                   pointerEvents: 'auto',
                   cursor: 'pointer',
-                  zIndex: 1001
+                  zIndex: 1001,
+                  textDecoration: 'none'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = '#e085cc';
@@ -172,7 +170,7 @@ export default function Home() {
                 }}
               >
                 Visit Music Nerd
-              </button>
+              </a>
             </div>
           </div>
         </div>
