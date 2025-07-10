@@ -50,11 +50,11 @@ This is a full-stack web application that visualizes music collaboration network
 - **Legend**: Shows color coding for different artist types
 
 ### Real Music Database Integration
-Now integrates with multiple authentic sources for comprehensive collaboration data:
-- **MusicBrainz API**: Primary source for artist collaboration relationships
-- **Wikipedia API**: Secondary source for collaboration data when MusicBrainz lacks information
+Now integrates with authentic sources for comprehensive collaboration data:
+- **OpenAI API**: Primary source for music collaboration data with temperature 0.1-0.3 for factual accuracy
+- **MusicBrainz API**: Fallback source for artist collaboration relationships when OpenAI is unavailable
 - **Spotify Web API**: Provides artist profile images and additional metadata
-- **Intelligent Fallback**: Two-tier system (MusicBrainz → Wikipedia) with authentic data only
+- **Clean Architecture**: Pure API-driven system with no internal databases or hardcoded fallbacks
 - **Rate Limiting**: Proper API throttling for sustainable data access
 
 ## Data Flow
@@ -275,17 +275,83 @@ Changelog:
 - Improved loading spinner and tooltip responsiveness for mobile viewing
 - Enhanced filter controls with smaller touch targets and mobile-appropriate spacing
 
-### OpenAI Primary Data Source Integration (June 30, 2025)
-- Integrated OpenAI API as the primary data source for music collaboration networks
-- Updated data source priority: 1) OpenAI → 2) MusicBrainz → 3) Wikipedia → 4) Known collaborations fallback
-- OpenAI generates authentic producer and songwriter collaborations using GPT-4o model
-- System prompts OpenAI with: "Generate a list of producers and songwriters who have collaborated with artist X. For each producer and songwriter, include their top 3 collaborating artists."
-- Successfully extracts 5 producers and 5 songwriters with their top 3 collaborating artists for enhanced music discovery
-- Enhanced producer branching: producers now get up to 3 top collaborator connections (previously limited to 2)
-- Both producers and songwriters display equal branching networks showing authentic industry relationships
-- Maintains all existing features: MusicNerd artist page linking, Spotify images, and branching connections
-- Comprehensive error handling with intelligent fallback to MusicBrainz when OpenAI is unavailable
-- Fixed TypeScript variable scope issues and type safety for seamless integration
+### Authentic Data Only Policy Implementation (July 8, 2025)
+- Disabled OpenAI API to ensure only authentic collaboration data is displayed
+- Updated data source priority: 1) MusicBrainz → 2) Wikipedia → 3) Main artist only (no synthetic data)
+- For artists with no real collaborators found in MusicBrainz or Wikipedia, only the main artist node is returned
+- Removed all synthetic/generated collaboration fallbacks to prevent misleading artificial connections
+- System now returns single-node networks for artists without documented collaborations
+- Maintains all existing features: MusicNerd artist page linking, Spotify images, and real collaboration detection
+- Comprehensive debugging shows exact data sources and extraction process for transparency
+- Cache system preserves authentic collaboration data for improved performance on repeat queries
+
+### Clean API-Only Architecture Implementation (July 7, 2025)
+- Removed all internal databases and fallback systems for pure API-driven architecture
+- Eliminated Wikipedia service integration and all hardcoded collaboration mappings
+- Simplified data source priority to: 1) OpenAI → 2) MusicBrainz (no fallbacks)
+- Removed known collaborations database, multi-role artist mappings, and synthetic data generation
+- Cleaned up generateRealCollaborationNetwork method to use only authentic API data sources
+- Temperature settings optimized: OpenAI service (0.1), API endpoint (0.3) for factual music data
+- System now returns only main artist node if no real collaboration data found from APIs
+- Maintains caching system for performance while ensuring all data comes from authorized sources
+- Eliminates misleading artificial connections by using authentic data sources exclusively
+
+### Spotify API Primary Source Implementation (July 7, 2025)
+- Implemented new data flow: Spotify API → MusicBrainz classification → optional OpenAI parsing
+- Spotify API now serves as primary source for discovering artist collaborators through tracks and albums
+- MusicBrainz API used for classifying collaborators by type (artist, producer, songwriter) based on relations
+- Enhanced Spotify service integration to extract collaborators from top tracks and album track listings
+- Intelligent classification system using MusicBrainz relation counts to determine collaborator roles
+- Maintains same JSON format output while using authentic collaboration data from Spotify's music database
+- All hardcoded arrays and fallback systems completely removed for pure API-driven architecture
+- System processes up to 15 collaborators to avoid rate limits while maintaining comprehensive coverage
+
+### Enhanced Branching Network with Tooltip Integration (July 7, 2025)
+- Implemented 5 main collaborators plus 3 branching collaborators per collaborator for comprehensive network discovery
+- Each collaborator now searches for their own top 3 collaborators using Spotify API for authentic branching relationships
+- Enhanced NetworkNode schema to include topCollaborations field for hover tooltip data
+- Restored hover tooltip functionality showing "Top Collaborations" for producers and songwriters
+- System creates multi-tier networks: Main Artist → 5 Collaborators → 3 Sub-collaborators per collaborator
+- Branching collaborators connect to MusicNerd artist pages when available, otherwise link to main MusicNerd site
+- All collaboration data sourced from authentic Spotify track and album collaborations
+- Tooltips display up to 3 top collaborations when hovering over producer and songwriter nodes
+- Successfully tested with artists like Olivia Rodrigo generating 12+ node networks with proper branching
+
+### 10-Collaborator System with Cross-Collaboration Detection (July 7, 2025)
+- Increased main collaborator limit from 5 to 10 for more comprehensive artist networks
+- Implemented cross-collaboration detection system that checks if collaborators have worked together
+- When collaborators share common projects, system adds direct links between them (e.g., Ryan Tedder ↔ Ed Sheeran if both worked with Beyonce)
+- Cross-collaboration uses Spotify API to verify authentic working relationships between collaborators
+- System checks each pair of collaborators to detect shared projects and creates interconnected network graphs
+- Enhanced network complexity shows realistic music industry collaboration patterns
+- Successfully tested with artists generating 15+ node networks with proper cross-collaborator connections
+- Example: Dua Lipa network shows John Hanes connected to both Chrome and Pearl Harbor & the Explosions
+
+### Enhanced Comprehensive Network System (July 7, 2025)
+- **10 Main Collaborators**: Increased back to 10 for comprehensive artist networks as requested
+- **3 Branching Collaborators**: Each main collaborator connects to 3 of their top collaborators
+- **Top 10 Songs + Top 3 Albums**: Uses both top 10 tracks and top 3 albums for comprehensive collaboration discovery
+- **Selective Cross-Collaboration Detection**: Checks top 6 collaborators for interconnections using efficient track-based matching
+- **Smart Rate Limiting**: 100ms delays between API calls plus 200ms delays for cross-collaboration checks
+- **Optimized Performance**: Balanced comprehensive data with reasonable generation times (15-25 seconds)
+- **Enhanced Discovery**: System now finds more authentic collaborations through dual-source analysis (songs + albums)
+- **Example**: Post Malone network discovers Morgan Wallen, Tate McRae, Eric Church, and HARDY with proper branching connections
+
+### Pure Spotify-Based Collaboration Discovery (July 7, 2025)
+- **Adaptive Album Search**: When fewer than 7 collaborators found, system searches up to 8 albums instead of 3
+- **No Fallback Data**: Removed known collaborator database to maintain pure API-driven architecture
+- **Authentic Spotify Data Only**: All collaborations sourced exclusively from Spotify track and album features
+- **Enhanced Coverage**: Kendrick Lamar network discovers 36+ unique collaborators through comprehensive album analysis
+- **Clean Architecture**: System uses only verified Spotify collaboration data without synthetic supplements
+
+### Restored Multi-Role Node Visualization (July 7, 2025)
+- **Multi-Role Detection**: MusicBrainz classification now assigns multiple roles (producer + songwriter, artist + songwriter)
+- **Segmented Circle Display**: Nodes with multiple roles show colored ring segments for each role
+- **Enhanced Role Assignment**: Collaborators can be simultaneously classified as multiple types based on MusicBrainz relations
+- **Visual Distinction**: Single-role nodes display solid colored circles, multi-role nodes display segmented arcs
+- **Authentic Role Data**: All role assignments based on verified MusicBrainz relationship data
+- **Main Artist Multi-Role Support**: Main artist nodes also get role detection (e.g., Taylor Swift shows as artist + songwriter + producer)
+- **Complete System Coverage**: Both collaborators and main artists receive comprehensive multi-role classification
 
 
 ### Multi-Role Node Consolidation (June 30, 2025)
@@ -383,6 +449,20 @@ Changelog:
 - All artist nodes now link exclusively to production MusicNerd environment
 
 - Complete elimination of staging URLs throughout the entire codebase
+
+### Environment Variable Consolidation (July 7, 2025)
+- Updated all API endpoints to prioritize MUSIC_BASE_URL over MUSICNERD_BASE_URL for consistency
+- Replaced all remaining hardcoded URLs in database-storage.ts with dynamic environment variables
+- Artist selection modal now uses dynamic base URL instead of hardcoded musicnerd.xyz
+- Added fallback chain: MUSIC_BASE_URL → MUSICNERD_BASE_URL → hardcoded fallback
+- Vercel API endpoints and Express server routes now use unified environment variable approach
+
+### Artist Not Found Dialog Implementation (July 7, 2025)
+- Created ArtistNotFoundDialog component for artist nodes without valid IDs
+- Added popup dialog with message "This artist has not been added to our database yet - feel free to add them and their socials!"
+- Dialog includes "Visit MusicNerd" button that opens MusicNerd homepage in new tab
+- Updated openMusicNerdProfile function to show dialog instead of doing nothing when no artist ID found
+- Fixed touchpad/mobile tap issue in search dropdowns by adding onTouchStart event handlers
 
 
 ### Fixed Main Artist Direct Navigation (July 2, 2025)
@@ -493,6 +573,35 @@ Changelog:
 - Filters out generic names like "John Doe", "Producer X", "Artist A", etc.
 - When OpenAI has no real data, returns single-node network instead of generating false information
 - Ensures complete data authenticity with zero tolerance for placeholder or synthetic collaborators
+
+
+### Enhanced OpenAI Prompt for Multi-Role Detection (July 7, 2025)
+- Updated OpenAI prompt to include explicit multi-role detection requirement
+- Added instruction to check if each artist/producer/songwriter has multiple roles (artist+songwriter, songwriter+producer)
+- Enhanced prompt specificity to ensure exactly 3 top collaborating artists for each producer and songwriter
+- Maintains focus on real, verified collaborations while improving role accuracy
+- Prompt now explicitly requests checking for dual roles to improve network node consolidation
+
+### Mobile-Specific Node Interaction Implementation (July 3, 2025)
+- Implemented mobile-specific node interaction mechanics for touch devices
+- Added `MobileNodeActionModal` component that shows choice dialog when mobile users tap artist nodes
+- Mobile behavior: Single tap opens choice modal with "Go to MusicNerd page" and "See their network map" options
+- Desktop behavior: Maintains existing left-click (MusicNerd page) and right-click (network map) functionality
+- Enhanced `NetworkNode` type definition to include `artistId` property for proper node linking
+- Integrated `useIsMobile` hook for accurate device detection (screens < 768px)
+- Mobile modal shows both navigation options for all artist nodes except main artist (which only shows MusicNerd option)
+- Provides equivalent functionality to desktop right-click through mobile-friendly interface
+- Addresses touch device limitation where right-click context is not available
+
+### Enhanced Mobile Modal with Tooltip Information (July 3, 2025)
+- Extended mobile modal to work with all node types (artists, producers, songwriters)
+- Moved all hover tooltip information into mobile modal for better mobile experience
+- Disabled hover tooltips on mobile devices (under 768px width) to prevent conflicts
+- Mobile modal now displays: artist name, role(s), and collaboration details for all nodes
+- Producer and songwriter modals show information only (no navigation buttons)
+- Artist modals include both information and navigation options (MusicNerd page, network map)
+- Enhanced mobile user experience with same detailed information previously only available on hover
+
 
 
 
