@@ -145,15 +145,8 @@ export default function Home() {
               <p className="mb-1 sm:mb-2">
                 Powered by{' '}
                 <button 
-                  type="button"
-                  className="music-nerd-link font-medium"
-                  onClick={(e) => {
-                    console.log('Music Nerd button clicked!');
-                    console.log('Event:', e);
-                    e.stopPropagation();
-                    window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer');
-                  }}
-                  onMouseOver={() => console.log('Hovering over Music Nerd button')}
+                  className="music-nerd-button"
+                  onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
                 >
                   Music Nerd
                 </button>
