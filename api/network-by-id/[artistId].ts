@@ -60,20 +60,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log(`✅ [Vercel] Found artist "${artistName}" (ID: ${artistId})`);
 
       // Check if we have cached webmapdata
-      // Clear cache for LISA/LiSA disambiguation - force regeneration to fix confusion
-      const shouldClearCache = artistName === 'LISA' || artistName === 'LiSA';
-      
-      if (artist.webmapdata && !shouldClearCache) {
+      if (artist.webmapdata) {
         await client.end();
         console.log(`🚀 [Vercel] Using cached webmapdata for "${artistName}" (ID: ${artistId})`);
         return res.json({
           ...artist.webmapdata,
           cached: true
         });
-      }
-      
-      if (shouldClearCache) {
-        console.log(`🗑️ [Vercel] Clearing cache for LISA/LiSA disambiguation - regenerating for "${artistName}" (ID: ${artistId})`);
       }
 
       await client.end();

@@ -1182,15 +1182,12 @@ export class DatabaseStorage implements IStorage {
       throw new Error(`Artist with ID "${artistId}" not found in database. Please search for an existing artist.`);
     }
 
-    // Clear cache for LISA/LiSA disambiguation fix - temporarily force regeneration
-    const shouldClearCache = cachedArtist.name === 'LISA' || cachedArtist.name === 'LiSA';
-    
-    if (cachedArtist?.webmapdata && !shouldClearCache) {
+    if (cachedArtist?.webmapdata) {
       console.log(`✅ [DEBUG] Found cached webmapdata for "${cachedArtist.name}" (ID: ${artistId}) - using cached data`);
       return cachedArtist.webmapdata as NetworkData;
     }
     
-    console.log(`🆕 [DEBUG] ${shouldClearCache ? 'Clearing cache for LISA/LiSA disambiguation - regenerating' : 'No cached data found for artist ID'} "${artistId}" - generating new network data`);
+    console.log(`🆕 [DEBUG] No cached data found for artist ID "${artistId}" - generating new network data`);
 
     // Use the artist's exact name from database for network generation
     const networkData = await this.generateRealCollaborationNetwork(cachedArtist.name);
