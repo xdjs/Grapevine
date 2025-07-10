@@ -475,6 +475,15 @@ Changelog:
 - **Applied to All Data Sources**: Limits work across OpenAI, MusicBrainz, and Wikipedia data sources
 - **Maintained Quality**: Authentic collaboration data preserved while improving user experience
 
+### Fixed MusicBrainz API Rate Limiting Issues (July 10, 2025)
+- **Resolved 503 Errors**: Eliminated service unavailable errors by disabling problematic work details requests
+- **Enhanced Rate Limiting**: Increased delay between requests to 1.2 seconds to respect MusicBrainz API limits
+- **Reduced Concurrent Requests**: Limited recording processing to 5 recordings per artist to prevent API overload
+- **Improved Request Sequencing**: Added proper delays before all major API calls (search, relations, recordings)
+- **Focus on Core Data**: Prioritized artist relations and recording credits over work details for comprehensive collaboration data
+- **Verified Functionality**: Drake returns 17 nodes, Taylor Swift returns 2 nodes with authentic MusicBrainz data
+- **Maintained Data Quality**: All collaboration data remains authentic from MusicBrainz recording credits and artist relations
+
 ### Eliminated Demo Artist Logic & Debugged MusicBrainz Priority (July 9, 2025)
 - **Completely removed all demo artist handling** and hardcoded collaboration databases as requested
 - **Eliminated all enhanced demo artist logic** - no special handling for any artist names

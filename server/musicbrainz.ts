@@ -130,6 +130,7 @@ class MusicBrainzService {
 
   async getArtistWithRelations(artistId: string): Promise<MusicBrainzArtist | null> {
     try {
+      await this.rateLimitDelay(); // Add delay before artist relations request
       const endpoint = `/artist/${artistId}?inc=artist-rels+work-rels+recording-rels&fmt=json`;
       const artist: MusicBrainzArtist = await this.makeRequest(endpoint);
       return artist;
@@ -151,13 +152,9 @@ class MusicBrainzService {
   }
 
   async getWorkDetails(workId: string): Promise<any> {
-    try {
-      const endpoint = `/work/${workId}?inc=artist-rels&fmt=json`;
-      return await this.makeRequest(endpoint);
-    } catch (error) {
-      console.error('Error getting work details:', error);
-      return null;
-    }
+    // Temporarily disabled to avoid 503 errors
+    console.log(`🔍 [DEBUG] Skipping work details for work ID: ${workId} to avoid rate limiting`);
+    return null;
   }
 
   async getArtistCollaborations(artistName: string): Promise<{
@@ -217,28 +214,18 @@ class MusicBrainzService {
           if (relation.type && ['composer', 'lyricist', 'writer', 'arranger'].includes(relation.type.toLowerCase())) {
             // This indicates the main artist is a songwriter for this work
             // Look for other songwriters associated with this work
-            try {
-              const workDetails = await this.getWorkDetails(relation.work.id);
-              if (workDetails && workDetails.relations) {
-                for (const workRelation of workDetails.relations) {
-                  if (workRelation["target-type"] === "artist" && workRelation.artist && 
-                      workRelation.artist.name !== artistName &&
-                      ['composer', 'lyricist', 'writer', 'arranger'].includes(workRelation.type?.toLowerCase() || '')) {
-                    
-                    if (!processedArtists.has(workRelation.artist.name)) {
-                      collaboratingArtists.push({
-                        name: workRelation.artist.name,
-                        type: 'songwriter',
-                        relation: `work ${workRelation.type}`
-                      });
-                      processedArtists.add(workRelation.artist.name);
-                      console.log(`✍️ [DEBUG] Found songwriter from work: ${workRelation.artist.name} (${workRelation.type})`);
-                    }
-                  }
-                }
-              }
-            } catch (workError) {
-              console.log(`⚠️ [DEBUG] Could not fetch work details for "${relation.work.title}":`, workError);
+            // Skip work details requests to avoid 503 errors - focus on recording credits instead
+            console.log(`🔍 [DEBUG] Skipping work details for "${relation.work.title}" to avoid rate limiting`);
+            
+            // Add the main artist as a songwriter for this work if they're the composer/lyricist
+            if (!processedArtists.has(artistName)) {
+              collaboratingArtists.push({
+                name: artistName,
+                type: 'songwriter',
+                relation: `work ${relation.type}`
+              });
+              processedArtists.add(artistName);
+              console.log(`✍️ [DEBUG] Found songwriter role for main artist: ${artistName} (${relation.type})`);
             }
           }
           
@@ -264,7 +251,7 @@ class MusicBrainzService {
         console.log(`🎵 [DEBUG] Found ${recordings.length} recordings for ${artistName}`);
 
       // Process recordings to extract production credits
-      for (const recording of recordings.slice(0, 10)) { // Limit to first 10 recordings to avoid rate limits
+      for (const recording of recordings.slice(0, 5)) { // Limit to first 5 recordings to avoid rate limits
         console.log(`🎵 [DEBUG] Processing recording: "${recording.title}" for ${artistName}`);
         
         // Check recording relations for producers/engineers
@@ -330,11 +317,8 @@ class MusicBrainzService {
         }
       }
 
-        // Process work relations for detailed songwriter/producer credits
-        for (const work of collaborativeWorks.slice(0, 5)) { // Limit to avoid rate limits
-          // This would require additional API calls to get work details
-          // For now, we'll rely on the artist relations and recording credits
-        }
+        // Skip work details requests to avoid rate limiting issues
+        // Focus on artist relations and recording credits which provide sufficient data
 
         console.log(`✅ [DEBUG] Recordings analysis completed for ${artistName}`);
       } catch (recordingsError) {
@@ -405,8 +389,8 @@ class MusicBrainzService {
 
   // Rate limiting helper
   private async rateLimitDelay(): Promise<void> {
-    // MusicBrainz allows 1 request per second
-    return new Promise(resolve => setTimeout(resolve, 1000));
+    // MusicBrainz allows 1 request per second - be more conservative
+    return new Promise(resolve => setTimeout(resolve, 1200));
   }
 }
 
