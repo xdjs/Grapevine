@@ -411,6 +411,15 @@ Changelog:
 - Ensures network maps display proper artist stylization as stored in MusicNerd database
 - Applied fix to both cached data retrieval and new network generation paths
 
+### Fixed Vercel Deployment Network Generation (July 10, 2025)
+- Created missing `/api/network-by-id/[artistId].ts` endpoint for Vercel deployment
+- Fixed issue where searching artists with no cached webmapdata showed 404 errors instead of generating networks
+- Added complete network generation workflow for ID-based artist requests on Vercel
+- Implemented proper error handling for missing OpenAI API keys in serverless environment
+- Added comprehensive logging and debugging for Vercel deployment troubleshooting
+- Fixed MusicNerd base URL configuration to use production domain consistently
+- Updated both local server and Vercel API endpoints to use correct production URLs
+
 
 
 
