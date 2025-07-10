@@ -367,8 +367,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
                 console.log(`🎭 [DEBUG] Enhanced "${collaborator.name}" from ${collaborator.type} to roles:`, enhancedRoles);
                 nodeMap.set(collaborator.name, collaboratorNode);
               }
-
-              }
+            }
 
             // Process all nodes to create links and branching connections
             const allNodes = Array.from(nodeMap.values());
