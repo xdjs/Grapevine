@@ -866,22 +866,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
-    // TEMPORARY: Force cache invalidation for main artist size fix
-    // Remove this section after all cached data is regenerated
-    const forceRegenerationArtists = ['Taylor Swift', 'DNCE', 'Post Malone', 'Ariana Grande', 'Billie Eilish', 'The Weeknd', 'Drake', 'Olivia Rodrigo'];
-    const shouldForceRegeneration = forceRegenerationArtists.includes(artistName);
+    // Force fresh generation for all artists to use new data-only approach
+    console.log(`🔄 [DEBUG] Force regenerating network data for "${artistName}" with data-only approach (cache cleared)`);
     
-    if (!shouldForceRegeneration) {
-      // First, check if we have cached webmapdata for this artist (applies to ALL artists)
-      console.log(`💾 [DEBUG] Checking for cached webmapdata for "${artistName}"`);
-      const cachedArtist = await this.getArtistByName(artistName);
-      
-      if (cachedArtist?.webmapdata) {
-        console.log(`✅ [DEBUG] Found cached webmapdata for "${cachedArtist.name}" - using cached data`);
-        return cachedArtist.webmapdata as NetworkData;
-      }
-    } else {
-      console.log(`🔄 [DEBUG] Force regenerating network data for "${artistName}" due to size standardization`);
+    // Check if artist exists but skip cached data
+    const artist = await this.getArtistByName(artistName);
+    if (!artist) {
+      console.log(`❌ [DEBUG] Artist "${artistName}" not found in database`);
+      return null;
     }
     
     console.log(`🆕 [DEBUG] No cached data found for "${artistName}" - generating new network data`);

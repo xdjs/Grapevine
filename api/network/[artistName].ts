@@ -65,15 +65,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Use the correct artist name from database (with proper capitalization)
       const correctArtistName = artistExistsResult.rows[0].name;
       
-      // Check for cached webmapdata using the correct artist name
-      const cacheQuery = 'SELECT webmapdata FROM artists WHERE LOWER(name) = LOWER($1) AND webmapdata IS NOT NULL';
-      const cacheResult = await client.query(cacheQuery, [correctArtistName]);
-      
-      if (cacheResult.rows.length > 0 && cacheResult.rows[0].webmapdata) {
-        console.log(`✅ [Vercel] Found cached data for ${artistName}`);
-        await client.end();
-        return res.json(cacheResult.rows[0].webmapdata);
-      }
+      // Skip cache and force fresh generation for all artists with data-only approach
+      console.log(`🔄 [Vercel] Skipping cache and forcing fresh generation for ${artistName} with data-only approach`);
       
       // If no cached data and no OpenAI key, return error
       if (!OPENAI_API_KEY) {

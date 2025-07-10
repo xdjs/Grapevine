@@ -435,6 +435,13 @@ Changelog:
 - Multi-role consolidation system remains but only uses real collaboration data from API sources
 - No role hallucination or assumptions - only verified data from reliable sources
 
+### Cache Cleared for All Artists (July 9, 2025)
+- Cleared all cached network data for every artist to force fresh generation using the new data-only approach
+- Updated both local server (database-storage.ts) and Vercel API endpoints to bypass all cached webmapdata
+- All artists now generate fresh collaboration networks from external APIs only
+- Ensures complete removal of any previously cached data that may have contained hardcoded fallbacks
+- System now provides purely authentic collaboration data for all network visualizations
+
 
 
 
