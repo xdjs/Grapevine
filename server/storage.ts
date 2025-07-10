@@ -1,7 +1,7 @@
 import { artists, collaborations, type Artist, type InsertArtist, type Collaboration, type InsertCollaboration, type NetworkData, type NetworkNode, type NetworkLink } from "../shared/schema.js";
 import { spotifyService } from "./spotify.js";
 import { musicBrainzService } from "./musicbrainz.js";
-import { wikipediaService } from "./wikipedia.js";
+// Wikipedia service removed - using pure API-only architecture
 import { musicNerdService } from "./musicnerd-service.js";
 
 export interface IStorage {
@@ -351,10 +351,14 @@ export class MemStorage implements IStorage {
       // Add collaborating artists from MusicBrainz
       console.log(`🎨 [DEBUG] Processing ${collaborationData.artists.length} MusicBrainz collaborators...`);
       
+
       // Use only the role data from external sources - no hardcoded role classifications
       const enhancedCollaborators = collaborationData.artists;
       
       for (const collaborator of enhancedCollaborators) {
+
+      // Use collaborator types directly from MusicBrainz API without hardcoded arrays
+      for (const collaborator of collaborationData.artists) {
         console.log(`👤 [DEBUG] Processing collaborator: "${collaborator.name}" (type: ${collaborator.type})`);
         // Get Spotify image for collaborator
         let collaboratorImage = null;
@@ -433,8 +437,9 @@ export class MemStorage implements IStorage {
         });
       }
 
-      // If no real collaborations found, try Wikipedia
+      // If no real collaborations found from MusicBrainz, return only the main artist
       if (collaborationData.artists.length === 0) {
+
         console.log(`No MusicBrainz collaborations found for ${artistName}, trying Wikipedia`);
         
         try {
@@ -495,6 +500,9 @@ export class MemStorage implements IStorage {
         
         // If both MusicBrainz and Wikipedia fail, return only the main artist
         console.log(`No real collaboration data found for ${artistName}, returning only main artist`);
+
+        console.log(`No MusicBrainz collaborations found for ${artistName} - returning main artist only`);
+
         return { nodes, links };
       }
 
