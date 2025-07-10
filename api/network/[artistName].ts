@@ -1,15 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Simple role detection for API consistency
-async function getVerifiedRoles(artistName: string) {
-  // This is a simplified version for the API - ideally would use the same service
-  // but for now, we'll maintain the existing logic and just ensure consistency
-  return {
-    roles: ['artist'], // Default for API
-    primaryRole: 'artist' as const
-  };
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -193,13 +183,11 @@ Requirements:
       const links = [];
 
       // Add main artist node using correct capitalization from database
-      // For API consistency, we'll use the same approach as the main server
-      const mainArtistRoles = await getVerifiedRoles(correctArtistName);
       const mainNode = {
         id: correctArtistName,
         name: correctArtistName,
-        type: mainArtistRoles.primaryRole,
-        types: mainArtistRoles.roles,
+        type: 'artist',
+        types: ['artist'],
         color: '#FF69B4',
         size: 30,
         artistId: artistExistsResult.rows[0].id
