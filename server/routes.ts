@@ -4,27 +4,19 @@ import { storage } from "./storage.js";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get network data for an artist by ID
-  app.get("/api/network/:artistId", async (req, res) => {
+  // Get network data for an artist by name
+  app.get("/api/network/:artistName", async (req, res) => {
     try {
-      const artistId = req.params.artistId;
+      const artistName = decodeURIComponent(req.params.artistName);
+      console.log(`🔍 [Server] Fetching network data for: "${artistName}"`);
       
-      // Check if data is cached first
-      let isCached = false;
-      if ('getArtist' in storage) {
-        const cachedArtist = await storage.getArtist(parseInt(artistId));
-        if (cachedArtist && 'webmapdata' in cachedArtist && cachedArtist.webmapdata) {
-          isCached = true;
-        }
+      const networkData = await storage.getNetworkData(artistName);
+      
+      if (!networkData) {
+        return res.status(404).json({ message: `No network data found for artist: ${artistName}` });
       }
       
-      const networkData = await storage.getNetworkDataById(parseInt(artistId));
-      
-      // Include cache status in response
-      res.json({
-        ...networkData,
-        cached: isCached
-      });
+      res.json(networkData);
     } catch (error) {
       console.error("Error fetching network data:", error);
       
