@@ -196,10 +196,47 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       return globalRoleMap.get(personName) || [defaultRole];
     };
 
-    // Pre-detect roles for main artist only
+    // Pre-detect roles for main artist with dedicated detection
     console.log(`🔍 [DEBUG] Detecting roles for main artist "${artistName}"...`);
-    await batchDetectRoles([artistName]);
-    const mainArtistTypes = getOptimizedRoles(artistName, 'artist');
+    let mainArtistTypes = ['artist']; // Default
+    
+    if (openAIService.isServiceAvailable()) {
+      try {
+        const mainArtistRolePrompt = `What roles does ${artistName} have in the music industry? Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. Return ONLY the JSON array, no other text.`;
+        
+        const OpenAI = await import('openai');
+        const openai = new OpenAI.default({
+          apiKey: process.env.OPENAI_API_KEY,
+        });
+
+        const roleCompletion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [{ role: "user", content: mainArtistRolePrompt }],
+          temperature: 0.1,
+          max_tokens: 100,
+        });
+
+        const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
+        if (roleContent) {
+          try {
+            const detectedRoles = JSON.parse(roleContent);
+            if (Array.isArray(detectedRoles) && detectedRoles.length > 0) {
+              const validRoles = detectedRoles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
+              if (validRoles.length > 0) {
+                mainArtistTypes = validRoles;
+                console.log(`✅ [DEBUG] Detected main artist roles for "${artistName}":`, mainArtistTypes);
+                // Cache for consistency
+                globalRoleMap.set(artistName, mainArtistTypes);
+              }
+            }
+          } catch (parseError) {
+            console.log(`⚠️ [DEBUG] Could not parse main artist role detection for "${artistName}", using default`);
+          }
+        }
+      } catch (error) {
+        console.log(`⚠️ [DEBUG] Main artist role detection failed for "${artistName}", using default`);
+      }
+    }
     
     // Ensure 'artist' is first for main artists if they have that role
     const orderedMainArtistTypes = mainArtistTypes.includes('artist') 
