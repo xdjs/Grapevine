@@ -411,6 +411,16 @@ Changelog:
 - Ensures network maps display proper artist stylization as stored in MusicNerd database
 - Applied fix to both cached data retrieval and new network generation paths
 
+
+### Fixed Vercel Deployment Network Generation (July 10, 2025)
+- Created missing `/api/network-by-id/[artistId].ts` endpoint for Vercel deployment
+- Fixed issue where searching artists with no cached webmapdata showed 404 errors instead of generating networks
+- Added complete network generation workflow for ID-based artist requests on Vercel
+- Implemented proper error handling for missing OpenAI API keys in serverless environment
+- Added comprehensive logging and debugging for Vercel deployment troubleshooting
+- Fixed MusicNerd base URL configuration to use production domain consistently
+- Updated both local server and Vercel API endpoints to use correct production URLs
+
 ### Standardized Main Artist Node Size (July 9, 2025)
 - Fixed inconsistent main artist node sizing across all network generation files
 - Updated main artist node size from varying sizes (20-30) to consistent size 30 across all files
@@ -506,6 +516,7 @@ Changelog:
 - Filters out generic names like "John Doe", "Producer X", "Artist A", etc.
 - When OpenAI has no real data, returns single-node network instead of generating false information
 - Ensures complete data authenticity with zero tolerance for placeholder or synthetic collaborators
+
 
 
 

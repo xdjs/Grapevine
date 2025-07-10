@@ -868,8 +868,12 @@ export default function NetworkVisualizer({
 
   const handleArtistSelection = (artistId: string) => {
     // Open the specific artist page with the selected ID
+    if (!musicNerdBaseUrl) {
+      console.error('🔧 [Config] MusicNerd base URL not available');
+      return;
+    }
 
-    const musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
+    const musicNerdUrl = `${musicNerdBaseUrl}/artist/${artistId}`;
 
     console.log(`🎵 Opening selected artist page: ${musicNerdUrl}`);
     
