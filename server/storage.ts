@@ -352,11 +352,6 @@ export class MemStorage implements IStorage {
       console.log(`🎨 [DEBUG] Processing ${collaborationData.artists.length} MusicBrainz collaborators...`);
       
 
-      // Use only the role data from external sources - no hardcoded role classifications
-      const enhancedCollaborators = collaborationData.artists;
-      
-      for (const collaborator of enhancedCollaborators) {
-
       // Use collaborator types directly from MusicBrainz API without hardcoded arrays
       for (const collaborator of collaborationData.artists) {
         console.log(`👤 [DEBUG] Processing collaborator: "${collaborator.name}" (type: ${collaborator.type})`);
