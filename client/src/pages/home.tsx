@@ -145,6 +145,27 @@ export default function Home() {
               <p className="mb-1 sm:mb-2">Powered by Music Nerd</p>
               <p>Click on artist nodes to visit their MusicNerd profiles</p>
             </div>
+            
+            {/* Music Nerd Button */}
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
+                className="font-medium py-3 px-6 rounded-xl transition-colors"
+                style={{
+                  backgroundColor: '#ffa2e3',
+                  color: '#1f2937',
+                  borderColor: '#b427b4'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e085cc';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffa2e3';
+                }}
+              >
+                Visit Music Nerd
+              </button>
+            </div>
           </div>
         </div>
       )}
