@@ -121,7 +121,7 @@ export default function Home() {
 
       {/* How it works Content - Only visible when not showing network */}
       {!showNetworkView && (
-        <div className="absolute bottom-4 sm:bottom-12 md:bottom-24 left-0 right-0 px-4 text-center z-10" style={{ pointerEvents: 'auto' }}>
+        <div className="absolute bottom-16 left-0 right-0 px-4 text-center z-10" style={{ pointerEvents: 'auto' }}>
           <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
             <div className="text-gray-400 text-sm">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs">
@@ -140,7 +140,7 @@ export default function Home() {
               </div>
             </div>
             
-            <div className="text-gray-500 text-xs">
+            <div className="text-gray-500 text-xs mb-2">
               <p className="mb-1 sm:mb-2">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
               <p className="mb-1 sm:mb-2">Powered by Music Nerd</p>
               <p>Click on artist nodes to visit their MusicNerd profiles</p>
