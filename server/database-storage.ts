@@ -268,7 +268,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       // First try OpenAI for collaboration data
       if (openAIService.isServiceAvailable()) {
         console.log(`🤖 [DEBUG] Querying OpenAI API for "${artistName}"...`);
-        console.log(`🔍 [DEBUG] About to call openAIService.getArtistCollaborations for main artist:`, artistName);
+        console.log('🔍 [DEBUG] About to call openAIService.getArtistCollaborations for main artist:', artistName);
         
         try {
           const openAIData = await openAIService.getArtistCollaborations(artistName);
