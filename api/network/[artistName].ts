@@ -88,19 +88,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         apiKey: OPENAI_API_KEY,
       });
 
-      const prompt = `Generate a comprehensive list of music industry professionals who have collaborated with ${correctArtistName}. Include people who work as producers, songwriters, or both. For each person, specify all their roles and their top 3 collaborating artists.
+      const prompt = `Generate a list of music industry professionals who have collaborated with ${correctArtistName}. For each person, specify their PRIMARY role in relation to ${correctArtistName} specifically.
 
 Please respond with JSON in this exact format:
 {
   "collaborators": [
     {
       "name": "Person Name",
-      "roles": ["producer", "songwriter"], 
+      "role": "producer",
       "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
     },
     {
       "name": "Another Person",
-      "roles": ["songwriter"],
+      "role": "songwriter",
       "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
     }
   ]
@@ -108,8 +108,8 @@ Please respond with JSON in this exact format:
 
 Important guidelines:
 - Include up to 10 music industry professionals who have actually worked with ${correctArtistName}
-- For each person, list ALL their roles from: ["producer", "songwriter", "artist"]
-- Many professionals have multiple roles (e.g., Jack Antonoff is both producer and songwriter)
+- For each person, specify their MAIN role when working with ${correctArtistName}: "producer", "songwriter", or "artist"
+- If Jack Antonoff primarily produced for ${correctArtistName}, list him as "producer" only (not both producer and songwriter)
 - Include their top 3 collaborating artists for each person
 - Focus on real, verified collaborations from the music industry
 - Return ONLY the JSON object, no other text`;
@@ -256,15 +256,13 @@ Important guidelines:
       const collaborators = [];
       if (collaborationData.collaborators) {
         for (const person of collaborationData.collaborators) {
-          const roles = person.roles || ['producer'];
-          for (const role of roles) {
-            if (role === 'producer' || role === 'songwriter') {
-              collaborators.push({
-                name: person.name,
-                type: role,
-                topCollaborators: person.topCollaborators || []
-              });
-            }
+          const role = person.role || 'producer'; // Single primary role
+          if (role === 'producer' || role === 'songwriter') {
+            collaborators.push({
+              name: person.name,
+              type: role,
+              topCollaborators: person.topCollaborators || []
+            });
           }
         }
       } else if (collaborationData.artists) {

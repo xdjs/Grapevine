@@ -460,14 +460,14 @@ Changelog:
 - Applied enhanced prompt to both local server and Vercel API endpoints for consistent multi-role detection
 - Significantly improved role accuracy while maintaining performance efficiency
 
-### Comprehensive Role Consistency System (July 10, 2025)
-- Implemented global role caching system to ensure identical role information across all network generations
-- Added getComprehensiveRoles function that queries OpenAI once per person and caches results for consistency
-- Role detection now works for all nodes: main artists, collaborators, and branching artists
-- When Julia Michaels appears as "artist + songwriter" in her own map, she maintains the same roles when appearing in other artists' maps
-- Applied comprehensive role detection to both local server (database-storage.ts) and Vercel API endpoints
-- Eliminates role inconsistencies where the same person showed different roles in different network contexts
-- All role information is detected once and cached globally within each network generation process
+### Primary Role Relationship System (July 10, 2025) 
+- Updated OpenAI prompts to request each collaborator's PRIMARY role in relation to the main artist specifically
+- Changed from multi-role arrays to single primary role per relationship context
+- Jack Antonoff now appears as "producer" when primarily producing for an artist, "songwriter" when primarily writing for another
+- Eliminates role confusion by showing relationships in their actual working context
+- Applied primary role approach to both local server and Vercel API endpoints for consistency
+- Each person appears with their most relevant role for each specific artist collaboration
+- Relationships now accurately reflect "who they are TO the main artist" rather than all possible roles
 
 
 
