@@ -312,6 +312,12 @@ class MusicBrainzService {
                            joinPhrase.toLowerCase().includes('composed') ||
                            joinPhrase.toLowerCase().includes('lyrics')) {
                   type = 'songwriter';
+
+                } else {
+                  // Use context-based identification for known producer/songwriter names
+                  // Use only the role data from MusicBrainz relation types - no hardcoded classifications
+                  console.log(`🔍 [DEBUG] Using MusicBrainz relation type for: "${collaboratorName}"`)
+
                 }
                 // Use artist type as provided by MusicBrainz without hardcoded arrays
 
@@ -341,7 +347,11 @@ class MusicBrainzService {
 
       console.log(`✅ [DEBUG] Total collaborators found for ${artistName}: ${collaboratingArtists.length}`);
       
+
+      // Use only data from MusicBrainz API - no hardcoded collaborations
+
       // Using purely API-driven data - no hardcoded collaborations
+
       
       console.log(`✅ [DEBUG] Final collaborators count for ${artistName}: ${collaboratingArtists.length}`);
       return {

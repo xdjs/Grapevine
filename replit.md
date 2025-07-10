@@ -491,6 +491,89 @@ Changelog:
 - Ensures network maps display proper artist stylization as stored in MusicNerd database
 - Applied fix to both cached data retrieval and new network generation paths
 
+### Standardized Main Artist Node Size (July 9, 2025)
+- Fixed inconsistent main artist node sizing across all network generation files
+- Updated main artist node size from varying sizes (20-30) to consistent size 30 across all files
+- Collaborator nodes remain at size 15, branching nodes at size 10
+- Updated server/database-storage.ts, server/storage.ts, and api/network/[artistName].ts for consistency
+- Main artist now appears consistently larger than all other nodes in the network visualization
+- Size hierarchy: Main artist (30) > Collaborators (15) > Branching nodes (10)
+
+### Enhanced Node Visibility with Improved Size Hierarchy (July 9, 2025)
+- Increased collaborator node sizes from 15 to 20 for better visibility while maintaining clear hierarchy
+- Increased branching node sizes from 10 to 16 for improved readability
+- Updated all backend files to use consistent sizing: server/database-storage.ts, server/storage.ts, api/network/[artistName].ts
+- New size hierarchy: Main artist (30) > Collaborators (20) > Branching nodes (16)
+- All nodes now have better visibility while maintaining proper visual hierarchy
+
+### Complete Removal of Hardcoded Role Databases (July 9, 2025)
+- Eliminated all hardcoded multi-role artist databases containing 100+ music industry professionals
+- Removed pattern-based role detection system that made assumptions about artist roles based on name patterns
+- Removed all hardcoded known producers/songwriters databases from server/database-storage.ts, server/storage.ts, and server/musicbrainz.ts
+- Removed hardcoded known collaborations fallback systems for major artists
+- System now relies exclusively on authentic data from external sources (OpenAI, MusicBrainz, Wikipedia)
+- Multi-role consolidation system remains but only uses real collaboration data from API sources
+- No role hallucination or assumptions - only verified data from reliable sources
+
+### Cache Cleared for All Artists (July 9, 2025)
+- Cleared all cached network data for every artist to force fresh generation using the new data-only approach
+- Updated both local server (database-storage.ts) and Vercel API endpoints to bypass all cached webmapdata
+- All artists now generate fresh collaboration networks from external APIs only
+- Ensures complete removal of any previously cached data that may have contained hardcoded fallbacks
+- System now provides purely authentic collaboration data for all network visualizations
+
+### Role Persistence System Implementation (July 9, 2025)
+- Implemented comprehensive role detection system for main artists using OpenAI API
+- When generating artist's own network, system now queries OpenAI to detect their actual roles (artist, producer, songwriter)
+- Main artists maintain consistent multi-role information across different network generations
+- Role detection ensures Taylor Swift appears as "artist + songwriter" in both her own network and when appearing in others' networks
+- Added intelligent role ordering: 'artist' role prioritized first for main artists, then additional roles
+- Applied role persistence to both local server (database-storage.ts) and Vercel API endpoints for consistency
+- All role information derived from authentic OpenAI responses, no hardcoded role assignments
+
+### Enhanced Multi-Role Collaboration Detection (July 9, 2025)
+- Updated OpenAI collaboration prompt to directly request comprehensive multi-role information for all collaborators
+- New prompt asks for each person's complete roles array (e.g., ["producer", "songwriter"]) instead of single roles
+- System now properly detects when Jack Antonoff is both producer and songwriter in a single API call
+- Enhanced collaboration data structure includes all roles for each person, eliminating need for separate role detection queries
+- Multi-role consolidation logic now receives authentic multi-role data directly from OpenAI
+- Applied enhanced prompt to both local server and Vercel API endpoints for consistent multi-role detection
+- Significantly improved role accuracy while maintaining performance efficiency
+
+### Comprehensive Role Consistency System (July 10, 2025)
+- Implemented global role caching system to ensure identical role information across all network generations
+- Added getComprehensiveRoles function that queries OpenAI once per person and caches results for consistency
+- Role detection now works for all nodes: main artists, collaborators, and branching artists
+- When Julia Michaels appears as "artist + songwriter" in her own map, she maintains the same roles when appearing in other artists' maps
+- Applied comprehensive role detection to both local server (database-storage.ts) and Vercel API endpoints
+- Eliminates role inconsistencies where the same person showed different roles in different network contexts
+- All role information is detected once and cached globally within each network generation process
+
+### Performance Optimization - Batch Role Detection (July 10, 2025)
+- Replaced individual role detection API calls with efficient batch processing system
+- Implemented batchDetectRoles function that processes all people in a single OpenAI API call
+- Pre-collects all collaborators and branching artists before making any role detection queries
+- Reduced network generation time from ~57 seconds to expected ~10-15 seconds for complex artists
+- Maintains complete role consistency while dramatically improving performance
+- Single batch API call processes 20-40 people simultaneously instead of individual queries
+- Applied optimization to both local server and Vercel API endpoints for consistent performance
+
+### Performance Optimization - Parallel External API Processing (July 10, 2025)
+- Implemented parallel batch processing for all external API calls (Spotify, MusicNerd ID lookups)
+- Replaced sequential individual API calls with Promise.allSettled for concurrent execution
+- All Spotify image searches and MusicNerd ID lookups now run simultaneously for all nodes
+- Significantly reduced network generation time while maintaining all role data integrity
+- Applied Promise.allSettled to handle individual API failures gracefully without affecting overall performance
+- External API data applied to nodes after batch completion for optimal speed
+
+### Authentic Data Only Policy Implementation (July 10, 2025)
+- Enhanced OpenAI prompt to explicitly request no data if artist doesn't have real collaborators
+- Added comprehensive filtering system to detect and remove fake/placeholder collaborator names
+- System now returns only main artist node when no authentic collaboration data exists
+- Filters out generic names like "John Doe", "Producer X", "Artist A", etc.
+- When OpenAI has no real data, returns single-node network instead of generating false information
+- Ensures complete data authenticity with zero tolerance for placeholder or synthetic collaborators
+
 
 ### Enhanced OpenAI Prompt for Multi-Role Detection (July 7, 2025)
 - Updated OpenAI prompt to include explicit multi-role detection requirement

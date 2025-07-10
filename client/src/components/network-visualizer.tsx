@@ -729,7 +729,7 @@ export default function NetworkVisualizer({
         event.stopPropagation();
         // Right-click to view artist's network (only for artist nodes that aren't the main artist)
         if ((d.type === 'artist' || (d.types && d.types.includes('artist'))) && onArtistSearch) {
-          const mainArtistNode = data.nodes.find(node => node.size === 20 && node.type === 'artist');
+          const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === 'artist');
           if (d !== mainArtistNode) {
             onArtistSearch(d.name);
           }
