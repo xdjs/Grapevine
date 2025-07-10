@@ -65,15 +65,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Use the correct artist name from database (with proper capitalization)
       const correctArtistName = artistExistsResult.rows[0].name;
       
-      // Check for cached webmapdata using the correct artist name
-      const cacheQuery = 'SELECT webmapdata FROM artists WHERE LOWER(name) = LOWER($1) AND webmapdata IS NOT NULL';
-      const cacheResult = await client.query(cacheQuery, [correctArtistName]);
-      
-      if (cacheResult.rows.length > 0 && cacheResult.rows[0].webmapdata) {
-        console.log(`✅ [Vercel] Found cached data for ${artistName}`);
-        await client.end();
-        return res.json(cacheResult.rows[0].webmapdata);
-      }
+      // Skip cache and force fresh generation for all artists with data-only approach
+      console.log(`🔄 [Vercel] Skipping cache and forcing fresh generation for ${artistName} with data-only approach`);
       
       // If no cached data and no OpenAI key, return error
       if (!OPENAI_API_KEY) {
@@ -95,29 +88,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         apiKey: OPENAI_API_KEY,
       });
 
-      const prompt = `Generate a list of producers and songwriters who have collaborated with ${correctArtistName}. Return ONLY valid JSON with no additional text, markdown, or formatting.
+      const prompt = `Generate a comprehensive list of music industry professionals who have collaborated with ${correctArtistName}. Include people who work as producers, songwriters, or both. For each person, specify all their roles and their top 3 collaborating artists.
 
-Required format:
+Please respond with JSON in this exact format:
 {
-  "artists": [
+  "collaborators": [
     {
-      "name": "Producer Name",
-      "type": "producer", 
+      "name": "Person Name",
+      "roles": ["producer", "songwriter"], 
       "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
     },
     {
-      "name": "Songwriter Name",
-      "type": "songwriter",
+      "name": "Another Person",
+      "roles": ["songwriter"],
       "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
     }
   ]
 }
 
-Requirements:
-- Provide exactly 5 producers and 5 songwriters who have actually worked with ${correctArtistName}
-- Use only real music industry collaborations
-- Return ONLY the JSON object, no other text
-- Ensure all JSON is properly formatted and valid`;
+Important guidelines:
+- Include up to 10 music industry professionals who have actually worked with ${correctArtistName}
+- For each person, list ALL their roles from: ["producer", "songwriter", "artist"]
+- Many professionals have multiple roles (e.g., Jack Antonoff is both producer and songwriter)
+- Include their top 3 collaborating artists for each person
+- Focus on real, verified collaborations from the music industry
+- Return ONLY the JSON object, no other text`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -164,7 +159,7 @@ Requirements:
           console.warn('❌ [Vercel] Primary JSON parse failed, trying fallback');
           collaborationData = { artists: [] };
         }
-        console.log(`✅ [Vercel] Parsed collaboration data with ${collaborationData.artists?.length || 0} artists`);
+        console.log(`✅ [Vercel] Parsed collaboration data with ${collaborationData.collaborators?.length || collaborationData.artists?.length || 0} collaborators`);
       } catch (parseError) {
         console.error('❌ [Vercel] Failed to parse OpenAI response:', parseError);
         console.error('❌ [Vercel] Raw OpenAI content:', completion.choices[0]?.message?.content);
@@ -178,24 +173,169 @@ Requirements:
         });
       }
 
-      // Build network data structure with multi-role consolidation
+      // Build network data structure with comprehensive role consistency
       const nodeMap = new Map();
       const links = [];
 
-      // Add main artist node using correct capitalization from database
+      // Create optimized batch role detection system for performance
+      const globalRoleMap = new Map<string, string[]>();
+      
+      // Batch role detection function for better performance
+      const batchDetectRoles = async (peopleList: string[]): Promise<void> => {
+        if (peopleList.length === 0) return;
+        
+        try {
+          const peopleListStr = peopleList.map(name => `"${name}"`).join(', ');
+          const batchRolePrompt = `For each of these music industry professionals: ${peopleListStr}
+          
+Return their roles as JSON in this exact format:
+{
+  "Person Name 1": ["artist", "songwriter"],
+  "Person Name 2": ["producer", "songwriter"],
+  "Person Name 3": ["artist"]
+}
+
+Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has. Return ONLY the JSON object, no other text.`;
+
+          const openai = new OpenAI({
+            apiKey: OPENAI_API_KEY,
+          });
+
+          const roleCompletion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: batchRolePrompt }],
+            temperature: 0.1,
+            max_tokens: 1000,
+          });
+
+          const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
+          if (roleContent) {
+            try {
+              const rolesData = JSON.parse(roleContent);
+              for (const [personName, roles] of Object.entries(rolesData)) {
+                if (Array.isArray(roles) && roles.length > 0) {
+                  const validRoles = roles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
+                  if (validRoles.length > 0) {
+                    globalRoleMap.set(personName, validRoles);
+                    console.log(`✅ [Vercel] Batch detected roles for "${personName}":`, validRoles);
+                  }
+                }
+              }
+            } catch (parseError) {
+              console.log(`⚠️ [Vercel] Could not parse batch role detection, falling back to defaults`);
+            }
+          }
+        } catch (error) {
+          console.log(`⚠️ [Vercel] Batch role detection failed, falling back to defaults`);
+        }
+      };
+      
+      // Quick role lookup with fallback to default
+      const getOptimizedRoles = (personName: string, defaultRole: 'artist' | 'producer' | 'songwriter'): string[] => {
+        return globalRoleMap.get(personName) || [defaultRole];
+      };
+
+      // Pre-detect roles for main artist with dedicated detection
+      console.log(`🔍 [Vercel] Detecting roles for main artist "${correctArtistName}"...`);
+      let mainArtistTypes = ['artist']; // Default
+      
+      try {
+        const mainArtistRolePrompt = `What roles does ${correctArtistName} have in the music industry? Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. Return ONLY the JSON array, no other text.`;
+        
+        const openai = new OpenAI({
+          apiKey: OPENAI_API_KEY,
+        });
+
+        const roleCompletion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [{ role: "user", content: mainArtistRolePrompt }],
+          temperature: 0.1,
+          max_tokens: 100,
+        });
+
+        const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
+        if (roleContent) {
+          try {
+            const detectedRoles = JSON.parse(roleContent);
+            if (Array.isArray(detectedRoles) && detectedRoles.length > 0) {
+              const validRoles = detectedRoles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
+              if (validRoles.length > 0) {
+                mainArtistTypes = validRoles;
+                console.log(`✅ [Vercel] Detected main artist roles for "${correctArtistName}":`, mainArtistTypes);
+                // Cache for consistency
+                globalRoleMap.set(correctArtistName, mainArtistTypes);
+              }
+            }
+          } catch (parseError) {
+            console.log(`⚠️ [Vercel] Could not parse main artist role detection for "${correctArtistName}", using default`);
+          }
+        }
+      } catch (error) {
+        console.log(`⚠️ [Vercel] Main artist role detection failed for "${correctArtistName}", using default`);
+      }
+      
+      // Ensure 'artist' is first for main artists if they have that role
+      const orderedMainArtistTypes = mainArtistTypes.includes('artist') 
+        ? ['artist', ...mainArtistTypes.filter(r => r !== 'artist')]
+        : mainArtistTypes;
+
+      // Add main artist node using correct capitalization from database and detected roles
       const mainNode = {
         id: correctArtistName,
         name: correctArtistName,
-        type: 'artist',
-        types: ['artist'],
+        type: orderedMainArtistTypes[0],
+        types: orderedMainArtistTypes,
         color: '#FF69B4',
         size: 30,
         artistId: artistExistsResult.rows[0].id
       };
       nodeMap.set(correctArtistName, mainNode);
+      
+      console.log(`🎭 [Vercel] Main artist "${correctArtistName}" initialized with ${orderedMainArtistTypes.length} roles:`, orderedMainArtistTypes);
+
+      // Transform new format to expected format and collect all people for batch role detection
+      const collaborators = [];
+      const allPeople = new Set<string>();
+      
+      if (collaborationData.collaborators) {
+        for (const person of collaborationData.collaborators) {
+          allPeople.add(person.name);
+          const roles = person.roles || ['producer'];
+          for (const role of roles) {
+            if (role === 'producer' || role === 'songwriter') {
+              collaborators.push({
+                name: person.name,
+                type: role,
+                topCollaborators: person.topCollaborators || []
+              });
+              // Add branching artists to the batch
+              for (const branchingArtist of person.topCollaborators || []) {
+                if (branchingArtist !== correctArtistName) {
+                  allPeople.add(branchingArtist);
+                }
+              }
+            }
+          }
+        }
+      } else if (collaborationData.artists) {
+        // Fallback for old format
+        collaborators.push(...collaborationData.artists);
+        for (const collaborator of collaborationData.artists) {
+          allPeople.add(collaborator.name);
+          for (const branchingArtist of collaborator.topCollaborators || []) {
+            if (branchingArtist !== correctArtistName) {
+              allPeople.add(branchingArtist);
+            }
+          }
+        }
+      }
+      
+      // Batch detect roles for all people at once for performance
+      console.log(`🎭 [Vercel] Batch detecting roles for ${allPeople.size} people...`);
+      await batchDetectRoles([...allPeople]);
 
       // Process producers and songwriters with multi-role consolidation
-      for (const collaborator of collaborationData.artists || []) {
+      for (const collaborator of collaborators) {
         // Check if we already have a node for this person
         let collabNode = nodeMap.get(collaborator.name);
         
@@ -218,14 +358,16 @@ Requirements:
             collabNode.color = '#8A2BE2'; // Keep producer color for producer-songwriters
           }
         } else {
-          // Create new node
+          // Create new node with optimized role detection
+          const enhancedRoles = getOptimizedRoles(collaborator.name, collaborator.type);
+          const color = enhancedRoles.includes('producer') ? '#8A2BE2' : '#00CED1';
           collabNode = {
             id: collaborator.name,
             name: collaborator.name,
-            type: collaborator.type,
-            types: [collaborator.type],
-            color: collaborator.type === 'producer' ? '#8A2BE2' : '#00CED1',
-            size: 20,
+            type: enhancedRoles[0],
+            types: enhancedRoles,
+            color: color,
+            size: 20, // Smaller size for collaborators
             artistId: null,
             collaborations: collaborator.topCollaborators || []
           };
@@ -252,13 +394,14 @@ Requirements:
         // Add branching artists
         for (const branchingArtist of collaborator.topCollaborators || []) {
           if (branchingArtist !== correctArtistName && !nodeMap.has(branchingArtist)) {
+            const branchingRoles = getOptimizedRoles(branchingArtist, 'artist');
             const branchNode = {
               id: branchingArtist,
               name: branchingArtist,
-              type: 'artist',
-              types: ['artist'],
+              type: branchingRoles[0],
+              types: branchingRoles,
               color: '#FF69B4',
-              size: 15,
+              size: 16,
               artistId: null
             };
 

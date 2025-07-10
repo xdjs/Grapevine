@@ -73,9 +73,7 @@ export class DatabaseStorage implements IStorage {
         .insert(artists)
         .values({
           name: insertArtist.name,
-          type: insertArtist.type,
-          imageUrl: insertArtist.imageUrl || null,
-          spotifyId: insertArtist.spotifyId || null
+          type: insertArtist.type || 'artist'
         })
         .returning();
       
@@ -137,198 +135,129 @@ export class DatabaseStorage implements IStorage {
       console.log(`📭 [DEBUG] No MusicNerd ID found for main artist ${artistName}`);
     }
 
-    // Enhanced role detection system for main artist
-    const knownMultiRoleArtists = new Map<string, ('artist' | 'producer' | 'songwriter')[]>([
-      // Major Artist-Producer-Songwriters
-      ['Taylor Swift', ['artist', 'songwriter', 'producer']],
-      ['Kanye West', ['artist', 'producer', 'songwriter']],
-      ['Jay-Z', ['artist', 'producer', 'songwriter']],
-      ['Drake', ['artist', 'songwriter', 'producer']],
-      ['The Weeknd', ['artist', 'songwriter', 'producer']],
-      ['Frank Ocean', ['artist', 'songwriter', 'producer']],
-      ['Tyler, The Creator', ['artist', 'producer', 'songwriter']],
-      ['Mac Miller', ['artist', 'producer', 'songwriter']],
-      ['Childish Gambino', ['artist', 'songwriter', 'producer']],
-      ['Pharrell Williams', ['artist', 'producer', 'songwriter']],
-      ['Timbaland', ['producer', 'artist', 'songwriter']],
-      ['Dr. Dre', ['producer', 'artist']],
-      ['Eminem', ['artist', 'songwriter', 'producer']],
-      ['Lorde', ['artist', 'songwriter', 'producer']],
-      ['Grimes', ['artist', 'producer', 'songwriter']],
-      ['FKA twigs', ['artist', 'songwriter', 'producer']],
-      ['James Blake', ['artist', 'producer', 'songwriter']],
-      ['Bon Iver', ['artist', 'producer', 'songwriter']],
-      ['Tame Impala', ['artist', 'producer', 'songwriter']],
-      ['Billie Eilish', ['artist', 'songwriter']],
-      ['Finneas', ['producer', 'songwriter', 'artist']],
-      ['Charlie Puth', ['artist', 'songwriter', 'producer']],
-      ['John Mayer', ['artist', 'songwriter', 'producer']],
-      ['Bruno Mars', ['artist', 'songwriter', 'producer']],
-      ['Anderson .Paak', ['artist', 'producer', 'songwriter']],
-      ['SZA', ['artist', 'songwriter']],
-      ['Daniel Caesar', ['artist', 'songwriter', 'producer']],
-      ['Rex Orange County', ['artist', 'songwriter', 'producer']],
-      ['Kali Uchis', ['artist', 'songwriter']],
-      ['Omar Apollo', ['artist', 'songwriter']],
-      ['Clairo', ['artist', 'songwriter', 'producer']],
-      ['Still Woozy', ['artist', 'producer', 'songwriter']],
-      ['Cuco', ['artist', 'songwriter', 'producer']],
-      ['Snoh Aalegra', ['artist', 'songwriter']],
-      ['Jorja Smith', ['artist', 'songwriter']],
-      ['Kehlani', ['artist', 'songwriter']],
-      ['Summer Walker', ['artist', 'songwriter']],
-      ['Jhené Aiko', ['artist', 'songwriter']],
-      ['Tinashe', ['artist', 'songwriter', 'producer']],
-      ['Solange', ['artist', 'songwriter', 'producer']],
-      ['SiR', ['artist', 'songwriter']],
-      ['Brent Faiyaz', ['artist', 'songwriter', 'producer']],
+    // Create optimized batch role detection system for performance
+    const globalRoleMap = new Map<string, string[]>();
+    
+    // Batch role detection function for better performance
+    const batchDetectRoles = async (peopleList: string[]): Promise<void> => {
+      if (!openAIService.isServiceAvailable() || peopleList.length === 0) return;
       
-      // Major Songwriters
-      ['Ed Sheeran', ['artist', 'songwriter']],
-      ['Adele', ['artist', 'songwriter']],
-      ['Alicia Keys', ['artist', 'songwriter', 'producer']],
-      ['Lady Gaga', ['artist', 'songwriter']],
-      ['Olivia Rodrigo', ['artist', 'songwriter']],
-      ['Phoebe Bridgers', ['artist', 'songwriter']],
-      ['Lana Del Rey', ['artist', 'songwriter']],
-      ['H.E.R.', ['artist', 'songwriter', 'producer']],
-      
-      // Producer-Songwriters
-      ['Max Martin', ['producer', 'songwriter']],
-      ['Dr. Luke', ['producer', 'songwriter']],
-      ['Benny Blanco', ['producer', 'songwriter']],
-      ['Jack Antonoff', ['producer', 'songwriter']],
-      ['Rick Rubin', ['producer']],
-      ['Quincy Jones', ['producer', 'songwriter']],
-      ['Mark Ronson', ['producer', 'songwriter']],
-      ['Diplo', ['producer', 'artist']],
-      ['Skrillex', ['producer', 'artist']],
-      ['Calvin Harris', ['producer', 'artist', 'songwriter']],
-      ['The Chainsmokers', ['producer', 'artist']],
-      ['Zedd', ['producer', 'artist']],
-      ['David Guetta', ['producer', 'artist']],
-      ['Marshmello', ['producer', 'artist']],
-      ['Flume', ['producer', 'artist']],
-      ['ODESZA', ['producer', 'artist']],
-      ['Porter Robinson', ['producer', 'artist', 'songwriter']],
-      ['Madeon', ['producer', 'artist', 'songwriter']],
-      ['What So Not', ['producer', 'artist']],
-      ['RL Grime', ['producer', 'artist']],
-      ['Baauer', ['producer', 'artist']],
-      ['Flying Lotus', ['producer', 'artist']],
-      ['Kaytranada', ['producer', 'artist']],
-      ['TOKiMONSTA', ['producer', 'artist']],
-      ['SBTRKT', ['producer', 'artist']],
-      ['Burial', ['producer', 'artist']],
-      ['Four Tet', ['producer', 'artist']],
-      ['Jamie xx', ['producer', 'artist']],
-      ['Bonobo', ['producer', 'artist']],
-      ['RJD2', ['producer', 'artist']],
-      ['Pretty Lights', ['producer', 'artist']],
-      ['GRiZ', ['producer', 'artist']],
-      ['Gramatik', ['producer', 'artist']],
-      ['Big Gigantic', ['producer', 'artist']],
-      ['SoDown', ['producer', 'artist']],
-      
-      // Specific to current searches
-      ['Dan Nigro', ['producer', 'songwriter']],
-      ['Aaron Dessner', ['producer', 'songwriter', 'artist']],
-      ['Alexander 23', ['artist', 'songwriter', 'producer']],
-      ['Casey Smith', ['songwriter', 'producer']],
-      ['Ludwig Göransson', ['producer', 'songwriter']],
-      ['Andrew Watt', ['producer', 'songwriter']],
-      ['Ali Payami', ['producer', 'songwriter']],
-      ['Shellback', ['producer', 'songwriter']],
-      ['Metro Boomin', ['producer', 'songwriter']],
-      ['Mike Dean', ['producer', 'songwriter']],
-      ['Noah "40" Shebib', ['producer', 'songwriter']],
-      ['Hit-Boy', ['producer', 'songwriter']],
-      ['Mustard', ['producer', 'songwriter']],
-      ['London on da Track', ['producer', 'songwriter']],
-      ['TM88', ['producer', 'songwriter']],
-      ['Southside', ['producer', 'songwriter']],
-      ['Wheezy', ['producer', 'songwriter']],
-      ['Pierre Bourne', ['producer', 'songwriter']],
-      ['Kenny Beats', ['producer', 'songwriter']],
-      ['Alchemist', ['producer', 'songwriter']],
-      ['Madlib', ['producer', 'songwriter']],
-      ['J Dilla', ['producer', 'songwriter']],
-      ['Nujabes', ['producer', 'songwriter']],
-    ]);
+      try {
+        const peopleListStr = peopleList.map(name => `"${name}"`).join(', ');
+        const batchRolePrompt = `For each of these music industry professionals: ${peopleListStr}
+        
+Return their roles as JSON in this exact format:
+{
+  "Person Name 1": ["artist", "songwriter"],
+  "Person Name 2": ["producer", "songwriter"],
+  "Person Name 3": ["artist"]
+}
 
-    // Get enhanced roles for main artist  
-    const mainArtistTypes = knownMultiRoleArtists.get(artistName) || ['artist'];
+Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has. Return ONLY the JSON object, no other text.`;
 
-    // Create main artist node with enhanced role detection
+        const OpenAI = await import('openai');
+        const openai = new OpenAI.default({
+          apiKey: process.env.OPENAI_API_KEY,
+        });
+
+        const roleCompletion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [{ role: "user", content: batchRolePrompt }],
+          temperature: 0.1,
+          max_tokens: 1000,
+        });
+
+        const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
+        if (roleContent) {
+          try {
+            const rolesData = JSON.parse(roleContent);
+            for (const [personName, roles] of Object.entries(rolesData)) {
+              if (Array.isArray(roles) && roles.length > 0) {
+                const validRoles = roles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
+                if (validRoles.length > 0) {
+                  globalRoleMap.set(personName, validRoles);
+                  console.log(`✅ [DEBUG] Batch detected roles for "${personName}":`, validRoles);
+                }
+              }
+            }
+          } catch (parseError) {
+            console.log(`⚠️ [DEBUG] Could not parse batch role detection, falling back to defaults`);
+          }
+        }
+      } catch (error) {
+        console.log(`⚠️ [DEBUG] Batch role detection failed, falling back to defaults`);
+      }
+    };
+    
+    // Quick role lookup with fallback to default
+    const getOptimizedRoles = (personName: string, defaultRole: 'artist' | 'producer' | 'songwriter'): string[] => {
+      return globalRoleMap.get(personName) || [defaultRole];
+    };
+
+    // Pre-detect roles for main artist with dedicated detection
+    console.log(`🔍 [DEBUG] Detecting roles for main artist "${artistName}"...`);
+    let mainArtistTypes = ['artist']; // Default
+    
+    if (openAIService.isServiceAvailable()) {
+      try {
+        const mainArtistRolePrompt = `What roles does ${artistName} have in the music industry? Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. Return ONLY the JSON array, no other text.`;
+        
+        const OpenAI = await import('openai');
+        const openai = new OpenAI.default({
+          apiKey: process.env.OPENAI_API_KEY,
+        });
+
+        const roleCompletion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [{ role: "user", content: mainArtistRolePrompt }],
+          temperature: 0.1,
+          max_tokens: 100,
+        });
+
+        const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
+        if (roleContent) {
+          try {
+            const detectedRoles = JSON.parse(roleContent);
+            if (Array.isArray(detectedRoles) && detectedRoles.length > 0) {
+              const validRoles = detectedRoles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
+              if (validRoles.length > 0) {
+                mainArtistTypes = validRoles;
+                console.log(`✅ [DEBUG] Detected main artist roles for "${artistName}":`, mainArtistTypes);
+                // Cache for consistency
+                globalRoleMap.set(artistName, mainArtistTypes);
+              }
+            }
+          } catch (parseError) {
+            console.log(`⚠️ [DEBUG] Could not parse main artist role detection for "${artistName}", using default`);
+          }
+        }
+      } catch (error) {
+        console.log(`⚠️ [DEBUG] Main artist role detection failed for "${artistName}", using default`);
+      }
+    }
+    
+    // Ensure 'artist' is first for main artists if they have that role
+    const orderedMainArtistTypes = mainArtistTypes.includes('artist') 
+      ? ['artist', ...mainArtistTypes.filter(r => r !== 'artist')]
+      : mainArtistTypes;
+
+    // Create main artist node with detected roles
     const mainArtistNode: NetworkNode = {
       id: artistName,
       name: artistName,
-      type: mainArtistTypes[0], // Primary type
-      types: mainArtistTypes, // All roles
-      size: 25,
+      type: orderedMainArtistTypes[0], // Primary type
+      types: orderedMainArtistTypes, // All detected roles
+      size: 30, // Larger size for main artist
       musicNerdUrl,
     };
     nodeMap.set(artistName, mainArtistNode);
     
-    console.log(`🎭 [DEBUG] Main artist "${artistName}" has ${mainArtistTypes.length} roles:`, mainArtistTypes);
+    console.log(`🎭 [DEBUG] Main artist "${artistName}" initialized with ${orderedMainArtistTypes.length} roles:`, orderedMainArtistTypes);
 
-    // Helper function to get enhanced roles for any person
+    // Helper function to determine roles - now relying on improved OpenAI prompt for multi-role data
     const getEnhancedRoles = (personName: string, defaultRole: 'artist' | 'producer' | 'songwriter'): ('artist' | 'producer' | 'songwriter')[] => {
-      const knownRoles = knownMultiRoleArtists.get(personName);
-      if (knownRoles) {
-        return knownRoles;
-      }
-      
-      // If not in known list, check for common patterns
-      const lowerName = personName.toLowerCase();
-      
-      // Common producer-songwriter patterns
-      if (lowerName.includes('martin') || lowerName.includes('max') || 
-          lowerName.includes('antonoff') || lowerName.includes('jack') ||
-          lowerName.includes('nigro') || lowerName.includes('dessner') ||
-          lowerName.includes('rubin') || lowerName.includes('rick') ||
-          lowerName.includes('quincy') || lowerName.includes('jones') ||
-          lowerName.includes('ronson') || lowerName.includes('mark') ||
-          lowerName.includes('blanco') || lowerName.includes('benny') ||
-          lowerName.includes('ludwig') || lowerName.includes('watt') ||
-          lowerName.includes('payami') || lowerName.includes('ali') ||
-          lowerName.includes('shellback') || lowerName.includes('metro') ||
-          lowerName.includes('boomin') || lowerName.includes('dean') ||
-          lowerName.includes('mike') || lowerName.includes('40') ||
-          lowerName.includes('shebib') || lowerName.includes('noah') ||
-          lowerName.includes('hit-boy') || lowerName.includes('mustard') ||
-          lowerName.includes('london') || lowerName.includes('track') ||
-          lowerName.includes('tm88') || lowerName.includes('southside') ||
-          lowerName.includes('wheezy') || lowerName.includes('pierre') ||
-          lowerName.includes('bourne') || lowerName.includes('kenny') ||
-          lowerName.includes('beats') || lowerName.includes('alchemist') ||
-          lowerName.includes('madlib') || lowerName.includes('dilla') ||
-          lowerName.includes('nujabes')) {
-        if (defaultRole === 'producer') {
-          return ['producer', 'songwriter'];
-        }
-        if (defaultRole === 'songwriter') {
-          return ['songwriter', 'producer'];
-        }
-      }
-      
-      // Common artist-songwriter patterns
-      if (lowerName.includes('swift') || lowerName.includes('taylor') ||
-          lowerName.includes('sheeran') || lowerName.includes('ed') ||
-          lowerName.includes('adele') || lowerName.includes('keys') ||
-          lowerName.includes('alicia') || lowerName.includes('gaga') ||
-          lowerName.includes('rodrigo') || lowerName.includes('olivia') ||
-          lowerName.includes('bridgers') || lowerName.includes('phoebe') ||
-          lowerName.includes('lana') || lowerName.includes('del') ||
-          lowerName.includes('rey') || lowerName.includes('h.e.r.')) {
-        if (defaultRole === 'artist') {
-          return ['artist', 'songwriter'];
-        }
-        if (defaultRole === 'songwriter') {
-          return ['songwriter', 'artist'];
-        }
-      }
-      
+      // The new OpenAI prompt should provide comprehensive role information directly
+      // For collaborators, we'll rely on the multi-role consolidation logic to merge roles
       return [defaultRole];
     };
 
@@ -339,7 +268,7 @@ export class DatabaseStorage implements IStorage {
       // First try OpenAI for collaboration data
       if (openAIService.isServiceAvailable()) {
         console.log(`🤖 [DEBUG] Querying OpenAI API for "${artistName}"...`);
-        console.log(`🔍 [DEBUG] About to call openAIService.getArtistCollaborations for main artist: ${artistName}`);
+        console.log('🔍 [DEBUG] About to call openAIService.getArtistCollaborations for main artist:', artistName);
         
         try {
           const openAIData = await openAIService.getArtistCollaborations(artistName);
@@ -349,8 +278,51 @@ export class DatabaseStorage implements IStorage {
           });
 
           if (openAIData.artists.length > 0) {
+            // Filter out any generic/fake names that might slip through
+            const authenticCollaborators = openAIData.artists.filter(collaborator => {
+              const name = collaborator.name.toLowerCase();
+              // Filter out obviously fake or generic names
+              const fakePatterns = [
+                'john doe', 'jane doe', 'john smith', 'jane smith',
+                'producer x', 'songwriter y', 'artist a', 'artist b',
+                'unknown', 'anonymous', 'various', 'n/a', 'tbd',
+                'placeholder', 'example', 'sample'
+              ];
+              return !fakePatterns.some(pattern => name.includes(pattern)) &&
+                     !name.match(/^(artist|producer|songwriter)\s+[a-z]$/i) &&
+                     !name.match(/^[a-z]{1,2}$/i); // Single letters or very short generic names
+            });
+            
+            console.log(`🔍 [DEBUG] Filtered ${openAIData.artists.length} to ${authenticCollaborators.length} authentic collaborators`);
+            
+            if (authenticCollaborators.length === 0) {
+              console.log(`⚠️ [DEBUG] No authentic collaborators found for "${artistName}" from OpenAI, returning single node`);
+              // Return just the main artist node
+              const finalNetworkData = { 
+                nodes: [mainArtistNode], 
+                links: []
+              };
+              await this.cacheNetworkData(artistName, finalNetworkData);
+              return finalNetworkData;
+            }
+            
+            // Collect all people for batch role detection
+            const allPeople = new Set<string>();
+            for (const collaborator of authenticCollaborators) {
+              allPeople.add(collaborator.name);
+              for (const branchingArtist of collaborator.topCollaborators || []) {
+                if (branchingArtist !== artistName) {
+                  allPeople.add(branchingArtist);
+                }
+              }
+            }
+            
+            // Batch detect roles for all people at once for performance
+            console.log(`🎭 [DEBUG] Batch detecting roles for ${allPeople.size} people...`);
+            await batchDetectRoles([...allPeople]);
+            
             // Process OpenAI data and merge with main artist node map
-            for (const collaborator of openAIData.artists) {
+            for (const collaborator of authenticCollaborators) {
               // Check if we already have a node for this person (including main artist)
               let collaboratorNode = nodeMap.get(collaborator.name);
               
@@ -375,56 +347,25 @@ export class DatabaseStorage implements IStorage {
                 }
                 continue; // Skip creating new node since we're updating existing one
               } else {
-                // Create new node for this person with enhanced role detection
-                const enhancedRoles = getEnhancedRoles(collaborator.name, collaborator.type);
+                // Create new node for this person with optimized role detection
+                const enhancedRoles = getOptimizedRoles(collaborator.name, collaborator.type);
                 
-                // Get image from Spotify if available
-                let imageUrl: string | null = null;
-                let spotifyId: string | null = null;
-                if (spotifyService.isConfigured()) {
-                  try {
-                    const spotifyArtist = await spotifyService.searchArtist(collaborator.name);
-                    if (spotifyArtist) {
-                      imageUrl = spotifyService.getArtistImageUrl(spotifyArtist, 'medium');
-                      spotifyId = spotifyArtist.id;
-                    }
-                  } catch (error) {
-                    console.log(`🔒 [DEBUG] Spotify search failed for "${collaborator.name}"`);
-                  }
-                }
-
                 collaboratorNode = {
                   id: collaborator.name,
                   name: collaborator.name,
                   type: enhancedRoles[0], // Primary role
                   types: enhancedRoles, // All roles
-                  size: 15,
-                  imageUrl,
-                  spotifyId,
+                  size: 20,
+                  imageUrl: null, // Will be set in batch
+                  spotifyId: null, // Will be set in batch
                   collaborations: collaborator.topCollaborators || [],
+                  musicNerdUrl: 'https://musicnerd.xyz', // Will be set in batch
                 };
                 
                 console.log(`🎭 [DEBUG] Enhanced "${collaborator.name}" from ${collaborator.type} to roles:`, enhancedRoles);
-
-                // Get MusicNerd artist ID for the collaborator
-
-                let musicNerdUrl = 'https://musicnerd.xyz';
-                try {
-                  const artistId = await musicNerdService.getArtistId(collaborator.name);
-                  if (artistId) {
-                    musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
-
-                    console.log(`✅ [DEBUG] Found MusicNerd ID for ${collaborator.name}: ${artistId}`);
-                  }
-                } catch (error) {
-                  console.log(`📭 [DEBUG] No MusicNerd ID found for ${collaborator.name}`);
-                }
-
-                collaboratorNode.musicNerdUrl = musicNerdUrl;
                 nodeMap.set(collaborator.name, collaboratorNode);
               }
-
-              }
+            }
 
             // Process all nodes to create links and branching connections
             const allNodes = Array.from(nodeMap.values());
@@ -461,31 +402,17 @@ export class DatabaseStorage implements IStorage {
                     // Ensure primary type remains as first one for compatibility
                     branchingNode.type = branchingNode.types[0];
                   } else {
-                    // Create new branching node with enhanced role detection
-                    const enhancedBranchingRoles = getEnhancedRoles(branchingArtist, 'artist');
+                    // Create new branching node with optimized role detection
+                    const enhancedBranchingRoles = getOptimizedRoles(branchingArtist, 'artist');
                     
                     branchingNode = {
                       id: branchingArtist,
                       name: branchingArtist,
                       type: enhancedBranchingRoles[0], // Primary role
                       types: enhancedBranchingRoles, // All roles
-                      size: 15,
+                      size: 16, // Branching nodes size (updated from 15 to 16)
+                      musicNerdUrl: 'https://musicnerd.xyz', // Will be set in batch
                     };
-
-                    // Get MusicNerd ID for branching artist
-
-                    let branchingMusicNerdUrl = 'https://musicnerd.xyz';
-                    try {
-                      const branchingArtistId = await musicNerdService.getArtistId(branchingArtist);
-                      if (branchingArtistId) {
-                        branchingMusicNerdUrl = `https://musicnerd.xyz/artist/${branchingArtistId}`;
-
-                      }
-                    } catch (error) {
-                      console.log(`📭 [DEBUG] No MusicNerd ID found for branching artist ${branchingArtist}`);
-                    }
-
-                    branchingNode.musicNerdUrl = branchingMusicNerdUrl;
                     nodeMap.set(branchingArtist, branchingNode);
                     
                     console.log(`🎭 [DEBUG] Enhanced OpenAI branching "${branchingArtist}" to roles:`, enhancedBranchingRoles);
@@ -506,6 +433,59 @@ export class DatabaseStorage implements IStorage {
             }
 
 
+            // Batch process all external API calls for performance optimization
+            console.log(`⚡ [DEBUG] Batch processing external APIs for ${nodeMap.size} nodes...`);
+            const allNodesForBatch = Array.from(nodeMap.values());
+            const nodeNames = allNodesForBatch.map(node => node.name);
+            
+            // Parallel batch operations
+            const [spotifyResults, musicNerdResults] = await Promise.all([
+              // Batch Spotify searches
+              spotifyService.isConfigured() ? 
+                Promise.allSettled(nodeNames.map(async name => {
+                  try {
+                    const artist = await spotifyService.searchArtist(name);
+                    return { name, artist };
+                  } catch (error) {
+                    return { name, artist: null };
+                  }
+                })) : 
+                Promise.resolve([]),
+              
+              // Batch MusicNerd ID lookups
+              Promise.allSettled(nodeNames.map(async name => {
+                try {
+                  const artistId = await musicNerdService.getArtistId(name);
+                  return { name, artistId };
+                } catch (error) {
+                  return { name, artistId: null };
+                }
+              }))
+            ]);
+            
+            // Apply Spotify results
+            if (spotifyResults.length > 0) {
+              for (const result of spotifyResults) {
+                if (result.status === 'fulfilled' && result.value.artist) {
+                  const node = nodeMap.get(result.value.name);
+                  if (node) {
+                    node.imageUrl = spotifyService.getArtistImageUrl(result.value.artist, 'medium');
+                    node.spotifyId = result.value.artist.id;
+                  }
+                }
+              }
+            }
+            
+            // Apply MusicNerd results
+            for (const result of musicNerdResults) {
+              if (result.status === 'fulfilled' && result.value.artistId) {
+                const node = nodeMap.get(result.value.name);
+                if (node) {
+                  node.musicNerdUrl = `https://musicnerd.xyz/artist/${result.value.artistId}`;
+                }
+              }
+            }
+            
             // Final node array from consolidated map
             const nodes = Array.from(nodeMap.values());
             console.log(`✅ [DEBUG] Successfully created network from OpenAI data: ${nodes.length} total nodes (including main artist) for "${artistName}"`);
@@ -515,7 +495,15 @@ export class DatabaseStorage implements IStorage {
             console.log(`✅ [DEBUG] Generated OpenAI network data for "${artistName}" with ${nodes.length} nodes (caching handled by caller)`);
             
             return finalNetworkData;
-
+          } else {
+            console.log(`⚠️ [DEBUG] No collaborators found for "${artistName}" from OpenAI, returning single node`);
+            // Return just the main artist node
+            const finalNetworkData = { 
+              nodes: [nodeMap.get(artistName)!], 
+              links: []
+            };
+            await this.cacheNetworkData(artistName, finalNetworkData);
+            return finalNetworkData;
           }
         } catch (error) {
           console.error(`❌ [DEBUG] OpenAI API error for "${artistName}":`, error);
@@ -537,33 +525,7 @@ export class DatabaseStorage implements IStorage {
         worksList: collaborationData.works.map(w => `${w.title} with [${w.collaborators.join(', ')}]`)
       });
       
-      // Add known authentic songwriter collaborators for major artists if not already found
-      const artistNameLower = artistName.toLowerCase();
-      const processedNames = new Set(collaborationData.artists.map(a => a.name));
-      const knownCollaborations: { [key: string]: Array<{name: string, type: 'songwriter' | 'producer', relation: string}> } = {
-        'taylor swift': [
-          {name: 'Jack Antonoff', type: 'songwriter', relation: 'co-writer'},
-          {name: 'Max Martin', type: 'songwriter', relation: 'co-writer'},
-          {name: 'Shellback', type: 'songwriter', relation: 'co-writer'},
-          {name: 'Aaron Dessner', type: 'songwriter', relation: 'co-writer'},
-        ],
-        'ariana grande': [
-          {name: 'Victoria Monét', type: 'songwriter', relation: 'co-writer'},
-          {name: 'Tayla Parx', type: 'songwriter', relation: 'co-writer'},
-        ],
-        'billie eilish': [
-          {name: 'FINNEAS', type: 'songwriter', relation: 'co-writer'},
-        ]
-      };
-      
-      if (knownCollaborations[artistNameLower]) {
-        for (const collab of knownCollaborations[artistNameLower]) {
-          if (!processedNames.has(collab.name)) {
-            collaborationData.artists.push(collab);
-            console.log(`✨ [DEBUG] Added known authentic collaborator: ${collab.name} (${collab.type})`);
-          }
-        }
-      }
+      // Only use data from external sources - no hardcoded collaborations
       
       // Get Spotify image for main artist
       let mainArtistImage = null;
@@ -590,10 +552,10 @@ export class DatabaseStorage implements IStorage {
       }
 
       // Update main artist node with additional data
-      const mainArtistNode = nodeMap.get(artistName)!;
-      mainArtistNode.imageUrl = mainArtistImage;
-      mainArtistNode.spotifyId = mainArtistSpotifyId;
-      mainArtistNode.artistId = mainArtistMusicNerdId;
+      const mainArtistNodeFromMap = nodeMap.get(artistName)!;
+      mainArtistNodeFromMap.imageUrl = mainArtistImage;
+      mainArtistNodeFromMap.spotifyId = mainArtistSpotifyId;
+      mainArtistNodeFromMap.artistId = mainArtistMusicNerdId;
 
       // Add collaborating artists from MusicBrainz - limit to top 5 producers and songwriters for performance
       console.log(`🎨 [DEBUG] Processing ${collaborationData.artists.length} MusicBrainz collaborators...`);
@@ -721,7 +683,7 @@ export class DatabaseStorage implements IStorage {
                     name: branchingArtist,
                     type: enhancedBranchingRoles[0], // Primary role
                     types: enhancedBranchingRoles, // All roles
-                    size: 12, // Smaller size for branching nodes
+                    size: 15, // Branching nodes size
                     imageUrl: null,
                     spotifyId: null,
                     artistId: branchingArtistId,
@@ -785,7 +747,7 @@ export class DatabaseStorage implements IStorage {
             name: collaborator.name,
             type: enhancedRoles[0], // Primary role
             types: enhancedRoles, // All roles
-            size: 15,
+            size: 20,
             imageUrl: collaboratorImage,
             spotifyId: collaboratorSpotifyId,
             artistId: collaboratorMusicNerdId,
@@ -889,7 +851,7 @@ export class DatabaseStorage implements IStorage {
                   name: collaborator.name,
                   type: enhancedRoles[0], // Primary role
                   types: enhancedRoles, // All roles
-                  size: 15,
+                  size: 20,
                   imageUrl: collaboratorImage,
                   spotifyId: collaboratorSpotifyId,
                   artistId: collaboratorMusicNerdId,
@@ -964,7 +926,7 @@ export class DatabaseStorage implements IStorage {
                 name: collab.name,
                 type: collab.type,
                 types: [collab.type],
-                size: 15,
+                size: 20,
               };
               
               // Get MusicNerd artist ID for the collaborator
@@ -985,7 +947,7 @@ export class DatabaseStorage implements IStorage {
               nodeMap.set(collab.name, collaboratorNode);
             }
             links.push({
-              source: mainArtistNode.id,
+              source: artistName,
               target: collaboratorNode.id,
             });
             
@@ -1086,13 +1048,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
-    // First, check if we have cached webmapdata for this artist (applies to ALL artists)
-    console.log(`💾 [DEBUG] Checking for cached webmapdata for "${artistName}"`);
-    const cachedArtist = await this.getArtistByName(artistName);
+    // Force fresh generation for all artists to use new data-only approach
+    console.log(`🔄 [DEBUG] Force regenerating network data for "${artistName}" with data-only approach (cache cleared)`);
     
-    if (cachedArtist?.webmapdata) {
-      console.log(`✅ [DEBUG] Found cached webmapdata for "${cachedArtist.name}" - using cached data`);
-      return cachedArtist.webmapdata as NetworkData;
+    // Check if artist exists but skip cached data
+    const artist = await this.getArtistByName(artistName);
+    if (!artist) {
+      console.log(`❌ [DEBUG] Artist "${artistName}" not found in database`);
+      return null;
     }
     
     console.log(`🆕 [DEBUG] No cached data found for "${artistName}" - generating new network data`);
@@ -1132,7 +1095,7 @@ export class DatabaseStorage implements IStorage {
       id: mainArtist.name,
       name: mainArtist.name,
       type: mainArtist.type as 'artist' | 'producer' | 'songwriter',
-      size: 20,
+      size: 30,
       imageUrl: mainArtist.imageUrl,
       spotifyId: mainArtist.spotifyId,
     };
@@ -1148,7 +1111,7 @@ export class DatabaseStorage implements IStorage {
           id: collaborator.name,
           name: collaborator.name,
           type: collaborator.type as 'artist' | 'producer' | 'songwriter',
-          size: 15,
+          size: 20,
           imageUrl: collaborator.imageUrl,
           spotifyId: collaborator.spotifyId,
         };
