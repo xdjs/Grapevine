@@ -7,7 +7,7 @@ import MobileControls from "@/components/mobile-controls";
 
 import { NetworkData, FilterState } from "@/types/network";
 import { Loader2 } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile.tsx";
 
 export default function Home() {
   const [networkData, setNetworkData] = useState<NetworkData | null>(null);

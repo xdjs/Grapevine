@@ -490,10 +490,9 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
             const nodes = Array.from(nodeMap.values());
             console.log(`✅ [DEBUG] Successfully created network from OpenAI data: ${nodes.length} total nodes (including main artist) for "${artistName}"`);
             
-            // Cache the generated network data
+            // Return the generated network data (caching handled by caller)
             const finalNetworkData = { nodes, links };
-            console.log(`💾 [DEBUG] About to cache OpenAI network data for "${artistName}" with ${nodes.length} nodes`);
-            await this.cacheNetworkData(artistName, finalNetworkData);
+            console.log(`✅ [DEBUG] Generated OpenAI network data for "${artistName}" with ${nodes.length} nodes (caching handled by caller)`);
             
             return finalNetworkData;
           } else {
@@ -876,10 +875,9 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
             // Final node array from consolidated map
             const nodes = Array.from(nodeMap.values());
             
-            // Cache the generated network data
+            // Return the generated network data (caching handled by caller)
             const networkData = { nodes, links };
-            console.log(`💾 [DEBUG] About to cache Wikipedia network data for "${artistName}" with ${nodes.length} nodes`);
-            await this.cacheNetworkData(artistName, networkData);
+            console.log(`✅ [DEBUG] Generated Wikipedia network data for "${artistName}" with ${nodes.length} nodes (caching handled by caller)`);
             
             return networkData;
 
@@ -963,9 +961,8 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         // Final node array from consolidated map
         const nodes = Array.from(nodeMap.values());
         
-        // Cache the generated network data
+        // Return the generated network data (caching handled by caller)
         const networkData = { nodes, links };
-        await this.cacheNetworkData(artistName, networkData);
         return networkData;
 
       } else {
@@ -975,18 +972,16 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       // Final node array from consolidated map
       const nodes = Array.from(nodeMap.values());
       
-      // Cache the generated network data
+      // Return the generated network data (caching handled by caller)
       const networkData = { nodes, links };
-      await this.cacheNetworkData(artistName, networkData);
       return networkData;
     } catch (error) {
       console.error('Error generating real collaboration network:', error);
       // Return just the main artist if everything fails
       const nodes = Array.from(nodeMap.values());
       
-      // Cache the generated network data
+      // Return the generated network data (caching handled by caller)
       const networkData = { nodes, links };
-      await this.cacheNetworkData(artistName, networkData);
       return networkData;
     }
   }
@@ -1018,6 +1013,32 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       }
     } catch (error: any) {
       console.error(`❌ [DEBUG] Error caching webmapdata for "${artistName}":`, error);
+      console.error(`❌ [DEBUG] Full error details:`, {
+        message: error?.message,
+        code: error?.code,
+        detail: error?.detail
+      });
+    }
+  }
+
+  private async cacheNetworkDataById(artistId: string, networkData: NetworkData): Promise<void> {
+    if (!db) {
+      console.log(`⚠️ [DEBUG] Database not available - skipping cache for artist ID "${artistId}"`);
+      return;
+    }
+
+    try {
+      console.log(`💾 [DEBUG] Caching webmapdata for artist ID "${artistId}"`);
+      
+      // Update artist with webmapdata using ID directly
+      await db.execute(sql`
+        UPDATE artists 
+        SET webmapdata = ${JSON.stringify(networkData)}::jsonb 
+        WHERE id = ${artistId}
+      `);
+      console.log(`✅ [DEBUG] Updated webmapdata cache for artist ID "${artistId}"`);
+    } catch (error: any) {
+      console.error(`❌ [DEBUG] Error caching webmapdata for artist ID "${artistId}":`, error);
       console.error(`❌ [DEBUG] Full error details:`, {
         message: error?.message,
         code: error?.code,
@@ -1105,4 +1126,51 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
 
     return { nodes, links };
   }
+
+  async getNetworkDataById(artistId: string): Promise<NetworkData | null> {
+    if (!db) return null;
+    
+    try {
+      console.log(`🔍 [DEBUG] Fetching network data for artist ID: "${artistId}"`);
+      
+      // First, get the artist by ID
+      const result = await db
+        .select({
+          id: artists.id,
+          name: artists.name,
+          webmapdata: artists.webmapdata
+        })
+        .from(artists)
+        .where(eq(artists.id, artistId))
+        .limit(1);
+      
+      const artist = result[0];
+      if (!artist) {
+        console.log(`❌ [DEBUG] Artist not found with ID: "${artistId}"`);
+        return null;
+      }
+      
+      console.log(`✅ [DEBUG] Found artist: "${artist.name}" (ID: ${artistId})`);
+      
+      // Check if we have cached network data
+      if (artist.webmapdata) {
+        console.log(`💾 [DEBUG] Found cached webmapdata for artist ID "${artistId}" (${artist.name})`);
+        return artist.webmapdata;
+      }
+      
+      // If no cached data, generate new network data using the artist's name
+      console.log(`🔄 [DEBUG] No cached data found for artist ID "${artistId}" (${artist.name}), generating new network...`);
+      const networkData = await this.generateRealCollaborationNetwork(artist.name);
+      
+      // Cache the result with the correct artist ID
+      await this.cacheNetworkDataById(artistId, networkData);
+      
+      return networkData;
+      
+    } catch (error) {
+      console.error(`❌ [DEBUG] Error fetching network data for artist ID "${artistId}":`, error);
+      return null;
+    }
+  }
+
 }

@@ -16,6 +16,7 @@ export interface IStorage {
   
   // Network data methods
   getNetworkData(artistName: string): Promise<NetworkData | null>;
+  getNetworkDataById?(artistId: string): Promise<NetworkData | null>;
 }
 
 export class MemStorage implements IStorage {
@@ -522,6 +523,8 @@ export class MemStorage implements IStorage {
     console.log(`🎵 [DEBUG] Using real collaboration data path for "${artistName}"`);
     return this.generateRealCollaborationNetwork(artistName);
   }
+
+
 
   private async generateEnhancedDemoNetwork(mainArtist: Artist): Promise<NetworkData> {
     const nodes: NetworkNode[] = [];

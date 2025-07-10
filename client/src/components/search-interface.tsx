@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { fetchNetworkData } from "@/lib/network-data";
+import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
 import { NetworkData } from "@/types/network";
 import { Search } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -125,12 +125,15 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     setShowDropdown(false);
     setArtistOptions([]);
     
-    // Trigger search immediately
+    // Use artist ID if available, otherwise fall back to name
     try {
       setIsLoading(true);
       onLoadingChange?.(true);
       
-      const data = await fetchNetworkData(artist.name.trim());
+      // Use artist ID if available, otherwise fall back to name
+      const data = artist.artistId 
+        ? await fetchNetworkDataById(artist.artistId)
+        : await fetchNetworkData(artist.name.trim());
       onNetworkData(data);
       
       toast({
