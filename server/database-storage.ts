@@ -868,7 +868,7 @@ export class DatabaseStorage implements IStorage {
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
     // TEMPORARY: Force cache invalidation for main artist size fix
     // Remove this section after all cached data is regenerated
-    const forceRegenerationArtists = ['Taylor Swift', 'DNCE', 'Post Malone', 'Ariana Grande', 'Billie Eilish', 'The Weeknd', 'Drake'];
+    const forceRegenerationArtists = ['Taylor Swift', 'DNCE', 'Post Malone', 'Ariana Grande', 'Billie Eilish', 'The Weeknd', 'Drake', 'Olivia Rodrigo'];
     const shouldForceRegeneration = forceRegenerationArtists.includes(artistName);
     
     if (!shouldForceRegeneration) {
