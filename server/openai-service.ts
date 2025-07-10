@@ -38,25 +38,30 @@ class OpenAIService {
     console.log(`🤖 [DEBUG] Querying OpenAI for collaborations with "${artistName}"`);
 
     try {
-      const prompt = `Generate a list of producers and songwriters who have collaborated with artist ${artistName}. For each producer and songwriter, include their top 3 collaborating artists (biggest artists they have worked with).
+      const prompt = `Generate a comprehensive list of music industry professionals who have collaborated with ${artistName}. Include people who work as producers, songwriters, or both. For each person, specify all their roles and their top 3 collaborating artists.
 
 Please respond with JSON in this exact format:
 {
-  "producers": [
+  "collaborators": [
     {
-      "name": "Producer Name",
+      "name": "Person Name",
+      "roles": ["producer", "songwriter"], 
       "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
-    }
-  ],
-  "songwriters": [
+    },
     {
-      "name": "Songwriter Name", 
+      "name": "Another Person",
+      "roles": ["songwriter"],
       "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
     }
   ]
 }
 
-Focus on real, verified collaborations from the music industry. Include up to 5 producers and 5 songwriters who have actually worked with ${artistName}. Each producer and songwriter should have exactly 3 top collaborating artists listed.`;
+Important guidelines:
+- Include up to 10 music industry professionals who have actually worked with ${artistName}
+- For each person, list ALL their roles from: ["producer", "songwriter", "artist"]
+- Many professionals have multiple roles (e.g., Jack Antonoff is both producer and songwriter)
+- Include their top 3 collaborating artists for each person
+- Focus on real, verified collaborations from the music industry`;
 
       const response = await this.openai!.chat.completions.create({
         model: "gpt-4o",
@@ -74,28 +79,25 @@ Focus on real, verified collaborations from the music industry. Include up to 5 
         temperature: 0.1, // Low temperature for more factual responses
       });
 
-      const result = JSON.parse(response.choices[0].message.content || '{"producers": [], "songwriters": []}');
+      const result = JSON.parse(response.choices[0].message.content || '{"collaborators": []}');
       
       // Transform the response to our expected format
       const collaborators: OpenAICollaborator[] = [];
       
-      if (result.producers) {
-        for (const producer of result.producers) {
-          collaborators.push({
-            name: producer.name,
-            type: 'producer',
-            topCollaborators: producer.topCollaborators || []
-          });
-        }
-      }
-      
-      if (result.songwriters) {
-        for (const songwriter of result.songwriters) {
-          collaborators.push({
-            name: songwriter.name,
-            type: 'songwriter',
-            topCollaborators: songwriter.topCollaborators || []
-          });
+      if (result.collaborators) {
+        for (const collaborator of result.collaborators) {
+          // For each person, create entries for each of their roles
+          const roles = collaborator.roles || ['producer']; // Default to producer if no roles specified
+          
+          for (const role of roles) {
+            if (role === 'producer' || role === 'songwriter') {
+              collaborators.push({
+                name: collaborator.name,
+                type: role as 'producer' | 'songwriter',
+                topCollaborators: collaborator.topCollaborators || []
+              });
+            }
+          }
         }
       }
 

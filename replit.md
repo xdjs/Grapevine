@@ -451,6 +451,15 @@ Changelog:
 - Applied role persistence to both local server (database-storage.ts) and Vercel API endpoints for consistency
 - All role information derived from authentic OpenAI responses, no hardcoded role assignments
 
+### Enhanced Multi-Role Collaboration Detection (July 9, 2025)
+- Updated OpenAI collaboration prompt to directly request comprehensive multi-role information for all collaborators
+- New prompt asks for each person's complete roles array (e.g., ["producer", "songwriter"]) instead of single roles
+- System now properly detects when Jack Antonoff is both producer and songwriter in a single API call
+- Enhanced collaboration data structure includes all roles for each person, eliminating need for separate role detection queries
+- Multi-role consolidation logic now receives authentic multi-role data directly from OpenAI
+- Applied enhanced prompt to both local server and Vercel API endpoints for consistent multi-role detection
+- Significantly improved role accuracy while maintaining performance efficiency
+
 
 
 

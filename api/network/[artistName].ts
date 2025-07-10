@@ -88,29 +88,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         apiKey: OPENAI_API_KEY,
       });
 
-      const prompt = `Generate a list of producers and songwriters who have collaborated with ${correctArtistName}. Return ONLY valid JSON with no additional text, markdown, or formatting.
+      const prompt = `Generate a comprehensive list of music industry professionals who have collaborated with ${correctArtistName}. Include people who work as producers, songwriters, or both. For each person, specify all their roles and their top 3 collaborating artists.
 
-Required format:
+Please respond with JSON in this exact format:
 {
-  "artists": [
+  "collaborators": [
     {
-      "name": "Producer Name",
-      "type": "producer", 
+      "name": "Person Name",
+      "roles": ["producer", "songwriter"], 
       "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
     },
     {
-      "name": "Songwriter Name",
-      "type": "songwriter",
+      "name": "Another Person",
+      "roles": ["songwriter"],
       "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
     }
   ]
 }
 
-Requirements:
-- Provide exactly 5 producers and 5 songwriters who have actually worked with ${correctArtistName}
-- Use only real music industry collaborations
-- Return ONLY the JSON object, no other text
-- Ensure all JSON is properly formatted and valid`;
+Important guidelines:
+- Include up to 10 music industry professionals who have actually worked with ${correctArtistName}
+- For each person, list ALL their roles from: ["producer", "songwriter", "artist"]
+- Many professionals have multiple roles (e.g., Jack Antonoff is both producer and songwriter)
+- Include their top 3 collaborating artists for each person
+- Focus on real, verified collaborations from the music industry
+- Return ONLY the JSON object, no other text`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -157,7 +159,7 @@ Requirements:
           console.warn('❌ [Vercel] Primary JSON parse failed, trying fallback');
           collaborationData = { artists: [] };
         }
-        console.log(`✅ [Vercel] Parsed collaboration data with ${collaborationData.artists?.length || 0} artists`);
+        console.log(`✅ [Vercel] Parsed collaboration data with ${collaborationData.collaborators?.length || collaborationData.artists?.length || 0} collaborators`);
       } catch (parseError) {
         console.error('❌ [Vercel] Failed to parse OpenAI response:', parseError);
         console.error('❌ [Vercel] Raw OpenAI content:', completion.choices[0]?.message?.content);
@@ -232,8 +234,28 @@ Requirements:
       
       console.log(`🎭 [Vercel] Main artist "${correctArtistName}" initialized with ${mainArtistTypes.length} roles:`, mainArtistTypes);
 
+      // Transform new format to expected format and process collaborators
+      const collaborators = [];
+      if (collaborationData.collaborators) {
+        for (const person of collaborationData.collaborators) {
+          const roles = person.roles || ['producer'];
+          for (const role of roles) {
+            if (role === 'producer' || role === 'songwriter') {
+              collaborators.push({
+                name: person.name,
+                type: role,
+                topCollaborators: person.topCollaborators || []
+              });
+            }
+          }
+        }
+      } else if (collaborationData.artists) {
+        // Fallback for old format
+        collaborators.push(...collaborationData.artists);
+      }
+
       // Process producers and songwriters with multi-role consolidation
-      for (const collaborator of collaborationData.artists || []) {
+      for (const collaborator of collaborators) {
         // Check if we already have a node for this person
         let collabNode = nodeMap.get(collaborator.name);
         

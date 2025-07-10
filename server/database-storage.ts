@@ -197,9 +197,10 @@ export class DatabaseStorage implements IStorage {
     
     console.log(`🎭 [DEBUG] Main artist "${artistName}" initialized with ${mainArtistTypes.length} roles:`, mainArtistTypes);
 
-    // Helper function to determine roles based only on data from external sources
+    // Helper function to determine roles - now relying on improved OpenAI prompt for multi-role data
     const getEnhancedRoles = (personName: string, defaultRole: 'artist' | 'producer' | 'songwriter'): ('artist' | 'producer' | 'songwriter')[] => {
-      // Only use the role provided by the data source - no hardcoded information
+      // The new OpenAI prompt should provide comprehensive role information directly
+      // For collaborators, we'll rely on the multi-role consolidation logic to merge roles
       return [defaultRole];
     };
 
@@ -340,7 +341,7 @@ export class DatabaseStorage implements IStorage {
                       name: branchingArtist,
                       type: enhancedBranchingRoles[0], // Primary role
                       types: enhancedBranchingRoles, // All roles
-                      size: 15, // Branching nodes size
+                      size: 16, // Branching nodes size (updated from 15 to 16)
                     };
 
                     // Get MusicNerd ID for branching artist
