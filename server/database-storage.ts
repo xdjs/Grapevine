@@ -137,82 +137,20 @@ export class DatabaseStorage implements IStorage {
       console.log(`📭 [DEBUG] No MusicNerd ID found for main artist ${artistName}`);
     }
 
-    // Create a comprehensive role lookup system for consistency across maps
-    const globalRoleMap = new Map<string, string[]>();
-    
-    // Helper function to detect and cache roles for any person
-    const getComprehensiveRoles = async (personName: string, defaultRole: 'artist' | 'producer' | 'songwriter'): Promise<string[]> => {
-      // Check if we already have roles for this person
-      if (globalRoleMap.has(personName)) {
-        const cachedRoles = globalRoleMap.get(personName)!;
-        console.log(`🎭 [DEBUG] Using cached roles for "${personName}":`, cachedRoles);
-        return cachedRoles;
-      }
-      
-      // Query OpenAI to determine this person's roles
-      let detectedRoles = [defaultRole];
-      if (openAIService.isServiceAvailable()) {
-        try {
-          const roleDetectionPrompt = `What roles does ${personName} have in the music industry? Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. Return ONLY the JSON array, no other text.`;
-          
-          const OpenAI = await import('openai');
-          const openai = new OpenAI.default({
-            apiKey: process.env.OPENAI_API_KEY,
-          });
+    // Main artist is always an artist (no additional role detection)
+    const mainArtistTypes = ['artist'];
 
-          const roleCompletion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [{ role: "user", content: roleDetectionPrompt }],
-            temperature: 0.1,
-            max_tokens: 100,
-          });
-
-          const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
-          if (roleContent) {
-            try {
-              const parsedRoles = JSON.parse(roleContent);
-              if (Array.isArray(parsedRoles) && parsedRoles.length > 0) {
-                const validRoles = parsedRoles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
-                if (validRoles.length > 0) {
-                  detectedRoles = validRoles;
-                  console.log(`✅ [DEBUG] Detected roles for "${personName}":`, detectedRoles);
-                }
-              }
-            } catch (parseError) {
-              console.log(`⚠️ [DEBUG] Could not parse role detection for "${personName}", using default`);
-            }
-          }
-        } catch (error) {
-          console.log(`⚠️ [DEBUG] Role detection failed for "${personName}", using default`);
-        }
-      }
-      
-      // Cache the detected roles for consistency
-      globalRoleMap.set(personName, detectedRoles);
-      return detectedRoles;
-    };
-
-    // Detect main artist's roles with comprehensive detection
-    console.log(`🔍 [DEBUG] Detecting roles for main artist "${artistName}"...`);
-    const mainArtistTypes = await getComprehensiveRoles(artistName, 'artist');
-    
-    // Ensure 'artist' is first for main artists if they have that role
-    const orderedMainArtistTypes = mainArtistTypes.includes('artist') 
-      ? ['artist', ...mainArtistTypes.filter(r => r !== 'artist')]
-      : mainArtistTypes;
-
-    // Create main artist node with detected roles
+    // Create main artist node (always artist role)
     const mainArtistNode: NetworkNode = {
       id: artistName,
       name: artistName,
-      type: orderedMainArtistTypes[0], // Primary type
-      types: orderedMainArtistTypes, // All detected roles
+      type: 'artist',
       size: 30, // Larger size for main artist
       musicNerdUrl,
     };
     nodeMap.set(artistName, mainArtistNode);
     
-    console.log(`🎭 [DEBUG] Main artist "${artistName}" initialized with ${orderedMainArtistTypes.length} roles:`, orderedMainArtistTypes);
+    console.log(`🎭 [DEBUG] Main artist "${artistName}" initialized as artist`);
 
     // Helper function to determine roles - now relying on improved OpenAI prompt for multi-role data
     const getEnhancedRoles = (personName: string, defaultRole: 'artist' | 'producer' | 'songwriter'): ('artist' | 'producer' | 'songwriter')[] => {
@@ -285,15 +223,14 @@ export class DatabaseStorage implements IStorage {
                 collaboratorNode = {
                   id: collaborator.name,
                   name: collaborator.name,
-                  type: enhancedRoles[0], // Primary role
-                  types: enhancedRoles, // All roles
+                  type: collaborator.type, // Use only their primary role to this artist
                   size: 20,
                   imageUrl,
                   spotifyId,
                   collaborations: collaborator.topCollaborators || [],
                 };
                 
-                console.log(`🎭 [DEBUG] Enhanced "${collaborator.name}" from ${collaborator.type} to roles:`, enhancedRoles);
+                console.log(`➕ [DEBUG] Added ${collaborator.type}: ${collaborator.name} from OpenAI`);
 
                 // Get MusicNerd artist ID for the collaborator
 
@@ -350,15 +287,12 @@ export class DatabaseStorage implements IStorage {
                     // Ensure primary type remains as first one for compatibility
                     branchingNode.type = branchingNode.types[0];
                   } else {
-                    // Create new branching node with comprehensive role detection
-                    const enhancedBranchingRoles = await getComprehensiveRoles(branchingArtist, 'artist');
-                    
+                    // Create new branching node (always artist since they're collaborating artists)
                     branchingNode = {
                       id: branchingArtist,
                       name: branchingArtist,
-                      type: enhancedBranchingRoles[0], // Primary role
-                      types: enhancedBranchingRoles, // All roles
-                      size: 16, // Branching nodes size (updated from 15 to 16)
+                      type: 'artist', // Branching artists are always artists
+                      size: 16, // Branching nodes size
                     };
 
                     // Get MusicNerd ID for branching artist
@@ -399,12 +333,7 @@ export class DatabaseStorage implements IStorage {
             const nodes = Array.from(nodeMap.values());
             console.log(`✅ [DEBUG] Successfully created network from OpenAI data: ${nodes.length} total nodes (including main artist) for "${artistName}"`);
             
-            // Cache the generated network data
-            const finalNetworkData = { nodes, links };
-            console.log(`💾 [DEBUG] About to cache OpenAI network data for "${artistName}" with ${nodes.length} nodes`);
-            await this.cacheNetworkData(artistName, finalNetworkData);
-            
-            return finalNetworkData;
+            return { nodes, links };
 
           }
         } catch (error) {
@@ -777,12 +706,7 @@ export class DatabaseStorage implements IStorage {
             // Final node array from consolidated map
             const nodes = Array.from(nodeMap.values());
             
-            // Cache the generated network data
-            const networkData = { nodes, links };
-            console.log(`💾 [DEBUG] About to cache Wikipedia network data for "${artistName}" with ${nodes.length} nodes`);
-            await this.cacheNetworkData(artistName, networkData);
-            
-            return networkData;
+            return { nodes, links };
 
           } else {
             console.log(`❌ [DEBUG] Wikipedia returned 0 collaborators for "${artistName}"`);
@@ -928,44 +852,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
-    // Force fresh generation for all artists to use new data-only approach
-    console.log(`🔄 [DEBUG] Force regenerating network data for "${artistName}" with data-only approach (cache cleared)`);
+    console.log(`📊 [DEBUG] DatabaseStorage.getNetworkData called for: "${artistName}"`);
     
-    // Check if artist exists but skip cached data
-    const artist = await this.getArtistByName(artistName);
-    if (!artist) {
-      console.log(`❌ [DEBUG] Artist "${artistName}" not found in database`);
+    // Check if artist exists in database first
+    const existingArtist = await this.getArtistByName(artistName);
+    if (!existingArtist) {
+      console.log(`❌ [DEBUG] Artist "${artistName}" not found in database - cannot generate network`);
       return null;
     }
     
-    console.log(`🆕 [DEBUG] No cached data found for "${artistName}" - generating new network data`);
+    const correctArtistName = existingArtist.name; // Use the correct name from database
+    console.log(`✅ [DEBUG] Found existing artist: "${correctArtistName}" (original search: "${artistName}")`);
     
-    // For demo artists with rich mock data, use real MusicBrainz to showcase enhanced producer/songwriter extraction
-    const enhancedMusicBrainzArtists: string[] = ['Post Malone', 'The Weeknd', 'Ariana Grande', 'Billie Eilish', 'Taylor Swift', 'Drake'];
-    
-    const mainArtist = await this.getArtistByName(artistName);
-    if (!mainArtist) {
-      // Artist doesn't exist in database - return error instead of creating new entry
-      console.log(`❌ [DEBUG] Artist "${artistName}" does not exist in database - cannot generate network`);
-      throw new Error(`Artist "${artistName}" not found in database. Please search for an existing artist.`);
-    }
-
-    // Check if this is an enhanced demo artist using the correct database name
-    if (enhancedMusicBrainzArtists.includes(mainArtist.name)) {
-      console.log(`🎵 [DEBUG] Using enhanced MusicBrainz data for "${mainArtist.name}" to showcase deep producer/songwriter networks`);
-      const networkData = await this.generateRealCollaborationNetwork(mainArtist.name);
-      // Cache the result
-      await this.cacheNetworkData(mainArtist.name, networkData);
-      return networkData;
-    }
-
-    // If artist exists in MusicNerd database (UUID ID), skip collaboration lookup 
-    // and generate real collaboration data instead since MusicNerd doesn't have our collaborations table
-    const artistId = String(mainArtist.id);
-    if (artistId.includes('-')) {
-      console.log(`🎵 [DEBUG] Found MusicNerd artist "${mainArtist.name}" - generating real collaboration network`);
-      return this.generateRealCollaborationNetwork(mainArtist.name);
-    }
+    // Always generate fresh network data (no caching)
+    console.log(`🔄 [DEBUG] Generating fresh network for "${correctArtistName}" with authentic data only...`);
+    return await this.generateRealCollaborationNetwork(correctArtistName);
 
     // Artist exists in our own database, build network from stored data
     const nodes: NetworkNode[] = [];

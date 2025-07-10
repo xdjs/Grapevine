@@ -384,59 +384,17 @@ export default function NetworkVisualizer({
     // Add circles for each node - single color for single role, multi-colored for multiple roles
     nodeElements.each(function(d) {
       const group = d3.select(this);
-      const roles = d.types || [d.type];
-      
-      // Debug multi-role nodes
-      if (roles.length > 1) {
-        console.log(`🎭 [Frontend] Multi-role node "${d.name}": roles = [${roles.join(', ')}]`);
-      }
-      
-      if (roles.length === 1) {
-        // Single role - simple circle
-        group.append("circle")
-          .attr("r", d.size)
-          .attr("fill", "transparent")
-          .attr("stroke", () => {
-            if (roles[0] === 'artist') return '#FF0ACF';       // Magenta Pink
-            if (roles[0] === 'producer') return '#AE53FF';     // Bright Purple  
-            if (roles[0] === 'songwriter') return '#67D1F8';   // Light Blue
-            return '#355367';  // Police Blue
-          })
-          .attr("stroke-width", 4);
-      } else {
-        // Multiple roles - create segmented circle
-        const angleStep = (2 * Math.PI) / roles.length;
-        
-        roles.forEach((role, index) => {
-          const startAngle = index * angleStep;
-          const endAngle = (index + 1) * angleStep;
-          
-          // Create arc path for each role
-          const arcPath = d3.arc()
-            .innerRadius(d.size - 4)
-            .outerRadius(d.size)
-            .startAngle(startAngle)
-            .endAngle(endAngle);
-          
-          group.append("path")
-            .attr("d", arcPath)
-            .attr("fill", () => {
-              if (role === 'artist') return '#FF0ACF';       // Magenta Pink
-              if (role === 'producer') return '#AE53FF';     // Bright Purple  
-              if (role === 'songwriter') return '#67D1F8';   // Light Blue
-              return '#355367';  // Police Blue
-            })
-            .attr("stroke", "white")
-            .attr("stroke-width", 1);
-        });
-        
-        // Add inner circle for better visibility
-        group.append("circle")
-          .attr("r", d.size - 4)
-          .attr("fill", "transparent")
-          .attr("stroke", "white")
-          .attr("stroke-width", 2);
-      }
+      // Use only primary role (no multi-role display)
+      group.append("circle")
+        .attr("r", d.size)
+        .attr("fill", "transparent")
+        .attr("stroke", () => {
+          if (d.type === 'artist') return '#FF0ACF';       // Magenta Pink
+          if (d.type === 'producer') return '#AE53FF';     // Bright Purple  
+          if (d.type === 'songwriter') return '#67D1F8';   // Light Blue
+          return '#355367';  // Police Blue
+        })
+        .attr("stroke-width", 4);
     })
       .on("mouseover", function(event, d) {
         // Highlight the entire node group
@@ -447,27 +405,17 @@ export default function NetworkVisualizer({
       })
       .on("mousemove", moveTooltip)
       .on("mouseout", function(event, d) {
-        // Reset the stroke colors for the entire node group
+        // Reset the stroke colors for primary role only
         const group = d3.select(this);
-        const roles = d.types || [d.type];
         
-        if (roles.length === 1) {
-          group.select("circle")
-            .attr("stroke", () => {
-              if (roles[0] === 'artist') return '#FF0ACF';
-              if (roles[0] === 'producer') return '#AE53FF';
-              if (roles[0] === 'songwriter') return '#67D1F8';
-              return '#355367';
-            })
-            .attr("stroke-width", 4);
-        } else {
-          group.selectAll("path")
-            .attr("stroke", "white")
-            .attr("stroke-width", 1);
-          group.select("circle")
-            .attr("stroke", "white")
-            .attr("stroke-width", 2);
-        }
+        group.select("circle")
+          .attr("stroke", () => {
+            if (d.type === 'artist') return '#FF0ACF';
+            if (d.type === 'producer') return '#AE53FF';
+            if (d.type === 'songwriter') return '#67D1F8';
+            return '#355367';
+          })
+          .attr("stroke-width", 4);
         hideTooltip();
       })
       .on("click", function(event, d) {
@@ -746,23 +694,11 @@ export default function NetworkVisualizer({
   }, [data, visible, onZoomChange]);
 
   // Helper function to check if a node should be visible based on filter state
-  // For multi-role nodes, they are visible if ANY of their roles should be shown
+  // Primary role visibility only
   const isNodeVisible = (node: NetworkNode, filterState: FilterState): boolean => {
-    if (!node.types || node.types.length === 0) {
-      // Fallback to single type if types array is not available
-      if (node.type === "producer" && !filterState.showProducers) return false;
-      if (node.type === "songwriter" && !filterState.showSongwriters) return false;
-      if (node.type === "artist" && !filterState.showArtists) return false;
-      return true;
-    }
-    
-    // Check if any of the node's roles should be visible
-    for (const role of node.types) {
-      if (role === "producer" && filterState.showProducers) return true;
-      if (role === "songwriter" && filterState.showSongwriters) return true;
-      if (role === "artist" && filterState.showArtists) return true;
-    }
-    
+    if (node.type === "producer") return filterState.showProducers;
+    if (node.type === "songwriter") return filterState.showSongwriters;
+    if (node.type === "artist") return filterState.showArtists;
     return false;
   };
 
@@ -773,23 +709,12 @@ export default function NetworkVisualizer({
     const svg = d3.select(svgRef.current);
 
     // Helper function to check if a node should be visible based on filter state
-    // For multi-role nodes, they are visible if ANY of their roles should be shown
+    // Primary role visibility only
     const isNodeVisible = (node: NetworkNode): boolean => {
-      if (node.types && node.types.length > 0) {
-        // Check if any of the node's roles should be visible
-        for (const role of node.types) {
-          if (role === "producer" && filterState.showProducers) return true;
-          if (role === "songwriter" && filterState.showSongwriters) return true;
-          if (role === "artist" && filterState.showArtists) return true;
-        }
-        return false;
-      } else {
-        // Fallback to single type if types array is not available
-        if (node.type === "producer" && !filterState.showProducers) return false;
-        if (node.type === "songwriter" && !filterState.showSongwriters) return false;
-        if (node.type === "artist" && !filterState.showArtists) return false;
-        return true;
-      }
+      if (node.type === "producer") return filterState.showProducers;
+      if (node.type === "songwriter") return filterState.showSongwriters;
+      if (node.type === "artist") return filterState.showArtists;
+      return false;
     };
 
     // Hide/show nodes based on filter state

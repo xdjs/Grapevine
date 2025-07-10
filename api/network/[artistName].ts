@@ -362,14 +362,7 @@ Important guidelines:
 
       const networkData = { nodes, links };
 
-      // Cache the generated data
-      try {
-        const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE LOWER(name) = LOWER($2)';
-        await client.query(updateQuery, [JSON.stringify(networkData), correctArtistName]);
-        console.log(`💾 [Vercel] Cached network data for ${correctArtistName}`);
-      } catch (cacheError) {
-        console.warn('⚠️ [Vercel] Failed to cache data:', cacheError);
-      }
+      // No caching - always return fresh data
 
       await client.end();
       console.log(`✅ [Vercel] Generated network with ${nodes.length} nodes for ${artistName}`);
