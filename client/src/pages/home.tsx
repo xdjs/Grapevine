@@ -121,30 +121,22 @@ export default function Home() {
 
       {/* Connected Circles - Only visible when not showing network */}
       {!showNetworkView && (
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10" style={{ pointerEvents: 'auto' }}>
-          <div className="relative w-[600px] h-[400px]">
+        <div className="absolute top-[65%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10" style={{ pointerEvents: 'auto' }}>
+          <div className="relative w-[600px] h-[300px]">
             {/* SVG for connecting lines */}
             <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 1 }}>
               {/* Line from Search to Discover */}
               <line 
-                x1="100" y1="150" 
-                x2="300" y2="100" 
+                x1="100" y1="120" 
+                x2="300" y2="80" 
                 stroke="#666" 
                 strokeWidth="2"
                 strokeDasharray="5,5"
               />
               {/* Line from Discover to Explore */}
               <line 
-                x1="300" y1="100" 
-                x2="500" y2="150" 
-                stroke="#666" 
-                strokeWidth="2"
-                strokeDasharray="5,5"
-              />
-              {/* Line from Search to Explore (bottom connection) */}
-              <line 
-                x1="100" y1="150" 
-                x2="500" y2="150" 
+                x1="300" y1="80" 
+                x2="500" y2="120" 
                 stroke="#666" 
                 strokeWidth="2"
                 strokeDasharray="5,5"
@@ -152,7 +144,7 @@ export default function Home() {
             </svg>
             
             {/* Search Circle */}
-            <div className="absolute" style={{ left: '20px', top: '70px', zIndex: 2 }}>
+            <div className="absolute" style={{ left: '20px', top: '50px', zIndex: 2 }}>
               <div className="w-32 h-32 rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center p-4 text-center">
                 <div className="text-pink-400 font-medium text-sm mb-2">Search</div>
                 <div className="text-xs text-white leading-tight">Enter any artist name to start exploring their collaboration network</div>
@@ -160,7 +152,7 @@ export default function Home() {
             </div>
             
             {/* Discover Circle */}
-            <div className="absolute" style={{ left: '220px', top: '20px', zIndex: 2 }}>
+            <div className="absolute" style={{ left: '220px', top: '10px', zIndex: 2 }}>
               <div className="w-32 h-32 rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center p-4 text-center">
                 <div className="text-purple-400 font-medium text-sm mb-2">Discover</div>
                 <div className="text-xs text-white leading-tight">See producers, songwriters, and other artists they've worked with</div>
@@ -168,7 +160,7 @@ export default function Home() {
             </div>
             
             {/* Explore Circle */}
-            <div className="absolute" style={{ left: '420px', top: '70px', zIndex: 2 }}>
+            <div className="absolute" style={{ left: '420px', top: '50px', zIndex: 2 }}>
               <div className="w-32 h-32 rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center p-4 text-center">
                 <div className="text-cyan-400 font-medium text-sm mb-2">Explore</div>
                 <div className="text-xs text-white leading-tight">Click any node to search for that artist's connections</div>
