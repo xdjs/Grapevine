@@ -246,7 +246,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
             />
           </div>
           
-          <h1 className="text-xl sm:text-4xl font-bold mb-2 sm:mb-4 text-white">
+          <h1 className="text-2xl sm:text-5xl font-bold mb-2 sm:mb-4 text-white">
             Grapevine
           </h1>
           <p className="text-sm sm:text-lg text-gray-300 mb-6 sm:mb-8">
