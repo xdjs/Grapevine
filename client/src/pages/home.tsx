@@ -121,28 +121,28 @@ export default function Home() {
 
       {/* Info Circles - Only visible when not showing network */}
       {!showNetworkView && (
-        <div className="absolute top-[65%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10" style={{ pointerEvents: 'auto' }}>
-          <div className="relative w-[600px] h-[200px]">
+        <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10" style={{ pointerEvents: 'auto' }}>
+          <div className="flex justify-center items-center gap-8">
             {/* Search Circle */}
-            <div className="absolute" style={{ left: '20px', top: '35px', zIndex: 2 }}>
-              <div className="w-32 h-32 rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center p-4 text-center">
-                <div className="text-pink-400 font-medium text-sm mb-2">Search</div>
+            <div className="flex flex-col items-center">
+              <div className="w-40 h-40 rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center p-5 text-center">
+                <div className="text-pink-400 font-medium text-base mb-2">Search</div>
                 <div className="text-xs text-white leading-tight">Enter any artist name to start exploring their collaboration network</div>
               </div>
             </div>
             
             {/* Discover Circle */}
-            <div className="absolute" style={{ left: '220px', top: '35px', zIndex: 2 }}>
-              <div className="w-32 h-32 rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center p-4 text-center">
-                <div className="text-purple-400 font-medium text-sm mb-2">Discover</div>
+            <div className="flex flex-col items-center">
+              <div className="w-40 h-40 rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center p-5 text-center">
+                <div className="text-purple-400 font-medium text-base mb-2">Discover</div>
                 <div className="text-xs text-white leading-tight">See producers, songwriters, and other artists they've worked with</div>
               </div>
             </div>
             
             {/* Explore Circle */}
-            <div className="absolute" style={{ left: '420px', top: '35px', zIndex: 2 }}>
-              <div className="w-32 h-32 rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center p-4 text-center">
-                <div className="text-cyan-400 font-medium text-sm mb-2">Explore</div>
+            <div className="flex flex-col items-center">
+              <div className="w-40 h-40 rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center p-5 text-center">
+                <div className="text-cyan-400 font-medium text-base mb-2">Explore</div>
                 <div className="text-xs text-white leading-tight">Click any node to search for that artist's connections</div>
               </div>
             </div>
