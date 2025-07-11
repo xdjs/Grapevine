@@ -121,7 +121,7 @@ export default function Home() {
 
       {/* Info Circles - Only visible when not showing network */}
       {!showNetworkView && (
-        <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10" style={{ pointerEvents: 'auto' }}>
+        <div className="absolute top-[70%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10" style={{ pointerEvents: 'auto' }}>
           <div className="flex justify-center items-center gap-8">
             {/* Search Circle */}
             <div className="flex flex-col items-center">
