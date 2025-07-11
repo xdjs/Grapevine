@@ -172,17 +172,11 @@ export default function Home() {
                 onZoomReset={handleZoomReset}
                 onClearAll={handleClearNetwork}
               />
-              <FilterControls
-                filterState={filterState}
-                onFilterChange={setFilterState}
-              />
             </>
           )}
           
           {/* Mobile Controls */}
           <MobileControls
-            filterState={filterState}
-            onFilterChange={setFilterState}
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
             onZoomReset={handleZoomReset}

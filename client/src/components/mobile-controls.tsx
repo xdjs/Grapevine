@@ -1,15 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Plus, Minus, RotateCcw, X, Settings, Filter } from "lucide-react";
-import { FilterState } from "@/types/network";
+import { Plus, Minus, RotateCcw, X, Settings } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MobileControlsProps {
-  filterState: FilterState;
-  onFilterChange: (newState: FilterState) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomReset: () => void;
@@ -17,25 +12,15 @@ interface MobileControlsProps {
 }
 
 export default function MobileControls({
-  filterState,
-  onFilterChange,
   onZoomIn,
   onZoomOut,
   onZoomReset,
   onClearAll,
 }: MobileControlsProps) {
   const [showControls, setShowControls] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
   const isMobile = useIsMobile();
 
   if (!isMobile) return null;
-
-  const handleFilterChange = (type: keyof FilterState, checked: boolean) => {
-    onFilterChange({
-      ...filterState,
-      [type]: checked,
-    });
-  };
 
   return (
     <>
@@ -86,70 +71,7 @@ export default function MobileControls({
               </div>
             </div>
 
-            {/* Filter Toggle */}
-            <div>
-              <Button
-                onClick={() => setShowFilters(!showFilters)}
-                size="sm"
-                variant="outline"
-                className="w-full bg-gray-800 hover:bg-gray-700 border-gray-600 text-white"
-              >
-                <Filter className="w-4 h-4 mr-2" />
-                {showFilters ? "Hide Filters" : "Show Filters"}
-              </Button>
-              
-              {showFilters && (
-                <div className="mt-3 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="mobile-showArtists"
-                      checked={filterState.showArtists}
-                      onCheckedChange={(checked) =>
-                        handleFilterChange("showArtists", !!checked)
-                      }
-                      className="data-[state=checked]:border-[#FF0ACF] h-4 w-4"
-                      style={{ backgroundColor: filterState.showArtists ? '#FF0ACF' : 'transparent' }}
-                    />
-                    <Label htmlFor="mobile-showArtists" className="text-xs text-white cursor-pointer flex items-center gap-1">
-                      Artists
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#FF0ACF' }}></div>
-                    </Label>
-                  </div>
 
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="mobile-showProducers"
-                      checked={filterState.showProducers}
-                      onCheckedChange={(checked) =>
-                        handleFilterChange("showProducers", !!checked)
-                      }
-                      className="data-[state=checked]:border-[#AE53FF] h-4 w-4"
-                      style={{ backgroundColor: filterState.showProducers ? '#AE53FF' : 'transparent' }}
-                    />
-                    <Label htmlFor="mobile-showProducers" className="text-xs text-white cursor-pointer flex items-center gap-1">
-                      Producers
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#AE53FF' }}></div>
-                    </Label>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="mobile-showSongwriters"
-                      checked={filterState.showSongwriters}
-                      onCheckedChange={(checked) =>
-                        handleFilterChange("showSongwriters", !!checked)
-                      }
-                      className="data-[state=checked]:border-[#67D1F8] h-4 w-4"
-                      style={{ backgroundColor: filterState.showSongwriters ? '#67D1F8' : 'transparent' }}
-                    />
-                    <Label htmlFor="mobile-showSongwriters" className="text-xs text-white cursor-pointer flex items-center gap-1">
-                      Songwriters
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#67D1F8' }}></div>
-                    </Label>
-                  </div>
-                </div>
-              )}
-            </div>
 
             {/* Clear All */}
             <Button
