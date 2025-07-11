@@ -242,7 +242,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
             <img 
               src={grapevineLogoLarge} 
               alt="Grapevine Logo" 
-              className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
+              className="w-20 h-20 sm:w-32 sm:h-32 object-contain"
             />
           </div>
           
