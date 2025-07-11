@@ -122,19 +122,93 @@ export default function Home() {
       {/* How it works Content - Only visible when not showing network */}
       {!showNetworkView && (
         <div className="absolute bottom-16 left-0 right-0 px-4 text-center z-10" style={{ pointerEvents: 'auto' }}>
-          <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
+          <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+            {/* Interactive Node Visualization */}
+            <div className="relative flex items-center justify-center mb-8">
+              <svg 
+                className="w-full h-32 sm:h-40" 
+                viewBox="0 0 600 160" 
+                style={{ maxWidth: '600px' }}
+              >
+                {/* Connection lines */}
+                <defs>
+                  <linearGradient id="connectionGradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style={{ stopColor: '#FF69B4', stopOpacity: 0.6 }} />
+                    <stop offset="100%" style={{ stopColor: '#8A2BE2', stopOpacity: 0.6 }} />
+                  </linearGradient>
+                  <linearGradient id="connectionGradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style={{ stopColor: '#8A2BE2', stopOpacity: 0.6 }} />
+                    <stop offset="100%" style={{ stopColor: '#00CED1', stopOpacity: 0.6 }} />
+                  </linearGradient>
+                </defs>
+                
+                {/* Connection line 1 */}
+                <line 
+                  x1="100" y1="80" 
+                  x2="300" y2="80" 
+                  stroke="url(#connectionGradient1)" 
+                  strokeWidth="3"
+                  className="animate-pulse"
+                />
+                
+                {/* Connection line 2 */}
+                <line 
+                  x1="300" y1="80" 
+                  x2="500" y2="80" 
+                  stroke="url(#connectionGradient2)" 
+                  strokeWidth="3"
+                  className="animate-pulse"
+                  style={{ animationDelay: '0.5s' }}
+                />
+                
+                {/* Node 1 - Search */}
+                <circle 
+                  cx="100" cy="80" r="35" 
+                  fill="#FF69B4" 
+                  stroke="#FF69B4" 
+                  strokeWidth="2"
+                  className="hover:scale-110 transition-transform duration-300 cursor-pointer"
+                  style={{ filter: 'drop-shadow(0 0 10px rgba(255, 105, 180, 0.5))' }}
+                />
+                <text x="100" y="85" textAnchor="middle" className="fill-white text-sm font-bold">1</text>
+                
+                {/* Node 2 - Discover */}
+                <circle 
+                  cx="300" cy="80" r="35" 
+                  fill="#8A2BE2" 
+                  stroke="#8A2BE2" 
+                  strokeWidth="2"
+                  className="hover:scale-110 transition-transform duration-300 cursor-pointer"
+                  style={{ filter: 'drop-shadow(0 0 10px rgba(138, 43, 226, 0.5))' }}
+                />
+                <text x="300" y="85" textAnchor="middle" className="fill-white text-sm font-bold">2</text>
+                
+                {/* Node 3 - Explore */}
+                <circle 
+                  cx="500" cy="80" r="35" 
+                  fill="#00CED1" 
+                  stroke="#00CED1" 
+                  strokeWidth="2"
+                  className="hover:scale-110 transition-transform duration-300 cursor-pointer"
+                  style={{ filter: 'drop-shadow(0 0 10px rgba(0, 206, 209, 0.5))' }}
+                />
+                <text x="500" y="85" textAnchor="middle" className="fill-white text-sm font-bold">3</text>
+              </svg>
+            </div>
+            
+            {/* Node descriptions */}
             <div className="text-gray-400 text-sm">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs">
-                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
-                  <div className="text-pink-400 font-medium mb-1 sm:mb-2">1. Search</div>
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg border-l-4 border-pink-400">
+                  <div className="text-pink-400 font-medium mb-1 sm:mb-2">Search</div>
                   <div className="text-xs sm:text-sm">Enter any artist name to start exploring their collaboration network</div>
                 </div>
-                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
-                  <div className="text-purple-400 font-medium mb-1 sm:mb-2">2. Discover</div>
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg border-l-4 border-purple-400">
+                  <div className="text-purple-400 font-medium mb-1 sm:mb-2">Discover</div>
                   <div className="text-xs sm:text-sm">See producers, songwriters, and other artists they've worked with</div>
                 </div>
-                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
-                  <div className="text-cyan-400 font-medium mb-1 sm:mb-2">3. Explore</div>
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg border-l-4 border-cyan-400">
+                  <div className="text-cyan-400 font-medium mb-1 sm:mb-2">Explore</div>
                   <div className="text-xs sm:text-sm">Click any node to search for that artist's connections</div>
                 </div>
               </div>
