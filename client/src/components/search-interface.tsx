@@ -488,6 +488,13 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               )}
             </div>
           </div>
+          
+          {/* Tip Section */}
+          <div className="mt-4 text-center">
+            <p className="text-sm text-gray-300">
+              <span className="font-medium">Tip:</span> Try searching for Taylor Swift, Drake, or Ariana Grande.
+            </p>
+          </div>
         </div>
       </div>
       
