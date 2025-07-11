@@ -238,15 +238,15 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         }`}
       >
         <div className="text-center w-full max-w-md">
-          <div className="mb-4 sm:mb-6 flex justify-center">
+          <div className="mb-6 sm:mb-8 flex justify-center">
             <img 
               src={grapevineLogoLarge} 
               alt="Grapevine Logo" 
-              className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
+              className="w-32 h-32 sm:w-48 sm:h-48 object-contain"
             />
           </div>
           
-          <h1 className="text-xl sm:text-4xl font-bold mb-2 sm:mb-4 text-white">
+          <h1 className="text-4xl sm:text-7xl font-bold mb-6 sm:mb-8 text-white">
             Grapevine
           </h1>
 
