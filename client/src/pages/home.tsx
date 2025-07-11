@@ -125,32 +125,32 @@ export default function Home() {
           <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
             <div className="text-gray-400 text-sm">
               {/* Node-style How it Works */}
-              <div className="relative flex items-center justify-center max-w-5xl mx-auto">
-                <svg className="w-full h-52 sm:h-60" viewBox="0 0 900 240" xmlns="http://www.w3.org/2000/svg">
+              <div className="relative flex items-center justify-center max-w-6xl mx-auto">
+                <svg className="w-full h-52 sm:h-60" viewBox="0 0 1000 240" xmlns="http://www.w3.org/2000/svg">
                   {/* Connecting lines - fully connected to circle edges */}
-                  <line x1="210" y1="120" x2="310" y2="120" stroke="#374151" strokeWidth="3" />
-                  <line x1="490" y1="120" x2="590" y2="120" stroke="#374151" strokeWidth="3" />
+                  <line x1="240" y1="120" x2="360" y2="120" stroke="#374151" strokeWidth="3" />
+                  <line x1="540" y1="120" x2="660" y2="120" stroke="#374151" strokeWidth="3" />
                   
                   {/* Search Circle */}
-                  <circle cx="120" cy="120" r="90" fill="#ec4899" />
-                  <text x="120" y="100" textAnchor="middle" className="fill-white text-sm font-bold">1. Search</text>
-                  <text x="120" y="120" textAnchor="middle" className="fill-white text-xs">Enter any artist name</text>
-                  <text x="120" y="135" textAnchor="middle" className="fill-white text-xs">to start exploring their</text>
-                  <text x="120" y="150" textAnchor="middle" className="fill-white text-xs">collaboration network</text>
+                  <circle cx="150" cy="120" r="90" fill="#ec4899" stroke="#ffffff" strokeWidth="2" />
+                  <text x="150" y="105" textAnchor="middle" className="fill-white text-base font-bold">1. Search</text>
+                  <text x="150" y="125" textAnchor="middle" className="fill-white text-sm">Enter any artist name</text>
+                  <text x="150" y="140" textAnchor="middle" className="fill-white text-sm">to start exploring their</text>
+                  <text x="150" y="155" textAnchor="middle" className="fill-white text-sm">collaboration network</text>
                   
                   {/* Discover Circle */}
-                  <circle cx="400" cy="120" r="90" fill="#8a2be2" />
-                  <text x="400" y="100" textAnchor="middle" className="fill-white text-sm font-bold">2. Discover</text>
-                  <text x="400" y="120" textAnchor="middle" className="fill-white text-xs">See producers,</text>
-                  <text x="400" y="135" textAnchor="middle" className="fill-white text-xs">songwriters, and other</text>
-                  <text x="400" y="150" textAnchor="middle" className="fill-white text-xs">artists they've worked with</text>
+                  <circle cx="450" cy="120" r="90" fill="#8a2be2" stroke="#ffffff" strokeWidth="2" />
+                  <text x="450" y="105" textAnchor="middle" className="fill-white text-base font-bold">2. Discover</text>
+                  <text x="450" y="125" textAnchor="middle" className="fill-white text-sm">See producers,</text>
+                  <text x="450" y="140" textAnchor="middle" className="fill-white text-sm">songwriters, and other</text>
+                  <text x="450" y="155" textAnchor="middle" className="fill-white text-sm">artists they've worked with</text>
                   
                   {/* Explore Circle */}
-                  <circle cx="680" cy="120" r="90" fill="#00ced1" />
-                  <text x="680" y="100" textAnchor="middle" className="fill-white text-sm font-bold">3. Explore</text>
-                  <text x="680" y="120" textAnchor="middle" className="fill-white text-xs">Click any node to</text>
-                  <text x="680" y="135" textAnchor="middle" className="fill-white text-xs">search for that artist's</text>
-                  <text x="680" y="150" textAnchor="middle" className="fill-white text-xs">connections</text>
+                  <circle cx="750" cy="120" r="90" fill="#00ced1" stroke="#ffffff" strokeWidth="2" />
+                  <text x="750" y="105" textAnchor="middle" className="fill-white text-base font-bold">3. Explore</text>
+                  <text x="750" y="125" textAnchor="middle" className="fill-white text-sm">Click any node to</text>
+                  <text x="750" y="140" textAnchor="middle" className="fill-white text-sm">search for that artist's</text>
+                  <text x="750" y="155" textAnchor="middle" className="fill-white text-sm">connections</text>
                 </svg>
               </div>
             </div>
