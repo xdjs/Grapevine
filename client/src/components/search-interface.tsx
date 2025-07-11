@@ -231,7 +231,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     <>
       {/* Centered Search - Initial View */}
       <div
-        className={`absolute inset-0 flex items-start justify-center z-20 transition-all duration-700 px-4 pt-8 sm:pt-16 ${
+        className={`absolute inset-0 flex items-center justify-center z-20 transition-all duration-700 px-4 ${
           showNetworkView
             ? "opacity-0 pointer-events-none -translate-y-12"
             : "opacity-100"
