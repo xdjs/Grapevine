@@ -131,48 +131,66 @@ export default function Home() {
           <div className="hidden sm:flex sm:flex-row justify-center items-center gap-3 h-full">
             {/* Search Circle */}
             <div className="flex flex-col items-center">
-              <div className="rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center text-center" style={{
+              <div className="rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col text-center" style={{
                 width: 'min(20vh, 150px)',
                 height: 'min(20vh, 150px)',
                 padding: 'min(1.5vh, 12px)'
               }}>
-                <div className="text-pink-400 font-medium mb-1" style={{
-                  fontSize: 'min(2.5vh, 16px)'
+                <div className="text-pink-400 font-medium" style={{
+                  fontSize: 'min(2.5vh, 16px)',
+                  paddingTop: 'min(3vh, 24px)',
+                  height: 'min(4vh, 32px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}>Search</div>
-                <div className="text-white leading-tight" style={{
-                  fontSize: 'min(1.8vh, 12px)'
+                <div className="text-white leading-tight flex-1 flex items-start justify-center" style={{
+                  fontSize: 'min(1.8vh, 12px)',
+                  paddingTop: 'min(1vh, 8px)'
                 }}>Enter any artist name to start exploring their collaboration network</div>
               </div>
             </div>
             
             {/* Discover Circle */}
             <div className="flex flex-col items-center">
-              <div className="rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center text-center" style={{
+              <div className="rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col text-center" style={{
                 width: 'min(20vh, 150px)',
                 height: 'min(20vh, 150px)',
                 padding: 'min(1.5vh, 12px)'
               }}>
-                <div className="text-purple-400 font-medium mb-1" style={{
-                  fontSize: 'min(2.5vh, 16px)'
+                <div className="text-purple-400 font-medium" style={{
+                  fontSize: 'min(2.5vh, 16px)',
+                  paddingTop: 'min(3vh, 24px)',
+                  height: 'min(4vh, 32px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}>Discover</div>
-                <div className="text-white leading-tight" style={{
-                  fontSize: 'min(1.8vh, 12px)'
+                <div className="text-white leading-tight flex-1 flex items-start justify-center" style={{
+                  fontSize: 'min(1.8vh, 12px)',
+                  paddingTop: 'min(1vh, 8px)'
                 }}>See producers, songwriters, and other artists they've worked with</div>
               </div>
             </div>
             
             {/* Explore Circle */}
             <div className="flex flex-col items-center">
-              <div className="rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center text-center" style={{
+              <div className="rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col text-center" style={{
                 width: 'min(20vh, 150px)',
                 height: 'min(20vh, 150px)',
                 padding: 'min(1.5vh, 12px)'
               }}>
-                <div className="text-cyan-400 font-medium mb-1" style={{
-                  fontSize: 'min(2.5vh, 16px)'
+                <div className="text-cyan-400 font-medium" style={{
+                  fontSize: 'min(2.5vh, 16px)',
+                  paddingTop: 'min(3vh, 24px)',
+                  height: 'min(4vh, 32px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}>Explore</div>
-                <div className="text-white leading-tight" style={{
-                  fontSize: 'min(1.8vh, 12px)'
+                <div className="text-white leading-tight flex-1 flex items-start justify-center" style={{
+                  fontSize: 'min(1.8vh, 12px)',
+                  paddingTop: 'min(1vh, 8px)'
                 }}>Click any node to search for that artist's connections</div>
               </div>
             </div>
@@ -184,32 +202,44 @@ export default function Home() {
             <div className="flex justify-center items-center gap-1">
               {/* Search Circle */}
               <div className="flex flex-col items-center">
-                <div className="rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center text-center" style={{
+                <div className="rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col text-center" style={{
                   width: 'min(16vh, 120px)',
                   height: 'min(16vh, 120px)',
                   padding: 'min(1.2vh, 8px)'
                 }}>
-                  <div className="text-pink-400 font-medium mb-1" style={{
-                    fontSize: 'min(2vh, 14px)'
+                  <div className="text-pink-400 font-medium" style={{
+                    fontSize: 'min(2vh, 14px)',
+                    paddingTop: 'min(2vh, 16px)',
+                    height: 'min(3vh, 24px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}>Search</div>
-                  <div className="text-white leading-tight" style={{
-                    fontSize: 'min(1.5vh, 10px)'
+                  <div className="text-white leading-tight flex-1 flex items-start justify-center" style={{
+                    fontSize: 'min(1.5vh, 10px)',
+                    paddingTop: 'min(0.5vh, 4px)'
                   }}>Enter any artist name to start exploring their collaboration network</div>
                 </div>
               </div>
               
               {/* Discover Circle */}
               <div className="flex flex-col items-center">
-                <div className="rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center text-center" style={{
+                <div className="rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col text-center" style={{
                   width: 'min(16vh, 120px)',
                   height: 'min(16vh, 120px)',
                   padding: 'min(1.2vh, 8px)'
                 }}>
-                  <div className="text-purple-400 font-medium mb-1" style={{
-                    fontSize: 'min(2vh, 14px)'
+                  <div className="text-purple-400 font-medium" style={{
+                    fontSize: 'min(2vh, 14px)',
+                    paddingTop: 'min(2vh, 16px)',
+                    height: 'min(3vh, 24px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}>Discover</div>
-                  <div className="text-white leading-tight" style={{
-                    fontSize: 'min(1.5vh, 10px)'
+                  <div className="text-white leading-tight flex-1 flex items-start justify-center" style={{
+                    fontSize: 'min(1.5vh, 10px)',
+                    paddingTop: 'min(0.5vh, 4px)'
                   }}>See producers, songwriters, and other artists they've worked with</div>
                 </div>
               </div>
@@ -219,16 +249,22 @@ export default function Home() {
             <div className="flex justify-center -mt-1">
               {/* Explore Circle */}
               <div className="flex flex-col items-center">
-                <div className="rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center text-center" style={{
+                <div className="rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col text-center" style={{
                   width: 'min(16vh, 120px)',
                   height: 'min(16vh, 120px)',
                   padding: 'min(1.2vh, 8px)'
                 }}>
-                  <div className="text-cyan-400 font-medium mb-1" style={{
-                    fontSize: 'min(2vh, 14px)'
+                  <div className="text-cyan-400 font-medium" style={{
+                    fontSize: 'min(2vh, 14px)',
+                    paddingTop: 'min(2vh, 16px)',
+                    height: 'min(3vh, 24px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}>Explore</div>
-                  <div className="text-white leading-tight" style={{
-                    fontSize: 'min(1.5vh, 10px)'
+                  <div className="text-white leading-tight flex-1 flex items-start justify-center" style={{
+                    fontSize: 'min(1.5vh, 10px)',
+                    paddingTop: 'min(0.5vh, 4px)'
                   }}>Click any node to search for that artist's connections</div>
                 </div>
               </div>
