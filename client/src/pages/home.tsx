@@ -123,31 +123,37 @@ export default function Home() {
       {!showNetworkView && (
         <div className="absolute left-1/2 transform -translate-x-1/2 z-10 px-4" style={{ 
           pointerEvents: 'auto',
-          top: 'calc(50vh - 80px)',
+          top: 'calc(50vh - 100px)',
           transform: 'translateX(-50%)'
         }}>
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-8">
-            {/* Search Circle */}
-            <div className="flex flex-col items-center">
-              <div className="w-24 h-24 sm:w-40 sm:h-40 rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center p-2 sm:p-5 text-center">
-                <div className="text-pink-400 font-medium text-xs sm:text-base mb-1 sm:mb-2">Search</div>
-                <div className="text-xs sm:text-xs text-white leading-tight">Enter any artist name to start exploring their collaboration network</div>
+          <div className="flex flex-col items-center gap-4">
+            {/* Top Row - Two circles side by side */}
+            <div className="flex justify-center items-center gap-6 sm:gap-12">
+              {/* Search Circle */}
+              <div className="flex flex-col items-center">
+                <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center p-3 sm:p-4 text-center">
+                  <div className="text-pink-400 font-medium text-sm sm:text-base mb-1">Search</div>
+                  <div className="text-xs text-white leading-tight">Enter any artist name to start exploring</div>
+                </div>
+              </div>
+              
+              {/* Discover Circle */}
+              <div className="flex flex-col items-center">
+                <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center p-3 sm:p-4 text-center">
+                  <div className="text-purple-400 font-medium text-sm sm:text-base mb-1">Discover</div>
+                  <div className="text-xs text-white leading-tight">See producers, songwriters, and other artists</div>
+                </div>
               </div>
             </div>
             
-            {/* Discover Circle */}
-            <div className="flex flex-col items-center">
-              <div className="w-24 h-24 sm:w-40 sm:h-40 rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center p-2 sm:p-5 text-center">
-                <div className="text-purple-400 font-medium text-xs sm:text-base mb-1 sm:mb-2">Discover</div>
-                <div className="text-xs sm:text-xs text-white leading-tight">See producers, songwriters, and other artists they've worked with</div>
-              </div>
-            </div>
-            
-            {/* Explore Circle */}
-            <div className="flex flex-col items-center">
-              <div className="w-24 h-24 sm:w-40 sm:h-40 rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center p-2 sm:p-5 text-center">
-                <div className="text-cyan-400 font-medium text-xs sm:text-base mb-1 sm:mb-2">Explore</div>
-                <div className="text-xs sm:text-xs text-white leading-tight">Click any node to search for that artist's connections</div>
+            {/* Bottom Row - One circle centered */}
+            <div className="flex justify-center">
+              {/* Explore Circle */}
+              <div className="flex flex-col items-center">
+                <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center p-3 sm:p-4 text-center">
+                  <div className="text-cyan-400 font-medium text-sm sm:text-base mb-1">Explore</div>
+                  <div className="text-xs text-white leading-tight">Click any node to search for connections</div>
+                </div>
               </div>
             </div>
             
