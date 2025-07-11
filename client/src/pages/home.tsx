@@ -124,18 +124,43 @@ export default function Home() {
         <div className="absolute bottom-16 left-0 right-0 px-4 text-center z-10" style={{ pointerEvents: 'auto' }}>
           <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
             <div className="text-gray-400 text-sm">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs">
-                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
-                  <div className="text-pink-400 font-medium mb-1 sm:mb-2">1. Search</div>
-                  <div className="text-xs sm:text-sm">Enter any artist name to start exploring their collaboration network</div>
+              {/* Node-style How it Works */}
+              <div className="relative flex items-center justify-center max-w-lg mx-auto">
+                <svg className="w-full h-32 sm:h-40" viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg">
+                  {/* Connecting lines */}
+                  <line x1="70" y1="80" x2="170" y2="80" stroke="#374151" strokeWidth="2" />
+                  <line x1="230" y1="80" x2="330" y2="80" stroke="#374151" strokeWidth="2" />
+                  
+                  {/* Search Circle */}
+                  <circle cx="70" cy="80" r="35" fill="#ec4899" stroke="#f97316" strokeWidth="2" />
+                  <text x="70" y="78" textAnchor="middle" className="fill-white text-xs font-medium">Search</text>
+                  <text x="70" y="92" textAnchor="middle" className="fill-white text-xs">1</text>
+                  
+                  {/* Discover Circle */}
+                  <circle cx="200" cy="80" r="35" fill="#8a2be2" stroke="#f97316" strokeWidth="2" />
+                  <text x="200" y="78" textAnchor="middle" className="fill-white text-xs font-medium">Discover</text>
+                  <text x="200" y="92" textAnchor="middle" className="fill-white text-xs">2</text>
+                  
+                  {/* Explore Circle */}
+                  <circle cx="330" cy="80" r="35" fill="#00ced1" stroke="#f97316" strokeWidth="2" />
+                  <text x="330" y="78" textAnchor="middle" className="fill-white text-xs font-medium">Explore</text>
+                  <text x="330" y="92" textAnchor="middle" className="fill-white text-xs">3</text>
+                </svg>
+              </div>
+              
+              {/* Descriptions below nodes */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs mt-4 max-w-lg mx-auto">
+                <div className="text-center">
+                  <div className="text-pink-400 font-medium mb-1">Search</div>
+                  <div className="text-xs">Enter any artist name to start exploring</div>
                 </div>
-                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
-                  <div className="text-purple-400 font-medium mb-1 sm:mb-2">2. Discover</div>
-                  <div className="text-xs sm:text-sm">See producers, songwriters, and other artists they've worked with</div>
+                <div className="text-center">
+                  <div className="text-purple-400 font-medium mb-1">Discover</div>
+                  <div className="text-xs">See producers, songwriters, and collaborators</div>
                 </div>
-                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
-                  <div className="text-cyan-400 font-medium mb-1 sm:mb-2">3. Explore</div>
-                  <div className="text-xs sm:text-sm">Click any node to search for that artist's connections</div>
+                <div className="text-center">
+                  <div className="text-cyan-400 font-medium mb-1">Explore</div>
+                  <div className="text-xs">Click any node to search their connections</div>
                 </div>
               </div>
             </div>
