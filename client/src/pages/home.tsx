@@ -119,155 +119,31 @@ export default function Home() {
         onClearAll={handleReset}
       />
 
-      {/* Info Circles - Only visible when not showing network */}
+      {/* How it works Content - Only visible when not showing network */}
       {!showNetworkView && (
-        <div className="absolute left-1/2 transform -translate-x-1/2 z-10 px-4 w-full max-w-4xl" style={{ 
-          pointerEvents: 'auto',
-          top: 'calc(50vh + 20px)',
-          bottom: '220px',
-          transform: 'translateX(-50%)'
-        }}>
-          {/* Desktop: Horizontal layout */}
-          <div className="hidden sm:flex sm:flex-row justify-center items-center gap-3 h-full">
-            {/* Search Circle */}
-            <div className="flex flex-col items-center">
-              <div className="rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col text-center" style={{
-                width: 'min(20vh, 150px)',
-                height: 'min(20vh, 150px)',
-                padding: 'min(1.5vh, 12px)'
-              }}>
-                <div className="text-pink-400 font-medium" style={{
-                  fontSize: 'min(2.5vh, 16px)',
-                  paddingTop: 'min(2vh, 16px)',
-                  height: 'min(4vh, 32px)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>Search</div>
-                <div className="text-gray-300 leading-tight flex-1 flex items-start justify-center font-medium" style={{
-                  fontSize: 'min(1.8vh, 12px)',
-                  paddingTop: 'min(1.5vh, 12px)'
-                }}>Enter any artist name to start exploring their collaboration network</div>
-              </div>
-            </div>
-            
-            {/* Discover Circle */}
-            <div className="flex flex-col items-center">
-              <div className="rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col text-center" style={{
-                width: 'min(20vh, 150px)',
-                height: 'min(20vh, 150px)',
-                padding: 'min(1.5vh, 12px)'
-              }}>
-                <div className="text-purple-400 font-medium" style={{
-                  fontSize: 'min(2.5vh, 16px)',
-                  paddingTop: 'min(2vh, 16px)',
-                  height: 'min(4vh, 32px)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>Discover</div>
-                <div className="text-gray-300 leading-tight flex-1 flex items-start justify-center font-medium" style={{
-                  fontSize: 'min(1.8vh, 12px)',
-                  paddingTop: 'min(1.5vh, 12px)'
-                }}>See producers, songwriters, and other artists they've worked with</div>
-              </div>
-            </div>
-            
-            {/* Explore Circle */}
-            <div className="flex flex-col items-center">
-              <div className="rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col text-center" style={{
-                width: 'min(20vh, 150px)',
-                height: 'min(20vh, 150px)',
-                padding: 'min(1.5vh, 12px)'
-              }}>
-                <div className="text-cyan-400 font-medium" style={{
-                  fontSize: 'min(2.5vh, 16px)',
-                  paddingTop: 'min(2vh, 16px)',
-                  height: 'min(4vh, 32px)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>Explore</div>
-                <div className="text-gray-300 leading-tight flex-1 flex items-start justify-center font-medium" style={{
-                  fontSize: 'min(1.8vh, 12px)',
-                  paddingTop: 'min(1.5vh, 12px)'
-                }}>Click any node to search for that artist's connections</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Mobile: Triangle formation */}
-          <div className="flex sm:hidden flex-col items-center gap-1 h-full justify-center">
-            {/* Top Row - Two circles side by side */}
-            <div className="flex justify-center items-center gap-1">
-              {/* Search Circle */}
-              <div className="flex flex-col items-center">
-                <div className="rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col text-center" style={{
-                  width: 'min(16vh, 120px)',
-                  height: 'min(16vh, 120px)',
-                  padding: 'min(1.2vh, 8px)'
-                }}>
-                  <div className="text-pink-400 font-medium" style={{
-                    fontSize: 'min(2vh, 14px)',
-                    paddingTop: 'min(1.5vh, 12px)',
-                    height: 'min(3vh, 24px)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>Search</div>
-                  <div className="text-gray-300 leading-tight flex-1 flex items-start justify-center font-medium" style={{
-                    fontSize: 'min(1.5vh, 10px)',
-                    paddingTop: 'min(1vh, 8px)'
-                  }}>Enter any artist name to start exploring their collaboration network</div>
+        <div className="absolute bottom-16 left-0 right-0 px-4 text-center z-10" style={{ pointerEvents: 'auto' }}>
+          <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
+            <div className="text-gray-400 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs">
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
+                  <div className="text-pink-400 font-medium mb-1 sm:mb-2">1. Search</div>
+                  <div className="text-xs sm:text-sm">Enter any artist name to start exploring their collaboration network</div>
                 </div>
-              </div>
-              
-              {/* Discover Circle */}
-              <div className="flex flex-col items-center">
-                <div className="rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col text-center" style={{
-                  width: 'min(16vh, 120px)',
-                  height: 'min(16vh, 120px)',
-                  padding: 'min(1.2vh, 8px)'
-                }}>
-                  <div className="text-purple-400 font-medium" style={{
-                    fontSize: 'min(2vh, 14px)',
-                    paddingTop: 'min(1.5vh, 12px)',
-                    height: 'min(3vh, 24px)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>Discover</div>
-                  <div className="text-gray-300 leading-tight flex-1 flex items-start justify-center font-medium" style={{
-                    fontSize: 'min(1.5vh, 10px)',
-                    paddingTop: 'min(1vh, 8px)'
-                  }}>See producers, songwriters, and other artists they've worked with</div>
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
+                  <div className="text-purple-400 font-medium mb-1 sm:mb-2">2. Discover</div>
+                  <div className="text-xs sm:text-sm">See producers, songwriters, and other artists they've worked with</div>
+                </div>
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
+                  <div className="text-cyan-400 font-medium mb-1 sm:mb-2">3. Explore</div>
+                  <div className="text-xs sm:text-sm">Click any node to search for that artist's connections</div>
                 </div>
               </div>
             </div>
             
-            {/* Bottom Row - One circle centered, closer to top row */}
-            <div className="flex justify-center -mt-1">
-              {/* Explore Circle */}
-              <div className="flex flex-col items-center">
-                <div className="rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col text-center" style={{
-                  width: 'min(16vh, 120px)',
-                  height: 'min(16vh, 120px)',
-                  padding: 'min(1.2vh, 8px)'
-                }}>
-                  <div className="text-cyan-400 font-medium" style={{
-                    fontSize: 'min(2vh, 14px)',
-                    paddingTop: 'min(1.5vh, 12px)',
-                    height: 'min(3vh, 24px)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>Explore</div>
-                  <div className="text-gray-300 leading-tight flex-1 flex items-start justify-center font-medium" style={{
-                    fontSize: 'min(1.5vh, 10px)',
-                    paddingTop: 'min(1vh, 8px)'
-                  }}>Click any node to search for that artist's connections</div>
-                </div>
-              </div>
+            <div className="text-gray-500 text-xs mb-2">
+              <p className="mb-1 sm:mb-2">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
+              <p className="mb-1 sm:mb-2">Powered by Music Nerd</p>
+              <p>Click on artist nodes to visit their Music Nerd profiles</p>
             </div>
           </div>
         </div>

@@ -242,7 +242,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
             <img 
               src={grapevineLogoLarge} 
               alt="Grapevine Logo" 
-              className="w-20 h-20 sm:w-32 sm:h-32 object-contain"
+              className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
             />
           </div>
           
@@ -493,14 +493,9 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         </div>
       </div>
       
-      {/* Attribution text and Music Nerd Button - Fixed at bottom of screen */}
+      {/* Music Nerd Button - Fixed at bottom of screen */}
       {!showNetworkView && (
-        <div className="fixed bottom-2 left-1/2 transform -translate-x-1/2 z-50 flex flex-col items-center space-y-2">
-          <div className="text-gray-500 text-xs text-center space-y-1">
-            <p>Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
-            <p>Powered by Music Nerd</p>
-            <p>Click on artist nodes to visit their Music Nerd profiles</p>
-          </div>
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
           <Button
             onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
             className="font-medium py-0.5 px-2 rounded transition-colors text-white"
