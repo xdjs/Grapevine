@@ -144,7 +144,7 @@ export default function Home() {
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>Search</div>
-                <div className="text-white leading-tight flex-1 flex items-start justify-center font-medium" style={{
+                <div className="text-gray-300 leading-tight flex-1 flex items-start justify-center font-medium" style={{
                   fontSize: 'min(1.8vh, 12px)',
                   paddingTop: 'min(1.5vh, 12px)'
                 }}>Enter any artist name to start exploring their collaboration network</div>
@@ -166,7 +166,7 @@ export default function Home() {
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>Discover</div>
-                <div className="text-white leading-tight flex-1 flex items-start justify-center font-medium" style={{
+                <div className="text-gray-300 leading-tight flex-1 flex items-start justify-center font-medium" style={{
                   fontSize: 'min(1.8vh, 12px)',
                   paddingTop: 'min(1.5vh, 12px)'
                 }}>See producers, songwriters, and other artists they've worked with</div>
@@ -188,7 +188,7 @@ export default function Home() {
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>Explore</div>
-                <div className="text-white leading-tight flex-1 flex items-start justify-center font-medium" style={{
+                <div className="text-gray-300 leading-tight flex-1 flex items-start justify-center font-medium" style={{
                   fontSize: 'min(1.8vh, 12px)',
                   paddingTop: 'min(1.5vh, 12px)'
                 }}>Click any node to search for that artist's connections</div>
@@ -215,7 +215,7 @@ export default function Home() {
                     alignItems: 'center',
                     justifyContent: 'center'
                   }}>Search</div>
-                  <div className="text-white leading-tight flex-1 flex items-start justify-center font-medium" style={{
+                  <div className="text-gray-300 leading-tight flex-1 flex items-start justify-center font-medium" style={{
                     fontSize: 'min(1.5vh, 10px)',
                     paddingTop: 'min(1vh, 8px)'
                   }}>Enter any artist name to start exploring their collaboration network</div>
@@ -237,7 +237,7 @@ export default function Home() {
                     alignItems: 'center',
                     justifyContent: 'center'
                   }}>Discover</div>
-                  <div className="text-white leading-tight flex-1 flex items-start justify-center font-medium" style={{
+                  <div className="text-gray-300 leading-tight flex-1 flex items-start justify-center font-medium" style={{
                     fontSize: 'min(1.5vh, 10px)',
                     paddingTop: 'min(1vh, 8px)'
                   }}>See producers, songwriters, and other artists they've worked with</div>
@@ -262,7 +262,7 @@ export default function Home() {
                     alignItems: 'center',
                     justifyContent: 'center'
                   }}>Explore</div>
-                  <div className="text-white leading-tight flex-1 flex items-start justify-center font-medium" style={{
+                  <div className="text-gray-300 leading-tight flex-1 flex items-start justify-center font-medium" style={{
                     fontSize: 'min(1.5vh, 10px)',
                     paddingTop: 'min(1vh, 8px)'
                   }}>Click any node to search for that artist's connections</div>
