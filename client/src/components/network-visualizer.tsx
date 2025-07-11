@@ -370,9 +370,7 @@ export default function NetworkVisualizer({
       .enter()
       .append("line")
       .attr("class", "link network-link")
-      .attr("stroke", "#444")
-      .attr("stroke-width", 2)
-      .attr("opacity", 0.6);
+      .attr("stroke-width", 2);
 
     // Create nodes with multi-role support
     const nodeElements = networkGroup
@@ -394,27 +392,20 @@ export default function NetworkVisualizer({
       }
       
       if (roles.length === 1) {
-        // Single role - simple circle with solid fill
+        // Single role - simple circle
         group.append("circle")
           .attr("r", d.size)
-          .attr("fill", () => {
+          .attr("fill", "transparent")
+          .attr("stroke", () => {
             if (roles[0] === 'artist') return '#FF0ACF';       // Magenta Pink
             if (roles[0] === 'producer') return '#AE53FF';     // Bright Purple  
             if (roles[0] === 'songwriter') return '#67D1F8';   // Light Blue
             return '#355367';  // Police Blue
           })
-          .attr("stroke", "white")
-          .attr("stroke-width", 3);
+          .attr("stroke-width", 4);
       } else {
-        // Multiple roles - create segmented circle with solid fill
+        // Multiple roles - create segmented circle
         const angleStep = (2 * Math.PI) / roles.length;
-        
-        // First, add a solid background circle
-        group.append("circle")
-          .attr("r", d.size)
-          .attr("fill", "#333")
-          .attr("stroke", "white")
-          .attr("stroke-width", 3);
         
         roles.forEach((role, index) => {
           const startAngle = index * angleStep;
@@ -422,7 +413,7 @@ export default function NetworkVisualizer({
           
           // Create arc path for each role
           const arcPath = d3.arc()
-            .innerRadius(0)
+            .innerRadius(d.size - 4)
             .outerRadius(d.size)
             .startAngle(startAngle)
             .endAngle(endAngle);
@@ -438,6 +429,13 @@ export default function NetworkVisualizer({
             .attr("stroke", "white")
             .attr("stroke-width", 1);
         });
+        
+        // Add inner circle for better visibility
+        group.append("circle")
+          .attr("r", d.size - 4)
+          .attr("fill", "transparent")
+          .attr("stroke", "white")
+          .attr("stroke-width", 2);
       }
     })
       .on("mouseover", function(event, d) {
@@ -453,10 +451,23 @@ export default function NetworkVisualizer({
         const group = d3.select(this);
         const roles = d.types || [d.type];
         
-        // Reset stroke to white for all nodes
-        group.selectAll("circle, path")
-          .attr("stroke", "white")
-          .attr("stroke-width", roles.length === 1 ? 3 : 1);
+        if (roles.length === 1) {
+          group.select("circle")
+            .attr("stroke", () => {
+              if (roles[0] === 'artist') return '#FF0ACF';
+              if (roles[0] === 'producer') return '#AE53FF';
+              if (roles[0] === 'songwriter') return '#67D1F8';
+              return '#355367';
+            })
+            .attr("stroke-width", 4);
+        } else {
+          group.selectAll("path")
+            .attr("stroke", "white")
+            .attr("stroke-width", 1);
+          group.select("circle")
+            .attr("stroke", "white")
+            .attr("stroke-width", 2);
+        }
         hideTooltip();
       })
       .on("click", function(event, d) {
@@ -518,7 +529,7 @@ export default function NetworkVisualizer({
           .on("end", dragended)
       );
 
-    // Add labels for all nodes - with text wrapping and fitting inside nodes
+    // Add labels for all nodes
     const labelElements = networkGroup
       .selectAll(".label")
       .data(data.nodes)
@@ -527,64 +538,12 @@ export default function NetworkVisualizer({
       .attr("class", "label")
       .attr("text-anchor", "middle")
       .attr("dy", "0.35em")
-      .attr("font-size", (d) => {
-        // Make font size proportional to node size
-        const maxTextWidth = d.size * 1.6; // Text should fit within node diameter
-        const textLength = d.name.length;
-        const baseFontSize = Math.min(12, maxTextWidth / textLength * 2);
-        return Math.max(8, baseFontSize) + "px";
-      })
+      .attr("font-size", (d) => d.type === 'artist' ? "14px" : "11px")
       .attr("font-weight", (d) => d.type === 'artist' ? "600" : "500")
       .attr("fill", "white")
       .attr("pointer-events", "none")
       .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.8)")
-      .each(function(d) {
-        const textElement = d3.select(this);
-        const maxWidth = d.size * 1.8; // Maximum text width
-        const words = d.name.split(/\s+/);
-        
-        // If name is too long, try to wrap it
-        if (words.length > 1 && d.name.length > 12) {
-          textElement.text(''); // Clear existing text
-          
-          let line = '';
-          let lineCount = 0;
-          const maxLines = 2;
-          
-          for (let i = 0; i < words.length; i++) {
-            const testLine = line + words[i] + ' ';
-            if (testLine.length * 8 > maxWidth && line !== '') {
-              // Add current line
-              textElement.append('tspan')
-                .attr('x', 0)
-                .attr('dy', lineCount === 0 ? '0' : '1.2em')
-                .text(line.trim());
-              line = words[i] + ' ';
-              lineCount++;
-              
-              if (lineCount >= maxLines) break;
-            } else {
-              line = testLine;
-            }
-          }
-          
-          // Add final line
-          if (line && lineCount < maxLines) {
-            textElement.append('tspan')
-              .attr('x', 0)
-              .attr('dy', lineCount === 0 ? '0' : '1.2em')
-              .text(line.trim());
-          }
-          
-          // Adjust vertical position for multiline text
-          if (lineCount > 0) {
-            textElement.attr('dy', `-${lineCount * 0.6}em`);
-          }
-        } else {
-          // Single line text
-          textElement.text(d.name);
-        }
-      });
+      .text((d) => d.name);
 
     // Create tooltip
     const tooltip = d3

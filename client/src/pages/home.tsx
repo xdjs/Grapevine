@@ -124,34 +124,19 @@ export default function Home() {
         <div className="absolute bottom-16 left-0 right-0 px-4 text-center z-10" style={{ pointerEvents: 'auto' }}>
           <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
             <div className="text-gray-400 text-sm">
-              {/* Node-style How it Works */}
-              <div className="relative flex items-center justify-center max-w-4xl mx-auto">
-                <svg className="w-full h-40 sm:h-48" viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
-                  {/* Connecting lines */}
-                  <line x1="140" y1="100" x2="260" y2="100" stroke="#374151" strokeWidth="2" />
-                  <line x1="340" y1="100" x2="460" y2="100" stroke="#374151" strokeWidth="2" />
-                  
-                  {/* Search Circle */}
-                  <circle cx="140" cy="100" r="70" fill="#ec4899" />
-                  <text x="140" y="88" textAnchor="middle" className="fill-white text-sm font-medium">1. Search</text>
-                  <text x="140" y="105" textAnchor="middle" className="fill-white text-xs">Enter any artist name</text>
-                  <text x="140" y="120" textAnchor="middle" className="fill-white text-xs">to start exploring their</text>
-                  <text x="140" y="135" textAnchor="middle" className="fill-white text-xs">collaboration network</text>
-                  
-                  {/* Discover Circle */}
-                  <circle cx="400" cy="100" r="70" fill="#8a2be2" />
-                  <text x="400" y="88" textAnchor="middle" className="fill-white text-sm font-medium">2. Discover</text>
-                  <text x="400" y="105" textAnchor="middle" className="fill-white text-xs">See producers,</text>
-                  <text x="400" y="120" textAnchor="middle" className="fill-white text-xs">songwriters, and other</text>
-                  <text x="400" y="135" textAnchor="middle" className="fill-white text-xs">artists they've worked with</text>
-                  
-                  {/* Explore Circle */}
-                  <circle cx="660" cy="100" r="70" fill="#00ced1" />
-                  <text x="660" y="88" textAnchor="middle" className="fill-white text-sm font-medium">3. Explore</text>
-                  <text x="660" y="105" textAnchor="middle" className="fill-white text-xs">Click any node to</text>
-                  <text x="660" y="120" textAnchor="middle" className="fill-white text-xs">search for that artist's</text>
-                  <text x="660" y="135" textAnchor="middle" className="fill-white text-xs">connections</text>
-                </svg>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs">
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
+                  <div className="text-pink-400 font-medium mb-1 sm:mb-2">1. Search</div>
+                  <div className="text-xs sm:text-sm">Enter any artist name to start exploring their collaboration network</div>
+                </div>
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
+                  <div className="text-purple-400 font-medium mb-1 sm:mb-2">2. Discover</div>
+                  <div className="text-xs sm:text-sm">See producers, songwriters, and other artists they've worked with</div>
+                </div>
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
+                  <div className="text-cyan-400 font-medium mb-1 sm:mb-2">3. Explore</div>
+                  <div className="text-xs sm:text-sm">Click any node to search for that artist's connections</div>
+                </div>
               </div>
             </div>
             
