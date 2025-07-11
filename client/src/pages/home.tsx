@@ -128,77 +128,77 @@ export default function Home() {
           transform: 'translateX(-50%)'
         }}>
           {/* Desktop: Horizontal layout */}
-          <div className="hidden sm:flex sm:flex-row justify-center items-center gap-4 h-full">
+          <div className="hidden sm:flex sm:flex-row justify-center items-center gap-3 h-full">
             {/* Search Circle */}
             <div className="flex flex-col items-center">
-              <div className="rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center p-4 text-center" style={{
-                width: 'min(22vh, 160px)',
-                height: 'min(22vh, 160px)'
+              <div className="rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center p-3 text-center" style={{
+                width: 'min(18vh, 140px)',
+                height: 'min(18vh, 140px)'
               }}>
-                <div className="text-pink-400 font-medium text-base mb-2">Search</div>
-                <div className="text-sm text-white leading-tight">Enter any artist name to start exploring their collaboration network</div>
+                <div className="text-pink-400 font-medium text-sm mb-1">Search</div>
+                <div className="text-xs text-white leading-tight">Enter any artist name to start exploring their collaboration network</div>
               </div>
             </div>
             
             {/* Discover Circle */}
             <div className="flex flex-col items-center">
-              <div className="rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center p-4 text-center" style={{
-                width: 'min(22vh, 160px)',
-                height: 'min(22vh, 160px)'
+              <div className="rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center p-3 text-center" style={{
+                width: 'min(18vh, 140px)',
+                height: 'min(18vh, 140px)'
               }}>
-                <div className="text-purple-400 font-medium text-base mb-2">Discover</div>
-                <div className="text-sm text-white leading-tight">See producers, songwriters, and other artists they've worked with</div>
+                <div className="text-purple-400 font-medium text-sm mb-1">Discover</div>
+                <div className="text-xs text-white leading-tight">See producers, songwriters, and other artists they've worked with</div>
               </div>
             </div>
             
             {/* Explore Circle */}
             <div className="flex flex-col items-center">
-              <div className="rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center p-4 text-center" style={{
-                width: 'min(22vh, 160px)',
-                height: 'min(22vh, 160px)'
+              <div className="rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center p-3 text-center" style={{
+                width: 'min(18vh, 140px)',
+                height: 'min(18vh, 140px)'
               }}>
-                <div className="text-cyan-400 font-medium text-base mb-2">Explore</div>
-                <div className="text-sm text-white leading-tight">Click any node to search for that artist's connections</div>
+                <div className="text-cyan-400 font-medium text-sm mb-1">Explore</div>
+                <div className="text-xs text-white leading-tight">Click any node to search for that artist's connections</div>
               </div>
             </div>
           </div>
 
           {/* Mobile: Triangle formation */}
-          <div className="flex sm:hidden flex-col items-center gap-2 h-full justify-center">
+          <div className="flex sm:hidden flex-col items-center gap-1 h-full justify-center">
             {/* Top Row - Two circles side by side */}
-            <div className="flex justify-center items-center gap-2">
+            <div className="flex justify-center items-center gap-1">
               {/* Search Circle */}
               <div className="flex flex-col items-center">
-                <div className="rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center p-3 text-center" style={{
-                  width: 'min(18vh, 130px)',
-                  height: 'min(18vh, 130px)'
+                <div className="rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center p-2 text-center" style={{
+                  width: 'min(15vh, 110px)',
+                  height: 'min(15vh, 110px)'
                 }}>
-                  <div className="text-pink-400 font-medium text-sm mb-1">Search</div>
+                  <div className="text-pink-400 font-medium text-xs mb-1">Search</div>
                   <div className="text-xs text-white leading-tight">Enter any artist name to start exploring their collaboration network</div>
                 </div>
               </div>
               
               {/* Discover Circle */}
               <div className="flex flex-col items-center">
-                <div className="rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center p-3 text-center" style={{
-                  width: 'min(18vh, 130px)',
-                  height: 'min(18vh, 130px)'
+                <div className="rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center p-2 text-center" style={{
+                  width: 'min(15vh, 110px)',
+                  height: 'min(15vh, 110px)'
                 }}>
-                  <div className="text-purple-400 font-medium text-sm mb-1">Discover</div>
+                  <div className="text-purple-400 font-medium text-xs mb-1">Discover</div>
                   <div className="text-xs text-white leading-tight">See producers, songwriters, and other artists they've worked with</div>
                 </div>
               </div>
             </div>
             
-            {/* Bottom Row - One circle centered */}
-            <div className="flex justify-center">
+            {/* Bottom Row - One circle centered, closer to top row */}
+            <div className="flex justify-center -mt-1">
               {/* Explore Circle */}
               <div className="flex flex-col items-center">
-                <div className="rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center p-3 text-center" style={{
-                  width: 'min(18vh, 130px)',
-                  height: 'min(18vh, 130px)'
+                <div className="rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center p-2 text-center" style={{
+                  width: 'min(15vh, 110px)',
+                  height: 'min(15vh, 110px)'
                 }}>
-                  <div className="text-cyan-400 font-medium text-sm mb-1">Explore</div>
+                  <div className="text-cyan-400 font-medium text-xs mb-1">Explore</div>
                   <div className="text-xs text-white leading-tight">Click any node to search for that artist's connections</div>
                 </div>
               </div>
