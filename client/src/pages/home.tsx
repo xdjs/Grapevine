@@ -119,31 +119,69 @@ export default function Home() {
         onClearAll={handleReset}
       />
 
-      {/* How it works Content - Only visible when not showing network */}
+      {/* Connected Circles - Only visible when not showing network */}
       {!showNetworkView && (
-        <div className="absolute bottom-16 left-0 right-0 px-4 text-center z-10" style={{ pointerEvents: 'auto' }}>
-          <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
-            <div className="text-gray-400 text-sm">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs">
-                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
-                  <div className="text-pink-400 font-medium mb-1 sm:mb-2">1. Search</div>
-                  <div className="text-xs sm:text-sm">Enter any artist name to start exploring their collaboration network</div>
-                </div>
-                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
-                  <div className="text-purple-400 font-medium mb-1 sm:mb-2">2. Discover</div>
-                  <div className="text-xs sm:text-sm">See producers, songwriters, and other artists they've worked with</div>
-                </div>
-                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
-                  <div className="text-cyan-400 font-medium mb-1 sm:mb-2">3. Explore</div>
-                  <div className="text-xs sm:text-sm">Click any node to search for that artist's connections</div>
-                </div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10" style={{ pointerEvents: 'auto' }}>
+          <div className="relative w-[600px] h-[400px]">
+            {/* SVG for connecting lines */}
+            <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 1 }}>
+              {/* Line from Search to Discover */}
+              <line 
+                x1="100" y1="150" 
+                x2="300" y2="100" 
+                stroke="#666" 
+                strokeWidth="2"
+                strokeDasharray="5,5"
+              />
+              {/* Line from Discover to Explore */}
+              <line 
+                x1="300" y1="100" 
+                x2="500" y2="150" 
+                stroke="#666" 
+                strokeWidth="2"
+                strokeDasharray="5,5"
+              />
+              {/* Line from Search to Explore (bottom connection) */}
+              <line 
+                x1="100" y1="150" 
+                x2="500" y2="150" 
+                stroke="#666" 
+                strokeWidth="2"
+                strokeDasharray="5,5"
+              />
+            </svg>
+            
+            {/* Search Circle */}
+            <div className="absolute" style={{ left: '20px', top: '70px', zIndex: 2 }}>
+              <div className="w-32 h-32 rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center p-4 text-center">
+                <div className="text-pink-400 font-medium text-sm mb-2">Search</div>
+                <div className="text-xs text-white leading-tight">Enter any artist name to start exploring their collaboration network</div>
               </div>
             </div>
             
-            <div className="text-gray-500 text-xs mb-2">
-              <p className="mb-1 sm:mb-2">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
-              <p className="mb-1 sm:mb-2">Powered by Music Nerd</p>
-              <p>Click on artist nodes to visit their Music Nerd profiles</p>
+            {/* Discover Circle */}
+            <div className="absolute" style={{ left: '220px', top: '20px', zIndex: 2 }}>
+              <div className="w-32 h-32 rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center p-4 text-center">
+                <div className="text-purple-400 font-medium text-sm mb-2">Discover</div>
+                <div className="text-xs text-white leading-tight">See producers, songwriters, and other artists they've worked with</div>
+              </div>
+            </div>
+            
+            {/* Explore Circle */}
+            <div className="absolute" style={{ left: '420px', top: '70px', zIndex: 2 }}>
+              <div className="w-32 h-32 rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center p-4 text-center">
+                <div className="text-cyan-400 font-medium text-sm mb-2">Explore</div>
+                <div className="text-xs text-white leading-tight">Click any node to search for that artist's connections</div>
+              </div>
+            </div>
+            
+            {/* Attribution text below circles */}
+            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-center">
+              <div className="text-gray-500 text-xs space-y-1">
+                <p>Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
+                <p>Powered by Music Nerd</p>
+                <p>Click on artist nodes to visit their Music Nerd profiles</p>
+              </div>
             </div>
           </div>
         </div>
