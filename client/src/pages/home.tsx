@@ -121,7 +121,7 @@ export default function Home() {
 
       {/* How it works Content - Only visible when not showing network */}
       {!showNetworkView && (
-        <div className="absolute bottom-16 left-0 right-0 px-4 text-center z-10" style={{ pointerEvents: 'auto' }}>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 mt-16 px-4 text-center z-10" style={{ pointerEvents: 'auto' }}>
           <div className="max-w-7xl mx-auto">
             <div className="text-gray-400">
               {/* Node-style How it Works */}
@@ -132,25 +132,25 @@ export default function Home() {
                   <line x1="620" y1="160" x2="780" y2="160" stroke="#374151" strokeWidth="4" />
                   
                   {/* Search Circle */}
-                  <circle cx="120" cy="160" r="100" fill="#ec4899" stroke="#ffffff" strokeWidth="3" />
+                  <circle cx="120" cy="160" r="110" fill="#ec4899" stroke="#ffffff" strokeWidth="3" />
                   <text x="120" y="140" textAnchor="middle" className="fill-white font-bold" style={{ fontSize: '20px' }}>1. Search</text>
                   <text x="120" y="165" textAnchor="middle" className="fill-white" style={{ fontSize: '16px' }}>Enter any artist name</text>
                   <text x="120" y="180" textAnchor="middle" className="fill-white" style={{ fontSize: '16px' }}>to start exploring their</text>
                   <text x="120" y="195" textAnchor="middle" className="fill-white" style={{ fontSize: '16px' }}>collaboration network</text>
                   
                   {/* Discover Circle */}
-                  <circle cx="500" cy="160" r="120" fill="#8a2be2" stroke="#ffffff" strokeWidth="3" />
+                  <circle cx="500" cy="160" r="110" fill="#8a2be2" stroke="#ffffff" strokeWidth="3" />
                   <text x="500" y="140" textAnchor="middle" className="fill-white font-bold" style={{ fontSize: '20px' }}>2. Discover</text>
                   <text x="500" y="165" textAnchor="middle" className="fill-white" style={{ fontSize: '16px' }}>See producers,</text>
                   <text x="500" y="180" textAnchor="middle" className="fill-white" style={{ fontSize: '16px' }}>songwriters, and other</text>
                   <text x="500" y="195" textAnchor="middle" className="fill-white" style={{ fontSize: '16px' }}>artists they've worked with</text>
                   
                   {/* Explore Circle */}
-                  <circle cx="900" cy="160" r="110" fill="#00ced1" stroke="#ffffff" strokeWidth="3" />
-                  <text x="900" y="140" textAnchor="middle" className="fill-white font-bold" style={{ fontSize: '20px' }}>3. Explore</text>
-                  <text x="900" y="165" textAnchor="middle" className="fill-white" style={{ fontSize: '16px' }}>Click any node to</text>
-                  <text x="900" y="180" textAnchor="middle" className="fill-white" style={{ fontSize: '16px' }}>search for that artist's</text>
-                  <text x="900" y="195" textAnchor="middle" className="fill-white" style={{ fontSize: '16px' }}>connections</text>
+                  <circle cx="880" cy="160" r="110" fill="#00ced1" stroke="#ffffff" strokeWidth="3" />
+                  <text x="880" y="140" textAnchor="middle" className="fill-white font-bold" style={{ fontSize: '20px' }}>3. Explore</text>
+                  <text x="880" y="165" textAnchor="middle" className="fill-white" style={{ fontSize: '16px' }}>Click any node to</text>
+                  <text x="880" y="180" textAnchor="middle" className="fill-white" style={{ fontSize: '16px' }}>search for that artist's</text>
+                  <text x="880" y="195" textAnchor="middle" className="fill-white" style={{ fontSize: '16px' }}>connections</text>
                 </svg>
               </div>
             </div>
