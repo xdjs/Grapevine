@@ -249,13 +249,6 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-4 sm:mb-6 text-white">
             Grapevine
           </h1>
-
-          {/* Tip Section */}
-          <div className="mb-4 text-center">
-            <p className="text-sm text-gray-300">
-              <span className="font-medium">Tip:</span> Try searching for Taylor Swift, Drake, or Ariana Grande.
-            </p>
-          </div>
           
           <div className="relative mb-4 sm:mb-6 search-dropdown-container">
             <Input
@@ -493,6 +486,13 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 </div>
               )}
             </div>
+          </div>
+          
+          {/* Tip Section */}
+          <div className="mt-4 text-center">
+            <p className="text-sm text-gray-300">
+              <span className="font-medium">Tip:</span> Try searching for Taylor Swift, Drake, or Ariana Grande.
+            </p>
           </div>
         </div>
       </div>
