@@ -123,41 +123,41 @@ export default function Home() {
       {!showNetworkView && (
         <div className="absolute left-1/2 transform -translate-x-1/2 z-10 px-4 w-full max-w-4xl" style={{ 
           pointerEvents: 'auto',
-          top: 'calc(40vh + 50px)',
-          bottom: '200px',
+          top: 'calc(50vh + 20px)',
+          bottom: '180px',
           transform: 'translateX(-50%)'
         }}>
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 h-full">
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-8 h-full">
             {/* Search Circle */}
             <div className="flex flex-col items-center">
-              <div className="rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center p-3 text-center" style={{
-                width: 'min(20vh, 150px)',
-                height: 'min(20vh, 150px)'
+              <div className="rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center p-2 text-center" style={{
+                width: 'min(15vh, 120px)',
+                height: 'min(15vh, 120px)'
               }}>
-                <div className="text-pink-400 font-medium text-sm mb-1">Search</div>
-                <div className="text-xs text-white leading-tight">Enter any artist name to start exploring</div>
+                <div className="text-pink-400 font-medium text-xs mb-1">Search</div>
+                <div className="text-xs text-white leading-tight">Enter artist name</div>
               </div>
             </div>
             
             {/* Discover Circle */}
             <div className="flex flex-col items-center">
-              <div className="rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center p-3 text-center" style={{
-                width: 'min(20vh, 150px)',
-                height: 'min(20vh, 150px)'
+              <div className="rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center p-2 text-center" style={{
+                width: 'min(15vh, 120px)',
+                height: 'min(15vh, 120px)'
               }}>
-                <div className="text-purple-400 font-medium text-sm mb-1">Discover</div>
-                <div className="text-xs text-white leading-tight">See producers, songwriters, and other artists</div>
+                <div className="text-purple-400 font-medium text-xs mb-1">Discover</div>
+                <div className="text-xs text-white leading-tight">See collaborators</div>
               </div>
             </div>
             
             {/* Explore Circle */}
             <div className="flex flex-col items-center">
-              <div className="rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center p-3 text-center" style={{
-                width: 'min(20vh, 150px)',
-                height: 'min(20vh, 150px)'
+              <div className="rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center p-2 text-center" style={{
+                width: 'min(15vh, 120px)',
+                height: 'min(15vh, 120px)'
               }}>
-                <div className="text-cyan-400 font-medium text-sm mb-1">Explore</div>
-                <div className="text-xs text-white leading-tight">Click any node to search for connections</div>
+                <div className="text-cyan-400 font-medium text-xs mb-1">Explore</div>
+                <div className="text-xs text-white leading-tight">Click nodes</div>
               </div>
             </div>
             
