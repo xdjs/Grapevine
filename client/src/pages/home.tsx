@@ -147,14 +147,7 @@ export default function Home() {
               </div>
             </div>
             
-            {/* Attribution text below circles */}
-            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-center">
-              <div className="text-gray-500 text-xs space-y-1">
-                <p>Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
-                <p>Powered by Music Nerd</p>
-                <p>Click on artist nodes to visit their Music Nerd profiles</p>
-              </div>
-            </div>
+
           </div>
         </div>
       )}
