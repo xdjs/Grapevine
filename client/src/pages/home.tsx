@@ -128,12 +128,12 @@ export default function Home() {
           transform: 'translateX(-50%)'
         }}>
           {/* Desktop: Horizontal layout */}
-          <div className="hidden sm:flex sm:flex-row justify-center items-center gap-8 h-full">
+          <div className="hidden sm:flex sm:flex-row justify-center items-center gap-4 h-full">
             {/* Search Circle */}
             <div className="flex flex-col items-center">
               <div className="rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center p-4 text-center" style={{
-                width: 'min(25vh, 180px)',
-                height: 'min(25vh, 180px)'
+                width: 'min(22vh, 160px)',
+                height: 'min(22vh, 160px)'
               }}>
                 <div className="text-pink-400 font-medium text-base mb-2">Search</div>
                 <div className="text-sm text-white leading-tight">Enter any artist name to start exploring their collaboration network</div>
@@ -143,8 +143,8 @@ export default function Home() {
             {/* Discover Circle */}
             <div className="flex flex-col items-center">
               <div className="rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center p-4 text-center" style={{
-                width: 'min(25vh, 180px)',
-                height: 'min(25vh, 180px)'
+                width: 'min(22vh, 160px)',
+                height: 'min(22vh, 160px)'
               }}>
                 <div className="text-purple-400 font-medium text-base mb-2">Discover</div>
                 <div className="text-sm text-white leading-tight">See producers, songwriters, and other artists they've worked with</div>
@@ -154,8 +154,8 @@ export default function Home() {
             {/* Explore Circle */}
             <div className="flex flex-col items-center">
               <div className="rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center p-4 text-center" style={{
-                width: 'min(25vh, 180px)',
-                height: 'min(25vh, 180px)'
+                width: 'min(22vh, 160px)',
+                height: 'min(22vh, 160px)'
               }}>
                 <div className="text-cyan-400 font-medium text-base mb-2">Explore</div>
                 <div className="text-sm text-white leading-tight">Click any node to search for that artist's connections</div>
@@ -164,14 +164,14 @@ export default function Home() {
           </div>
 
           {/* Mobile: Triangle formation */}
-          <div className="flex sm:hidden flex-col items-center gap-4 h-full justify-center">
+          <div className="flex sm:hidden flex-col items-center gap-2 h-full justify-center">
             {/* Top Row - Two circles side by side */}
-            <div className="flex justify-center items-center gap-3">
+            <div className="flex justify-center items-center gap-2">
               {/* Search Circle */}
               <div className="flex flex-col items-center">
                 <div className="rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center p-3 text-center" style={{
-                  width: 'min(20vh, 140px)',
-                  height: 'min(20vh, 140px)'
+                  width: 'min(18vh, 130px)',
+                  height: 'min(18vh, 130px)'
                 }}>
                   <div className="text-pink-400 font-medium text-sm mb-1">Search</div>
                   <div className="text-xs text-white leading-tight">Enter any artist name to start exploring their collaboration network</div>
@@ -181,8 +181,8 @@ export default function Home() {
               {/* Discover Circle */}
               <div className="flex flex-col items-center">
                 <div className="rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center p-3 text-center" style={{
-                  width: 'min(20vh, 140px)',
-                  height: 'min(20vh, 140px)'
+                  width: 'min(18vh, 130px)',
+                  height: 'min(18vh, 130px)'
                 }}>
                   <div className="text-purple-400 font-medium text-sm mb-1">Discover</div>
                   <div className="text-xs text-white leading-tight">See producers, songwriters, and other artists they've worked with</div>
@@ -195,8 +195,8 @@ export default function Home() {
               {/* Explore Circle */}
               <div className="flex flex-col items-center">
                 <div className="rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center p-3 text-center" style={{
-                  width: 'min(20vh, 140px)',
-                  height: 'min(20vh, 140px)'
+                  width: 'min(18vh, 130px)',
+                  height: 'min(18vh, 130px)'
                 }}>
                   <div className="text-cyan-400 font-medium text-sm mb-1">Explore</div>
                   <div className="text-xs text-white leading-tight">Click any node to search for that artist's connections</div>
