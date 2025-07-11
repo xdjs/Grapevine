@@ -119,7 +119,35 @@ export default function Home() {
         onClearAll={handleReset}
       />
 
-
+      {/* How it works Content - Only visible when not showing network */}
+      {!showNetworkView && (
+        <div className="absolute bottom-16 left-0 right-0 px-4 text-center z-10" style={{ pointerEvents: 'auto' }}>
+          <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
+            <div className="text-gray-400 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs">
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
+                  <div className="text-pink-400 font-medium mb-1 sm:mb-2">1. Search</div>
+                  <div className="text-xs sm:text-sm">Enter any artist name to start exploring their collaboration network</div>
+                </div>
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
+                  <div className="text-purple-400 font-medium mb-1 sm:mb-2">2. Discover</div>
+                  <div className="text-xs sm:text-sm">See producers, songwriters, and other artists they've worked with</div>
+                </div>
+                <div className="bg-gray-900/50 p-2 sm:p-4 rounded-lg">
+                  <div className="text-cyan-400 font-medium mb-1 sm:mb-2">3. Explore</div>
+                  <div className="text-xs sm:text-sm">Click any node to search for that artist's connections</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-gray-500 text-xs mb-2">
+              <p className="mb-1 sm:mb-2">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
+              <p className="mb-1 sm:mb-2">Powered by Music Nerd</p>
+              <p>Click on artist nodes to visit their Music Nerd profiles</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Spacer to ensure scrollable content */}
       <div className="h-96"></div>
