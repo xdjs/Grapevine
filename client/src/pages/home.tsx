@@ -125,43 +125,33 @@ export default function Home() {
           <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
             <div className="text-gray-400 text-sm">
               {/* Node-style How it Works */}
-              <div className="relative flex items-center justify-center max-w-lg mx-auto">
-                <svg className="w-full h-32 sm:h-40" viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg">
+              <div className="relative flex items-center justify-center max-w-4xl mx-auto">
+                <svg className="w-full h-40 sm:h-48" viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
                   {/* Connecting lines */}
-                  <line x1="70" y1="80" x2="170" y2="80" stroke="#374151" strokeWidth="2" />
-                  <line x1="230" y1="80" x2="330" y2="80" stroke="#374151" strokeWidth="2" />
+                  <line x1="140" y1="100" x2="260" y2="100" stroke="#374151" strokeWidth="2" />
+                  <line x1="340" y1="100" x2="460" y2="100" stroke="#374151" strokeWidth="2" />
                   
                   {/* Search Circle */}
-                  <circle cx="70" cy="80" r="35" fill="#ec4899" stroke="#f97316" strokeWidth="2" />
-                  <text x="70" y="78" textAnchor="middle" className="fill-white text-xs font-medium">Search</text>
-                  <text x="70" y="92" textAnchor="middle" className="fill-white text-xs">1</text>
+                  <circle cx="140" cy="100" r="70" fill="#ec4899" />
+                  <text x="140" y="88" textAnchor="middle" className="fill-white text-sm font-medium">1. Search</text>
+                  <text x="140" y="105" textAnchor="middle" className="fill-white text-xs">Enter any artist name</text>
+                  <text x="140" y="120" textAnchor="middle" className="fill-white text-xs">to start exploring their</text>
+                  <text x="140" y="135" textAnchor="middle" className="fill-white text-xs">collaboration network</text>
                   
                   {/* Discover Circle */}
-                  <circle cx="200" cy="80" r="35" fill="#8a2be2" stroke="#f97316" strokeWidth="2" />
-                  <text x="200" y="78" textAnchor="middle" className="fill-white text-xs font-medium">Discover</text>
-                  <text x="200" y="92" textAnchor="middle" className="fill-white text-xs">2</text>
+                  <circle cx="400" cy="100" r="70" fill="#8a2be2" />
+                  <text x="400" y="88" textAnchor="middle" className="fill-white text-sm font-medium">2. Discover</text>
+                  <text x="400" y="105" textAnchor="middle" className="fill-white text-xs">See producers,</text>
+                  <text x="400" y="120" textAnchor="middle" className="fill-white text-xs">songwriters, and other</text>
+                  <text x="400" y="135" textAnchor="middle" className="fill-white text-xs">artists they've worked with</text>
                   
                   {/* Explore Circle */}
-                  <circle cx="330" cy="80" r="35" fill="#00ced1" stroke="#f97316" strokeWidth="2" />
-                  <text x="330" y="78" textAnchor="middle" className="fill-white text-xs font-medium">Explore</text>
-                  <text x="330" y="92" textAnchor="middle" className="fill-white text-xs">3</text>
+                  <circle cx="660" cy="100" r="70" fill="#00ced1" />
+                  <text x="660" y="88" textAnchor="middle" className="fill-white text-sm font-medium">3. Explore</text>
+                  <text x="660" y="105" textAnchor="middle" className="fill-white text-xs">Click any node to</text>
+                  <text x="660" y="120" textAnchor="middle" className="fill-white text-xs">search for that artist's</text>
+                  <text x="660" y="135" textAnchor="middle" className="fill-white text-xs">connections</text>
                 </svg>
-              </div>
-              
-              {/* Descriptions below nodes */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs mt-4 max-w-lg mx-auto">
-                <div className="text-center">
-                  <div className="text-pink-400 font-medium mb-1">Search</div>
-                  <div className="text-xs">Enter any artist name to start exploring</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-purple-400 font-medium mb-1">Discover</div>
-                  <div className="text-xs">See producers, songwriters, and collaborators</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-cyan-400 font-medium mb-1">Explore</div>
-                  <div className="text-xs">Click any node to search their connections</div>
-                </div>
               </div>
             </div>
             
