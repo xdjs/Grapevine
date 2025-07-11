@@ -255,7 +255,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
             <Input
               ref={searchInputRef}
               type="text"
-              placeholder="Enter artist name..."
+              placeholder="Search any artist to explore their network..."
               value={searchQuery}
               onChange={(e) => handleInputChange(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -390,7 +390,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               <Input
                 ref={networkSearchInputRef}
                 type="text"
-                placeholder="Search for a new artist..."
+              placeholder="Search any artist to explore their network..."
                 value={searchQuery}
                 onChange={(e) => handleInputChange(e.target.value)}
                 onKeyPress={handleKeyPress}
