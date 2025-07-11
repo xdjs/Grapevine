@@ -169,23 +169,23 @@ export default function Home() {
             <div className="flex justify-center items-center gap-4">
               {/* Search Circle */}
               <div className="flex flex-col items-center">
-                <div className="rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center p-2 text-center" style={{
-                  width: 'min(12vh, 100px)',
-                  height: 'min(12vh, 100px)'
+                <div className="rounded-full bg-pink-500/20 border-2 border-pink-500 flex flex-col items-center justify-center p-3 text-center" style={{
+                  width: 'min(16vh, 120px)',
+                  height: 'min(16vh, 120px)'
                 }}>
                   <div className="text-pink-400 font-medium text-xs mb-1">Search</div>
-                  <div className="text-xs text-white leading-tight">Enter artist name</div>
+                  <div className="text-xs text-white leading-tight">Enter any artist name to start exploring their collaboration network</div>
                 </div>
               </div>
               
               {/* Discover Circle */}
               <div className="flex flex-col items-center">
-                <div className="rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center p-2 text-center" style={{
-                  width: 'min(12vh, 100px)',
-                  height: 'min(12vh, 100px)'
+                <div className="rounded-full bg-purple-500/20 border-2 border-purple-500 flex flex-col items-center justify-center p-3 text-center" style={{
+                  width: 'min(16vh, 120px)',
+                  height: 'min(16vh, 120px)'
                 }}>
                   <div className="text-purple-400 font-medium text-xs mb-1">Discover</div>
-                  <div className="text-xs text-white leading-tight">See collaborators</div>
+                  <div className="text-xs text-white leading-tight">See producers, songwriters, and other artists they've worked with</div>
                 </div>
               </div>
             </div>
@@ -194,12 +194,12 @@ export default function Home() {
             <div className="flex justify-center">
               {/* Explore Circle */}
               <div className="flex flex-col items-center">
-                <div className="rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center p-2 text-center" style={{
-                  width: 'min(12vh, 100px)',
-                  height: 'min(12vh, 100px)'
+                <div className="rounded-full bg-cyan-500/20 border-2 border-cyan-500 flex flex-col items-center justify-center p-3 text-center" style={{
+                  width: 'min(16vh, 120px)',
+                  height: 'min(16vh, 120px)'
                 }}>
                   <div className="text-cyan-400 font-medium text-xs mb-1">Explore</div>
-                  <div className="text-xs text-white leading-tight">Click nodes</div>
+                  <div className="text-xs text-white leading-tight">Click any node to search for that artist's connections</div>
                 </div>
               </div>
             </div>
