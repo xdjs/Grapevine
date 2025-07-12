@@ -295,7 +295,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 sm:h-8 sm:w-8 p-0 rounded-lg"
               style={{
                 backgroundColor: '#ffa2e3',
-                color: '#b427b4'
+                color: '#9ca3af'
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = '#ff8adb';
