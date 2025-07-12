@@ -412,7 +412,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               <Input
                 ref={networkSearchInputRef}
                 type="text"
-              placeholder="Search any artist to explore their network..."
+                placeholder="Search any artist to explore their network..."
                 value={searchQuery}
                 onChange={(e) => handleInputChange(e.target.value)}
                 onKeyPress={handleKeyPress}
@@ -430,7 +430,13 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                     setShowDropdown(false);
                   }, 150);
                 }}
-                className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-10 sm:pr-12 text-sm sm:text-base"
+                className="w-full pl-2 pr-10 py-2 sm:pl-3 sm:pr-12 sm:py-2 bg-gray-800 text-white placeholder-gray-400 text-sm sm:text-base rounded-xl flex items-center"
+                style={{ 
+                  border: '2px solid #b427b4',
+                  boxShadow: '0 0 10px rgba(180, 39, 180, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
                 disabled={isLoading}
               />
               <Button
@@ -439,11 +445,21 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                   setArtistOptions([]);
                   handleSearch();
                 }}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 bg-blue-600 hover:bg-blue-700 rounded-md"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 sm:h-7 sm:w-7 p-0 rounded-lg"
+                style={{
+                  backgroundColor: '#ffa2e3',
+                  color: '#1f2937'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ff8adb';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffa2e3';
+                }}
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="w-3 h-3 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <Search className="w-3 h-3" />
                 )}
