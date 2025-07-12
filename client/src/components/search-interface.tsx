@@ -247,7 +247,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
           </div>
           
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-4 sm:mb-6 text-white" style={{
-            textShadow: '2px 2px 0px #9333EA, -2px -2px 0px #9333EA, 2px -2px 0px #9333EA, -2px 2px 0px #9333EA'
+            textShadow: '2px 2px 0px #b427b4, -2px -2px 0px #b427b4, 2px -2px 0px #b427b4, -2px 2px 0px #b427b4'
           }}>
             Grapevine
           </h1>
