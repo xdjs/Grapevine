@@ -279,10 +279,12 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                   setShowDropdown(false);
                 }, 150);
               }}
-              className="w-full pl-2 pr-10 py-3 sm:pl-3 sm:pr-12 sm:py-4 bg-gray-800 text-white placeholder-gray-400 text-base sm:text-lg rounded-xl"
+              className="w-full pl-2 pr-10 py-3 sm:pl-3 sm:pr-12 sm:py-4 bg-gray-800 text-white placeholder-gray-400 text-base sm:text-lg rounded-xl flex items-center"
               style={{ 
                 border: '2px solid #b427b4',
-                boxShadow: '0 0 10px rgba(180, 39, 180, 0.3)'
+                boxShadow: '0 0 10px rgba(180, 39, 180, 0.3)',
+                display: 'flex',
+                alignItems: 'center'
               }}
               disabled={isLoading}
             />
