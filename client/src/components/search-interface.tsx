@@ -279,7 +279,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                   setShowDropdown(false);
                 }, 150);
               }}
-              className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-gray-800 text-white placeholder-gray-400 pr-10 sm:pr-12 text-base sm:text-lg rounded-xl"
+              className="w-full pl-2 pr-10 py-3 sm:pl-3 sm:pr-12 sm:py-4 bg-gray-800 text-white placeholder-gray-400 text-base sm:text-lg rounded-xl"
               style={{ 
                 border: '2px solid #b427b4',
                 boxShadow: '0 0 10px rgba(180, 39, 180, 0.3)'
