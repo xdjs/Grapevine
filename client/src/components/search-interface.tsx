@@ -246,9 +246,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
             />
           </div>
           
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-4 sm:mb-6 text-white" style={{
-            textShadow: '2px 2px 0px #b427b4, -2px -2px 0px #b427b4, 2px -2px 0px #b427b4, -2px 2px 0px #b427b4'
-          }}>
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-4 sm:mb-6 text-white">
             Grapevine
           </h1>
 
@@ -281,7 +279,11 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                   setShowDropdown(false);
                 }, 150);
               }}
-              className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-10 sm:pr-12 text-base sm:text-lg rounded-xl"
+              className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-gray-800 text-white placeholder-gray-400 pr-10 sm:pr-12 text-base sm:text-lg rounded-xl"
+              style={{ 
+                border: '2px solid #b427b4',
+                boxShadow: '0 0 10px rgba(180, 39, 180, 0.3)'
+              }}
               disabled={isLoading}
             />
             <Button
