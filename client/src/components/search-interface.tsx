@@ -6,8 +6,8 @@ import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
 import { NetworkData } from "@/types/network";
 import { Search } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import musicNerdLogo from "@assets/musicNerdLogo_1751389187695.png";
-import musicNerdLogoSmall from "@assets/musicNerdLogo_1751389498769.png";
+import grapevineLogoLarge from "@assets/Grapevine Logo_1752103516040.png";
+import grapevineLogoSmall from "@assets/Grapevine Logo_1752103516040.png";
 
 interface SearchInterfaceProps {
   onNetworkData: (data: NetworkData) => void;
@@ -241,26 +241,30 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         }`}
       >
         <div className="text-center w-full max-w-md">
-          <div className="mb-4 sm:mb-6 flex justify-center">
+          <div className="mb-6 sm:mb-8 flex justify-center">
             <img 
-              src={musicNerdLogo} 
-              alt="MusicNerd Logo" 
-              className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
+              src={grapevineLogoLarge} 
+              alt="Grapevine Logo" 
+              className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 object-contain"
             />
           </div>
           
-          <h1 className="text-xl sm:text-4xl font-bold mb-2 sm:mb-4 text-white">
-            Music Collaboration Network
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-4 sm:mb-6 text-white">
+            Grapevine
           </h1>
-          <p className="text-sm sm:text-lg text-gray-300 mb-6 sm:mb-8">
-            Discover connections between artists, producers, and songwriters
-          </p>
+
+          {/* Tip Section */}
+          <div className="mb-4 text-center">
+            <p className="text-sm text-gray-300">
+              <span className="font-medium">Tip:</span> Try searching for Taylor Swift, Drake, or Ariana Grande.
+            </p>
+          </div>
           
           <div className="relative mb-4 sm:mb-6 search-dropdown-container">
             <Input
               ref={searchInputRef}
               type="text"
-              placeholder="Enter artist name..."
+              placeholder="Search any artist to explore their network..."
               value={searchQuery}
               onChange={(e) => handleInputChange(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -278,7 +282,13 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                   setShowDropdown(false);
                 }, 150);
               }}
-              className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-12 sm:pr-16 text-base sm:text-lg rounded-xl"
+              className="w-full pl-2 pr-10 py-3 sm:pl-3 sm:pr-12 sm:py-4 bg-gray-800 text-white placeholder-gray-400 text-base sm:text-lg rounded-xl flex items-center"
+              style={{ 
+                border: '2px solid #b427b4',
+                boxShadow: '0 0 10px rgba(180, 39, 180, 0.3)',
+                display: 'flex',
+                alignItems: 'center'
+              }}
               disabled={isLoading}
             />
             <Button
@@ -287,13 +297,23 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 setArtistOptions([]);
                 handleSearch();
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10 p-0 bg-blue-600 hover:bg-blue-700 rounded-lg"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 sm:h-8 sm:w-8 p-0 rounded-lg"
+              style={{
+                backgroundColor: '#ffa2e3',
+                color: '#1f2937'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#ff8adb';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#ffa2e3';
+              }}
               disabled={isLoading}
             >
               {isLoading ? (
-                <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Search className="w-3 h-3 sm:w-4 sm:h-4" />
               )}
             </Button>
 
@@ -358,6 +378,8 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               </div>
             )}
           </div>
+          
+
         </div>
       </div>
 
@@ -378,14 +400,14 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 title="Clear All"
               >
                 <img 
-                  src={musicNerdLogoSmall} 
-                  alt="MusicNerd Logo - Click to Clear" 
+                  src={grapevineLogoSmall} 
+                  alt="Grapevine Logo - Click to Clear" 
                   className="w-6 h-6 sm:w-8 sm:h-8 object-contain"
                 />
               </button>
               <h2 className="text-sm sm:text-xl font-semibold text-white truncate">
-                <span className="hidden sm:inline">Music Collaboration Network</span>
-                <span className="sm:hidden">MusicNerd</span>
+                <span className="hidden sm:inline">Grapevine</span>
+                <span className="sm:hidden">Grapevine</span>
               </h2>
             </div>
             
@@ -393,7 +415,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               <Input
                 ref={networkSearchInputRef}
                 type="text"
-                placeholder="Search for a new artist..."
+                placeholder="Search any artist to explore their network..."
                 value={searchQuery}
                 onChange={(e) => handleInputChange(e.target.value)}
                 onKeyPress={handleKeyPress}
@@ -411,7 +433,13 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                     setShowDropdown(false);
                   }, 150);
                 }}
-                className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 pr-10 sm:pr-12 text-sm sm:text-base"
+                className="w-full pl-2 pr-10 py-2 sm:pl-3 sm:pr-12 sm:py-2 bg-gray-800 text-white placeholder-gray-400 text-sm sm:text-base rounded-xl flex items-center"
+                style={{ 
+                  border: '2px solid #b427b4',
+                  boxShadow: '0 0 10px rgba(180, 39, 180, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
                 disabled={isLoading}
               />
               <Button
@@ -420,11 +448,21 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                   setArtistOptions([]);
                   handleSearch();
                 }}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 bg-blue-600 hover:bg-blue-700 rounded-md"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 sm:h-7 sm:w-7 p-0 rounded-lg"
+                style={{
+                  backgroundColor: '#ffa2e3',
+                  color: '#1f2937'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ff8adb';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffa2e3';
+                }}
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="w-3 h-3 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <Search className="w-3 h-3" />
                 )}
@@ -493,6 +531,29 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
           </div>
         </div>
       </div>
+      
+      {/* Music Nerd Button - Fixed at bottom of screen */}
+      {!showNetworkView && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
+          <Button
+            onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
+            className="font-medium py-0.5 px-2 rounded transition-colors text-white"
+            style={{
+              backgroundColor: '#b427b4',
+              fontSize: '10px',
+              height: '24px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#8f1c8f';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#b427b4';
+            }}
+          >
+            Visit Music Nerd
+          </Button>
+        </div>
+      )}
     </>
   );
 }

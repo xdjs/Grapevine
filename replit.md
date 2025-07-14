@@ -1,4 +1,4 @@
-# Music Collaboration Network Visualizer
+# Grapevine - Music Collaboration Network Visualizer
 
 ## Overview
 
@@ -410,6 +410,25 @@ Changelog:
 - All OpenAI prompts, cache operations, and node creation now use authentic database artist names
 - Ensures network maps display proper artist stylization as stored in MusicNerd database
 - Applied fix to both cached data retrieval and new network generation paths
+
+### Updated Application Branding to "Grapevine" (July 9, 2025)
+- Changed application name from "Music Collaboration Network" to "Grapevine"
+- Updated main title on home page to display "Grapevine" 
+- Updated top navigation bar to show "Grapevine" on both desktop and mobile
+- Updated HTML page title to "Grapevine - Music Collaboration Network"
+- Updated README.md and documentation to reflect new branding
+- Replaced all logo images with new pink/purple Grapevine logo design
+- Maintained all existing functionality while updating visual branding throughout
+
+### Enhanced Interface Design and Branding (July 11, 2025)
+- Removed filter by type functionality from artist maps for cleaner interface
+- Enhanced logo and title with dynamic responsive sizing (w-24 → w-32 → w-40 for logo, text-3xl → text-5xl → text-6xl for title)
+- Updated search bar placeholder to engaging call-to-action: "Search any artist to explore their network..."
+- Added tip section with popular artist suggestions: "Tip: Try searching for Taylor Swift, Drake, or Ariana Grande."
+- Applied magenta outline (#b427b4) to search bar with subtle glow effect
+- Changed search button color to lighter pink (#ffa2e3) from logo with hover effect
+- Streamlined mobile controls to only show zoom and clear functionality
+- Maintained consistent brand colors throughout interface
 
 
 ### Fixed Vercel Deployment Network Generation (July 10, 2025)
