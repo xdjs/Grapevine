@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import OpenAI from "openai";
 
 export interface OpenAICollaborator {

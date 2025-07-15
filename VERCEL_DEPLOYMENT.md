@@ -1,6 +1,6 @@
 # Deploying Music Collaboration Network Visualizer to Vercel
 
-⚠️ **Important Note**: This app is currently optimized for Replit deployment. For Vercel deployment, significant restructuring is needed since the current setup uses a single Express server for both frontend and backend.
+⚠️ **Important Note**: This app uses a unified Express server for both frontend and backend. For Vercel deployment, significant restructuring is needed to separate the frontend and backend.
 
 ## Recommended Alternative: Deploy to Railway
 

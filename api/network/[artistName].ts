@@ -1,4 +1,41 @@
+import 'dotenv/config';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+interface NetworkNode {
+  id: string;
+  name: string;
+  type: string;
+  types: string[];
+  color: string;
+  size: number;
+  artistId: string | null;
+  collaborations?: string[];
+}
+
+interface NetworkLink {
+  source: string;
+  target: string;
+}
+
+interface NetworkData {
+  nodes: NetworkNode[];
+  links: NetworkLink[];
+}
+
+interface Collaborator {
+  name: string;
+  type: string;
+  topCollaborators: string[];
+}
+
+interface CollaborationData {
+  collaborators?: Array<{
+    name: string;
+    roles: string[];
+    topCollaborators: string[];
+  }>;
+  artists?: Collaborator[];
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Add CORS headers
@@ -121,7 +158,7 @@ Important guidelines:
         max_tokens: 2000,
       });
 
-      let collaborationData;
+      let collaborationData: CollaborationData;
       try {
         const openaiContent = completion.choices[0]?.message?.content;
         console.log(`🤖 [Vercel] OpenAI response length: ${openaiContent?.length || 0} characters`);
@@ -174,8 +211,8 @@ Important guidelines:
       }
 
       // Build network data structure with comprehensive role consistency
-      const nodeMap = new Map();
-      const links = [];
+      const nodeMap = new Map<string, NetworkNode>();
+      const links: NetworkLink[] = [];
 
       // Create optimized batch role detection system for performance
       const globalRoleMap = new Map<string, string[]>();
@@ -231,7 +268,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       };
       
       // Quick role lookup with fallback to default
-      const getOptimizedRoles = (personName: string, defaultRole: 'artist' | 'producer' | 'songwriter'): string[] => {
+      const getOptimizedRoles = (personName: string, defaultRole: string): string[] => {
         return globalRoleMap.get(personName) || [defaultRole];
       };
 
@@ -348,7 +385,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
           // Update collaborations list
           if (collaborator.topCollaborators && collaborator.topCollaborators.length > 0) {
             const existingCollabs = collabNode.collaborations || [];
-            const newCollabs = collaborator.topCollaborators.filter(c => !existingCollabs.includes(c));
+            const newCollabs = collaborator.topCollaborators.filter((c: string) => !existingCollabs.includes(c));
             collabNode.collaborations = [...existingCollabs, ...newCollabs];
           }
           // Update color for multi-role nodes (artist + songwriter = multi-color, producer + songwriter = purple)

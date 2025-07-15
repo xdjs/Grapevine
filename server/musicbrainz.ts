@@ -31,7 +31,7 @@ export interface MusicBrainzSearchResult {
 
 class MusicBrainzService {
   private baseUrl = 'https://musicbrainz.org/ws/2';
-  private userAgent = 'MusicCollaborationVisualizer/1.0 (https://replit.com)';
+  private userAgent = 'MusicCollaborationVisualizer/1.0 (https://github.com/grapevine-music)';
 
   private async makeRequest(endpoint: string): Promise<any> {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {

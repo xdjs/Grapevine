@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -22,13 +23,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ message: 'Artist name is required' });
     }
     
+    const CONNECTION_STRING = process.env.CONNECTION_STRING;
+
     console.log(`🔍 [Vercel] Looking up artist options for: "${artistName}"`);
     console.log(`🔍 [Vercel] Environment check - CONNECTION_STRING exists:`, !!process.env.CONNECTION_STRING);
     console.log(`🔍 [Vercel] Node.js version:`, process.version);
     console.log(`🔍 [Vercel] Platform:`, process.platform);
     
     // Get environment variables
-    const CONNECTION_STRING = process.env.CONNECTION_STRING;
+    
     
     if (!CONNECTION_STRING) {
       console.error('❌ [Vercel] CONNECTION_STRING not found');

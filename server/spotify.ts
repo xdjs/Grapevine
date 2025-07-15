@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import axios from 'axios';
 
 export interface SpotifyArtist {
@@ -64,6 +65,9 @@ class SpotifyService {
       this.accessToken = response.data.access_token;
       this.tokenExpiry = Date.now() + (response.data.expires_in * 1000) - 60000; // 1 minute buffer
 
+      if (!this.accessToken) {
+        throw new Error('Access token is null after successful API response');
+      }
       return this.accessToken;
     } catch (error) {
       console.error('Failed to get Spotify access token:', error);

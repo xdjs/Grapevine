@@ -33,7 +33,7 @@ class WikipediaService {
   private async makeRequest(url: string): Promise<any> {
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'MusicCollaborationVisualizer/1.0 (https://replit.com)',
+        'User-Agent': 'MusicCollaborationVisualizer/1.0 (https://github.com/grapevine-music)',
       },
     });
 

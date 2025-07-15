@@ -1,4 +1,34 @@
+import 'dotenv/config';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+interface NetworkNode {
+  id: string;
+  name: string;
+  type: string;
+  types: string[];
+  color: string;
+  size: number;
+  artistId: string | null;
+  collaborations?: string[];
+}
+
+interface NetworkLink {
+  source: string;
+  target: string;
+}
+
+interface NetworkData {
+  nodes: NetworkNode[];
+  links: NetworkLink[];
+}
+
+interface CollaborationData {
+  artists: Array<{
+    name: string;
+    type: string;
+    topCollaborators: string[];
+  }>;
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Add CORS headers
@@ -117,7 +147,7 @@ Requirements:
         max_tokens: 2000,
       });
 
-      let collaborationData;
+      let collaborationData: CollaborationData;
       try {
         const openaiContent = completion.choices[0]?.message?.content;
         console.log(`🤖 [Vercel] OpenAI response length: ${openaiContent?.length || 0} characters`);
@@ -170,8 +200,8 @@ Requirements:
       }
 
       // Build network data structure with multi-role consolidation
-      const nodeMap = new Map();
-      const links = [];
+      const nodeMap = new Map<string, NetworkNode>();
+      const links: NetworkLink[] = [];
 
       // Add main artist node
       const mainNode = {
@@ -199,7 +229,7 @@ Requirements:
           // Update collaborations list
           if (collaborator.topCollaborators && collaborator.topCollaborators.length > 0) {
             const existingCollabs = collabNode.collaborations || [];
-            const newCollabs = collaborator.topCollaborators.filter(c => !existingCollabs.includes(c));
+            const newCollabs = collaborator.topCollaborators.filter((c: string) => !existingCollabs.includes(c));
             collabNode.collaborations = [...existingCollabs, ...newCollabs];
           }
           // Update color for multi-role nodes (artist + songwriter = multi-color, producer + songwriter = purple)
