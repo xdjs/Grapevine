@@ -173,7 +173,7 @@ export class MemStorage implements IStorage {
     const nodes: NetworkNode[] = [];
     const links: NetworkLink[] = [];
 
-    // Create main artist node
+    // Create main artist node only - no false collaborators
     const mainArtistNode: NetworkNode = {
       id: artistName,
       name: artistName,
@@ -182,50 +182,13 @@ export class MemStorage implements IStorage {
     };
     nodes.push(mainArtistNode);
 
-    // Generate 2-3 collaborators based on artist name hash
-    const hash = artistName.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-    const numCollaborators = 2 + (hash % 2); // 2 or 3 collaborators
-    
-    for (let i = 0; i < numCollaborators; i++) {
-      const isProducer = (hash + i) % 2 === 0;
-      const collaboratorType = isProducer ? 'producer' : 'songwriter';
-      const collaboratorName = isProducer 
-        ? `${artistName} Producer ${i + 1}`
-        : `${artistName} Writer ${i + 1}`;
-
-      const collaboratorNode: NetworkNode = {
-        id: collaboratorName,
-        name: collaboratorName,
-        type: collaboratorType,
-        size: 18,
-      };
-      
-      nodes.push(collaboratorNode);
-      links.push({
-        source: artistName,
-        target: collaboratorName
-      });
-    }
-
+    // Return only the main artist node with no collaborators
     return { nodes, links };
   }
 
   private generateCollaboratorNames(artistName: string): Array<{ name: string; type: 'producer' | 'songwriter' }> {
-    const hash = artistName.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-    const numCollaborators = 2 + (hash % 3); // 2-4 collaborators
-    const collaborators: Array<{ name: string; type: 'producer' | 'songwriter' }> = [];
-    
-    for (let i = 0; i < numCollaborators; i++) {
-      const isProducer = (hash + i) % 2 === 0;
-      const type: 'producer' | 'songwriter' = isProducer ? 'producer' : 'songwriter';
-      const name = isProducer 
-        ? `${artistName} Producer ${i + 1}`
-        : `${artistName} Writer ${i + 1}`;
-      
-      collaborators.push({ name, type });
-    }
-    
-    return collaborators;
+    // Return empty array - no false collaborators
+    return [];
   }
 
   private async generateDynamicNetworkWithImages(artistName: string): Promise<NetworkData> {
@@ -258,45 +221,7 @@ export class MemStorage implements IStorage {
     };
     nodes.push(mainArtistNode);
 
-    // Generate collaborators with potential Spotify images
-    const collaboratorNames = this.generateCollaboratorNames(artistName);
-    const clusterCenterX = Math.random() * 400 + 200;
-    const clusterCenterY = Math.random() * 300 + 150;
-
-    for (let i = 0; i < collaboratorNames.length; i++) {
-      const collaborator = collaboratorNames[i];
-      let collaboratorImage = null;
-      let collaboratorSpotifyId = null;
-
-      // Try to fetch real artist images for some collaborators
-      if (spotifyService.isConfigured() && Math.random() > 0.3) { // 70% chance to try Spotify
-        try {
-          const spotifyCollaborator = await spotifyService.searchArtist(collaborator.name);
-          if (spotifyCollaborator) {
-            collaboratorImage = spotifyService.getArtistImageUrl(spotifyCollaborator, 'medium');
-            collaboratorSpotifyId = spotifyCollaborator.id;
-          }
-        } catch (error) {
-          // Silently continue without image if Spotify search fails
-        }
-      }
-
-      const collaboratorNode: NetworkNode = {
-        id: collaborator.name,
-        name: collaborator.name,
-        type: collaborator.type,
-        size: 20,
-        imageUrl: collaboratorImage,
-        spotifyId: collaboratorSpotifyId,
-      };
-      nodes.push(collaboratorNode);
-
-      links.push({
-        source: artistName,
-        target: collaborator.name,
-      });
-    }
-
+    // Return only the main artist node with no collaborators
     return { nodes, links };
   }
 

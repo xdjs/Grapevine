@@ -215,6 +215,27 @@ Requirements:
       };
       nodeMap.set(artist.name, mainNode);
 
+      // If no collaborators found, return only the main artist
+      if (!collaborationData.artists || collaborationData.artists.length === 0) {
+        console.log(`⚠️ [Vercel] No collaborators found for "${artist.name}", returning only main artist`);
+        const networkData = { nodes: [mainNode], links: [] };
+        
+        // Cache the generated data by ID
+        try {
+          const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE id = $2';
+          await client.query(updateQuery, [JSON.stringify(networkData), artistId]);
+          console.log(`💾 [Vercel] Cached network data for artist ID ${artistId} (${artist.name})`);
+        } catch (cacheError) {
+          console.warn('⚠️ [Vercel] Failed to cache data:', cacheError);
+        }
+
+        await client.end();
+        console.log(`✅ [Vercel] Generated network with 1 node for artist ID ${artistId}`);
+        
+        res.json(networkData);
+        return;
+      }
+
       // Process producers and songwriters with multi-role consolidation
       for (const collaborator of collaborationData.artists || []) {
         // Check if we already have a node for this person

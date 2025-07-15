@@ -367,6 +367,27 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         }
       }
       
+      // If no collaborators found, return only the main artist
+      if (collaborators.length === 0) {
+        console.log(`⚠️ [Vercel] No collaborators found for "${correctArtistName}", returning only main artist`);
+        const networkData = { nodes: [mainNode], links: [] };
+        
+        // Cache the generated data
+        try {
+          const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE LOWER(name) = LOWER($2)';
+          await client.query(updateQuery, [JSON.stringify(networkData), correctArtistName]);
+          console.log(`💾 [Vercel] Cached network data for ${correctArtistName}`);
+        } catch (cacheError) {
+          console.warn('⚠️ [Vercel] Failed to cache data:', cacheError);
+        }
+
+        await client.end();
+        console.log(`✅ [Vercel] Generated network with 1 node for ${artistName}`);
+        
+        res.json(networkData);
+        return;
+      }
+      
       // Batch detect roles for all people at once for performance
       console.log(`🎭 [Vercel] Batch detecting roles for ${allPeople.size} people...`);
       await batchDetectRoles([...allPeople]);
