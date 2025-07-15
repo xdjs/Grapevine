@@ -144,7 +144,7 @@ Please respond with JSON in this exact format:
 }
 
 Important guidelines:
-- Include up to 10 music industry professionals who have actually worked with ${correctArtistName}
+- Include music industry professionals who have actually worked with ${correctArtistName}
 - For each person, list ALL their roles from: ["producer", "songwriter", "artist"]
 - Many professionals have multiple roles (e.g., Jack Antonoff is both producer and songwriter)
 - Include their top 3 collaborating artists for each person
