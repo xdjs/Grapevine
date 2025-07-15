@@ -192,11 +192,11 @@ export class DatabaseStorage implements IStorage {
     if (!openAIService.isServiceAvailable() || peopleList.length === 0) {
       return globalRoleMap;
     }
-    
-    try {
-      const peopleListStr = peopleList.map(name => `"${name}"`).join(', ');
-      const batchRolePrompt = `For each of these music industry professionals: ${peopleListStr}
       
+      try {
+        const peopleListStr = peopleList.map(name => `"${name}"`).join(', ');
+        const batchRolePrompt = `For each of these music industry professionals: ${peopleListStr}
+        
 Return their roles as JSON in this exact format:
 {
   "Person Name 1": ["artist", "songwriter"],
@@ -206,36 +206,36 @@ Return their roles as JSON in this exact format:
 
 Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has. Return ONLY the JSON object, no other text.`;
 
-      const OpenAI = await import('openai');
-      const openai = new OpenAI.default({
-        apiKey: process.env.OPENAI_API_KEY,
-      });
+        const OpenAI = await import('openai');
+        const openai = new OpenAI.default({
+          apiKey: process.env.OPENAI_API_KEY,
+        });
 
-      const roleCompletion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: batchRolePrompt }],
-        temperature: 0.1,
-        max_tokens: 1000,
-      });
+        const roleCompletion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [{ role: "user", content: batchRolePrompt }],
+          temperature: 0.1,
+          max_tokens: 1000,
+        });
 
-      const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
-      if (roleContent) {
-        try {
+        const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
+        if (roleContent) {
+          try {
           const rolesData = JSON.parse(roleContent) as Record<string, unknown>;
-          for (const [personName, roles] of Object.entries(rolesData)) {
+            for (const [personName, roles] of Object.entries(rolesData)) {
             const validRoles = safeParseRoles(roles);
-            if (validRoles.length > 0) {
-              globalRoleMap.set(personName, validRoles);
-              console.log(`✅ [DEBUG] Batch detected roles for "${personName}":`, validRoles);
+                if (validRoles.length > 0) {
+                  globalRoleMap.set(personName, validRoles);
+                  console.log(`✅ [DEBUG] Batch detected roles for "${personName}":`, validRoles);
+              }
             }
+          } catch (parseError) {
+            console.log(`⚠️ [DEBUG] Could not parse batch role detection, falling back to defaults`);
           }
-        } catch (parseError) {
-          console.log(`⚠️ [DEBUG] Could not parse batch role detection, falling back to defaults`);
         }
+      } catch (error) {
+        console.log(`⚠️ [DEBUG] Batch role detection failed, falling back to defaults`);
       }
-    } catch (error) {
-      console.log(`⚠️ [DEBUG] Batch role detection failed, falling back to defaults`);
-    }
     
     return globalRoleMap;
   }
@@ -245,37 +245,37 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       return ['artist'];
     }
     
-    try {
-      const mainArtistRolePrompt = `What roles does ${artistName} have in the music industry? Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. Return ONLY the JSON array, no other text.`;
-      
-      const OpenAI = await import('openai');
-      const openai = new OpenAI.default({
-        apiKey: process.env.OPENAI_API_KEY,
-      });
+      try {
+        const mainArtistRolePrompt = `What roles does ${artistName} have in the music industry? Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. Return ONLY the JSON array, no other text.`;
+        
+        const OpenAI = await import('openai');
+        const openai = new OpenAI.default({
+          apiKey: process.env.OPENAI_API_KEY,
+        });
 
-      const roleCompletion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: mainArtistRolePrompt }],
-        temperature: 0.1,
-        max_tokens: 100,
-      });
+        const roleCompletion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [{ role: "user", content: mainArtistRolePrompt }],
+          temperature: 0.1,
+          max_tokens: 100,
+        });
 
-      const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
-      if (roleContent) {
-        try {
-          const detectedRoles = JSON.parse(roleContent);
+        const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
+        if (roleContent) {
+          try {
+            const detectedRoles = JSON.parse(roleContent);
           const validRoles = safeParseRoles(detectedRoles);
-          if (validRoles.length > 0) {
+              if (validRoles.length > 0) {
             console.log(`✅ [DEBUG] Detected main artist roles for "${artistName}":`, validRoles);
             return validRoles;
+            }
+          } catch (parseError) {
+            console.log(`⚠️ [DEBUG] Could not parse main artist role detection for "${artistName}", using default`);
           }
-        } catch (parseError) {
-          console.log(`⚠️ [DEBUG] Could not parse main artist role detection for "${artistName}", using default`);
         }
+      } catch (error) {
+        console.log(`⚠️ [DEBUG] Main artist role detection failed for "${artistName}", using default`);
       }
-    } catch (error) {
-      console.log(`⚠️ [DEBUG] Main artist role detection failed for "${artistName}", using default`);
-    }
     
     return ['artist'];
   }
@@ -310,7 +310,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       musicNerdUrl,
     });
     nodeMap.set(artistName, mainArtistNode);
-
+    
     console.log(`🎭 [DEBUG] Main artist "${artistName}" initialized with ${orderedMainArtistTypes.length} roles:`, orderedMainArtistTypes);
 
     try {
@@ -524,20 +524,20 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         const safeCollaboratorType = ensureRoleType(collaborator.type);
         
         const collaboratorNode = createSafeNetworkNode({
-          name: collaborator.name,
+            name: collaborator.name,
           type: safeCollaboratorType,
-          size: 20,
+            size: 20,
         });
         
-        nodeMap.set(collaborator.name, collaboratorNode);
-        
-        links.push({
-          source: artistName,
-          target: collaborator.name,
-        });
-      }
+                nodeMap.set(collaborator.name, collaboratorNode);
 
-      const nodes = Array.from(nodeMap.values());
+              links.push({
+                source: artistName,
+                target: collaborator.name,
+              });
+            }
+            
+            const nodes = Array.from(nodeMap.values());
       return { nodes, links };
       
     } catch (error) {
@@ -681,4 +681,4 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       return null;
     }
   }
-} 
+}
