@@ -5,6 +5,7 @@ import NetworkVisualizer from "@/components/network-visualizer";
 import ZoomControls from "@/components/zoom-controls";
 import FilterControls from "@/components/filter-controls";
 import MobileControls from "@/components/mobile-controls";
+import HelpButton from "@/components/help-button";
 import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft } from "lucide-react";
 
@@ -150,6 +151,9 @@ export default function ArtistNetwork() {
           />
         </>
       )}
+
+      {/* Help Button - Always visible */}
+      <HelpButton />
     </div>
   );
 }
