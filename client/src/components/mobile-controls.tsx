@@ -35,7 +35,7 @@ export default function MobileControls({
 
       {/* Mobile Controls Panel */}
       {showControls && (
-        <Card className="fixed bottom-20 right-4 z-40 bg-gray-900/95 backdrop-blur border-gray-700 p-4 max-w-[calc(100vw-2rem)]">
+        <Card className="fixed bottom-20 right-4 z-40 bg-gray-900/95 backdrop-blur p-4 max-w-[calc(100vw-2rem)] border-2" style={{ borderColor: '#b427b4' }}>
           <div className="space-y-4">
             {/* Zoom Controls */}
             <div>
