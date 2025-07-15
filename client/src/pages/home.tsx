@@ -4,6 +4,7 @@ import NetworkVisualizer from "@/components/network-visualizer";
 import ZoomControls from "@/components/zoom-controls";
 import FilterControls from "@/components/filter-controls";
 import MobileControls from "@/components/mobile-controls";
+import HelpButton from "@/components/help-button";
 
 import { NetworkData, FilterState } from "@/types/network";
 import { Loader2 } from "lucide-react";
@@ -184,6 +185,9 @@ export default function Home() {
           />
         </>
       )}
+
+      {/* Help Button - Always visible */}
+      <HelpButton />
     </div>
   );
 }
