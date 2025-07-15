@@ -472,14 +472,34 @@ export default function NetworkVisualizer({
       })
       .on("click", function(event, d) {
         event.stopPropagation();
-        console.log(`🎯 [CLICK DEBUG] ===== NODE CLICK EVENT =====`);
+        console.log(`🎯 [CLICK DEBUG] ===== LEFT CLICK EVENT =====`);
         console.log(`🎯 [CLICK DEBUG] Node: "${d.name}"`);
         console.log(`🎯 [CLICK DEBUG] Type: ${d.type}`);
         console.log(`🎯 [CLICK DEBUG] Types: ${JSON.stringify(d.types)}`);
         console.log(`🎯 [CLICK DEBUG] ArtistId: ${d.artistId}`);
-        console.log(`🎯 [CLICK DEBUG] Environment: ${window.location.href}`);
-        console.log(`🎯 [CLICK DEBUG] Event type: ${event.type}`);
-        console.log(`🎯 [CLICK DEBUG] Event target: ${event.target}`);
+        
+        // Left-click to expand artist's network (only for artist nodes that aren't the main artist)
+        if ((d.type === 'artist' || (d.types && d.types.includes('artist'))) && onArtistSearch) {
+          const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+          if (d !== mainArtistNode) {
+            console.log(`🎯 [CLICK DEBUG] Expanding network for artist: ${d.name}`);
+            onArtistSearch(d.name);
+          } else {
+            console.log(`🎯 [CLICK DEBUG] Skipping network expansion for main artist`);
+          }
+        } else {
+          console.log(`🎯 [CLICK DEBUG] Not an artist node or no onArtistSearch callback, skipping action`);
+        }
+        console.log(`🎯 [CLICK DEBUG] ===== END LEFT CLICK EVENT =====`);
+      })
+      .on("contextmenu", function(event, d) {
+        event.preventDefault();
+        event.stopPropagation();
+        console.log(`🎯 [CLICK DEBUG] ===== RIGHT CLICK EVENT =====`);
+        console.log(`🎯 [CLICK DEBUG] Node: "${d.name}"`);
+        console.log(`🎯 [CLICK DEBUG] Type: ${d.type}`);
+        console.log(`🎯 [CLICK DEBUG] Types: ${JSON.stringify(d.types)}`);
+        console.log(`🎯 [CLICK DEBUG] ArtistId: ${d.artistId}`);
         
         // Check if this is an artist node
         const isArtistNode = d.type === 'artist' || (d.types && d.types.includes('artist'));
@@ -493,33 +513,16 @@ export default function NetworkVisualizer({
           console.log(`🎯 [CLICK DEBUG] Is main artist: ${isMainArtist}`);
           
           try {
-            // For main artist with artistId, go directly to their page (skip modal)
-            if (isMainArtist && d.artistId) {
-              console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile for main artist with ID`);
-              openMusicNerdProfile(d.name, d.artistId);
-            } else {
-              console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile for regular flow`);
-              // For other artists or main artist without artistId, use normal flow
-              openMusicNerdProfile(d.name, d.artistId);
-            }
+            // Always pass the artistId if available, let openMusicNerdProfile handle the logic
+            console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile with artistId: ${d.artistId}`);
+            openMusicNerdProfile(d.name, d.artistId);
           } catch (error) {
             console.error(`🎯 [CLICK DEBUG] Error calling openMusicNerdProfile:`, error);
           }
         } else {
           console.log(`🎯 [CLICK DEBUG] Not an artist node, skipping action`);
         }
-        console.log(`🎯 [CLICK DEBUG] ===== END CLICK EVENT =====`);
-      })
-      .on("contextmenu", function(event, d) {
-        event.preventDefault();
-        event.stopPropagation();
-        // Right-click to view artist's network (only for artist nodes that aren't the main artist)
-        if ((d.type === 'artist' || (d.types && d.types.includes('artist'))) && onArtistSearch) {
-          const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === 'artist');
-          if (d !== mainArtistNode) {
-            onArtistSearch(d.name);
-          }
-        }
+        console.log(`🎯 [CLICK DEBUG] ===== END RIGHT CLICK EVENT =====`);
       })
       .call(
         d3
@@ -575,18 +578,8 @@ export default function NetworkVisualizer({
       }
 
       if (roles.includes('artist')) {
-        content += `<br/><br/><em>Click to search on Music Nerd</em>`;
-        
-        // Add note about right-click for non-primary artists
-        const primaryArtistNode = data.nodes
-          .filter(node => node.type === 'artist' || (node.types && node.types.includes('artist')))
-          .reduce((largest, current) => 
-            !largest || current.size > largest.size ? current : largest, 
-            null as NetworkNode | null
-          );
-        if (d !== primaryArtistNode) {
-          content += `<br/><em>Right-click to view ${d.name}'s network</em>`;
-        }
+        content += `<br/><br/><em>Left-click to expand ${d.name}'s network</em>`;
+        content += `<br/><em>Right-click to search on Music Nerd</em>`;
       }
 
       tooltip.html(content).style("opacity", 1);
