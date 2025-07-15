@@ -149,6 +149,8 @@ Important guidelines:
 - Many professionals have multiple roles (e.g., Jack Antonoff is both producer and songwriter)
 - Include their top 3 collaborating artists for each person
 - Focus on real, verified collaborations from the music industry
+- DO NOT generate fake or placeholder names like "Artist A", "Producer 1", "Songwriter X", etc.
+- If you cannot find real collaborators, return an empty collaborators array
 - Return ONLY the JSON object, no other text`;
 
       const completion = await openai.chat.completions.create({
@@ -334,8 +336,32 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       const collaborators = [];
       const allPeople = new Set<string>();
       
+      // Function to detect fake collaborators
+      const isFakeCollaborator = (name: string): boolean => {
+        const lowerName = name.toLowerCase();
+        const fakePatterns = [
+          'artist a', 'artist b', 'artist c', 'artist d', 'artist e',
+          'producer a', 'producer b', 'producer c', 'producer d', 'producer e',
+          'songwriter a', 'songwriter b', 'songwriter c', 'songwriter d', 'songwriter e',
+          'artist 1', 'artist 2', 'artist 3', 'artist 4', 'artist 5',
+          'producer 1', 'producer 2', 'producer 3', 'producer 4', 'producer 5',
+          'songwriter 1', 'songwriter 2', 'songwriter 3', 'songwriter 4', 'songwriter 5',
+          'unknown', 'anonymous', 'various', 'n/a', 'tbd',
+          'placeholder', 'example', 'sample'
+        ];
+        return fakePatterns.some(pattern => lowerName.includes(pattern)) ||
+               lowerName.match(/^(artist|producer|songwriter)\s+[a-z]$/i) ||
+               lowerName.match(/^[a-z]{1,2}$/i);
+      };
+      
       if (collaborationData.collaborators) {
         for (const person of collaborationData.collaborators) {
+          // Skip fake collaborators
+          if (isFakeCollaborator(person.name)) {
+            console.log(`🚫 [Vercel] Filtering out fake collaborator: "${person.name}"`);
+            continue;
+          }
+          
           allPeople.add(person.name);
           const roles = person.roles || ['producer'];
           for (const role of roles) {
@@ -347,7 +373,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
               });
               // Add branching artists to the batch
               for (const branchingArtist of person.topCollaborators || []) {
-                if (branchingArtist !== correctArtistName) {
+                if (branchingArtist !== correctArtistName && !isFakeCollaborator(branchingArtist)) {
                   allPeople.add(branchingArtist);
                 }
               }
@@ -356,11 +382,17 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         }
       } else if (collaborationData.artists) {
         // Fallback for old format
-        collaborators.push(...collaborationData.artists);
         for (const collaborator of collaborationData.artists) {
+          // Skip fake collaborators
+          if (isFakeCollaborator(collaborator.name)) {
+            console.log(`🚫 [Vercel] Filtering out fake collaborator: "${collaborator.name}"`);
+            continue;
+          }
+          
+          collaborators.push(collaborator);
           allPeople.add(collaborator.name);
           for (const branchingArtist of collaborator.topCollaborators || []) {
-            if (branchingArtist !== correctArtistName) {
+            if (branchingArtist !== correctArtistName && !isFakeCollaborator(branchingArtist)) {
               allPeople.add(branchingArtist);
             }
           }

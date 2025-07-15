@@ -331,7 +331,12 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
               const name = collaborator.name.toLowerCase();
               const fakePatterns = [
                 'john doe', 'jane doe', 'john smith', 'jane smith',
-                'producer x', 'songwriter y', 'artist a', 'artist b',
+                'producer x', 'songwriter y', 'artist a', 'artist b', 'artist c', 'artist d', 'artist e',
+                'producer a', 'producer b', 'producer c', 'producer d', 'producer e',
+                'songwriter a', 'songwriter b', 'songwriter c', 'songwriter d', 'songwriter e',
+                'artist 1', 'artist 2', 'artist 3', 'artist 4', 'artist 5',
+                'producer 1', 'producer 2', 'producer 3', 'producer 4', 'producer 5',
+                'songwriter 1', 'songwriter 2', 'songwriter 3', 'songwriter 4', 'songwriter 5',
                 'unknown', 'anonymous', 'various', 'n/a', 'tbd',
                 'placeholder', 'example', 'sample'
               ];

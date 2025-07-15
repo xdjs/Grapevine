@@ -135,8 +135,10 @@ Required format:
 }
 
 Requirements:
-- Provide exactly 5 producers and 5 songwriters who have actually worked with ${artist.name}
+- Provide real producers and songwriters who have actually worked with ${artist.name}
 - Use only real music industry collaborations
+- DO NOT generate fake or placeholder names like "Artist A", "Producer 1", "Songwriter X", etc.
+- If you cannot find real collaborators, return an empty artists array
 - Return ONLY the JSON object, no other text
 - Ensure all JSON is properly formatted and valid`;
 
@@ -236,8 +238,31 @@ Requirements:
         return;
       }
 
+      // Function to detect fake collaborators
+      const isFakeCollaborator = (name: string): boolean => {
+        const lowerName = name.toLowerCase();
+        const fakePatterns = [
+          'artist a', 'artist b', 'artist c', 'artist d', 'artist e',
+          'producer a', 'producer b', 'producer c', 'producer d', 'producer e',
+          'songwriter a', 'songwriter b', 'songwriter c', 'songwriter d', 'songwriter e',
+          'artist 1', 'artist 2', 'artist 3', 'artist 4', 'artist 5',
+          'producer 1', 'producer 2', 'producer 3', 'producer 4', 'producer 5',
+          'songwriter 1', 'songwriter 2', 'songwriter 3', 'songwriter 4', 'songwriter 5',
+          'unknown', 'anonymous', 'various', 'n/a', 'tbd',
+          'placeholder', 'example', 'sample'
+        ];
+        return fakePatterns.some(pattern => lowerName.includes(pattern)) ||
+               lowerName.match(/^(artist|producer|songwriter)\s+[a-z]$/i) ||
+               lowerName.match(/^[a-z]{1,2}$/i);
+      };
+
       // Process producers and songwriters with multi-role consolidation
       for (const collaborator of collaborationData.artists || []) {
+        // Skip fake collaborators
+        if (isFakeCollaborator(collaborator.name)) {
+          console.log(`🚫 [Vercel] Filtering out fake collaborator: "${collaborator.name}"`);
+          continue;
+        }
         // Check if we already have a node for this person
         let collabNode = nodeMap.get(collaborator.name);
         
@@ -293,7 +318,7 @@ Requirements:
 
         // Add branching artists
         for (const branchingArtist of collaborator.topCollaborators || []) {
-          if (branchingArtist !== artist.name && !nodeMap.has(branchingArtist)) {
+          if (branchingArtist !== artist.name && !nodeMap.has(branchingArtist) && !isFakeCollaborator(branchingArtist)) {
             const branchNode = {
               id: branchingArtist,
               name: branchingArtist,
