@@ -87,6 +87,8 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         const sorted = parsed.sort((a, b) => b.timestamp - a.timestamp);
         // Keep only the last 10 entries
         setSearchHistory(sorted.slice(0, 10));
+      } else {
+        setSearchHistory([]);
       }
     } catch (error) {
       console.error('Error loading search history:', error);
@@ -180,10 +182,17 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     }
   };
 
-  // Load search history on component mount
+  // Load search history on component mount and when dropdown is shown
   useEffect(() => {
     loadSearchHistory();
   }, [loadSearchHistory]);
+
+  // Also reload search history when dropdown is shown to ensure it's up to date
+  useEffect(() => {
+    if (showDropdown && searchQuery.trim().length === 0) {
+      loadSearchHistory();
+    }
+  }, [showDropdown, searchQuery, loadSearchHistory]);
 
   const handleArtistSelect = async (artist: ArtistOption) => {
     setSearchQuery(artist.name);
@@ -392,12 +401,14 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               onKeyPress={handleKeyPress}
               onFocus={() => {
                 setIsSearchFocused(true);
+                // Always reload search history on focus to ensure it's current
+                loadSearchHistory();
                 if (searchQuery.trim().length >= 1 && artistOptions.length === 0) {
                   debouncedFetchOptions(searchQuery.trim());
                 } else if (artistOptions.length > 0) {
                   setShowDropdown(true);
-                } else if (searchQuery.trim().length === 0 && searchHistory.length > 0) {
-                  // Show search history when no query and history exists
+                } else if (searchQuery.trim().length === 0) {
+                  // Show dropdown if we have history or to show it will load
                   setShowDropdown(true);
                 }
               }}
@@ -498,14 +509,14 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                   {!isLoadingOptions && artistOptions.length === 0 && searchQuery.trim().length === 0 && searchHistory.length > 0 && (
                     <>
                       <div className="text-xs text-gray-400 px-2 py-1 border-b border-gray-700 mb-2">
-                        Recent searches
+                        Recent searches ({searchHistory.length})
                       </div>
                       {searchHistory.map((entry, index) => (
                         <Card
                           key={`${entry.artistName}-${entry.timestamp}`}
                           className="mb-2 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4"
                           style={{
-                            borderLeftColor: '#67D1F8'
+                            borderLeftColor: '#FF69B4'
                           }}
                           onClick={() => handleHistoryItemClick(entry)}
                         >
@@ -523,6 +534,16 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                         </Card>
                       ))}
                     </>
+                  )}
+                  
+                  {/* Empty search history state */}
+                  {!isLoadingOptions && artistOptions.length === 0 && searchQuery.trim().length === 0 && searchHistory.length === 0 && (
+                    <div className="py-4 text-center text-xs text-gray-400">
+                      <Clock className="w-4 h-4 mx-auto mb-2 text-gray-500" />
+                      No recent searches yet
+                      <br />
+                      <span className="text-gray-500">Your search history will appear here</span>
+                    </div>
                   )}
                   
                   {!isLoadingOptions && artistOptions.length === 0 && searchQuery.length >= 1 && (
@@ -577,12 +598,14 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 onKeyPress={handleKeyPress}
                 onFocus={() => {
                   setIsSearchFocused(true);
+                  // Always reload search history on focus to ensure it's current
+                  loadSearchHistory();
                   if (searchQuery.trim().length >= 1 && artistOptions.length === 0) {
                     debouncedFetchOptions(searchQuery.trim());
                   } else if (artistOptions.length > 0) {
                     setShowDropdown(true);
-                  } else if (searchQuery.trim().length === 0 && searchHistory.length > 0) {
-                    // Show search history when no query and history exists
+                  } else if (searchQuery.trim().length === 0) {
+                    // Show dropdown if we have history or to show it will load
                     setShowDropdown(true);
                   }
                 }}
@@ -678,21 +701,21 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                       </>
                     )}
                     
-                    {/* Search History - Network View */}
-                    {!isLoadingOptions && artistOptions.length === 0 && searchQuery.trim().length === 0 && searchHistory.length > 0 && (
-                      <>
-                        <div className="text-xs text-gray-400 px-2 py-1 border-b border-gray-700 mb-1">
-                          Recent searches
-                        </div>
+                                         {/* Search History - Network View */}
+                     {!isLoadingOptions && artistOptions.length === 0 && searchQuery.trim().length === 0 && searchHistory.length > 0 && (
+                       <>
+                         <div className="text-xs text-gray-400 px-2 py-1 border-b border-gray-700 mb-1">
+                           Recent searches ({searchHistory.length})
+                         </div>
                         {searchHistory.map((entry, index) => (
-                          <Card
-                            key={`${entry.artistName}-${entry.timestamp}`}
-                            className="mb-1 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4"
-                            style={{
-                              borderLeftColor: '#67D1F8'
-                            }}
-                            onClick={() => handleHistoryItemClick(entry)}
-                          >
+                                                     <Card
+                             key={`${entry.artistName}-${entry.timestamp}`}
+                             className="mb-1 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4"
+                             style={{
+                               borderLeftColor: '#FF69B4'
+                             }}
+                             onClick={() => handleHistoryItemClick(entry)}
+                           >
                             <CardHeader className="pb-1 pt-2 px-3">
                               <div className="flex items-center justify-between">
                                 <CardTitle className="text-xs text-white flex items-center">
@@ -707,13 +730,23 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                           </Card>
                         ))}
                       </>
-                    )}
-                    
-                    {!isLoadingOptions && artistOptions.length === 0 && searchQuery.length >= 1 && (
-                      <div className="py-2 text-center text-xs text-gray-400">
-                        No artists found for "{searchQuery}"
-                      </div>
-                    )}
+                                         )}
+                     
+                     {/* Empty search history state - Network View */}
+                     {!isLoadingOptions && artistOptions.length === 0 && searchQuery.trim().length === 0 && searchHistory.length === 0 && (
+                       <div className="py-2 text-center text-xs text-gray-400">
+                         <Clock className="w-3 h-3 mx-auto mb-1 text-gray-500" />
+                         No recent searches yet
+                         <br />
+                         <span className="text-gray-500">History will appear here</span>
+                       </div>
+                     )}
+                     
+                     {!isLoadingOptions && artistOptions.length === 0 && searchQuery.length >= 1 && (
+                       <div className="py-2 text-center text-xs text-gray-400">
+                         No artists found for "{searchQuery}"
+                       </div>
+                     )}
                   </div>
                 </div>
               )}
