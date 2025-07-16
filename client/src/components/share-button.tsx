@@ -155,18 +155,22 @@ export default function ShareButton() {
       const networkWidth = networkBounds.maxX - networkBounds.minX;
       const networkHeight = networkBounds.maxY - networkBounds.minY;
       
-      // Create square based on the larger network dimension (always length = width)
-      const squareSize = Math.max(networkWidth, networkHeight);
+      // FORCE a perfect square - use the larger dimension for BOTH width and height
+      // Ensure minimum size of 400px for visibility
+      const squareSize = Math.max(400, Math.max(networkWidth, networkHeight));
+      
+      console.log(`🔳 SQUARE DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}, squareSize=${squareSize}`);
       
       // Center the square crop around the network center
       const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
       const networkCenterY = (networkBounds.minY + networkBounds.maxY) / 2;
       
-      // Calculate crop position centered on network
-      const cropX = Math.max(0, Math.min(canvas.width - squareSize, networkCenterX - squareSize / 2));
-      const cropY = Math.max(0, Math.min(canvas.height - squareSize, networkCenterY - squareSize / 2));
+      // Calculate square crop coordinates - FORCE square dimensions
+      const halfSquare = squareSize / 2;
+      const cropX = Math.max(0, Math.min(canvas.width - squareSize, networkCenterX - halfSquare));
+      const cropY = Math.max(0, Math.min(canvas.height - squareSize, networkCenterY - halfSquare));
 
-      // Create a square canvas for the cropped image
+      // Create a PERFECTLY SQUARE canvas
       const watermarkedCanvas = document.createElement('canvas');
       const ctx = watermarkedCanvas.getContext('2d');
       
@@ -174,19 +178,21 @@ export default function ShareButton() {
         throw new Error('Failed to get canvas context');
       }
 
-      // Set canvas to square dimensions
+      // FORCE the canvas to be perfectly square - width MUST equal height
       watermarkedCanvas.width = squareSize;
       watermarkedCanvas.height = squareSize;
+      
+      console.log(`🔳 CANVAS DEBUG: width=${watermarkedCanvas.width}, height=${watermarkedCanvas.height}, isSquare=${watermarkedCanvas.width === watermarkedCanvas.height}`);
 
       // Fill with black background
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, squareSize, squareSize);
 
-      // Draw the cropped screenshot onto the square canvas
+      // Draw EXACTLY a square crop - source and destination are both perfect squares
       ctx.drawImage(
         canvas,
-        cropX, cropY, squareSize, squareSize, // Source rectangle (crop area)
-        0, 0, squareSize, squareSize // Destination rectangle (full canvas)
+        cropX, cropY, squareSize, squareSize, // Source: SQUARE crop from original
+        0, 0, squareSize, squareSize // Destination: SQUARE on new canvas
       );
 
       // Load the Grapevine logo
@@ -230,6 +236,9 @@ export default function ShareButton() {
             
             // Convert to data URL
             const dataUrl = watermarkedCanvas.toDataURL('image/png', 0.9);
+            
+            console.log(`🔳 FINAL DEBUG: Canvas ${watermarkedCanvas.width}x${watermarkedCanvas.height}, DataURL length: ${dataUrl.length}`);
+            
             setIsCapturing(false);
             resolve(dataUrl);
           } catch (error) {
