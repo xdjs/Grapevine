@@ -378,7 +378,7 @@ export default function NetworkVisualizer({
       
       if (!link.collaborationDetails) {
         // Show loading state
-        const content = `<strong>${sourceName} ↔ ${targetName}</strong><br/><em>Loading collaboration details...</em>`;
+        const content = `<strong>${sourceName} ↔ ${targetName}</strong><br/><em>Loading collaboration details...</em><br/><small>Click on this link to fetch data</small>`;
         tooltip.html(content).style("opacity", 1);
         return;
       }
@@ -386,8 +386,8 @@ export default function NetworkVisualizer({
       const details = link.collaborationDetails;
       
       if (!details.hasData) {
-        // Show no data state
-        const content = `<strong>${sourceName} ↔ ${targetName}</strong><br/><em>No collaboration data found</em><br/><small>This link is not clickable</small>`;
+        // Show no data state with more helpful information
+        const content = `<strong>${sourceName} ↔ ${targetName}</strong><br/><em>No specific collaboration data found</em><br/><small>This may indicate limited database coverage or they haven't worked together on recorded music</small>`;
         tooltip.html(content).style("opacity", 1);
         return;
       }
@@ -457,12 +457,14 @@ export default function NetworkVisualizer({
           linkElement
             .attr("stroke", "#67D1F8") // Light blue for links with data
             .style("cursor", "pointer")
+            .style("opacity", 1)
             .attr("stroke-dasharray", null); // Solid line
         } else {
           linkElement
-            .attr("stroke", "#555555") // Gray for links without data
-            .style("cursor", "not-allowed")
-            .attr("stroke-dasharray", "5,5"); // Dashed line to indicate no data
+            .attr("stroke", "#888888") // Keep gray but still interactive
+            .style("cursor", "pointer") // Keep clickable for small artists too
+            .style("opacity", 0.6)
+            .attr("stroke-dasharray", "3,3"); // Subtle dashed line
         }
       } catch (error) {
         console.error(`❌ [Frontend] Error fetching collaboration details:`, error);
@@ -474,11 +476,12 @@ export default function NetworkVisualizer({
           hasData: false
         };
         
-        // Style as no-data link
+        // Style as no-data link but keep interactive
         linkElement
-          .attr("stroke", "#555555")
-          .style("cursor", "not-allowed")
-          .attr("stroke-dasharray", "5,5");
+          .attr("stroke", "#888888")
+          .style("cursor", "pointer") // Keep clickable for all artists
+          .style("opacity", 0.6)
+          .attr("stroke-dasharray", "3,3");
       }
     };
 
@@ -489,8 +492,10 @@ export default function NetworkVisualizer({
       .enter()
       .append("line")
       .attr("class", "link network-link")
+      .attr("stroke", "#888888") // Default gray for all links initially
       .attr("stroke-width", 2)
       .style("cursor", "pointer")
+      .style("opacity", 0.8) // Slightly transparent to indicate interactivity
       .on("mouseenter", async function(event, d) {
         // Highlight the link
         d3.select(this)
@@ -514,15 +519,24 @@ export default function NetworkVisualizer({
         
         hideTooltip();
       })
-      .on("click", function(event, d) {
-        // Only allow clicking if there's collaboration data
+      .on("click", async function(event, d) {
+        console.log(`🔗 [Frontend] Link clicked`);
+        
+        // Fetch collaboration details if not already fetched
+        if (!d.collaborationDetails) {
+          console.log(`🔗 [Frontend] Fetching collaboration details on click...`);
+          await fetchCollaborationDetails(d, d3.select(this));
+        }
+        
+        // Now check if there's collaboration data
         if (d.collaborationDetails?.hasData) {
-          console.log(`🔗 [Frontend] Link clicked with collaboration data`);
-          // Could add additional functionality here like expanding details
+          console.log(`🔗 [Frontend] Link clicked with collaboration data - could add additional functionality here`);
+          // For now, just log - could add modal or expanded view in the future
         } else {
-          console.log(`🔗 [Frontend] Link clicked but no collaboration data available`);
-          event.preventDefault();
-          event.stopPropagation();
+          console.log(`🔗 [Frontend] Link clicked but no collaboration data available after fetching`);
+          // Don't prevent the click - let the user know why there's no interaction
+          showCollaborationTooltip(event, d);
+          setTimeout(() => hideTooltip(), 3000); // Show tooltip for 3 seconds
         }
       });
 

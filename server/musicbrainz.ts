@@ -48,82 +48,92 @@ class MusicBrainzService {
     return response.json();
   }
 
-  async searchArtist(artistName: string): Promise<MusicBrainzArtist | null> {
+  async searchArtist(artistName: string): Promise<any> {
+    await this.rateLimitDelay();
+    
+    console.log(`🔍 [DEBUG] Searching MusicBrainz for artist: "${artistName}"`);
+    
     try {
-      console.log(`🎵 [DEBUG] MusicBrainz searching for artist: "${artistName}"`);
+      // Try exact match first
+      let url = `${this.baseUrl}/artist/?query=artist:"${encodeURIComponent(artistName)}"&fmt=json&limit=10`;
+      let response = await fetch(url);
+      let data = await response.json();
       
-      // Try different search strategies for better results
-      const searchStrategies = [
-        `artist:"${artistName}"`,
-        `artist:${encodeURIComponent(artistName)}`,
-        encodeURIComponent(artistName)
-      ];
+      console.log(`🎯 [DEBUG] Exact search for "${artistName}" returned ${data.artists?.length || 0} results`);
       
-      for (const searchQuery of searchStrategies) {
-        console.log(`🔍 [DEBUG] Trying search query: ${searchQuery}`);
-        const endpoint = `/artist?query=${searchQuery}&limit=10&fmt=json`;
-        const result: MusicBrainzSearchResult = await this.makeRequest(endpoint);
+      // If exact match found with high score, use it
+      if (data.artists && data.artists.length > 0) {
+        const topMatch = data.artists.find((artist: any) => 
+          artist.name.toLowerCase() === artistName.toLowerCase() && artist.score >= 95
+        );
+        if (topMatch) {
+          console.log(`✅ [DEBUG] Found high-confidence exact match for "${artistName}": ${topMatch.name} (score: ${topMatch.score})`);
+          return topMatch;
+        }
+      }
+      
+      // Try fuzzy search for potentially similar names or aliases
+      url = `${this.baseUrl}/artist/?query=${encodeURIComponent(artistName)}&fmt=json&limit=15`;
+      response = await fetch(url);
+      data = await response.json();
+      
+      console.log(`🎯 [DEBUG] Fuzzy search for "${artistName}" returned ${data.artists?.length || 0} results`);
+      
+      if (data.artists && data.artists.length > 0) {
+        // Look for exact name match first
+        let bestMatch = data.artists.find((artist: any) => 
+          artist.name.toLowerCase() === artistName.toLowerCase()
+        );
         
-        if (result.artists && result.artists.length > 0) {
-          console.log(`🔍 [DEBUG] MusicBrainz found ${result.artists.length} potential matches for "${artistName}"`);
-          
-          // Log all results for debugging
-          result.artists.forEach((artist, index) => {
-            console.log(`🔍 [DEBUG] Result ${index + 1}: "${artist.name}" (${artist.id}) ${artist.disambiguation ? `[${artist.disambiguation}]` : ''}`);
-          });
-          
-          // Look for exact name match first (case-sensitive)
-          let exactMatch = result.artists.find(artist => artist.name === artistName);
-          if (exactMatch) {
-            console.log(`✅ [DEBUG] Found exact match: "${exactMatch.name}" (ID: ${exactMatch.id})`);
-            if (exactMatch.disambiguation) {
-              console.log(`📝 [DEBUG] Artist disambiguation: "${exactMatch.disambiguation}"`);
-            }
-            return exactMatch;
-          }
-          
-          // If no exact match, try case-insensitive match
-          exactMatch = result.artists.find(artist => artist.name.toLowerCase() === artistName.toLowerCase());
-          if (exactMatch) {
-            console.log(`✅ [DEBUG] Found case-insensitive match: "${artistName}" → "${exactMatch.name}" (ID: ${exactMatch.id})`);
-            if (exactMatch.disambiguation) {
-              console.log(`📝 [DEBUG] Artist disambiguation: "${exactMatch.disambiguation}"`);
-            }
-            return exactMatch;
-          }
-          
-          // Check for the BLACKPINK member LISA specifically
-          if (artistName === "LISA") {
-            const blackpinkLisa = result.artists.find(artist => 
-              artist.name === "LISA" || 
-              (artist.disambiguation && artist.disambiguation.toLowerCase().includes('blackpink'))
+        if (bestMatch) {
+          console.log(`✅ [DEBUG] Found exact name match for "${artistName}": ${bestMatch.name}`);
+          return bestMatch;
+        }
+        
+        // For smaller artists, try alias matching and partial matches
+        for (const artist of data.artists) {
+          // Check aliases for smaller/independent artists who might have stage names
+          if (artist.aliases) {
+            const aliasMatch = artist.aliases.find((alias: any) => 
+              alias.name.toLowerCase() === artistName.toLowerCase()
             );
-            if (blackpinkLisa) {
-              console.log(`✅ [DEBUG] Found BLACKPINK LISA: "${blackpinkLisa.name}" (ID: ${blackpinkLisa.id})`);
-              return blackpinkLisa;
+            if (aliasMatch) {
+              console.log(`✅ [DEBUG] Found alias match for "${artistName}": ${artist.name} (alias: ${aliasMatch.name})`);
+              return artist;
             }
           }
           
-          // Check for Kanye West / Ye specifically
-          if (artistName === "Kanye West") {
-            const ye = result.artists.find(artist => 
-              artist.name === "Ye" || 
-              (artist.disambiguation && artist.disambiguation.toLowerCase().includes('formerly kanye west'))
-            );
-            if (ye) {
-              console.log(`✅ [DEBUG] Found Ye (formerly Kanye West): "${ye.name}" (ID: ${ye.id})`);
-              return ye;
-            }
+          // For artists with scores above 85, consider as potential matches
+          if (artist.score >= 85) {
+            console.log(`✅ [DEBUG] Found high-score match for "${artistName}": ${artist.name} (score: ${artist.score})`);
+            return artist;
           }
         }
         
-        await this.rateLimitDelay();
+        // If still no match and this might be a smaller artist, try the first reasonable result
+        const firstResult = data.artists[0];
+        if (firstResult.score >= 70) {
+          console.log(`⚠️ [DEBUG] Using best available match for "${artistName}": ${firstResult.name} (score: ${firstResult.score})`);
+          return firstResult;
+        }
       }
       
-      console.log(`❌ [DEBUG] MusicBrainz found no artists matching "${artistName}" with any search strategy`);
+      // Try alternative search strategies for smaller artists
+      // Search by sortname (handles cases like "Last, First" format)
+      url = `${this.baseUrl}/artist/?query=sortname:"${encodeURIComponent(artistName)}"&fmt=json&limit=10`;
+      response = await fetch(url);
+      data = await response.json();
+      
+      if (data.artists && data.artists.length > 0) {
+        console.log(`✅ [DEBUG] Found sortname match for "${artistName}": ${data.artists[0].name}`);
+        return data.artists[0];
+      }
+      
+      console.log(`❌ [DEBUG] No suitable match found for "${artistName}"`);
       return null;
+      
     } catch (error) {
-      console.error(`⚠️ [DEBUG] MusicBrainz search error for "${artistName}":`, error);
+      console.error(`❌ [DEBUG] Error searching for artist "${artistName}":`, error);
       return null;
     }
   }
@@ -139,9 +149,9 @@ class MusicBrainzService {
     }
   }
 
-  async getArtistRecordings(artistId: string): Promise<any[]> {
+  async getArtistRecordings(artistId: string, limit: number = 50): Promise<any[]> {
     try {
-      const endpoint = `/recording?artist=${artistId}&inc=artist-credits+artist-rels+work-rels&fmt=json&limit=50`;
+      const endpoint = `/recording?artist=${artistId}&inc=artist-credits+artist-rels+work-rels&fmt=json&limit=${limit}`;
       const result = await this.makeRequest(endpoint);
       return result.recordings || [];
     } catch (error) {
@@ -160,9 +170,9 @@ class MusicBrainzService {
     }
   }
 
-  async getArtistReleases(artistId: string): Promise<any[]> {
+  async getArtistReleases(artistId: string, limit: number = 25): Promise<any[]> {
     try {
-      const endpoint = `/release?artist=${artistId}&inc=artist-credits&fmt=json&limit=25`;
+      const endpoint = `/release?artist=${artistId}&inc=artist-credits&fmt=json&limit=${limit}`;
       const result = await this.makeRequest(endpoint);
       return result.releases || [];
     } catch (error) {
@@ -456,7 +466,7 @@ class MusicBrainzService {
     try {
       console.log(`🤝 [DEBUG] Fetching collaboration details between "${artist1Name}" and "${artist2Name}"`);
       
-      // Search for both artists
+      // Search for both artists with enhanced search
       const [artist1, artist2] = await Promise.all([
         this.searchArtist(artist1Name),
         this.searchArtist(artist2Name)
@@ -497,100 +507,181 @@ class MusicBrainzService {
         }
       }
 
-      // Get recordings for artist1 to find collaborations
-      await this.rateLimitDelay();
-      const recordings1 = await this.getArtistRecordings(artist1.id);
-      console.log(`🎵 [DEBUG] Found ${recordings1.length} recordings for ${artist1Name}`);
+      // Enhanced recording search - more comprehensive for smaller artists
+      console.log(`🎵 [DEBUG] Searching recordings for both artists...`);
+      
+      // Get recordings for both artists
+      const [recordings1, recordings2] = await Promise.all([
+        this.getArtistRecordings(artist1.id, 30), // Increased limit for smaller artists
+        this.getArtistRecordings(artist2.id, 30)
+      ]);
+      
+      console.log(`🎵 [DEBUG] Found ${recordings1.length} recordings for ${artist1Name}, ${recordings2.length} for ${artist2Name}`);
 
-      // Process recordings to find collaborations
-      for (const recording of recordings1.slice(0, 20)) { // Limit to prevent timeout
+      // Cross-reference recordings between both artists
+      const allRecordings = [...recordings1, ...recordings2];
+      
+      for (const recording of allRecordings) {
         if (processedRecordings.has(recording.id)) continue;
         processedRecordings.add(recording.id);
 
         let foundCollaboration = false;
+        let collaboratorFound = '';
 
-        // Check artist credits
+        // Enhanced artist credit checking
         if (recording['artist-credit']) {
-          for (const credit of recording['artist-credit']) {
-            if (credit.artist?.name.toLowerCase().includes(artist2Name.toLowerCase()) ||
-                artist2Name.toLowerCase().includes(credit.artist?.name.toLowerCase() || '')) {
-              songs.push(recording.title);
-              foundCollaboration = true;
-              console.log(`🎵 [DEBUG] Found song collaboration: "${recording.title}"`);
-              
-              // Determine collaboration type from credits
-              const joinPhrase = credit.joinphrase || '';
-              if (joinPhrase.toLowerCase().includes('produced')) {
+          const creditNames = recording['artist-credit']
+            .map((credit: any) => credit.artist?.name.toLowerCase() || '')
+            .filter((name: string) => name.length > 0);
+          
+          const hasArtist1 = creditNames.some((name: string) => 
+            name.includes(artist1Name.toLowerCase()) || artist1Name.toLowerCase().includes(name)
+          );
+          const hasArtist2 = creditNames.some((name: string) => 
+            name.includes(artist2Name.toLowerCase()) || artist2Name.toLowerCase().includes(name)
+          );
+          
+          if (hasArtist1 && hasArtist2) {
+            songs.push(recording.title);
+            foundCollaboration = true;
+            collaboratorFound = hasArtist1 ? artist2Name : artist1Name;
+            console.log(`🎵 [DEBUG] Found song collaboration: "${recording.title}"`);
+            
+            // Enhanced collaboration type detection
+            for (const credit of recording['artist-credit']) {
+              const joinPhrase = (credit.joinphrase || '').toLowerCase();
+              if (joinPhrase.includes('produced') || joinPhrase.includes('producer')) {
                 collaborationType = 'production';
-                details.push(`${artist2Name} produced "${recording.title}"`);
-              } else if (joinPhrase.toLowerCase().includes('wrote') || joinPhrase.toLowerCase().includes('composed')) {
+                details.push(`${collaboratorFound} produced "${recording.title}"`);
+              } else if (joinPhrase.includes('wrote') || joinPhrase.includes('composed') || joinPhrase.includes('songwriter')) {
                 collaborationType = 'songwriting';
-                details.push(`${artist2Name} co-wrote "${recording.title}"`);
+                details.push(`${collaboratorFound} co-wrote "${recording.title}"`);
+              } else if (joinPhrase.includes('feat') || joinPhrase.includes('featuring')) {
+                collaborationType = 'performance';
+                details.push(`${collaboratorFound} featured on "${recording.title}"`);
               } else {
                 collaborationType = 'performance';
-                details.push(`${artist2Name} featured on "${recording.title}"`);
+                details.push(`${collaboratorFound} collaborated on "${recording.title}"`);
               }
-              break;
             }
           }
         }
 
-        // Check recording relations (producer, engineer, etc.)
+        // Enhanced recording relations checking (crucial for smaller artists)
         if (!foundCollaboration && recording.relations) {
           for (const relation of recording.relations) {
-            if (relation.artist?.name.toLowerCase().includes(artist2Name.toLowerCase()) ||
-                artist2Name.toLowerCase().includes(relation.artist?.name.toLowerCase() || '')) {
-              songs.push(recording.title);
-              foundCollaboration = true;
-              console.log(`🎵 [DEBUG] Found recording relation: "${recording.title}" - ${relation.type}`);
+            if (relation.artist?.name) {
+              const relationArtistName = relation.artist.name.toLowerCase();
+              const isArtist1Related = relationArtistName.includes(artist1Name.toLowerCase()) || 
+                                      artist1Name.toLowerCase().includes(relationArtistName);
+              const isArtist2Related = relationArtistName.includes(artist2Name.toLowerCase()) || 
+                                      artist2Name.toLowerCase().includes(relationArtistName);
               
-              const relationType = this.mapRelationType(relation.type);
-              if (relationType === 'producer') {
-                collaborationType = 'production';
-                details.push(`${artist2Name} ${relation.type} on "${recording.title}"`);
-              } else if (relationType === 'songwriter') {
-                collaborationType = 'songwriting';
-                details.push(`${artist2Name} ${relation.type} on "${recording.title}"`);
+              if ((isArtist1Related || isArtist2Related) && 
+                  relationArtistName !== artist1Name.toLowerCase() && 
+                  relationArtistName !== artist2Name.toLowerCase()) {
+                songs.push(recording.title);
+                foundCollaboration = true;
+                collaboratorFound = isArtist1Related ? artist2Name : artist1Name;
+                console.log(`🎵 [DEBUG] Found recording relation: "${recording.title}" - ${relation.type}`);
+                
+                const relationType = this.mapRelationType(relation.type);
+                if (relationType === 'producer') {
+                  collaborationType = 'production';
+                  details.push(`${collaboratorFound} ${relation.type} on "${recording.title}"`);
+                } else if (relationType === 'songwriter') {
+                  collaborationType = 'songwriting';
+                  details.push(`${collaboratorFound} ${relation.type} on "${recording.title}"`);
+                } else {
+                  collaborationType = relation.type || 'collaboration';
+                  details.push(`${collaboratorFound} worked as ${relation.type} on "${recording.title}"`);
+                }
+                break;
               }
-              break;
             }
           }
         }
       }
 
-      // Get releases (albums) for artist1 to find album collaborations
-      await this.rateLimitDelay();
-      const releases1 = await this.getArtistReleases(artist1.id);
-      console.log(`💿 [DEBUG] Found ${releases1.length} releases for ${artist1Name}`);
-
-      for (const release of releases1.slice(0, 10)) { // Limit to prevent timeout
-        if (processedReleases.has(release.id)) continue;
-        processedReleases.add(release.id);
-
-        // Check release artist credits
-        if (release['artist-credit']) {
-          for (const credit of release['artist-credit']) {
-            if (credit.artist?.name.toLowerCase().includes(artist2Name.toLowerCase()) ||
-                artist2Name.toLowerCase().includes(credit.artist?.name.toLowerCase() || '')) {
+      // Enhanced release search for albums - especially important for smaller artists
+      console.log(`💿 [DEBUG] Searching releases for album collaborations...`);
+      
+      try {
+        const [releases1, releases2] = await Promise.all([
+          this.getArtistReleases(artist1.id, 20), // Increased limit
+          this.getArtistReleases(artist2.id, 20)
+        ]);
+        
+        const allReleases = [...(releases1 || []), ...(releases2 || [])];
+        
+        for (const release of allReleases) {
+          if (processedReleases.has(release.id)) continue;
+          processedReleases.add(release.id);
+          
+          // Check if both artists are credited on the same release
+          if (release['artist-credit']) {
+            const creditNames = release['artist-credit']
+              .map((credit: any) => credit.artist?.name.toLowerCase() || '')
+              .filter((name: string) => name.length > 0);
+            
+            const hasArtist1 = creditNames.some((name: string) => 
+              name.includes(artist1Name.toLowerCase()) || artist1Name.toLowerCase().includes(name)
+            );
+            const hasArtist2 = creditNames.some((name: string) => 
+              name.includes(artist2Name.toLowerCase()) || artist2Name.toLowerCase().includes(name)
+            );
+            
+            if (hasArtist1 && hasArtist2) {
               albums.push(release.title);
               console.log(`💿 [DEBUG] Found album collaboration: "${release.title}"`);
               details.push(`Collaborated on album "${release.title}"`);
-              break;
+            }
+          }
+        }
+      } catch (releaseError) {
+        console.log(`⚠️ [DEBUG] Could not fetch releases for detailed search:`, releaseError);
+      }
+
+      // For smaller artists, try alternative search approaches
+      if (songs.length === 0 && albums.length === 0 && details.length <= 1) {
+        console.log(`🔍 [DEBUG] Limited results found, trying alternative approaches for smaller artists...`);
+        
+        // Search for works (compositions) that might connect the artists
+        if (detailedArtist1?.relations) {
+          for (const relation of detailedArtist1.relations) {
+            if (relation["target-type"] === "work" && relation.work && 
+                ['composer', 'lyricist', 'writer', 'arranger'].includes(relation.type?.toLowerCase() || '')) {
+              
+              try {
+                const workDetails = await this.getWorkDetails(relation.work.id);
+                if (workDetails?.relations) {
+                  for (const workRelation of workDetails.relations) {
+                    if (workRelation.artist?.name.toLowerCase().includes(artist2Name.toLowerCase())) {
+                      console.log(`🎼 [DEBUG] Found work collaboration: "${relation.work.title}"`);
+                      details.push(`Co-wrote work "${relation.work.title}"`);
+                      collaborationType = 'songwriting';
+                    }
+                  }
+                }
+              } catch (workError) {
+                console.log(`⚠️ [DEBUG] Could not fetch work details:`, workError);
+              }
             }
           }
         }
       }
 
-      console.log(`✅ [DEBUG] Collaboration details found: ${songs.length} songs, ${albums.length} albums`);
+      console.log(`✅ [DEBUG] Collaboration search complete: ${songs.length} songs, ${albums.length} albums, ${details.length} details`);
+
       return {
         songs: Array.from(new Set(songs)), // Remove duplicates
-        albums: Array.from(new Set(albums)), // Remove duplicates
+        albums: Array.from(new Set(albums)),
         collaborationType,
-        details: Array.from(new Set(details)) // Remove duplicates
+        details: Array.from(new Set(details))
       };
 
     } catch (error) {
-      console.error(`❌ [DEBUG] Error fetching collaboration details between ${artist1Name} and ${artist2Name}:`, error);
+      console.error(`❌ [DEBUG] Error fetching collaboration details:`, error);
       return { songs: [], albums: [], collaborationType: 'unknown', details: [] };
     }
   }

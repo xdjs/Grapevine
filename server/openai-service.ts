@@ -47,6 +47,15 @@ class OpenAIService {
 
       const prompt = `What did ${artist1Name} and ${artist2Name} collaborate on? Cite the exact song or project/album, and how they helped work on it.
 
+Search comprehensively for collaborations including:
+- Major label releases and independent/underground projects  
+- Singles, albums, EPs, mixtapes, and compilation appearances
+- Producer-songwriter relationships across all career phases
+- Cross-genre collaborations and experimental projects
+- Earlier career work before mainstream success
+- Regional/local music scene collaborations
+- Remix work, features, and uncredited contributions
+
 Return a JSON object with the following structure:
 {
   "songs": ["Song Title 1", "Song Title 2"],
@@ -57,18 +66,18 @@ Return a JSON object with the following structure:
 
 Be specific about:
 - Exact song titles they worked on together
-- Specific albums or projects
+- Specific albums or projects (include independent releases)
 - How each person contributed to the collaboration
-- What role each played (producer, songwriter, featured artist, etc.)
+- What role each played (producer, songwriter, featured artist, engineer, etc.)
 
-Only include verified, real collaborations with specific song/album names. If no collaborations exist, return empty arrays and "unknown" for collaborationType.`;
+Include ALL authentic collaborations with specific song/album names when available. For smaller, independent, or emerging artists, include any known professional working relationships, studio sessions, or creative partnerships, even if less documented in mainstream sources. If no collaborations exist, return empty arrays and "unknown" for collaborationType.`;
 
       const response = await this.openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
             role: "system",
-            content: "You are a music industry database expert. Provide accurate, specific information about real musical collaborations between artists. Only include verified collaborations with actual song/album titles."
+            content: "You are a comprehensive music industry database expert with knowledge of mainstream, independent, and underground music scenes. Provide accurate, specific information about real musical collaborations between artists of all sizes and career stages. Include collaborations from major labels, independent labels, self-releases, and regional music scenes. Only include verified collaborations with actual song/album titles."
           },
           {
             role: "user",
@@ -108,9 +117,22 @@ Only include verified, real collaborations with specific song/album names. If no
     console.log(`🤖 [DEBUG] Querying OpenAI for collaborations with "${artistName}"`);
 
     try {
-      const prompt = `If ${artistName} is a real artist with known music industry collaborations, provide a comprehensive list of music industry professionals who have collaborated with them. Include people who work as producers, songwriters, or both.
+      const prompt = `Provide a comprehensive list of music industry professionals who have collaborated with ${artistName}. Include people who work as producers, songwriters, or both.
 
-IMPORTANT: If ${artistName} is not a well-known artist or you have no authentic collaboration data for them, return an empty collaborators array. Do NOT create fake or placeholder collaborators.
+Search across ALL career phases and music contexts:
+- Major label and independent releases
+- Early career/developmental work before mainstream success
+- Regional and local music scene collaborations  
+- Cross-genre experiments and side projects
+- Producer-songwriter relationships in various capacities
+- Studio musicians and session work
+- Remix collaborations and alternative versions
+- Live performance collaborators
+- Self-released or underground projects
+
+IMPORTANT: Include both well-established industry figures AND smaller/independent collaborators who have worked with ${artistName}. Do NOT limit results to only mainstream collaborators.
+
+If ${artistName} has limited mainstream recognition but has authentic music industry work, still provide any verified collaborators from their actual musical output.
 
 Please respond with JSON in this exact format:
 {
@@ -124,19 +146,21 @@ Please respond with JSON in this exact format:
 }
 
 Guidelines:
-- Only include real, verified music industry professionals who have actually worked with ${artistName}
-- If you don't have authentic data, return: {"collaborators": []}
+- Include real, verified music industry professionals who have actually worked with ${artistName}
+- For smaller/independent artists, include collaborators even if documentation is limited
+- If truly no authentic data exists, return: {"collaborators": []}
 - For each real person, list ALL their roles from: ["producer", "songwriter", "artist"]
-- Include their top 3 real collaborating artists
+- Include their top 3 real collaborating artists (can include both mainstream and independent artists)
 - Never use generic names like "John Doe", "Producer X", or placeholder data
-- Maximum 10 real collaborators if they exist`;
+- Maximum 15 real collaborators if they exist
+- Prioritize quality and authenticity over quantity`;
 
       const response = await this.openai!.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
             role: "system",
-            content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations. Only include verified, authentic collaborations from the music industry."
+            content: "You are a comprehensive music industry database expert with extensive knowledge of mainstream, independent, underground, and regional music scenes worldwide. Provide accurate information about real producer and songwriter collaborations across all levels of the music industry. Include verified, authentic collaborations from major labels, independent labels, self-releases, and local music scenes. Focus on real working relationships regardless of artist size or mainstream recognition."
           },
           {
             role: "user",

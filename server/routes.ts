@@ -154,44 +154,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`🤝 [Server] Fetching collaboration details between "${artist1Name}" and "${artist2Name}"`);
       
-      // Try MusicBrainz first
-      let collaborationDetails = await musicBrainzService.getCollaborationDetails(artist1Name, artist2Name);
+      let collaborationDetails = null;
+      let dataSource = 'none';
       
-      // If MusicBrainz didn't find much, try OpenAI as fallback
-      if (collaborationDetails.songs.length === 0 && collaborationDetails.albums.length === 0 && 
-          collaborationDetails.details.length === 0 && openAIService.isServiceAvailable()) {
-        console.log(`🔄 [Server] MusicBrainz found no collaboration details, trying OpenAI fallback...`);
-        collaborationDetails = await openAIService.getCollaborationDetails(artist1Name, artist2Name);
+      // Strategy 1: Try MusicBrainz first (most reliable for documented collaborations)
+      try {
+        console.log(`🎵 [Server] Trying MusicBrainz for "${artist1Name}" and "${artist2Name}"`);
+        collaborationDetails = await musicBrainzService.getCollaborationDetails(artist1Name, artist2Name);
+        
+        if (collaborationDetails.songs.length > 0 || collaborationDetails.albums.length > 0 || 
+            collaborationDetails.details.length > 0) {
+          dataSource = 'musicbrainz';
+          console.log(`✅ [Server] MusicBrainz found data: ${collaborationDetails.songs.length} songs, ${collaborationDetails.albums.length} albums`);
+        }
+      } catch (musicbrainzError) {
+        console.log(`⚠️ [Server] MusicBrainz error:`, musicbrainzError);
+        collaborationDetails = { songs: [], albums: [], collaborationType: 'unknown', details: [] };
       }
       
-      // If still no data found, return empty but valid response
-      if (collaborationDetails.songs.length === 0 && collaborationDetails.albums.length === 0 && 
-          collaborationDetails.details.length === 0) {
-        console.log(`❌ [Server] No collaboration data found between "${artist1Name}" and "${artist2Name}"`);
+      // Strategy 2: If MusicBrainz found limited/no data, try OpenAI fallback
+      if ((collaborationDetails.songs.length === 0 && collaborationDetails.albums.length === 0 && 
+           collaborationDetails.details.length === 0) && openAIService.isServiceAvailable()) {
+        
+        console.log(`🔄 [Server] MusicBrainz found no collaboration details, trying OpenAI fallback...`);
+        
+        try {
+          const openAIDetails = await openAIService.getCollaborationDetails(artist1Name, artist2Name);
+          
+          if (openAIDetails.songs.length > 0 || openAIDetails.albums.length > 0 || 
+              openAIDetails.details.length > 0) {
+            collaborationDetails = openAIDetails;
+            dataSource = 'openai';
+            console.log(`✅ [Server] OpenAI found data: ${openAIDetails.songs.length} songs, ${openAIDetails.albums.length} albums`);
+          }
+        } catch (openaiError) {
+          console.log(`⚠️ [Server] OpenAI error:`, openaiError);
+        }
+      }
+      
+      // Strategy 3: Try name variations for smaller artists if still no data
+      if ((collaborationDetails.songs.length === 0 && collaborationDetails.albums.length === 0 && 
+           collaborationDetails.details.length === 0)) {
+        
+        console.log(`🔍 [Server] Trying name variations for smaller artists...`);
+        
+        // Generate name variations for both artists
+        const generateVariations = (name: string): string[] => {
+          const variations = [name];
+          const lower = name.toLowerCase();
+          
+          // Remove common prefixes
+          if (lower.startsWith('the ')) variations.push(name.substring(4));
+          if (lower.startsWith('dj ')) variations.push(name.substring(3));
+          if (lower.startsWith('lil ')) variations.push(name.substring(4));
+          
+          // Handle ampersand variations
+          if (name.includes('&')) {
+            variations.push(name.replace('&', 'and'));
+          }
+          if (name.includes(' and ')) {
+            variations.push(name.replace(' and ', ' & '));
+          }
+          
+          return variations;
+        };
+        
+        const artist1Variations = generateVariations(artist1Name);
+        const artist2Variations = generateVariations(artist2Name);
+        
+        // Try combinations of variations
+        for (const var1 of artist1Variations.slice(0, 2)) {
+          for (const var2 of artist2Variations.slice(0, 2)) {
+            if (var1 === artist1Name && var2 === artist2Name) continue; // Skip original combination
+            
+            try {
+              console.log(`🔍 [Server] Trying variation: "${var1}" and "${var2}"`);
+              
+              // Try MusicBrainz with variations
+              const variationDetails = await musicBrainzService.getCollaborationDetails(var1, var2);
+              if (variationDetails.songs.length > 0 || variationDetails.albums.length > 0 || 
+                  variationDetails.details.length > 0) {
+                collaborationDetails = variationDetails;
+                dataSource = 'musicbrainz-variation';
+                console.log(`✅ [Server] Found data with variations: ${variationDetails.songs.length} songs, ${variationDetails.albums.length} albums`);
+                break;
+              }
+              
+              // Try OpenAI with variations if available
+              if (openAIService.isServiceAvailable()) {
+                const openAIVariationDetails = await openAIService.getCollaborationDetails(var1, var2);
+                if (openAIVariationDetails.songs.length > 0 || openAIVariationDetails.albums.length > 0 || 
+                    openAIVariationDetails.details.length > 0) {
+                  collaborationDetails = openAIVariationDetails;
+                  dataSource = 'openai-variation';
+                  console.log(`✅ [Server] Found data with OpenAI variations: ${openAIVariationDetails.songs.length} songs, ${openAIVariationDetails.albums.length} albums`);
+                  break;
+                }
+              }
+            } catch (variationError) {
+              console.log(`⚠️ [Server] Variation "${var1}" and "${var2}" failed:`, variationError);
+            }
+          }
+          if (collaborationDetails.songs.length > 0 || collaborationDetails.albums.length > 0 || 
+              collaborationDetails.details.length > 0) break;
+        }
+      }
+      
+      // Final result processing
+      const hasData = collaborationDetails.songs.length > 0 || collaborationDetails.albums.length > 0 || 
+                      collaborationDetails.details.length > 0;
+      
+      if (!hasData) {
+        console.log(`❌ [Server] No collaboration data found between "${artist1Name}" and "${artist2Name}" with any strategy`);
         return res.json({
           songs: [],
           albums: [],
           collaborationType: 'unknown',
           details: [],
-          hasData: false
+          hasData: false,
+          dataSource: 'none'
         });
       }
       
-      console.log(`✅ [Server] Found collaboration data: ${collaborationDetails.songs.length} songs, ${collaborationDetails.albums.length} albums`);
+      console.log(`✅ [Server] Found collaboration data via ${dataSource}: ${collaborationDetails.songs.length} songs, ${collaborationDetails.albums.length} albums`);
       res.json({
         ...collaborationDetails,
-        hasData: true
+        hasData: true,
+        dataSource
       });
       
     } catch (error) {
-      console.error("Error fetching collaboration details:", error);
+      console.error(`❌ [Server] Error fetching collaboration details:`, error);
       res.status(500).json({ 
-        message: "Internal server error",
-        songs: [],
-        albums: [],
-        collaborationType: 'unknown',
-        details: [],
-        hasData: false
+        error: 'Internal server error', 
+        songs: [], 
+        albums: [], 
+        collaborationType: 'unknown', 
+        details: [], 
+        hasData: false,
+        dataSource: 'error'
       });
     }
   });

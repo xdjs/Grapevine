@@ -241,43 +241,160 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
   }
 
   private async detectMainArtistRoles(artistName: string): Promise<RoleType[]> {
-    if (!openAIService.isServiceAvailable()) {
-      return ['artist'];
-    }
+    const roles: RoleType[] = [];
     
+    // Get enhanced collaboration data from OpenAI with alternative names
+    if (openAIService.isServiceAvailable()) {
       try {
-        const mainArtistRolePrompt = `What roles does ${artistName} have in the music industry? Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. Return ONLY the JSON array, no other text.`;
+        // Try multiple name variations for smaller artists
+        const nameVariations = this.generateNameVariations(artistName);
+        console.log(`🔍 [DEBUG] Trying ${nameVariations.length} name variations for "${artistName}":`, nameVariations);
         
-        const OpenAI = await import('openai');
-        const openai = new OpenAI.default({
-          apiKey: process.env.OPENAI_API_KEY,
-        });
-
-        const roleCompletion = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [{ role: "user", content: mainArtistRolePrompt }],
-          temperature: 0.1,
-          max_tokens: 100,
-        });
-
-        const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
-        if (roleContent) {
+        let bestResult = null;
+        let bestCollaboratorCount = 0;
+        
+        for (const nameVariation of nameVariations) {
           try {
-            const detectedRoles = JSON.parse(roleContent);
-          const validRoles = safeParseRoles(detectedRoles);
-              if (validRoles.length > 0) {
-            console.log(`✅ [DEBUG] Detected main artist roles for "${artistName}":`, validRoles);
-            return validRoles;
+            const openAIData = await openAIService.getArtistCollaborations(nameVariation);
+            if (openAIData.artists.length > bestCollaboratorCount) {
+              bestResult = openAIData;
+              bestCollaboratorCount = openAIData.artists.length;
+              console.log(`✅ [DEBUG] Better result found for "${nameVariation}": ${openAIData.artists.length} collaborators`);
             }
-          } catch (parseError) {
-            console.log(`⚠️ [DEBUG] Could not parse main artist role detection for "${artistName}", using default`);
+          } catch (variationError) {
+            console.log(`⚠️ [DEBUG] No data for variation "${nameVariation}"`);
+          }
+        }
+        
+        if (bestResult) {
+          console.log(`🎭 [DEBUG] Using best result with ${bestResult.artists.length} collaborators`);
+          
+          // Check for songwriter roles
+          const songwriterCollaborators = bestResult.artists.filter(c => c.type === 'songwriter');
+          if (songwriterCollaborators.length > 0) {
+            roles.push('songwriter');
+            console.log(`✍️ [DEBUG] Detected "${artistName}" as songwriter (${songwriterCollaborators.length} songwriter collaborations)`);
+          }
+          
+          // Check for producer roles
+          const producerCollaborators = bestResult.artists.filter(c => c.type === 'producer');
+          if (producerCollaborators.length > 0) {
+            roles.push('producer');
+            console.log(`🎛️ [DEBUG] Detected "${artistName}" as producer (${producerCollaborators.length} producer collaborations)`);
           }
         }
       } catch (error) {
-        console.log(`⚠️ [DEBUG] Main artist role detection failed for "${artistName}", using default`);
+        console.log(`⚠️ [DEBUG] Could not detect roles for "${artistName}" via OpenAI:`, error);
       }
+    }
     
-    return ['artist'];
+    // Try MusicBrainz with name variations
+    try {
+      const nameVariations = this.generateNameVariations(artistName);
+      for (const nameVariation of nameVariations) {
+        const musicBrainzData = await musicBrainzService.getArtistCollaborations(nameVariation);
+        if (musicBrainzData.artists.length > 0) {
+          console.log(`🎵 [DEBUG] Found MusicBrainz data for "${nameVariation}": ${musicBrainzData.artists.length} collaborators`);
+          
+          // Check relationship types to infer roles
+          for (const collaborator of musicBrainzData.artists) {
+            if (collaborator.relation && collaborator.relation.toLowerCase().includes('produc')) {
+              if (!roles.includes('producer')) {
+                roles.push('producer');
+                console.log(`🎛️ [DEBUG] Detected "${artistName}" as producer from MusicBrainz relations`);
+              }
+            }
+            if (collaborator.relation && (collaborator.relation.toLowerCase().includes('writ') || 
+                                        collaborator.relation.toLowerCase().includes('compos'))) {
+              if (!roles.includes('songwriter')) {
+                roles.push('songwriter');
+                console.log(`✍️ [DEBUG] Detected "${artistName}" as songwriter from MusicBrainz relations`);
+              }
+            }
+          }
+          break; // Use first successful variation
+        }
+      }
+    } catch (error) {
+      console.log(`⚠️ [DEBUG] Could not detect roles for "${artistName}" via MusicBrainz:`, error);
+    }
+    
+    // Default to 'artist' if no specific roles detected
+    if (roles.length === 0) {
+      roles.push('artist');
+      console.log(`🎭 [DEBUG] No specific roles detected for "${artistName}", defaulting to 'artist'`);
+    }
+    
+    return roles;
+  }
+
+  private generateNameVariations(artistName: string): string[] {
+    const variations = [artistName]; // Start with original name
+    const nameLower = artistName.toLowerCase();
+    
+    // Handle common variations for smaller/independent artists
+    
+    // Remove common prefixes/suffixes
+    const prefixesToRemove = ['the ', 'dj ', 'mc ', 'lil ', 'young ', 'big ', 'old ', '$'];
+    const suffixesToRemove = [' band', ' group', ' collective', ' crew', ' productions', ' music'];
+    
+    for (const prefix of prefixesToRemove) {
+      if (nameLower.startsWith(prefix)) {
+        variations.push(artistName.substring(prefix.length));
+      }
+    }
+    
+    for (const suffix of suffixesToRemove) {
+      if (nameLower.endsWith(suffix)) {
+        variations.push(artistName.substring(0, artistName.length - suffix.length));
+      }
+    }
+    
+    // Handle ampersand variations
+    if (artistName.includes('&')) {
+      variations.push(artistName.replace('&', 'and'));
+      variations.push(artistName.replace('&', '+'));
+    }
+    if (artistName.includes(' and ')) {
+      variations.push(artistName.replace(' and ', ' & '));
+      variations.push(artistName.replace(' and ', ' + '));
+    }
+    
+    // Handle number variations (common in hip-hop/electronic)
+    const numberWords = {
+      '2': ['two', 'to', 'too'],
+      '4': ['four', 'for', 'fore'],
+      '8': ['eight', 'ate'],
+      '1': ['one', 'won']
+    };
+    
+    for (const [num, words] of Object.entries(numberWords)) {
+      if (artistName.includes(num)) {
+        for (const word of words) {
+          variations.push(artistName.replace(num, word));
+        }
+      }
+      for (const word of words) {
+        if (nameLower.includes(word)) {
+          variations.push(artistName.replace(new RegExp(word, 'gi'), num));
+        }
+      }
+    }
+    
+    // Handle stylized names (remove special characters for mainstream search)
+    const cleanName = artistName.replace(/[^a-zA-Z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (cleanName !== artistName) {
+      variations.push(cleanName);
+    }
+    
+    // Handle all caps / title case variations
+    if (artistName === artistName.toUpperCase()) {
+      // Convert from ALL CAPS to Title Case
+      variations.push(artistName.toLowerCase().replace(/\b\w/g, l => l.toUpperCase()));
+    }
+    
+    // Remove duplicates and empty strings
+    return Array.from(new Set(variations.filter(v => v.length > 0)));
   }
 
   private async generateRealCollaborationNetwork(artistName: string): Promise<SafeNetworkData> {
@@ -314,13 +431,32 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
     console.log(`🎭 [DEBUG] Main artist "${artistName}" initialized with ${orderedMainArtistTypes.length} roles:`, orderedMainArtistTypes);
 
     try {
-      // Try OpenAI for collaboration data
+      // Try OpenAI for collaboration data with name variations
       if (openAIService.isServiceAvailable()) {
         console.log(`🤖 [DEBUG] Querying OpenAI API for "${artistName}"...`);
         
         try {
-          const openAIData = await openAIService.getArtistCollaborations(artistName);
-          console.log(`✅ [DEBUG] OpenAI response:`, {
+          // Try name variations for better results with smaller artists
+          const nameVariations = this.generateNameVariations(artistName);
+          let bestOpenAIData = null;
+          let bestCollaboratorCount = 0;
+          
+          for (const nameVariation of nameVariations.slice(0, 3)) { // Limit to top 3 variations
+            try {
+              console.log(`🔍 [DEBUG] Trying OpenAI with variation: "${nameVariation}"`);
+              const variationData = await openAIService.getArtistCollaborations(nameVariation);
+              if (variationData.artists.length > bestCollaboratorCount) {
+                bestOpenAIData = variationData;
+                bestCollaboratorCount = variationData.artists.length;
+                console.log(`✅ [DEBUG] Better OpenAI result for "${nameVariation}": ${variationData.artists.length} collaborators`);
+              }
+            } catch (variationError) {
+              console.log(`⚠️ [DEBUG] OpenAI variation "${nameVariation}" failed:`, variationError);
+            }
+          }
+          
+          const openAIData = bestOpenAIData || await openAIService.getArtistCollaborations(artistName);
+          console.log(`✅ [DEBUG] Final OpenAI response:`, {
             collaborators: openAIData.artists.length,
             collaboratorList: openAIData.artists.map(a => `${a.name} (${a.type})`)
           });
