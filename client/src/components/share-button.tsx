@@ -50,6 +50,12 @@ export default function ShareButton() {
   const createWatermarkedSnapshot = async (): Promise<string> => {
     setIsCapturing(true);
     
+    // Declare variables at function scope for error handling
+    let elementsToHide: HTMLElement[] = [];
+    let originalDisplays: string[] = [];
+    let currentDialog: HTMLElement | null = null;
+    let dialogDisplay = '';
+    
     try {
       // Find the network container element
       const networkContainer = document.querySelector('.network-container') as HTMLElement;
@@ -57,14 +63,20 @@ export default function ShareButton() {
         throw new Error('Network visualization not found');
       }
 
-      // Temporarily hide the share dialog and any overlays
-      const shareDialog = document.querySelector('[role="dialog"]') as HTMLElement;
-      const controls = document.querySelectorAll('.fixed') as NodeListOf<HTMLElement>;
-      const overlays = document.querySelectorAll('[data-radix-popper-content-wrapper]') as NodeListOf<HTMLElement>;
+      // Temporarily hide UI controls but keep the current share dialog
+      currentDialog = document.querySelector('[data-state="open"][role="dialog"]') as HTMLElement;
+      const controls = document.querySelectorAll('.fixed:not([role="dialog"]):not([data-radix-portal])') as NodeListOf<HTMLElement>;
+      const tooltips = document.querySelectorAll('[data-radix-tooltip-content]') as NodeListOf<HTMLElement>;
+      const searchBar = document.querySelector('.absolute.top-0') as HTMLElement;
       
       // Store original display values
-      const originalDisplays: string[] = [];
-      const elementsToHide = [shareDialog, ...Array.from(controls), ...Array.from(overlays)].filter(Boolean);
+      elementsToHide = [...Array.from(controls), ...Array.from(tooltips), searchBar].filter(Boolean) as HTMLElement[];
+      
+      // Hide current dialog temporarily during capture
+      if (currentDialog) {
+        dialogDisplay = currentDialog.style.display;
+        currentDialog.style.display = 'none';
+      }
       
       elementsToHide.forEach((element, index) => {
         if (element) {
@@ -93,6 +105,11 @@ export default function ShareButton() {
           element.style.display = originalDisplays[index] || '';
         }
       });
+      
+      // Restore dialog
+      if (currentDialog) {
+        currentDialog.style.display = dialogDisplay;
+      }
 
       // Create a new canvas for the watermarked image
       const watermarkedCanvas = document.createElement('canvas');
@@ -169,6 +186,17 @@ export default function ShareButton() {
         logo.src = '/grapevine-logo.png';
       });
     } catch (error) {
+      // Ensure we restore elements even if there's an error
+      elementsToHide.forEach((element, index) => {
+        if (element) {
+          element.style.display = originalDisplays[index] || '';
+        }
+      });
+      
+      if (currentDialog) {
+        currentDialog.style.display = dialogDisplay;
+      }
+      
       setIsCapturing(false);
       console.error('Failed to create snapshot:', error);
       throw error;
@@ -199,7 +227,10 @@ export default function ShareButton() {
     // Copy to clipboard automatically when button is clicked
     await copyToClipboard(url);
     
-    // Create snapshot
+    // Open the dialog first
+    setIsOpen(true);
+    
+    // Create snapshot after dialog is open
     try {
       const snapshot = await createWatermarkedSnapshot();
       setSnapshotDataUrl(snapshot);
@@ -211,9 +242,6 @@ export default function ShareButton() {
         variant: "destructive",
       });
     }
-    
-    // Open the dialog to show the URL and snapshot
-    setIsOpen(true);
   };
 
   return (
