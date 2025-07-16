@@ -447,36 +447,47 @@ export default function NetworkVisualizer({
       }
     })
       .on("mouseover", function(event, d) {
-        // Highlight the entire node group
-        d3.select(this).selectAll("circle, path")
-          .attr("stroke", "white")
-          .attr("stroke-width", 3);
-        showTooltip(event, d);
-      })
-      .on("mousemove", moveTooltip)
-      .on("mouseout", function(event, d) {
-        // Reset the stroke colors for the entire node group
-        const group = d3.select(this);
-        const roles = d.types || [d.type];
-        
-        if (roles.length === 1) {
-          group.select("circle")
-            .attr("stroke", () => {
-              if (roles[0] === 'artist') return '#FF0ACF';
-              if (roles[0] === 'producer') return '#AE53FF';
-              if (roles[0] === 'songwriter') return '#67D1F8';
-              return '#355367';
-            })
-            .attr("stroke-width", 4);
-        } else {
-          group.selectAll("path")
+        // Only show tooltip and highlight on desktop
+        if (!isMobile) {
+          // Highlight the entire node group
+          d3.select(this).selectAll("circle, path")
             .attr("stroke", "white")
-            .attr("stroke-width", 1);
-          group.select("circle")
-            .attr("stroke", "white")
-            .attr("stroke-width", 2);
+            .attr("stroke-width", 3);
+          showTooltip(event, d);
         }
-        hideTooltip();
+      })
+      .on("mousemove", function(event, d) {
+        // Only move tooltip on desktop
+        if (!isMobile) {
+          moveTooltip(event);
+        }
+      })
+      .on("mouseout", function(event, d) {
+        // Only hide tooltip and reset highlight on desktop
+        if (!isMobile) {
+          // Reset the stroke colors for the entire node group
+          const group = d3.select(this);
+          const roles = d.types || [d.type];
+          
+          if (roles.length === 1) {
+            group.select("circle")
+              .attr("stroke", () => {
+                if (roles[0] === 'artist') return '#FF0ACF';
+                if (roles[0] === 'producer') return '#AE53FF';
+                if (roles[0] === 'songwriter') return '#67D1F8';
+                return '#355367';
+              })
+              .attr("stroke-width", 4);
+          } else {
+            group.selectAll("path")
+              .attr("stroke", "white")
+              .attr("stroke-width", 1);
+            group.select("circle")
+              .attr("stroke", "white")
+              .attr("stroke-width", 2);
+          }
+          hideTooltip();
+        }
       })
       .on("click", function(event, d) {
         event.stopPropagation();
@@ -493,19 +504,22 @@ export default function NetworkVisualizer({
           setMobilePopupNode(d);
           setMobilePopupPosition({ x: event.pageX, y: event.pageY });
           setShowMobilePopup(true);
-        } else {
-          // Desktop behavior - left-click to expand artist's network (only for artist nodes that aren't the main artist)
-          if ((d.type === 'artist' || (d.types && d.types.includes('artist'))) && onArtistSearch) {
-            const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === 'artist');
-            if (d !== mainArtistNode) {
-              console.log(`🎯 [CLICK DEBUG] Expanding network for artist: ${d.name}`);
-              onArtistSearch(d.name);
-            } else {
-              console.log(`🎯 [CLICK DEBUG] Skipping network expansion for main artist`);
-            }
+          // Don't perform any other actions on mobile - just show the popup
+          console.log(`🎯 [CLICK DEBUG] ===== END LEFT CLICK EVENT (MOBILE) =====`);
+          return;
+        }
+        
+        // Desktop behavior - left-click to expand artist's network (only for artist nodes that aren't the main artist)
+        if ((d.type === 'artist' || (d.types && d.types.includes('artist'))) && onArtistSearch) {
+          const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+          if (d !== mainArtistNode) {
+            console.log(`🎯 [CLICK DEBUG] Expanding network for artist: ${d.name}`);
+            onArtistSearch(d.name);
           } else {
-            console.log(`🎯 [CLICK DEBUG] Not an artist node or no onArtistSearch callback, skipping action`);
+            console.log(`🎯 [CLICK DEBUG] Skipping network expansion for main artist`);
           }
+        } else {
+          console.log(`🎯 [CLICK DEBUG] Not an artist node or no onArtistSearch callback, skipping action`);
         }
         console.log(`🎯 [CLICK DEBUG] ===== END LEFT CLICK EVENT =====`);
       })
