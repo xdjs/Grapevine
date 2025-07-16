@@ -5,6 +5,10 @@ export interface NetworkNode {
   types?: ('artist' | 'producer' | 'songwriter')[];
   size: number;
   collaborations?: string[];
+  artistId?: string | null;
+  imageUrl?: string | null;
+  spotifyId?: string | null;
+  musicNerdUrl?: string;
   x?: number;
   y?: number;
   fx?: number | null;

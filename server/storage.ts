@@ -36,99 +36,7 @@ export class MemStorage implements IStorage {
   }
 
   private async initializeMockData() {
-    // Create artists
-    const taylorSwift = await this.createArtist({ name: "Taylor Swift", type: "artist" });
-    const jackAntonoff = await this.createArtist({ name: "Jack Antonoff", type: "producer" });
-    const aaronDessner = await this.createArtist({ name: "Aaron Dessner", type: "producer" });
-    const maxMartin = await this.createArtist({ name: "Max Martin", type: "producer" });
-    const williamBowery = await this.createArtist({ name: "William Bowery", type: "songwriter" });
-    const lorde = await this.createArtist({ name: "Lorde", type: "artist" });
-    const lanaDelRey = await this.createArtist({ name: "Lana Del Rey", type: "artist" });
-    const bonIver = await this.createArtist({ name: "Bon Iver", type: "artist" });
-    const arianaGrande = await this.createArtist({ name: "Ariana Grande", type: "artist" });
-    const theWeeknd = await this.createArtist({ name: "The Weeknd", type: "artist" });
-    
-    const drake = await this.createArtist({ name: "Drake", type: "artist" });
-    const forty = await this.createArtist({ name: "40", type: "producer" });
-    const boi1da = await this.createArtist({ name: "Boi-1da", type: "producer" });
-    const hitBoy = await this.createArtist({ name: "Hit-Boy", type: "producer" });
-    const partyNextDoor = await this.createArtist({ name: "PartyNextDoor", type: "songwriter" });
-    const future = await this.createArtist({ name: "Future", type: "artist" });
-    const lilWayne = await this.createArtist({ name: "Lil Wayne", type: "artist" });
-    const rihanna = await this.createArtist({ name: "Rihanna", type: "artist" });
-    
-    const billieEilish = await this.createArtist({ name: "Billie Eilish", type: "artist" });
-    const finneas = await this.createArtist({ name: "FINNEAS", type: "producer" });
-    const robKinelski = await this.createArtist({ name: "Rob Kinelski", type: "producer" });
-    const ashe = await this.createArtist({ name: "Ashe", type: "artist" });
-    const selenaGomez = await this.createArtist({ name: "Selena Gomez", type: "artist" });
-    
-    // Additional artists for testing
-    const edSheeran = await this.createArtist({ name: "Ed Sheeran", type: "artist" });
-    const johnnyMcDaid = await this.createArtist({ name: "Johnny McDaid", type: "songwriter" });
-    const benny = await this.createArtist({ name: "Benny Blanco", type: "producer" });
-    const justinBieber = await this.createArtist({ name: "Justin Bieber", type: "artist" });
-    const skrillex = await this.createArtist({ name: "Skrillex", type: "producer" });
-    
-    // Independent artists with no common collaborators
-    const laufey = await this.createArtist({ name: "Laufey", type: "artist" });
-    const spencerStewart = await this.createArtist({ name: "Spencer Stewart", type: "producer" });
-    const adamYassin = await this.createArtist({ name: "Adam Yaasin", type: "songwriter" });
-    
-    const tylerTheCreator = await this.createArtist({ name: "Tyler, The Creator", type: "artist" });
-    const lomatPowers = await this.createArtist({ name: "Loma Powers", type: "producer" });
-    const kaliUchis = await this.createArtist({ name: "Kali Uchis", type: "artist" });
-    
-    const clairo = await this.createArtist({ name: "Clairo", type: "artist" });
-    const rostam = await this.createArtist({ name: "Rostam", type: "producer" });
-    const jacksonFoote = await this.createArtist({ name: "Jackson Foote", type: "songwriter" });
-    
-    // Create collaborations for Taylor Swift
-    await this.createCollaboration({ fromArtistId: taylorSwift.id, toArtistId: jackAntonoff.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: taylorSwift.id, toArtistId: aaronDessner.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: taylorSwift.id, toArtistId: maxMartin.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: taylorSwift.id, toArtistId: williamBowery.id, collaborationType: "songwriting" });
-    
-    await this.createCollaboration({ fromArtistId: jackAntonoff.id, toArtistId: lorde.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: jackAntonoff.id, toArtistId: lanaDelRey.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: aaronDessner.id, toArtistId: bonIver.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: maxMartin.id, toArtistId: arianaGrande.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: maxMartin.id, toArtistId: theWeeknd.id, collaborationType: "production" });
-    
-    // Create collaborations for Drake
-    await this.createCollaboration({ fromArtistId: drake.id, toArtistId: forty.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: drake.id, toArtistId: boi1da.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: drake.id, toArtistId: hitBoy.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: drake.id, toArtistId: partyNextDoor.id, collaborationType: "songwriting" });
-    
-    await this.createCollaboration({ fromArtistId: forty.id, toArtistId: theWeeknd.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: partyNextDoor.id, toArtistId: rihanna.id, collaborationType: "songwriting" });
-    
-    // Create collaborations for Billie Eilish
-    await this.createCollaboration({ fromArtistId: billieEilish.id, toArtistId: finneas.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: billieEilish.id, toArtistId: robKinelski.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: finneas.id, toArtistId: ashe.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: finneas.id, toArtistId: selenaGomez.id, collaborationType: "production" });
-    
-    // Create collaborations for Ed Sheeran
-    await this.createCollaboration({ fromArtistId: edSheeran.id, toArtistId: johnnyMcDaid.id, collaborationType: "songwriting" });
-    await this.createCollaboration({ fromArtistId: edSheeran.id, toArtistId: benny.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: benny.id, toArtistId: justinBieber.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: skrillex.id, toArtistId: justinBieber.id, collaborationType: "production" });
-    
-    // Cross-connections to make network more interesting
-    await this.createCollaboration({ fromArtistId: benny.id, toArtistId: selenaGomez.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: johnnyMcDaid.id, toArtistId: taylorSwift.id, collaborationType: "songwriting" });
-    
-    // Independent artist networks (no cross-connections with main network)
-    await this.createCollaboration({ fromArtistId: laufey.id, toArtistId: spencerStewart.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: laufey.id, toArtistId: adamYassin.id, collaborationType: "songwriting" });
-    
-    await this.createCollaboration({ fromArtistId: tylerTheCreator.id, toArtistId: lomatPowers.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: tylerTheCreator.id, toArtistId: kaliUchis.id, collaborationType: "songwriting" });
-    
-    await this.createCollaboration({ fromArtistId: clairo.id, toArtistId: rostam.id, collaborationType: "production" });
-    await this.createCollaboration({ fromArtistId: clairo.id, toArtistId: jacksonFoote.id, collaborationType: "songwriting" });
+    // No mock data - all artists will use real collaboration data
   }
 
   async getArtist(id: number): Promise<Artist | undefined> {
@@ -173,7 +81,7 @@ export class MemStorage implements IStorage {
     const nodes: NetworkNode[] = [];
     const links: NetworkLink[] = [];
 
-    // Create main artist node
+    // Create main artist node only - no false collaborators
     const mainArtistNode: NetworkNode = {
       id: artistName,
       name: artistName,
@@ -182,50 +90,13 @@ export class MemStorage implements IStorage {
     };
     nodes.push(mainArtistNode);
 
-    // Generate 2-3 collaborators based on artist name hash
-    const hash = artistName.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-    const numCollaborators = 2 + (hash % 2); // 2 or 3 collaborators
-    
-    for (let i = 0; i < numCollaborators; i++) {
-      const isProducer = (hash + i) % 2 === 0;
-      const collaboratorType = isProducer ? 'producer' : 'songwriter';
-      const collaboratorName = isProducer 
-        ? `${artistName} Producer ${i + 1}`
-        : `${artistName} Writer ${i + 1}`;
-
-      const collaboratorNode: NetworkNode = {
-        id: collaboratorName,
-        name: collaboratorName,
-        type: collaboratorType,
-        size: 18,
-      };
-      
-      nodes.push(collaboratorNode);
-      links.push({
-        source: artistName,
-        target: collaboratorName
-      });
-    }
-
+    // Return only the main artist node with no collaborators
     return { nodes, links };
   }
 
   private generateCollaboratorNames(artistName: string): Array<{ name: string; type: 'producer' | 'songwriter' }> {
-    const hash = artistName.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-    const numCollaborators = 2 + (hash % 3); // 2-4 collaborators
-    const collaborators: Array<{ name: string; type: 'producer' | 'songwriter' }> = [];
-    
-    for (let i = 0; i < numCollaborators; i++) {
-      const isProducer = (hash + i) % 2 === 0;
-      const type: 'producer' | 'songwriter' = isProducer ? 'producer' : 'songwriter';
-      const name = isProducer 
-        ? `${artistName} Producer ${i + 1}`
-        : `${artistName} Writer ${i + 1}`;
-      
-      collaborators.push({ name, type });
-    }
-    
-    return collaborators;
+    // Return empty array - no false collaborators
+    return [];
   }
 
   private async generateDynamicNetworkWithImages(artistName: string): Promise<NetworkData> {
@@ -258,45 +129,7 @@ export class MemStorage implements IStorage {
     };
     nodes.push(mainArtistNode);
 
-    // Generate collaborators with potential Spotify images
-    const collaboratorNames = this.generateCollaboratorNames(artistName);
-    const clusterCenterX = Math.random() * 400 + 200;
-    const clusterCenterY = Math.random() * 300 + 150;
-
-    for (let i = 0; i < collaboratorNames.length; i++) {
-      const collaborator = collaboratorNames[i];
-      let collaboratorImage = null;
-      let collaboratorSpotifyId = null;
-
-      // Try to fetch real artist images for some collaborators
-      if (spotifyService.isConfigured() && Math.random() > 0.3) { // 70% chance to try Spotify
-        try {
-          const spotifyCollaborator = await spotifyService.searchArtist(collaborator.name);
-          if (spotifyCollaborator) {
-            collaboratorImage = spotifyService.getArtistImageUrl(spotifyCollaborator, 'medium');
-            collaboratorSpotifyId = spotifyCollaborator.id;
-          }
-        } catch (error) {
-          // Silently continue without image if Spotify search fails
-        }
-      }
-
-      const collaboratorNode: NetworkNode = {
-        id: collaborator.name,
-        name: collaborator.name,
-        type: collaborator.type,
-        size: 20,
-        imageUrl: collaboratorImage,
-        spotifyId: collaboratorSpotifyId,
-      };
-      nodes.push(collaboratorNode);
-
-      links.push({
-        source: artistName,
-        target: collaborator.name,
-      });
-    }
-
+    // Return only the main artist node with no collaborators
     return { nodes, links };
   }
 
@@ -508,142 +341,16 @@ export class MemStorage implements IStorage {
   }
 
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
-    // For demo artists with rich mock data, use mock network to show comprehensive producer/songwriter examples
-    const demoArtists = ['Taylor Swift', 'Drake', 'Billie Eilish', 'Ed Sheeran'];
-    
-    if (demoArtists.includes(artistName)) {
-      console.log(`🎵 [DEBUG] Using enhanced demo data for "${artistName}" to showcase producer/songwriter networks`);
-      const mainArtist = await this.getArtistByName(artistName);
-      if (mainArtist) {
-        return this.generateEnhancedDemoNetwork(mainArtist);
-      }
-    }
-    
-    // For all other artists, use real collaboration data from MusicBrainz
+    // Use real collaboration data from MusicBrainz for all artists
     console.log(`🎵 [DEBUG] Using real collaboration data path for "${artistName}"`);
     return this.generateRealCollaborationNetwork(artistName);
   }
 
 
 
-  private async generateEnhancedDemoNetwork(mainArtist: Artist): Promise<NetworkData> {
-    const nodes: NetworkNode[] = [];
-    const links: NetworkLink[] = [];
-    const nodeMap = new Map<string, NetworkNode>();
 
-    // Get MusicNerd artist ID for main artist 
-    let mainArtistMusicNerdId = null;
-    try {
-      mainArtistMusicNerdId = await musicNerdService.getArtistId(mainArtist.name);
-    } catch (error) {
-      console.log(`Could not fetch MusicNerd ID for ${mainArtist.name}`);
-    }
 
-    // Add main artist node
-    const mainArtistNode: NetworkNode = {
-      id: mainArtist.name,
-      name: mainArtist.name,
-      type: 'artist',
-      size: 30, // Larger size for main artist
-      artistId: mainArtistMusicNerdId,
-    };
-    nodes.push(mainArtistNode);
-    nodeMap.set(mainArtist.name, mainArtistNode);
 
-    // Get collaborations for the main artist from mock data
-    const collaborations = await this.getCollaborationsByArtist(mainArtist.id);
-    
-    for (const collaboration of collaborations) {
-      const collaborator = await this.getArtist(collaboration.toArtistId);
-      if (collaborator && !nodeMap.has(collaborator.name)) {
-        // Get MusicNerd artist ID for collaborators who are artists
-        let collaboratorMusicNerdId = null;
-        if (collaborator.type === 'artist') {
-          try {
-            collaboratorMusicNerdId = await musicNerdService.getArtistId(collaborator.name);
-          } catch (error) {
-            console.log(`Could not fetch MusicNerd ID for ${collaborator.name}`);
-          }
-        }
-
-        const collaboratorNode: NetworkNode = {
-          id: collaborator.name,
-          name: collaborator.name,
-          type: collaborator.type as 'artist' | 'producer' | 'songwriter',
-          size: 20,
-          artistId: collaboratorMusicNerdId,
-        };
-        nodes.push(collaboratorNode);
-        nodeMap.set(collaborator.name, collaboratorNode);
-
-        links.push({
-          source: mainArtist.name,
-          target: collaborator.name,
-        });
-      }
-    }
-
-    // Add secondary connections (collaborator-to-collaborator relationships)
-    for (const collaboration of collaborations) {
-      const collaborator = await this.getArtist(collaboration.toArtistId);
-      if (collaborator) {
-        const secondaryCollaborations = await this.getCollaborationsByArtist(collaborator.id);
-        
-        for (const secondaryCollab of secondaryCollaborations) {
-          const other = await this.getArtist(secondaryCollab.toArtistId);
-          if (other && other.name !== mainArtist.name && nodeMap.has(other.name)) {
-            // Add link between collaborators if both are in the network
-            const existingLink = links.find(link => 
-              (link.source === collaborator.name && link.target === other.name) ||
-              (link.source === other.name && link.target === collaborator.name)
-            );
-            
-            if (!existingLink) {
-              links.push({
-                source: collaborator.name,
-                target: other.name,
-              });
-            }
-          } else if (other && other.name !== mainArtist.name && !nodeMap.has(other.name)) {
-            // Add new collaborator node if not already in network
-            let otherMusicNerdId = null;
-            if (other.type === 'artist') {
-              try {
-                otherMusicNerdId = await musicNerdService.getArtistId(other.name);
-              } catch (error) {
-                console.log(`Could not fetch MusicNerd ID for ${other.name}`);
-              }
-            }
-
-            const otherNode: NetworkNode = {
-              id: other.name,
-              name: other.name,
-              type: other.type as 'artist' | 'producer' | 'songwriter',
-              size: 16,
-              artistId: otherMusicNerdId,
-            };
-            nodes.push(otherNode);
-            nodeMap.set(other.name, otherNode);
-
-            links.push({
-              source: collaborator.name,
-              target: other.name,
-            });
-          }
-        }
-      }
-    }
-
-    return { nodes, links };
-  }
-
-  private getOldPath(): NetworkData {
-    const nodes: NetworkNode[] = [];
-    const links: NetworkLink[] = [];
-    
-    // Simple fallback network for compatibility
-    return { nodes, links };
-  }
 }
 
 import { DatabaseStorage } from './database-storage.js';
