@@ -51,14 +51,47 @@ export default function ShareButton() {
     setIsCapturing(true);
     
     try {
-      // Capture the entire page
-      const canvas = await html2canvas(document.body, {
-        height: window.innerHeight,
-        width: window.innerWidth,
+      // Find the network container element
+      const networkContainer = document.querySelector('.network-container') as HTMLElement;
+      if (!networkContainer) {
+        throw new Error('Network visualization not found');
+      }
+
+      // Temporarily hide the share dialog and any overlays
+      const shareDialog = document.querySelector('[role="dialog"]') as HTMLElement;
+      const controls = document.querySelectorAll('.fixed') as NodeListOf<HTMLElement>;
+      const overlays = document.querySelectorAll('[data-radix-popper-content-wrapper]') as NodeListOf<HTMLElement>;
+      
+      // Store original display values
+      const originalDisplays: string[] = [];
+      const elementsToHide = [shareDialog, ...Array.from(controls), ...Array.from(overlays)].filter(Boolean);
+      
+      elementsToHide.forEach((element, index) => {
+        if (element) {
+          originalDisplays[index] = element.style.display;
+          element.style.display = 'none';
+        }
+      });
+
+      // Wait a brief moment for elements to hide
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Capture only the network visualization
+      const canvas = await html2canvas(networkContainer, {
         useCORS: true,
         allowTaint: true,
-        scale: 0.8, // Reduce scale for better performance
+        scale: 1, // Full scale for network content
         logging: false,
+        backgroundColor: '#000000', // Ensure black background
+        width: networkContainer.offsetWidth,
+        height: networkContainer.offsetHeight,
+      });
+
+      // Restore original display values
+      elementsToHide.forEach((element, index) => {
+        if (element) {
+          element.style.display = originalDisplays[index] || '';
+        }
       });
 
       // Create a new canvas for the watermarked image
@@ -84,19 +117,23 @@ export default function ShareButton() {
         logo.onload = () => {
           try {
             // Calculate watermark size and position (top-left corner)
-            const logoSize = Math.min(150, canvas.width * 0.15); // Max 150px or 15% of width
-            const padding = 20;
+            const logoSize = Math.min(80, canvas.width * 0.08); // Smaller: Max 80px or 8% of width
+            const padding = 15;
+            
+            // Calculate dynamic text size based on logoSize
+            const textSize = Math.max(12, logoSize * 0.3); // Text size scales with logo
+            const textSpacing = 8;
             
             // Create a semi-transparent background for the watermark
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            const bgWidth = logoSize + 80;
+            const bgWidth = logoSize + textSpacing + (textSize * 5.5); // Dynamic width based on text size
             const bgHeight = logoSize + 20;
             const bgX = padding - 10;
             const bgY = padding - 10;
             
             // Use roundRect if available, otherwise use regular rect
             if (typeof ctx.roundRect === 'function') {
-              ctx.roundRect(bgX, bgY, bgWidth, bgHeight, 10);
+              ctx.roundRect(bgX, bgY, bgWidth, bgHeight, 8);
             } else {
               ctx.fillRect(bgX, bgY, bgWidth, bgHeight);
             }
@@ -107,9 +144,9 @@ export default function ShareButton() {
             
             // Add "Grapevine" text next to the logo
             ctx.fillStyle = 'white';
-            ctx.font = `bold ${Math.max(16, logoSize * 0.15)}px Arial, sans-serif`;
+            ctx.font = `bold ${textSize}px Arial, sans-serif`;
             ctx.textAlign = 'left';
-            ctx.fillText('Grapevine', padding + logoSize + 10, padding + logoSize/2 + 6);
+            ctx.fillText('Grapevine', padding + logoSize + textSpacing, padding + logoSize/2 + textSize/3);
             
             // Convert to data URL
             const dataUrl = watermarkedCanvas.toDataURL('image/png', 0.9);
