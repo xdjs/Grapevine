@@ -111,7 +111,59 @@ export default function ShareButton() {
         currentDialog.style.display = dialogDisplay;
       }
 
-      // Create a new canvas for the watermarked image
+      // Find the bounds of the network content by analyzing the SVG
+      const svg = networkContainer.querySelector('svg');
+      let networkBounds = { minX: 0, minY: 0, maxX: canvas.width, maxY: canvas.height };
+      
+      if (svg) {
+        try {
+          // Get all network nodes and their positions
+          const nodes = svg.querySelectorAll('.node-group');
+          if (nodes.length > 0) {
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            
+            nodes.forEach((node) => {
+              const transform = node.getAttribute('transform');
+              if (transform) {
+                const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+                if (match) {
+                  const x = parseFloat(match[1]);
+                  const y = parseFloat(match[2]);
+                  minX = Math.min(minX, x);
+                  minY = Math.min(minY, y);
+                  maxX = Math.max(maxX, x);
+                  maxY = Math.max(maxY, y);
+                }
+              }
+            });
+            
+            // Add padding around the network
+            const padding = 100;
+            minX = Math.max(0, minX - padding);
+            minY = Math.max(0, minY - padding);
+            maxX = Math.min(canvas.width, maxX + padding);
+            maxY = Math.min(canvas.height, maxY + padding);
+            
+            networkBounds = { minX, minY, maxX, maxY };
+          }
+        } catch (error) {
+          console.warn('Could not calculate network bounds:', error);
+        }
+      }
+
+      // Calculate square crop dimensions
+      const networkWidth = networkBounds.maxX - networkBounds.minX;
+      const networkHeight = networkBounds.maxY - networkBounds.minY;
+      const squareSize = Math.max(networkWidth, networkHeight);
+      
+      // Center the square crop area
+      const centerX = (networkBounds.minX + networkBounds.maxX) / 2;
+      const centerY = (networkBounds.minY + networkBounds.maxY) / 2;
+      const cropX = Math.max(0, centerX - squareSize / 2);
+      const cropY = Math.max(0, centerY - squareSize / 2);
+      const finalSquareSize = Math.min(squareSize, Math.min(canvas.width - cropX, canvas.height - cropY));
+
+      // Create a square canvas for the cropped image
       const watermarkedCanvas = document.createElement('canvas');
       const ctx = watermarkedCanvas.getContext('2d');
       
@@ -119,12 +171,20 @@ export default function ShareButton() {
         throw new Error('Failed to get canvas context');
       }
 
-      // Set canvas size to match the screenshot
-      watermarkedCanvas.width = canvas.width;
-      watermarkedCanvas.height = canvas.height;
+      // Set canvas to square dimensions
+      watermarkedCanvas.width = finalSquareSize;
+      watermarkedCanvas.height = finalSquareSize;
 
-      // Draw the screenshot onto the new canvas
-      ctx.drawImage(canvas, 0, 0);
+      // Fill with black background
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, finalSquareSize, finalSquareSize);
+
+      // Draw the cropped screenshot onto the square canvas
+      ctx.drawImage(
+        canvas,
+        cropX, cropY, finalSquareSize, finalSquareSize, // Source rectangle (crop area)
+        0, 0, finalSquareSize, finalSquareSize // Destination rectangle (full canvas)
+      );
 
       // Load the Grapevine logo
       const logo = new Image();
@@ -134,12 +194,12 @@ export default function ShareButton() {
         logo.onload = () => {
           try {
             // Calculate watermark size and position (top-left corner)
-            const logoSize = Math.min(80, canvas.width * 0.08); // Smaller: Max 80px or 8% of width
-            const padding = 15;
+            const logoSize = Math.min(60, finalSquareSize * 0.08); // Smaller: Max 60px or 8% of square
+            const padding = 12;
             
             // Calculate dynamic text size based on logoSize
-            const textSize = Math.max(12, logoSize * 0.3); // Text size scales with logo
-            const textSpacing = 8;
+            const textSize = Math.max(10, logoSize * 0.3); // Text size scales with logo
+            const textSpacing = 6;
             
             // Create a semi-transparent background for the watermark
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -150,7 +210,7 @@ export default function ShareButton() {
             
             // Use roundRect if available, otherwise use regular rect
             if (typeof ctx.roundRect === 'function') {
-              ctx.roundRect(bgX, bgY, bgWidth, bgHeight, 8);
+              ctx.roundRect(bgX, bgY, bgWidth, bgHeight, 6);
             } else {
               ctx.fillRect(bgX, bgY, bgWidth, bgHeight);
             }
@@ -176,9 +236,9 @@ export default function ShareButton() {
         };
         
         logo.onerror = () => {
-          // Fallback: just return the screenshot without watermark
+          // Fallback: just return the cropped screenshot without watermark
           console.warn('Failed to load logo, returning screenshot without watermark');
-          const dataUrl = canvas.toDataURL('image/png', 0.9);
+          const dataUrl = watermarkedCanvas.toDataURL('image/png', 0.9);
           setIsCapturing(false);
           resolve(dataUrl);
         };
