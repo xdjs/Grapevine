@@ -3,12 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Plus, Minus, RotateCcw, X, Settings } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { FilterState } from "@/types/network";
 
 interface MobileControlsProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomReset: () => void;
   onClearAll: () => void;
+  filterState: FilterState;
+  onFilterChange: (filterState: FilterState) => void;
 }
 
 export default function MobileControls({
@@ -16,6 +19,8 @@ export default function MobileControls({
   onZoomOut,
   onZoomReset,
   onClearAll,
+  filterState,
+  onFilterChange,
 }: MobileControlsProps) {
   const [showControls, setShowControls] = useState(false);
   const isMobile = useIsMobile();
@@ -67,6 +72,37 @@ export default function MobileControls({
                 >
                   <RotateCcw className="w-4 h-4 mr-1" />
                   Reset
+                </Button>
+              </div>
+            </div>
+
+            {/* Filter Controls */}
+            <div>
+              <h3 className="text-sm font-semibold text-white mb-2">Filters</h3>
+              <div className="space-y-2">
+                <Button
+                  onClick={() => onFilterChange({ ...filterState, showArtists: !filterState.showArtists })}
+                  size="sm"
+                  variant={filterState.showArtists ? "default" : "secondary"}
+                  className={`w-full ${filterState.showArtists ? 'bg-pink-600 hover:bg-pink-700' : 'bg-gray-800 hover:bg-gray-700 border-gray-600'}`}
+                >
+                  Artists
+                </Button>
+                <Button
+                  onClick={() => onFilterChange({ ...filterState, showProducers: !filterState.showProducers })}
+                  size="sm"
+                  variant={filterState.showProducers ? "default" : "secondary"}
+                  className={`w-full ${filterState.showProducers ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-800 hover:bg-gray-700 border-gray-600'}`}
+                >
+                  Producers
+                </Button>
+                <Button
+                  onClick={() => onFilterChange({ ...filterState, showSongwriters: !filterState.showSongwriters })}
+                  size="sm"
+                  variant={filterState.showSongwriters ? "default" : "secondary"}
+                  className={`w-full ${filterState.showSongwriters ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-800 hover:bg-gray-700 border-gray-600'}`}
+                >
+                  Songwriters
                 </Button>
               </div>
             </div>
