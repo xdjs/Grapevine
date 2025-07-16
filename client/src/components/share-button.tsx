@@ -151,17 +151,20 @@ export default function ShareButton() {
         }
       }
 
-      // Calculate square crop dimensions
+      // Calculate square crop dimensions - use the smaller available dimension to ensure perfect square
       const networkWidth = networkBounds.maxX - networkBounds.minX;
       const networkHeight = networkBounds.maxY - networkBounds.minY;
-      const squareSize = Math.max(networkWidth, networkHeight);
+      const maxPossibleSize = Math.min(canvas.width, canvas.height);
+      const desiredSize = Math.max(networkWidth, networkHeight);
+      const finalSquareSize = Math.min(desiredSize, maxPossibleSize);
       
-      // Center the square crop area
+      // Center the square crop area within the canvas
       const centerX = (networkBounds.minX + networkBounds.maxX) / 2;
       const centerY = (networkBounds.minY + networkBounds.maxY) / 2;
-      const cropX = Math.max(0, centerX - squareSize / 2);
-      const cropY = Math.max(0, centerY - squareSize / 2);
-      const finalSquareSize = Math.min(squareSize, Math.min(canvas.width - cropX, canvas.height - cropY));
+      
+      // Ensure the crop area stays within canvas bounds
+      const cropX = Math.max(0, Math.min(canvas.width - finalSquareSize, centerX - finalSquareSize / 2));
+      const cropY = Math.max(0, Math.min(canvas.height - finalSquareSize, centerY - finalSquareSize / 2));
 
       // Create a square canvas for the cropped image
       const watermarkedCanvas = document.createElement('canvas');
