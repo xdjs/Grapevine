@@ -111,12 +111,59 @@ export default function ShareButton() {
         currentDialog.style.display = dialogDisplay;
       }
 
-      // Force a perfect square crop - use the smaller dimension of the captured canvas
-      const squareSize = Math.min(canvas.width, canvas.height);
+      // Find the bounds of the network content by analyzing the SVG
+      const svg = networkContainer.querySelector('svg');
+      let networkBounds = { minX: 0, minY: 0, maxX: canvas.width, maxY: canvas.height };
       
-      // Center the square crop
-      const cropX = (canvas.width - squareSize) / 2;
-      const cropY = (canvas.height - squareSize) / 2;
+      if (svg) {
+        try {
+          // Get all network nodes and their positions
+          const nodes = svg.querySelectorAll('.node-group');
+          if (nodes.length > 0) {
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            
+            nodes.forEach((node) => {
+              const transform = node.getAttribute('transform');
+              if (transform) {
+                const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+                if (match) {
+                  const x = parseFloat(match[1]);
+                  const y = parseFloat(match[2]);
+                  minX = Math.min(minX, x);
+                  minY = Math.min(minY, y);
+                  maxX = Math.max(maxX, x);
+                  maxY = Math.max(maxY, y);
+                }
+              }
+            });
+            
+            // Add padding around the network
+            const padding = 80;
+            minX = Math.max(0, minX - padding);
+            minY = Math.max(0, minY - padding);
+            maxX = Math.min(canvas.width, maxX + padding);
+            maxY = Math.min(canvas.height, maxY + padding);
+            
+            networkBounds = { minX, minY, maxX, maxY };
+          }
+        } catch (error) {
+          console.warn('Could not calculate network bounds:', error);
+        }
+      }
+
+      // Calculate the network dimensions
+      const networkWidth = networkBounds.maxX - networkBounds.minX;
+      const networkHeight = networkBounds.maxY - networkBounds.minY;
+      
+      // Create a square that fits the network with some extra padding
+      const squareSize = Math.max(networkWidth, networkHeight);
+      
+      // Center the square crop around the network center
+      const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
+      const networkCenterY = (networkBounds.minY + networkBounds.maxY) / 2;
+      
+      const cropX = Math.max(0, Math.min(canvas.width - squareSize, networkCenterX - squareSize / 2));
+      const cropY = Math.max(0, Math.min(canvas.height - squareSize, networkCenterY - squareSize / 2));
 
       // Create a square canvas for the cropped image
       const watermarkedCanvas = document.createElement('canvas');
