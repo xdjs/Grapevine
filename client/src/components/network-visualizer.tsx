@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import ArtistSelectionModal from "./artist-selection-modal";
-import MobileNodePopup from "./mobile-node-popup";
+import SimpleMobilePopup from "./simple-mobile-popup";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface NetworkVisualizerProps {
@@ -28,10 +28,6 @@ export default function NetworkVisualizer({
   const [selectedArtistName, setSelectedArtistName] = useState("");
   const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("");
   
-  // Mobile popup state
-  const [mobilePopupNode, setMobilePopupNode] = useState<NetworkNode | null>(null);
-  const [mobilePopupPosition, setMobilePopupPosition] = useState<{ x: number; y: number } | null>(null);
-  const [showMobilePopup, setShowMobilePopup] = useState(false);
   const isMobile = useIsMobile();
   
   // Additional mobile detection for debugging
@@ -504,19 +500,31 @@ export default function NetworkVisualizer({
         console.log(`🎯 [CLICK DEBUG] ArtistId: ${d.artistId}`);
         
         // Handle mobile vs desktop differently
-        console.log(`🎯 [CLICK DEBUG] isMobile value: ${isMobile}`);
-        if (isMobile) {
+        // Check mobile detection inside the click handler to get the current value
+        const currentIsMobile = window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        console.log(`🎯 [CLICK DEBUG] isMobile value: ${isMobile}, currentIsMobile: ${currentIsMobile}`);
+        console.log(`🎯 [CLICK DEBUG] window.innerWidth: ${window.innerWidth}`);
+        console.log(`🎯 [CLICK DEBUG] 'ontouchstart' in window: ${'ontouchstart' in window}`);
+        console.log(`🎯 [CLICK DEBUG] navigator.maxTouchPoints: ${navigator.maxTouchPoints}`);
+        
+        if (currentIsMobile) {
           // On mobile, show popup instead of immediate action
           console.log(`🎯 [CLICK DEBUG] Mobile device detected, showing popup`);
-          console.log(`🎯 [CLICK DEBUG] Setting popup node: ${d.name}`);
-          console.log(`🎯 [CLICK DEBUG] Setting popup position: ${event.pageX}, ${event.pageY}`);
-          setMobilePopupNode(d);
-          setMobilePopupPosition({ x: event.pageX, y: event.pageY });
-          setShowMobilePopup(true);
-          console.log(`🎯 [CLICK DEBUG] Popup state set to true`);
+          console.log(`🎯 [CLICK DEBUG] Calling showMobilePopup for: ${d.name}`);
+          
+          // Use the global function to show popup
+          if ((window as any).showMobilePopup) {
+            (window as any).showMobilePopup(d, event.pageX, event.pageY);
+            console.log(`🎯 [CLICK DEBUG] showMobilePopup called successfully`);
+          } else {
+            console.log(`🎯 [CLICK DEBUG] showMobilePopup function not available`);
+          }
+          
           // Don't perform any other actions on mobile - just show the popup
           console.log(`🎯 [CLICK DEBUG] ===== END LEFT CLICK EVENT (MOBILE) =====`);
           return;
+        } else {
+          console.log(`🎯 [CLICK DEBUG] Not mobile, going to desktop logic`);
         }
         
         // Desktop behavior - left-click to expand artist's network (only for artist nodes that aren't the main artist)
@@ -983,13 +991,7 @@ export default function NetworkVisualizer({
         onSelectArtist={handleArtistSelection}
       />
       
-      <MobileNodePopup
-        node={mobilePopupNode}
-        isOpen={showMobilePopup}
-        onClose={() => {
-          console.log(`🎯 [CLICK DEBUG] Closing mobile popup`);
-          setShowMobilePopup(false);
-        }}
+      <SimpleMobilePopup
         onExpandNetwork={(artistName) => {
           console.log(`🎯 [CLICK DEBUG] Expanding network for: ${artistName}`);
           if (onArtistSearch) {
@@ -997,9 +999,7 @@ export default function NetworkVisualizer({
           }
         }}
         onOpenMusicNerdProfile={openMusicNerdProfile}
-        position={mobilePopupPosition}
       />
-      {console.log(`🎯 [CLICK DEBUG] Mobile popup props - isOpen: ${showMobilePopup}, node: ${mobilePopupNode?.name}, position: ${mobilePopupPosition?.x}, ${mobilePopupPosition?.y}`)}
     </div>
   );
 }
