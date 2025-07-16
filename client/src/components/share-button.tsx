@@ -111,60 +111,12 @@ export default function ShareButton() {
         currentDialog.style.display = dialogDisplay;
       }
 
-      // Find the bounds of the network content by analyzing the SVG
-      const svg = networkContainer.querySelector('svg');
-      let networkBounds = { minX: 0, minY: 0, maxX: canvas.width, maxY: canvas.height };
+      // Force a perfect square crop - use the smaller dimension of the captured canvas
+      const squareSize = Math.min(canvas.width, canvas.height);
       
-      if (svg) {
-        try {
-          // Get all network nodes and their positions
-          const nodes = svg.querySelectorAll('.node-group');
-          if (nodes.length > 0) {
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            
-            nodes.forEach((node) => {
-              const transform = node.getAttribute('transform');
-              if (transform) {
-                const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
-                if (match) {
-                  const x = parseFloat(match[1]);
-                  const y = parseFloat(match[2]);
-                  minX = Math.min(minX, x);
-                  minY = Math.min(minY, y);
-                  maxX = Math.max(maxX, x);
-                  maxY = Math.max(maxY, y);
-                }
-              }
-            });
-            
-            // Add padding around the network
-            const padding = 100;
-            minX = Math.max(0, minX - padding);
-            minY = Math.max(0, minY - padding);
-            maxX = Math.min(canvas.width, maxX + padding);
-            maxY = Math.min(canvas.height, maxY + padding);
-            
-            networkBounds = { minX, minY, maxX, maxY };
-          }
-        } catch (error) {
-          console.warn('Could not calculate network bounds:', error);
-        }
-      }
-
-      // Calculate square crop dimensions - use the smaller available dimension to ensure perfect square
-      const networkWidth = networkBounds.maxX - networkBounds.minX;
-      const networkHeight = networkBounds.maxY - networkBounds.minY;
-      const maxPossibleSize = Math.min(canvas.width, canvas.height);
-      const desiredSize = Math.max(networkWidth, networkHeight);
-      const finalSquareSize = Math.min(desiredSize, maxPossibleSize);
-      
-      // Center the square crop area within the canvas
-      const centerX = (networkBounds.minX + networkBounds.maxX) / 2;
-      const centerY = (networkBounds.minY + networkBounds.maxY) / 2;
-      
-      // Ensure the crop area stays within canvas bounds
-      const cropX = Math.max(0, Math.min(canvas.width - finalSquareSize, centerX - finalSquareSize / 2));
-      const cropY = Math.max(0, Math.min(canvas.height - finalSquareSize, centerY - finalSquareSize / 2));
+      // Center the square crop
+      const cropX = (canvas.width - squareSize) / 2;
+      const cropY = (canvas.height - squareSize) / 2;
 
       // Create a square canvas for the cropped image
       const watermarkedCanvas = document.createElement('canvas');
@@ -175,18 +127,18 @@ export default function ShareButton() {
       }
 
       // Set canvas to square dimensions
-      watermarkedCanvas.width = finalSquareSize;
-      watermarkedCanvas.height = finalSquareSize;
+      watermarkedCanvas.width = squareSize;
+      watermarkedCanvas.height = squareSize;
 
       // Fill with black background
       ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, finalSquareSize, finalSquareSize);
+      ctx.fillRect(0, 0, squareSize, squareSize);
 
       // Draw the cropped screenshot onto the square canvas
       ctx.drawImage(
         canvas,
-        cropX, cropY, finalSquareSize, finalSquareSize, // Source rectangle (crop area)
-        0, 0, finalSquareSize, finalSquareSize // Destination rectangle (full canvas)
+        cropX, cropY, squareSize, squareSize, // Source rectangle (crop area)
+        0, 0, squareSize, squareSize // Destination rectangle (full canvas)
       );
 
       // Load the Grapevine logo
@@ -197,7 +149,7 @@ export default function ShareButton() {
         logo.onload = () => {
           try {
             // Calculate watermark size and position (top-left corner)
-            const logoSize = Math.min(60, finalSquareSize * 0.08); // Smaller: Max 60px or 8% of square
+            const logoSize = Math.min(60, squareSize * 0.08); // Smaller: Max 60px or 8% of square
             const padding = 12;
             
             // Calculate dynamic text size based on logoSize
