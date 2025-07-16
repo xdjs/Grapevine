@@ -89,11 +89,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const artist = artistResult.rows[0];
       console.log(`✅ [Vercel] Found artist: "${artist.name}" (ID: ${artistId})`);
       
-      // Check if we have cached network data
-      if (artist.webmapdata) {
+      // Check if we should bypass cache (for debugging/refresh purposes)
+      const bypassCache = req.query.refresh === 'true' || req.query.bypass === 'true';
+      
+      // Check if we have cached network data (unless bypassing cache)
+      if (artist.webmapdata && !bypassCache) {
         console.log(`💾 [Vercel] Found cached webmapdata for artist ID "${artistId}" (${artist.name})`);
         await client.end();
         return res.json(artist.webmapdata);
+      }
+      
+      if (bypassCache) {
+        console.log(`🔄 [Vercel] Bypassing cache for artist ID "${artistId}" (${artist.name}) - forcing regeneration`);
+      } else {
+        console.log(`🔄 [Vercel] No cached data found for artist ID "${artistId}" (${artist.name}), generating new network...`);
       }
       
       // If no cached data and no OpenAI key, return error

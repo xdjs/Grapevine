@@ -1,12 +1,14 @@
 import { apiRequest } from "./queryClient";
 import { NetworkData } from "../types/network";
 
-export async function fetchNetworkData(artistName: string): Promise<NetworkData> {
+export async function fetchNetworkData(artistName: string, refresh?: boolean): Promise<NetworkData> {
   try {
-    console.log(`🔍 [Frontend] Fetching network data for: "${artistName}"`);
-    console.log(`🔍 [Frontend] Request URL: /api/network/${encodeURIComponent(artistName)}`);
+    console.log(`🔍 [Frontend] Fetching network data for: "${artistName}"${refresh ? ' (refreshing cache)' : ''}`);
     
-    const response = await apiRequest("GET", `/api/network/${encodeURIComponent(artistName)}`);
+    const url = `/api/network/${encodeURIComponent(artistName)}${refresh ? '?refresh=true' : ''}`;
+    console.log(`🔍 [Frontend] Request URL: ${url}`);
+    
+    const response = await apiRequest("GET", url);
     
     console.log(`🔍 [Frontend] Response status: ${response.status}`);
     console.log(`🔍 [Frontend] Response ok: ${response.ok}`);
@@ -43,12 +45,14 @@ export async function fetchNetworkData(artistName: string): Promise<NetworkData>
   }
 }
 
-export async function fetchNetworkDataById(artistId: string): Promise<NetworkData> {
+export async function fetchNetworkDataById(artistId: string, refresh?: boolean): Promise<NetworkData> {
   try {
-    console.log(`🔍 [Frontend] Fetching network data for artist ID: "${artistId}"`);
-    console.log(`🔍 [Frontend] Request URL: /api/network-by-id/${encodeURIComponent(artistId)}`);
+    console.log(`🔍 [Frontend] Fetching network data for artist ID: "${artistId}"${refresh ? ' (refreshing cache)' : ''}`);
     
-    const response = await apiRequest("GET", `/api/network-by-id/${encodeURIComponent(artistId)}`);
+    const url = `/api/network-by-id/${encodeURIComponent(artistId)}${refresh ? '?refresh=true' : ''}`;
+    console.log(`🔍 [Frontend] Request URL: ${url}`);
+    
+    const response = await apiRequest("GET", url);
     
     console.log(`🔍 [Frontend] Response status: ${response.status}`);
     console.log(`🔍 [Frontend] Response ok: ${response.ok}`);
@@ -88,4 +92,56 @@ export async function fetchNetworkDataById(artistId: string): Promise<NetworkDat
 export async function searchArtist(query: string) {
   const response = await apiRequest("GET", `/api/search?q=${encodeURIComponent(query)}`);
   return response.json();
+}
+
+// Utility function to clear cache for an artist
+export async function clearArtistCache(artistName: string): Promise<void> {
+  try {
+    console.log(`🗑️ [Frontend] Clearing cache for: "${artistName}"`);
+    const response = await apiRequest("DELETE", `/api/clear-cache/${encodeURIComponent(artistName)}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to clear cache: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log(`✅ [Frontend] Cache cleared:`, result.message);
+  } catch (error) {
+    console.error(`❌ [Frontend] Error clearing cache:`, error);
+    throw error;
+  }
+}
+
+// Utility function to clear cache for an artist by ID
+export async function clearArtistCacheById(artistId: string): Promise<void> {
+  try {
+    console.log(`🗑️ [Frontend] Clearing cache for artist ID: "${artistId}"`);
+    const response = await apiRequest("DELETE", `/api/clear-cache-by-id/${encodeURIComponent(artistId)}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to clear cache: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log(`✅ [Frontend] Cache cleared:`, result.message);
+  } catch (error) {
+    console.error(`❌ [Frontend] Error clearing cache:`, error);
+    throw error;
+  }
+}
+
+// Utility function to refresh network data (clear cache + fetch fresh data)
+export async function refreshNetworkData(artistName: string): Promise<NetworkData> {
+  try {
+    console.log(`🔄 [Frontend] Refreshing network data for: "${artistName}"`);
+    
+    // First clear the cache
+    await clearArtistCache(artistName);
+    
+    // Then fetch fresh data
+    return await fetchNetworkData(artistName, true);
+  } catch (error) {
+    console.error(`❌ [Frontend] Error refreshing network data:`, error);
+    throw error;
+  }
 }

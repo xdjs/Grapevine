@@ -144,6 +144,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Clear cached data for an artist by ID
+  app.delete("/api/clear-cache-by-id/:artistId", async (req, res) => {
+    try {
+      const artistId = req.params.artistId;
+      console.log(`🗑️ [DEBUG] Clearing cache for artist ID "${artistId}"`);
+      
+      const connectionString = process.env.CONNECTION_STRING;
+      if (connectionString) {
+        const { Client } = await import('pg');
+        const client = new Client({ connectionString });
+        await client.connect();
+        
+        // First check if artist exists
+        const artistQuery = 'SELECT name FROM artists WHERE id = $1';
+        const artistResult = await client.query(artistQuery, [artistId]);
+        
+        if (artistResult.rows.length === 0) {
+          await client.end();
+          return res.status(404).json({ message: `Artist with ID ${artistId} not found` });
+        }
+        
+        const artistName = artistResult.rows[0].name;
+        await client.query('UPDATE artists SET webmapdata = NULL WHERE id = $1', [artistId]);
+        await client.end();
+        
+        console.log(`✅ [DEBUG] Cache cleared for artist ID "${artistId}" (${artistName})`);
+        res.json({ message: `Cache cleared for artist ID ${artistId} (${artistName})` });
+      } else {
+        res.status(500).json({ message: "Database connection not configured" });
+      }
+    } catch (error) {
+      console.error("Clear cache by ID error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Clear all cached network data
+  app.delete("/api/clear-all-cache", async (req, res) => {
+    try {
+      console.log(`🗑️ [DEBUG] Clearing all cached network data`);
+      
+      const connectionString = process.env.CONNECTION_STRING;
+      if (connectionString) {
+        const { Client } = await import('pg');
+        const client = new Client({ connectionString });
+        await client.connect();
+        
+        // Clear all webmapdata
+        const result = await client.query('UPDATE artists SET webmapdata = NULL WHERE webmapdata IS NOT NULL');
+        await client.end();
+        
+        console.log(`✅ [DEBUG] Cleared cache for ${result.rowCount} artists`);
+        res.json({ 
+          message: `Cleared cache for ${result.rowCount} artists`,
+          clearedCount: result.rowCount
+        });
+      } else {
+        res.status(500).json({ message: "Database connection not configured" });
+      }
+    } catch (error) {
+      console.error("Clear all cache error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get configuration including MusicNerd base URL
   app.get("/api/config", async (req, res) => {
     try {
