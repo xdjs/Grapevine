@@ -443,31 +443,53 @@ export default function NetworkVisualizer({
       const sourceName = typeof link.source === 'string' ? link.source : link.source.name;
       const targetName = typeof link.target === 'string' ? link.target : link.target.name;
       
+      console.log(`🤝 [Frontend] STARTING fetchCollaborationDetails for "${sourceName}" and "${targetName}"`);
+      
       try {
-        console.log(`🤝 [Frontend] Fetching collaboration details between "${sourceName}" and "${targetName}"`);
+        console.log(`🌐 [Frontend] Making fetch request to: /api/collaboration/${encodeURIComponent(sourceName)}/${encodeURIComponent(targetName)}`);
         const response = await fetch(`/api/collaboration/${encodeURIComponent(sourceName)}/${encodeURIComponent(targetName)}`);
+        console.log(`📡 [Frontend] Response status: ${response.status}, ok: ${response.ok}`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const collaborationData = await response.json();
+        console.log(`📄 [Frontend] Collaboration data received:`, collaborationData);
         
         // Store the collaboration details in the link data
         link.collaborationDetails = collaborationData;
-        console.log(`✅ [Frontend] Collaboration details fetched:`, collaborationData.hasData ? 'Data found' : 'No data');
+        console.log(`✅ [Frontend] Collaboration details stored:`, collaborationData.hasData ? 'Data found' : 'No data');
         
         // Update link appearance based on data availability
         if (collaborationData.hasData) {
+          console.log(`🎨 [Frontend] Updating link to blue (data found)`);
           linkElement
             .attr("stroke", "#67D1F8") // Light blue for links with data
             .style("cursor", "pointer")
             .style("opacity", 1)
-            .attr("stroke-dasharray", null); // Solid line
+            .attr("stroke-dasharray", null) // Solid line
+            .attr("stroke-width", 5); // Consistent with new thicker default
         } else {
+          console.log(`🎨 [Frontend] Updating link to gray (no data)`);
           linkElement
             .attr("stroke", "#888888") // Keep gray but still interactive
             .style("cursor", "pointer") // Keep clickable for small artists too
             .style("opacity", 0.6)
-            .attr("stroke-dasharray", "3,3"); // Subtle dashed line
+            .attr("stroke-dasharray", "3,3") // Subtle dashed line
+            .attr("stroke-width", 5); // Consistent with new thicker default
         }
+        
+        console.log(`✅ [Frontend] fetchCollaborationDetails completed successfully`);
       } catch (error) {
-        console.error(`❌ [Frontend] Error fetching collaboration details:`, error);
+        console.error(`❌ [Frontend] Error in fetchCollaborationDetails:`, error);
+        console.error(`❌ [Frontend] Error details:`, {
+          sourceName,
+          targetName,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          errorStack: error instanceof Error ? error.stack : 'No stack trace'
+        });
+        
         link.collaborationDetails = {
           songs: [],
           albums: [],
@@ -485,7 +507,8 @@ export default function NetworkVisualizer({
       }
     };
 
-    // Create links
+    // Create links with enhanced debugging
+    console.log(`🔗 [Frontend] Creating ${validLinks.length} links`);
     const linkElements = networkGroup
       .selectAll(".link")
       .data(validLinks)
@@ -493,48 +516,70 @@ export default function NetworkVisualizer({
       .append("line")
       .attr("class", "link network-link")
       .attr("stroke", "#888888") // Default gray for all links initially
-      .attr("stroke-width", 2)
+      .attr("stroke-width", 5) // Increased from 2 to 5 for easier interaction
       .style("cursor", "pointer")
       .style("opacity", 0.8) // Slightly transparent to indicate interactivity
       .on("mouseenter", async function(event, d) {
-        // Highlight the link
+        console.log(`🖱️ [Frontend] Link mouseenter triggered`, {
+          source: typeof d.source === 'string' ? d.source : d.source.name,
+          target: typeof d.target === 'string' ? d.target : d.target.name,
+          hasCollaborationDetails: !!d.collaborationDetails
+        });
+        
+        // Highlight the link - make it even thicker on hover
         d3.select(this)
           .attr("stroke", "#ffffff")
-          .attr("stroke-width", 4);
+          .attr("stroke-width", 8); // Increased from 4 to 8 for better visibility
         
         // Fetch collaboration details if not already fetched
         if (!d.collaborationDetails) {
+          console.log(`📡 [Frontend] No collaboration details found, fetching...`);
           await fetchCollaborationDetails(d, d3.select(this));
+        } else {
+          console.log(`💾 [Frontend] Using cached collaboration details`);
         }
         
         // Show collaboration tooltip
         showCollaborationTooltip(event, d);
       })
-      .on("mousemove", moveTooltip)
+      .on("mousemove", function(event, d) {
+        console.log(`🖱️ [Frontend] Link mousemove`);
+        moveTooltip(event);
+      })
       .on("mouseleave", function(event, d) {
-        // Reset link appearance
+        console.log(`🖱️ [Frontend] Link mouseleave`);
+        // Reset link appearance - back to thicker default
         d3.select(this)
           .attr("stroke", d.collaborationDetails?.hasData ? "#67D1F8" : "#555555")
-          .attr("stroke-width", 2);
+          .attr("stroke-width", 5); // Increased from 2 to 5
         
         hideTooltip();
       })
       .on("click", async function(event, d) {
-        console.log(`🔗 [Frontend] Link clicked`);
+        console.log(`🔗 [Frontend] Link clicked!`, {
+          source: typeof d.source === 'string' ? d.source : d.source.name,
+          target: typeof d.target === 'string' ? d.target : d.target.name,
+          hasCollaborationDetails: !!d.collaborationDetails
+        });
+        
+        // Prevent event bubbling
+        event.stopPropagation();
         
         // Fetch collaboration details if not already fetched
         if (!d.collaborationDetails) {
-          console.log(`🔗 [Frontend] Fetching collaboration details on click...`);
+          console.log(`📡 [Frontend] Fetching collaboration details on click...`);
           await fetchCollaborationDetails(d, d3.select(this));
+        } else {
+          console.log(`💾 [Frontend] Already have collaboration details`);
         }
         
         // Now check if there's collaboration data
         if (d.collaborationDetails?.hasData) {
-          console.log(`🔗 [Frontend] Link clicked with collaboration data - could add additional functionality here`);
-          // For now, just log - could add modal or expanded view in the future
+          console.log(`✅ [Frontend] Link clicked with collaboration data - showing tooltip`);
+          showCollaborationTooltip(event, d);
+          setTimeout(() => hideTooltip(), 5000); // Show tooltip for 5 seconds
         } else {
-          console.log(`🔗 [Frontend] Link clicked but no collaboration data available after fetching`);
-          // Don't prevent the click - let the user know why there's no interaction
+          console.log(`❌ [Frontend] Link clicked but no collaboration data available after fetching`);
           showCollaborationTooltip(event, d);
           setTimeout(() => hideTooltip(), 3000); // Show tooltip for 3 seconds
         }

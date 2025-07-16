@@ -148,27 +148,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get collaboration details between two artists
   app.get("/api/collaboration/:artist1/:artist2", async (req, res) => {
+    const startTime = Date.now();
     try {
       const artist1Name = decodeURIComponent(req.params.artist1);
       const artist2Name = decodeURIComponent(req.params.artist2);
       
-      console.log(`🤝 [Server] Fetching collaboration details between "${artist1Name}" and "${artist2Name}"`);
+      console.log(`🤝 [Server] ==========================================`);
+      console.log(`🤝 [Server] NEW COLLABORATION REQUEST`);
+      console.log(`🤝 [Server] Artist 1: "${artist1Name}"`);
+      console.log(`🤝 [Server] Artist 2: "${artist2Name}"`);
+      console.log(`🤝 [Server] Request URL: ${req.url}`);
+      console.log(`🤝 [Server] ==========================================`);
       
       let collaborationDetails = null;
       let dataSource = 'none';
       
       // Strategy 1: Try MusicBrainz first (most reliable for documented collaborations)
       try {
-        console.log(`🎵 [Server] Trying MusicBrainz for "${artist1Name}" and "${artist2Name}"`);
+        console.log(`🎵 [Server] STRATEGY 1: Trying MusicBrainz for "${artist1Name}" and "${artist2Name}"`);
+        const musicBrainzStart = Date.now();
         collaborationDetails = await musicBrainzService.getCollaborationDetails(artist1Name, artist2Name);
+        const musicBrainzTime = Date.now() - musicBrainzStart;
+        console.log(`🎵 [Server] MusicBrainz completed in ${musicBrainzTime}ms`);
         
         if (collaborationDetails.songs.length > 0 || collaborationDetails.albums.length > 0 || 
             collaborationDetails.details.length > 0) {
           dataSource = 'musicbrainz';
-          console.log(`✅ [Server] MusicBrainz found data: ${collaborationDetails.songs.length} songs, ${collaborationDetails.albums.length} albums`);
+          console.log(`✅ [Server] MusicBrainz SUCCESS: ${collaborationDetails.songs.length} songs, ${collaborationDetails.albums.length} albums, ${collaborationDetails.details.length} details`);
+        } else {
+          console.log(`⚠️ [Server] MusicBrainz returned empty results`);
         }
       } catch (musicbrainzError) {
-        console.log(`⚠️ [Server] MusicBrainz error:`, musicbrainzError);
+        console.log(`❌ [Server] MusicBrainz ERROR:`, musicbrainzError);
         collaborationDetails = { songs: [], albums: [], collaborationType: 'unknown', details: [] };
       }
       
@@ -176,27 +187,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if ((collaborationDetails.songs.length === 0 && collaborationDetails.albums.length === 0 && 
            collaborationDetails.details.length === 0) && openAIService.isServiceAvailable()) {
         
-        console.log(`🔄 [Server] MusicBrainz found no collaboration details, trying OpenAI fallback...`);
+        console.log(`🔄 [Server] STRATEGY 2: MusicBrainz found no data, trying OpenAI fallback...`);
         
         try {
+          const openAIStart = Date.now();
           const openAIDetails = await openAIService.getCollaborationDetails(artist1Name, artist2Name);
+          const openAITime = Date.now() - openAIStart;
+          console.log(`🤖 [Server] OpenAI completed in ${openAITime}ms`);
           
           if (openAIDetails.songs.length > 0 || openAIDetails.albums.length > 0 || 
               openAIDetails.details.length > 0) {
             collaborationDetails = openAIDetails;
             dataSource = 'openai';
-            console.log(`✅ [Server] OpenAI found data: ${openAIDetails.songs.length} songs, ${openAIDetails.albums.length} albums`);
+            console.log(`✅ [Server] OpenAI SUCCESS: ${openAIDetails.songs.length} songs, ${openAIDetails.albums.length} albums, ${openAIDetails.details.length} details`);
+          } else {
+            console.log(`⚠️ [Server] OpenAI returned empty results`);
           }
         } catch (openaiError) {
-          console.log(`⚠️ [Server] OpenAI error:`, openaiError);
+          console.log(`❌ [Server] OpenAI ERROR:`, openaiError);
         }
+      } else if (!openAIService.isServiceAvailable()) {
+        console.log(`⚠️ [Server] OpenAI service not available, skipping strategy 2`);
+      } else {
+        console.log(`✅ [Server] MusicBrainz found data, skipping OpenAI`);
       }
       
       // Strategy 3: Try name variations for smaller artists if still no data
       if ((collaborationDetails.songs.length === 0 && collaborationDetails.albums.length === 0 && 
            collaborationDetails.details.length === 0)) {
         
-        console.log(`🔍 [Server] Trying name variations for smaller artists...`);
+        console.log(`🔍 [Server] STRATEGY 3: Trying name variations for smaller artists...`);
         
         // Generate name variations for both artists
         const generateVariations = (name: string): string[] => {
@@ -222,7 +242,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const artist1Variations = generateVariations(artist1Name);
         const artist2Variations = generateVariations(artist2Name);
         
+        console.log(`🔍 [Server] Artist 1 variations:`, artist1Variations);
+        console.log(`🔍 [Server] Artist 2 variations:`, artist2Variations);
+        
         // Try combinations of variations
+        let foundWithVariations = false;
         for (const var1 of artist1Variations.slice(0, 2)) {
           for (const var2 of artist2Variations.slice(0, 2)) {
             if (var1 === artist1Name && var2 === artist2Name) continue; // Skip original combination
@@ -236,7 +260,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   variationDetails.details.length > 0) {
                 collaborationDetails = variationDetails;
                 dataSource = 'musicbrainz-variation';
-                console.log(`✅ [Server] Found data with variations: ${variationDetails.songs.length} songs, ${variationDetails.albums.length} albums`);
+                console.log(`✅ [Server] Found data with MusicBrainz variations: ${variationDetails.songs.length} songs, ${variationDetails.albums.length} albums`);
+                foundWithVariations = true;
                 break;
               }
               
@@ -248,6 +273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   collaborationDetails = openAIVariationDetails;
                   dataSource = 'openai-variation';
                   console.log(`✅ [Server] Found data with OpenAI variations: ${openAIVariationDetails.songs.length} songs, ${openAIVariationDetails.albums.length} albums`);
+                  foundWithVariations = true;
                   break;
                 }
               }
@@ -255,8 +281,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`⚠️ [Server] Variation "${var1}" and "${var2}" failed:`, variationError);
             }
           }
-          if (collaborationDetails.songs.length > 0 || collaborationDetails.albums.length > 0 || 
-              collaborationDetails.details.length > 0) break;
+          if (foundWithVariations) break;
+        }
+        
+        if (!foundWithVariations) {
+          console.log(`⚠️ [Server] No data found with any variations`);
         }
       }
       
@@ -264,27 +293,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasData = collaborationDetails.songs.length > 0 || collaborationDetails.albums.length > 0 || 
                       collaborationDetails.details.length > 0;
       
+      const totalTime = Date.now() - startTime;
+      
       if (!hasData) {
-        console.log(`❌ [Server] No collaboration data found between "${artist1Name}" and "${artist2Name}" with any strategy`);
-        return res.json({
+        console.log(`❌ [Server] FINAL RESULT: No collaboration data found between "${artist1Name}" and "${artist2Name}" with any strategy (${totalTime}ms)`);
+        const response = {
           songs: [],
           albums: [],
           collaborationType: 'unknown',
           details: [],
           hasData: false,
           dataSource: 'none'
-        });
+        };
+        console.log(`📤 [Server] Sending response:`, response);
+        return res.json(response);
       }
       
-      console.log(`✅ [Server] Found collaboration data via ${dataSource}: ${collaborationDetails.songs.length} songs, ${collaborationDetails.albums.length} albums`);
-      res.json({
+      console.log(`✅ [Server] FINAL RESULT: Found collaboration data via ${dataSource} (${totalTime}ms)`);
+      console.log(`📊 [Server] Final data: ${collaborationDetails.songs.length} songs, ${collaborationDetails.albums.length} albums, ${collaborationDetails.details.length} details`);
+      
+      const response = {
         ...collaborationDetails,
         hasData: true,
         dataSource
-      });
+      };
+      console.log(`📤 [Server] Sending response:`, response);
+      res.json(response);
       
     } catch (error) {
-      console.error(`❌ [Server] Error fetching collaboration details:`, error);
+      const totalTime = Date.now() - startTime;
+      console.error(`❌ [Server] CRITICAL ERROR in collaboration endpoint (${totalTime}ms):`, error);
+      console.error(`❌ [Server] Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
       res.status(500).json({ 
         error: 'Internal server error', 
         songs: [], 
@@ -292,7 +331,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         collaborationType: 'unknown', 
         details: [], 
         hasData: false,
-        dataSource: 'error'
+        dataSource: 'error',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
