@@ -88,11 +88,14 @@ export default function ShareButton() {
       // Wait a brief moment for elements to hide
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Capture only the network visualization
+      // Capture only the network visualization at high quality
+      const devicePixelRatio = window.devicePixelRatio || 1;
+      const highScale = Math.max(2, devicePixelRatio); // At least 2x, or device pixel ratio
+      
       const canvas = await html2canvas(networkContainer, {
         useCORS: true,
         allowTaint: true,
-        scale: 1, // Full scale for network content
+        scale: highScale, // High resolution for crisp quality
         logging: false,
         backgroundColor: '#000000', // Ensure black background
         width: networkContainer.offsetWidth,
@@ -122,23 +125,24 @@ export default function ShareButton() {
           if (nodes.length > 0) {
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
             
-            nodes.forEach((node) => {
-              const transform = node.getAttribute('transform');
-              if (transform) {
-                const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
-                if (match) {
-                  const x = parseFloat(match[1]);
-                  const y = parseFloat(match[2]);
-                  minX = Math.min(minX, x);
-                  minY = Math.min(minY, y);
-                  maxX = Math.max(maxX, x);
-                  maxY = Math.max(maxY, y);
+                          nodes.forEach((node) => {
+                const transform = node.getAttribute('transform');
+                if (transform) {
+                  const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+                  if (match) {
+                    // Scale the node positions to match the high-resolution canvas
+                    const x = parseFloat(match[1]) * highScale;
+                    const y = parseFloat(match[2]) * highScale;
+                    minX = Math.min(minX, x);
+                    minY = Math.min(minY, y);
+                    maxX = Math.max(maxX, x);
+                    maxY = Math.max(maxY, y);
+                  }
                 }
-              }
-            });
+              });
             
-            // Add padding around the network
-            const padding = 80;
+            // Add padding around the network (scaled for high resolution)
+            const padding = 80 * highScale;
             minX = Math.max(0, minX - padding);
             minY = Math.max(0, minY - padding);
             maxX = Math.min(canvas.width, maxX + padding);
@@ -156,8 +160,9 @@ export default function ShareButton() {
       const networkHeight = networkBounds.maxY - networkBounds.minY;
       
       // FORCE a perfect square - use the larger dimension for BOTH width and height
-      // Ensure minimum size of 400px for visibility
-      const squareSize = Math.max(400, Math.max(networkWidth, networkHeight));
+      // Ensure minimum size (scaled for high resolution)
+      const minSize = 400 * highScale;
+      const squareSize = Math.max(minSize, Math.max(networkWidth, networkHeight));
       
       console.log(`🔳 SQUARE DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}, squareSize=${squareSize}`);
       
@@ -202,13 +207,13 @@ export default function ShareButton() {
       return new Promise((resolve, reject) => {
         logo.onload = () => {
           try {
-            // Calculate watermark size and position (top-left corner)
-            const logoSize = Math.min(60, squareSize * 0.08); // Smaller: Max 60px or 8% of square
-            const padding = 12;
+            // Calculate watermark size and position (top-left corner) - scaled for high res
+            const logoSize = Math.min(60 * highScale, squareSize * 0.08);
+            const padding = 12 * highScale;
             
             // Calculate dynamic text size based on logoSize
-            const textSize = Math.max(10, logoSize * 0.3); // Text size scales with logo
-            const textSpacing = 6;
+            const textSize = Math.max(10 * highScale, logoSize * 0.3);
+            const textSpacing = 6 * highScale;
             
             // Create a semi-transparent background for the watermark
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -218,8 +223,9 @@ export default function ShareButton() {
             const bgY = padding - 10;
             
             // Use roundRect if available, otherwise use regular rect
+            const cornerRadius = 6 * highScale;
             if (typeof ctx.roundRect === 'function') {
-              ctx.roundRect(bgX, bgY, bgWidth, bgHeight, 6);
+              ctx.roundRect(bgX, bgY, bgWidth, bgHeight, cornerRadius);
             } else {
               ctx.fillRect(bgX, bgY, bgWidth, bgHeight);
             }
@@ -234,10 +240,10 @@ export default function ShareButton() {
             ctx.textAlign = 'left';
             ctx.fillText('Grapevine', padding + logoSize + textSpacing, padding + logoSize/2 + textSize/3);
             
-            // Convert to data URL
-            const dataUrl = watermarkedCanvas.toDataURL('image/png', 0.9);
+            // Convert to high-quality PNG (1.0 = maximum quality)
+            const dataUrl = watermarkedCanvas.toDataURL('image/png', 1.0);
             
-            console.log(`🔳 FINAL DEBUG: Canvas ${watermarkedCanvas.width}x${watermarkedCanvas.height}, DataURL length: ${dataUrl.length}`);
+            console.log(`🔳 HIGH-RES DEBUG: Canvas ${watermarkedCanvas.width}x${watermarkedCanvas.height}, Scale: ${highScale}x, DataURL length: ${dataUrl.length}`);
             
             setIsCapturing(false);
             resolve(dataUrl);
@@ -248,9 +254,9 @@ export default function ShareButton() {
         };
         
         logo.onerror = () => {
-          // Fallback: just return the cropped screenshot without watermark
-          console.warn('Failed to load logo, returning screenshot without watermark');
-          const dataUrl = watermarkedCanvas.toDataURL('image/png', 0.9);
+          // Fallback: just return the high-res cropped screenshot without watermark
+          console.warn('Failed to load logo, returning high-res screenshot without watermark');
+          const dataUrl = watermarkedCanvas.toDataURL('image/png', 1.0);
           setIsCapturing(false);
           resolve(dataUrl);
         };
