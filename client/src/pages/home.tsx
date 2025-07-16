@@ -90,7 +90,7 @@ export default function Home() {
     setIsLoading(false);
     
     // Update URL to reflect the artist being displayed
-    if (artistId && window.location.pathname === '/') {
+    if (artistId) {
       setLocation(`/${artistId}`);
     }
   }, [setLocation]);
