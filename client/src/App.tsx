@@ -12,6 +12,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/connections" component={ArtistNetwork} />
+      <Route path="/:artistId" component={Home} />
       <Route component={NotFound} />
     </Switch>
   );
