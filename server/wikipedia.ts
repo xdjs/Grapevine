@@ -172,7 +172,7 @@ class WikipediaService {
       !blacklist.includes(c.name.toLowerCase()) &&
       !c.name.includes('(') && // Filter out things like "Album Name (2020)"
       /^[A-Z]/.test(c.name) // Must start with capital letter
-    ).slice(0, 6); // Limit to 6 collaborators max
+    ).slice(0, 15); // Increased from 6 collaborators max
   }
 
   async getArtistCollaborations(artistName: string): Promise<WikipediaCollaborator[]> {

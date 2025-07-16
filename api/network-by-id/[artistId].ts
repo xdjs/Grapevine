@@ -238,22 +238,19 @@ Requirements:
         return;
       }
 
-      // Function to detect fake collaborators
+      // Function to detect fake collaborators - bare-bones version
       const isFakeCollaborator = (name: string): boolean => {
         const lowerName = name.toLowerCase();
-        const fakePatterns = [
+        const obviousFakePatterns = [
+          'producer 1', 'producer 2', 'producer 3', 'producer 4', 'producer 5',
           'artist a', 'artist b', 'artist c', 'artist d', 'artist e',
+          'songwriter 1', 'songwriter 2', 'songwriter 3', 'songwriter 4', 'songwriter 5',
           'producer a', 'producer b', 'producer c', 'producer d', 'producer e',
           'songwriter a', 'songwriter b', 'songwriter c', 'songwriter d', 'songwriter e',
-          'artist 1', 'artist 2', 'artist 3', 'artist 4', 'artist 5',
-          'producer 1', 'producer 2', 'producer 3', 'producer 4', 'producer 5',
-          'songwriter 1', 'songwriter 2', 'songwriter 3', 'songwriter 4', 'songwriter 5',
           'unknown', 'anonymous', 'various', 'n/a', 'tbd',
           'placeholder', 'example', 'sample'
         ];
-        return fakePatterns.some(pattern => lowerName.includes(pattern)) ||
-               lowerName.match(/^(artist|producer|songwriter)\s+[a-z]$/i) ||
-               lowerName.match(/^[a-z]{1,2}$/i);
+        return obviousFakePatterns.some(pattern => lowerName.includes(pattern));
       };
 
       // Process producers and songwriters with multi-role consolidation

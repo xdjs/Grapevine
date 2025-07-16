@@ -214,8 +214,8 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         const roleCompletion = await openai.chat.completions.create({
           model: "gpt-4o",
           messages: [{ role: "user", content: batchRolePrompt }],
-          temperature: 0.1,
-          max_tokens: 1000,
+          temperature: 0.3, // Increased from 0.1 for more creative responses
+          max_tokens: 2000, // Increased from 1000 for more detailed responses
         });
 
         const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
@@ -256,8 +256,8 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         const roleCompletion = await openai.chat.completions.create({
           model: "gpt-4o",
           messages: [{ role: "user", content: mainArtistRolePrompt }],
-          temperature: 0.1,
-          max_tokens: 100,
+          temperature: 0.3, // Increased from 0.1 for more creative responses
+          max_tokens: 200, // Increased from 100 for more detailed responses
         });
 
         const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
@@ -326,35 +326,34 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
           });
 
           if (openAIData.artists.length > 0) {
-            // Filter authentic collaborators
+            // Bare-bones filtering - only remove the most obvious fake patterns
             const authenticCollaborators = openAIData.artists.filter(collaborator => {
               const name = collaborator.name.toLowerCase();
-              const fakePatterns = [
-                'john doe', 'jane doe', 'john smith', 'jane smith',
-                'producer x', 'songwriter y', 'artist a', 'artist b', 'artist c', 'artist d', 'artist e',
+              const obviousFakePatterns = [
+                'producer 1', 'producer 2', 'producer 3', 'producer 4', 'producer 5',
+                'artist a', 'artist b', 'artist c', 'artist d', 'artist e',
+                'songwriter 1', 'songwriter 2', 'songwriter 3', 'songwriter 4', 'songwriter 5',
                 'producer a', 'producer b', 'producer c', 'producer d', 'producer e',
                 'songwriter a', 'songwriter b', 'songwriter c', 'songwriter d', 'songwriter e',
-                'artist 1', 'artist 2', 'artist 3', 'artist 4', 'artist 5',
-                'producer 1', 'producer 2', 'producer 3', 'producer 4', 'producer 5',
-                'songwriter 1', 'songwriter 2', 'songwriter 3', 'songwriter 4', 'songwriter 5',
                 'unknown', 'anonymous', 'various', 'n/a', 'tbd',
                 'placeholder', 'example', 'sample'
               ];
-              return !fakePatterns.some(pattern => name.includes(pattern)) &&
-                     !name.match(/^(artist|producer|songwriter)\s+[a-z]$/i) &&
-                     !name.match(/^[a-z]{1,2}$/i);
+              return !obviousFakePatterns.some(pattern => name.includes(pattern));
             });
             
-            console.log(`🔍 [DEBUG] Filtered ${openAIData.artists.length} to ${authenticCollaborators.length} authentic collaborators`);
+            console.log(`🔍 [DEBUG] Filtered ${openAIData.artists.length} to ${authenticCollaborators.length} collaborators (bare-bones mode)`);
             
-            if (authenticCollaborators.length === 0) {
-              console.log(`⚠️ [DEBUG] No authentic collaborators found for "${artistName}" from OpenAI`);
+            // Even if no "authentic" collaborators, still try to use what we have
+            const collaboratorsToUse = authenticCollaborators.length > 0 ? authenticCollaborators : openAIData.artists;
+            
+            if (collaboratorsToUse.length === 0) {
+              console.log(`⚠️ [DEBUG] No collaborators found for "${artistName}" from OpenAI`);
               return { nodes: [mainArtistNode], links: [] };
             }
             
             // Collect all people for batch role detection
             const allPeople = new Set<string>();
-            for (const collaborator of authenticCollaborators) {
+            for (const collaborator of collaboratorsToUse) {
               allPeople.add(collaborator.name);
               for (const branchingArtist of collaborator.topCollaborators || []) {
                 if (branchingArtist !== artistName) {
@@ -372,7 +371,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
             };
             
             // Process OpenAI data
-            for (const collaborator of authenticCollaborators) {
+            for (const collaborator of collaboratorsToUse) {
               const safeCollaboratorType = ensureRoleType(collaborator.type);
               let collaboratorNode = nodeMap.get(collaborator.name);
               
@@ -419,7 +418,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
                 });
 
                 // Add branching connections
-                const maxBranching = 3;
+                const maxBranching = 5; // Increased from 3
                 const branchingCount = Math.min(collaboratorNode.collaborations?.length || 0, maxBranching);
                 
                 for (let i = 0; i < branchingCount; i++) {
@@ -523,7 +522,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       const collaborationData = await musicBrainzService.getArtistCollaborations(artistName);
       
       // Process MusicBrainz data with type safety
-      const limitedCollaborators = collaborationData.artists.slice(0, 10);
+      const limitedCollaborators = collaborationData.artists.slice(0, 20); // Increased from 10
       
       for (const collaborator of limitedCollaborators) {
         const safeCollaboratorType = ensureRoleType(collaborator.type);
