@@ -27,6 +27,21 @@ export default function ShareButton() {
     }
   };
 
+  const copyFromDialog = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({
+        title: "Copied!",
+      });
+    } catch (error) {
+      console.error("Failed to copy to clipboard:", error);
+      toast({
+        title: "Copy failed",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleShareClick = async () => {
     const url = window.location.href;
     setCurrentUrl(url);
@@ -69,7 +84,7 @@ export default function ShareButton() {
                       <Button
                         size="icon"
                         variant="secondary"
-                        onClick={() => copyToClipboard(currentUrl)}
+                        onClick={() => copyFromDialog(currentUrl)}
                         className="bg-gray-700 hover:bg-gray-600 border-gray-600"
                         title="Copy link"
                       >
