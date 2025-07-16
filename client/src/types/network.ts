@@ -31,3 +31,14 @@ export interface FilterState {
   showSongwriters: boolean;
   showArtists: boolean;
 }
+
+export interface SearchHistoryEntry {
+  artistName: string;
+  artistId: string | null;
+  timestamp: number;
+  url: string;
+}
+
+export interface SearchHistory {
+  entries: SearchHistoryEntry[];
+}

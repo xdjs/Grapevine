@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
-import { NetworkData } from "@/types/network";
+import { NetworkData, SearchHistoryEntry } from "@/types/network";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, X } from "lucide-react";
+import { Search, X, Clock } from "lucide-react";
 import grapevineLogoLarge from "@assets/Grapevine Logo_1752103516040.png";
 import grapevineLogoSmall from "@assets/Grapevine Logo_1752103516040.png";
 
@@ -58,6 +58,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([]);
   const { toast } = useToast();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -74,6 +75,65 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     const maxHeight = Math.min(baseHeight, Math.max(120, availableSpace)); // Minimum 120px
     
     return `${maxHeight}px`;
+  }, []);
+
+  // Search history utility functions
+  const loadSearchHistory = useCallback(() => {
+    try {
+      const saved = sessionStorage.getItem('grapevine-search-history');
+      if (saved) {
+        const parsed = JSON.parse(saved) as SearchHistoryEntry[];
+        // Sort by timestamp, most recent first
+        const sorted = parsed.sort((a, b) => b.timestamp - a.timestamp);
+        // Keep only the last 10 entries
+        setSearchHistory(sorted.slice(0, 10));
+      }
+    } catch (error) {
+      console.error('Error loading search history:', error);
+      setSearchHistory([]);
+    }
+  }, []);
+
+  const saveToSearchHistory = useCallback((artistName: string, artistId: string | null) => {
+    try {
+      const newEntry: SearchHistoryEntry = {
+        artistName,
+        artistId,
+        timestamp: Date.now(),
+        url: artistId ? `/${artistId}` : '/'
+      };
+
+      setSearchHistory(prev => {
+        // Remove any existing entry for this artist to avoid duplicates
+        const filtered = prev.filter(entry => entry.artistName.toLowerCase() !== artistName.toLowerCase());
+        // Add new entry at the beginning
+        const updated = [newEntry, ...filtered].slice(0, 10); // Keep max 10 entries
+        
+        // Save to sessionStorage
+        try {
+          sessionStorage.setItem('grapevine-search-history', JSON.stringify(updated));
+        } catch (storageError) {
+          console.error('Error saving to sessionStorage:', storageError);
+        }
+        
+        return updated;
+      });
+    } catch (error) {
+      console.error('Error saving search history:', error);
+    }
+  }, []);
+
+  const formatTimeAgo = useCallback((timestamp: number) => {
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / (1000 * 60));
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
   }, []);
 
   // Fetch artist options for instant search
@@ -120,6 +180,11 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     }
   };
 
+  // Load search history on component mount
+  useEffect(() => {
+    loadSearchHistory();
+  }, [loadSearchHistory]);
+
   const handleArtistSelect = async (artist: ArtistOption) => {
     setSearchQuery(artist.name);
     setShowDropdown(false);
@@ -136,7 +201,11 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         : await fetchNetworkData(artist.name.trim());
       
       // Pass artist ID to update URL
-      onNetworkData(data, artist.artistId || artist.id);
+      const finalArtistId = artist.artistId || artist.id;
+      onNetworkData(data, finalArtistId);
+      
+      // Save to search history
+      saveToSearchHistory(artist.name, finalArtistId);
       
       toast({
         title: "Network Generated",
@@ -169,6 +238,9 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       
       onNetworkData(data, artistId);
       
+      // Save to search history
+      saveToSearchHistory(searchQuery.trim(), artistId || null);
+      
       toast({
         title: "Network Generated",
         description: `Found collaboration network for ${searchQuery}`,
@@ -183,13 +255,48 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       setIsLoading(false);
       onLoadingChange?.(false);
     }
-  }, [searchQuery, onNetworkData, onLoadingChange, toast]);
+  }, [searchQuery, onNetworkData, onLoadingChange, toast, saveToSearchHistory]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       setShowDropdown(false);
       setArtistOptions([]);
       handleSearch();
+    }
+  };
+
+  const handleHistoryItemClick = async (historyEntry: SearchHistoryEntry) => {
+    setSearchQuery(historyEntry.artistName);
+    setShowDropdown(false);
+    setArtistOptions([]);
+    
+    try {
+      setIsLoading(true);
+      onLoadingChange?.(true);
+      
+      // Use artist ID if available, otherwise fall back to name
+      const data = historyEntry.artistId 
+        ? await fetchNetworkDataById(historyEntry.artistId)
+        : await fetchNetworkData(historyEntry.artistName);
+      
+             onNetworkData(data, historyEntry.artistId || undefined);
+      
+      // Update timestamp for this history entry
+      saveToSearchHistory(historyEntry.artistName, historyEntry.artistId);
+      
+      toast({
+        title: "Network Generated",
+        description: `Found collaboration network for ${historyEntry.artistName}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to fetch network data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      onLoadingChange?.(false);
     }
   };
 
@@ -223,6 +330,9 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
           
           onNetworkData(data, artistId);
           
+          // Save to search history
+          saveToSearchHistory(artistName.trim(), artistId || null);
+          
           toast({
             title: "Network Generated",
             description: `Found collaboration network for ${artistName}`,
@@ -240,7 +350,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         }
       });
     }
-  }, [onSearchFunction, onNetworkData, onLoadingChange, toast]);
+  }, [onSearchFunction, onNetworkData, onLoadingChange, toast, saveToSearchHistory]);
 
   return (
     <>
@@ -285,6 +395,9 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 if (searchQuery.trim().length >= 1 && artistOptions.length === 0) {
                   debouncedFetchOptions(searchQuery.trim());
                 } else if (artistOptions.length > 0) {
+                  setShowDropdown(true);
+                } else if (searchQuery.trim().length === 0 && searchHistory.length > 0) {
+                  // Show search history when no query and history exists
                   setShowDropdown(true);
                 }
               }}
@@ -381,6 +494,37 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                     </>
                   )}
                   
+                  {/* Search History - Show when no query and no artist options */}
+                  {!isLoadingOptions && artistOptions.length === 0 && searchQuery.trim().length === 0 && searchHistory.length > 0 && (
+                    <>
+                      <div className="text-xs text-gray-400 px-2 py-1 border-b border-gray-700 mb-2">
+                        Recent searches
+                      </div>
+                      {searchHistory.map((entry, index) => (
+                        <Card
+                          key={`${entry.artistName}-${entry.timestamp}`}
+                          className="mb-2 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4"
+                          style={{
+                            borderLeftColor: '#67D1F8'
+                          }}
+                          onClick={() => handleHistoryItemClick(entry)}
+                        >
+                          <CardHeader className="pb-2 pt-3 px-4">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-sm text-white flex items-center">
+                                <Clock className="w-3 h-3 mr-2 text-gray-400" />
+                                {entry.artistName}
+                              </CardTitle>
+                              <span className="text-xs text-gray-400">
+                                {formatTimeAgo(entry.timestamp)}
+                              </span>
+                            </div>
+                          </CardHeader>
+                        </Card>
+                      ))}
+                    </>
+                  )}
+                  
                   {!isLoadingOptions && artistOptions.length === 0 && searchQuery.length >= 1 && (
                     <div className="py-4 text-center text-xs text-gray-400">
                       No artists found for "{searchQuery}"
@@ -436,6 +580,9 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                   if (searchQuery.trim().length >= 1 && artistOptions.length === 0) {
                     debouncedFetchOptions(searchQuery.trim());
                   } else if (artistOptions.length > 0) {
+                    setShowDropdown(true);
+                  } else if (searchQuery.trim().length === 0 && searchHistory.length > 0) {
+                    // Show search history when no query and history exists
                     setShowDropdown(true);
                   }
                 }}
@@ -525,6 +672,37 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                                   {artist.bio}
                                 </CardDescription>
                               )}
+                            </CardHeader>
+                          </Card>
+                        ))}
+                      </>
+                    )}
+                    
+                    {/* Search History - Network View */}
+                    {!isLoadingOptions && artistOptions.length === 0 && searchQuery.trim().length === 0 && searchHistory.length > 0 && (
+                      <>
+                        <div className="text-xs text-gray-400 px-2 py-1 border-b border-gray-700 mb-1">
+                          Recent searches
+                        </div>
+                        {searchHistory.map((entry, index) => (
+                          <Card
+                            key={`${entry.artistName}-${entry.timestamp}`}
+                            className="mb-1 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4"
+                            style={{
+                              borderLeftColor: '#67D1F8'
+                            }}
+                            onClick={() => handleHistoryItemClick(entry)}
+                          >
+                            <CardHeader className="pb-1 pt-2 px-3">
+                              <div className="flex items-center justify-between">
+                                <CardTitle className="text-xs text-white flex items-center">
+                                  <Clock className="w-3 h-3 mr-2 text-gray-400" />
+                                  {entry.artistName}
+                                </CardTitle>
+                                <span className="text-xs text-gray-400">
+                                  {formatTimeAgo(entry.timestamp)}
+                                </span>
+                              </div>
                             </CardHeader>
                           </Card>
                         ))}
