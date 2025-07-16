@@ -16,6 +16,7 @@ export default function ShareButton() {
       toast({
         title: "Link copied!",
         description: "The artist network link has been copied to your clipboard.",
+        className: "bg-green-600 border-green-500 text-white",
       });
     } catch (error) {
       console.error("Failed to copy to clipboard:", error);
@@ -32,6 +33,7 @@ export default function ShareButton() {
       await navigator.clipboard.writeText(url);
       toast({
         title: "Copied!",
+        className: "bg-green-600 border-green-500 text-white",
       });
     } catch (error) {
       console.error("Failed to copy to clipboard:", error);
