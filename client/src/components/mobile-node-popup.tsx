@@ -42,7 +42,11 @@ export default function MobileNodePopup({
     fetchConfig();
   }, []);
 
-  if (!isOpen || !node || !position) return null;
+  console.log(`📱 [MOBILE POPUP DEBUG] isOpen: ${isOpen}, node: ${node?.name}, position: ${position?.x}, ${position?.y}`);
+  if (!isOpen || !node || !position) {
+    console.log(`📱 [MOBILE POPUP DEBUG] Returning null - not rendering popup`);
+    return null;
+  }
 
   const roles = node.types || [node.type];
   const roleDisplay = roles.length > 1 ? roles.join(' + ') : roles[0];

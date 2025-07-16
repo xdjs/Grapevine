@@ -33,6 +33,12 @@ export default function NetworkVisualizer({
   const [mobilePopupPosition, setMobilePopupPosition] = useState<{ x: number; y: number } | null>(null);
   const [showMobilePopup, setShowMobilePopup] = useState(false);
   const isMobile = useIsMobile();
+  
+  // Additional mobile detection for debugging
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const userAgentMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  console.log(`🎯 [MOBILE DEBUG] useIsMobile: ${isMobile}, isTouchDevice: ${isTouchDevice}, userAgentMobile: ${userAgentMobile}`);
 
   // Fetch configuration on component mount
   useEffect(() => {
@@ -498,12 +504,16 @@ export default function NetworkVisualizer({
         console.log(`🎯 [CLICK DEBUG] ArtistId: ${d.artistId}`);
         
         // Handle mobile vs desktop differently
+        console.log(`🎯 [CLICK DEBUG] isMobile value: ${isMobile}`);
         if (isMobile) {
           // On mobile, show popup instead of immediate action
           console.log(`🎯 [CLICK DEBUG] Mobile device detected, showing popup`);
+          console.log(`🎯 [CLICK DEBUG] Setting popup node: ${d.name}`);
+          console.log(`🎯 [CLICK DEBUG] Setting popup position: ${event.pageX}, ${event.pageY}`);
           setMobilePopupNode(d);
           setMobilePopupPosition({ x: event.pageX, y: event.pageY });
           setShowMobilePopup(true);
+          console.log(`🎯 [CLICK DEBUG] Popup state set to true`);
           // Don't perform any other actions on mobile - just show the popup
           console.log(`🎯 [CLICK DEBUG] ===== END LEFT CLICK EVENT (MOBILE) =====`);
           return;
@@ -976,8 +986,12 @@ export default function NetworkVisualizer({
       <MobileNodePopup
         node={mobilePopupNode}
         isOpen={showMobilePopup}
-        onClose={() => setShowMobilePopup(false)}
+        onClose={() => {
+          console.log(`🎯 [CLICK DEBUG] Closing mobile popup`);
+          setShowMobilePopup(false);
+        }}
         onExpandNetwork={(artistName) => {
+          console.log(`🎯 [CLICK DEBUG] Expanding network for: ${artistName}`);
           if (onArtistSearch) {
             onArtistSearch(artistName);
           }
@@ -985,6 +999,7 @@ export default function NetworkVisualizer({
         onOpenMusicNerdProfile={openMusicNerdProfile}
         position={mobilePopupPosition}
       />
+      {console.log(`🎯 [CLICK DEBUG] Mobile popup props - isOpen: ${showMobilePopup}, node: ${mobilePopupNode?.name}, position: ${mobilePopupPosition?.x}, ${mobilePopupPosition?.y}`)}
     </div>
   );
 }
