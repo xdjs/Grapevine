@@ -12,30 +12,25 @@ export async function fetchNetworkData(artistName: string): Promise<NetworkData>
     console.log(`🔍 [Frontend] Response ok: ${response.ok}`);
     
     if (!response.ok) {
-      // Read response body once as text
-      const responseText = await response.text();
       let errorMessage = `HTTP ${response.status}`;
-      
       try {
-        // Try to parse as JSON for structured error messages
-        const errorData = JSON.parse(responseText);
+        const errorData = await response.json();
         errorMessage = errorData.message || errorData.error || errorMessage;
         console.error(`❌ [Frontend] API error response:`, errorData);
       } catch (parseError) {
-        // If not JSON, use the raw text
-        errorMessage = responseText || errorMessage;
-        console.error(`❌ [Frontend] Non-JSON error response: ${responseText}`);
+        const errorText = await response.text();
+        errorMessage = errorText || errorMessage;
+        console.error(`❌ [Frontend] Non-JSON error response: ${errorText}`);
       }
       throw new Error(`Network request failed: ${errorMessage}`);
     }
     
-    // Read response body once as text
-    const responseText = await response.text();
     let data;
     try {
-      data = JSON.parse(responseText);
+      data = await response.json();
     } catch (parseError) {
       console.error(`❌ [Frontend] Failed to parse JSON response:`, parseError);
+      const responseText = await response.text();
       console.error(`❌ [Frontend] Response text:`, responseText);
       throw new Error(`Cannot parse response data: ${parseError instanceof Error ? parseError.message : 'Invalid JSON'}`);
     }
@@ -59,30 +54,25 @@ export async function fetchNetworkDataById(artistId: string): Promise<NetworkDat
     console.log(`🔍 [Frontend] Response ok: ${response.ok}`);
     
     if (!response.ok) {
-      // Read response body once as text
-      const responseText = await response.text();
       let errorMessage = `HTTP ${response.status}`;
-      
       try {
-        // Try to parse as JSON for structured error messages
-        const errorData = JSON.parse(responseText);
+        const errorData = await response.json();
         errorMessage = errorData.message || errorData.error || errorMessage;
         console.error(`❌ [Frontend] API error response:`, errorData);
       } catch (parseError) {
-        // If not JSON, use the raw text
-        errorMessage = responseText || errorMessage;
-        console.error(`❌ [Frontend] Non-JSON error response: ${responseText}`);
+        const errorText = await response.text();
+        errorMessage = errorText || errorMessage;
+        console.error(`❌ [Frontend] Non-JSON error response: ${errorText}`);
       }
       throw new Error(`Network request failed: ${errorMessage}`);
     }
     
-    // Read response body once as text
-    const responseText = await response.text();
     let data;
     try {
-      data = JSON.parse(responseText);
+      data = await response.json();
     } catch (parseError) {
       console.error(`❌ [Frontend] Failed to parse JSON response:`, parseError);
+      const responseText = await response.text();
       console.error(`❌ [Frontend] Response text:`, responseText);
       throw new Error(`Cannot parse response data: ${parseError instanceof Error ? parseError.message : 'Invalid JSON'}`);
     }
