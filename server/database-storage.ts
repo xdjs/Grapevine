@@ -63,7 +63,7 @@ function createSafeNetworkNode(params: {
   musicNerdUrl?: string;
 }): SafeNetworkNode {
   const safeType = ensureRoleType(params.type);
-  const safeTypes = params.types ? validateRoles(params.types) : [safeType];
+  const safeTypes = params.types ? normalizeRoles(validateRoles(params.types)) : [safeType];
   
   return {
     id: params.name,
@@ -77,6 +77,19 @@ function createSafeNetworkNode(params: {
     collaborations: params.collaborations,
     musicNerdUrl: params.musicNerdUrl || 'https://musicnerd.xyz',
   };
+}
+
+// Helper function to deduplicate and normalize roles
+function normalizeRoles(roles: RoleType[]): RoleType[] {
+  // Remove duplicates while preserving order
+  const uniqueRoles = roles.filter((role, index) => roles.indexOf(role) === index);
+  
+  // Ensure 'artist' is first if present (for main artists)
+  if (uniqueRoles.includes('artist') && uniqueRoles[0] !== 'artist') {
+    return ['artist', ...uniqueRoles.filter(r => r !== 'artist')];
+  }
+  
+  return uniqueRoles;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -297,9 +310,9 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
 
     // Detect roles for main artist
     const mainArtistTypes = await this.detectMainArtistRoles(artistName);
-    const orderedMainArtistTypes = mainArtistTypes.includes('artist') 
+    const orderedMainArtistTypes = normalizeRoles(mainArtistTypes.includes('artist') 
       ? ['artist' as const, ...mainArtistTypes.filter(r => r !== 'artist')]
-      : mainArtistTypes;
+      : mainArtistTypes);
 
     // Create main artist node
     const mainArtistNode = createSafeNetworkNode({
@@ -377,11 +390,12 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
               let collaboratorNode = nodeMap.get(collaborator.name);
               
               if (collaboratorNode) {
-                // Person already exists - merge roles
+                // Person already exists - merge roles with deduplication
                 const currentTypes = collaboratorNode.types || [collaboratorNode.type];
                 if (!currentTypes.includes(safeCollaboratorType)) {
-                  collaboratorNode.types = [...currentTypes, safeCollaboratorType];
-                  console.log(`🎭 [DEBUG] Added ${safeCollaboratorType} role to existing ${collaborator.name} node`);
+                  const mergedRoles = normalizeRoles([...currentTypes, safeCollaboratorType]);
+                  collaboratorNode.types = mergedRoles;
+                  console.log(`🎭 [DEBUG] Added ${safeCollaboratorType} role to existing ${collaborator.name} node (now has ${mergedRoles.length} roles: ${mergedRoles.join(', ')})`);
                 }
                 
                 // Merge collaborations
@@ -393,17 +407,18 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
               } else {
                 // Create new node
                 const enhancedRoles = getOptimizedRoles(collaborator.name, safeCollaboratorType);
+                const normalizedRoles = normalizeRoles(enhancedRoles);
                 
                 collaboratorNode = createSafeNetworkNode({
                   name: collaborator.name,
-                  type: enhancedRoles[0],
-                  types: enhancedRoles,
+                  type: normalizedRoles[0],
+                  types: normalizedRoles,
                   size: 20,
                   collaborations: collaborator.topCollaborators || [],
                 });
                 
                 nodeMap.set(collaborator.name, collaboratorNode);
-                console.log(`🎭 [DEBUG] Enhanced "${collaborator.name}" to roles:`, enhancedRoles);
+                console.log(`🎭 [DEBUG] Enhanced "${collaborator.name}" to roles:`, normalizedRoles);
               }
             }
 
@@ -431,22 +446,24 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
                     // Add artist role if not present
                     const currentTypes = branchingNode.types || [branchingNode.type];
                     if (!currentTypes.includes('artist')) {
-                      branchingNode.types = [...currentTypes, 'artist'];
-                      console.log(`🎭 [DEBUG] Added artist role to existing branching node ${branchingArtist}`);
+                      const updatedRoles = normalizeRoles([...currentTypes, 'artist']);
+                      branchingNode.types = updatedRoles;
+                      console.log(`🎭 [DEBUG] Added artist role to existing branching node ${branchingArtist} (now has ${updatedRoles.length} roles: ${updatedRoles.join(', ')})`);
                     }
                   } else {
                     // Create new branching node
                     const enhancedBranchingRoles = getOptimizedRoles(branchingArtist, 'artist');
+                    const normalizedRoles = normalizeRoles(enhancedBranchingRoles);
                     
                     branchingNode = createSafeNetworkNode({
                       name: branchingArtist,
-                      type: enhancedBranchingRoles[0],
-                      types: enhancedBranchingRoles,
+                      type: normalizedRoles[0],
+                      types: normalizedRoles,
                       size: 16,
                     });
                     
                     nodeMap.set(branchingArtist, branchingNode);
-                    console.log(`🎭 [DEBUG] Enhanced branching "${branchingArtist}" to roles:`, enhancedBranchingRoles);
+                    console.log(`🎭 [DEBUG] Enhanced branching "${branchingArtist}" to roles:`, normalizedRoles);
                   }
                   
                   // Create link

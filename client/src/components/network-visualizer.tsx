@@ -386,9 +386,11 @@ export default function NetworkVisualizer({
       const group = d3.select(this);
       const roles = d.types || [d.type];
       
-      // Debug multi-role nodes
+      // Debug multi-role nodes with detailed logging
       if (roles.length > 1) {
-        console.log(`🎭 [Frontend] Multi-role node "${d.name}": roles = [${roles.join(', ')}]`);
+        console.log(`🎭 [Frontend] Multi-role node "${d.name}": roles = [${roles.join(', ')}], primary type = ${d.type}`);
+      } else {
+        console.log(`🎭 [Frontend] Single-role node "${d.name}": role = ${roles[0]}, primary type = ${d.type}`);
       }
       
       if (roles.length === 1) {
