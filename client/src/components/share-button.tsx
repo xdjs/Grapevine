@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { Share2, Copy, X } from "lucide-react";
+import { Share2, Copy } from "lucide-react";
 import { useState } from "react";
 
 export default function ShareButton() {
@@ -56,16 +56,8 @@ export default function ShareButton() {
               </DialogTrigger>
               <DialogContent className="max-w-md bg-gray-900 border-gray-700">
                 <DialogHeader>
-                  <DialogTitle className="text-white flex items-center justify-between">
+                  <DialogTitle className="text-white">
                     Share Artist Network
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setIsOpen(false)}
-                      className="text-gray-400 hover:text-white h-6 w-6"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -85,15 +77,6 @@ export default function ShareButton() {
                         <Copy className="h-4 w-4" />
                       </Button>
                     </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={() => setIsOpen(false)}
-                      variant="secondary"
-                      className="bg-gray-700 hover:bg-gray-600 border-gray-600"
-                    >
-                      Close
-                    </Button>
                   </div>
                 </div>
               </DialogContent>
