@@ -1,8 +1,4 @@
-import { useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { X, ExternalLink, Network } from "lucide-react";
-import { NetworkNode } from "@/types/network";
+import { useEffect } from "react";
 
 interface SimpleMobilePopupProps {
   onExpandNetwork: (artistName: string) => void;
@@ -13,68 +9,39 @@ export default function SimpleMobilePopup({
   onExpandNetwork,
   onOpenMusicNerdProfile,
 }: SimpleMobilePopupProps) {
-  const popupRef = useRef<HTMLDivElement>(null);
+  console.log(`📱 [SIMPLE POPUP] Component rendering`);
 
-  useEffect(() => {
-    const handleClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (popupRef.current && !popupRef.current.contains(target)) {
-        hidePopup();
-      }
-    };
+  const showPopup = (node: any, x: number, y: number) => {
+    console.log(`📱 [SIMPLE POPUP] showPopup called for ${node.name} at ${x}, ${y}`);
+    
+    // Remove any existing popup first
+    const existingOverlay = document.getElementById('mobile-popup-overlay');
+    const existingPopup = document.getElementById('mobile-popup');
+    if (existingOverlay) existingOverlay.remove();
+    if (existingPopup) existingPopup.remove();
 
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
-  }, []);
-
-  const showPopup = (node: NetworkNode, x: number, y: number) => {
-    if (!popupRef.current) return;
-
+    // Create simple popup content
     const roles = node.types || [node.type];
     const roleDisplay = roles.length > 1 ? roles.join(' + ') : roles[0];
     const isArtistNode = node.type === 'artist' || (roles && roles.includes('artist'));
     const mainArtistNode = node.size === 30 && node.type === 'artist';
 
-    // Create popup content
     const content = `
-      <div class="fixed z-50 bg-gray-900/95 backdrop-blur border-2 max-w-[calc(100vw-2rem)]" 
-           style="border-color: #b427b4; left: ${x}px; top: ${y}px; transform: translate(-50%, -100%); margin-top: -10px;">
-        <div class="p-4 space-y-3">
-          <div class="flex items-center justify-between">
+      <div style="position: fixed; z-index: 50; background: rgba(17, 24, 39, 0.95); backdrop-filter: blur(8px); border: 2px solid #b427b4; max-width: calc(100vw - 2rem); left: ${x}px; top: ${y}px; transform: translate(-50%, -100%); margin-top: -10px; border-radius: 8px;">
+        <div style="padding: 1rem; color: white;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
             <div>
-              <h3 class="text-lg font-semibold text-white">${node.name}</h3>
-              <p class="text-sm text-gray-300">Role${roles.length > 1 ? 's' : ''}: ${roleDisplay}</p>
+              <h3 style="font-size: 1.125rem; font-weight: 600; margin: 0;">${node.name}</h3>
+              <p style="font-size: 0.875rem; color: #d1d5db; margin: 0;">Role${roles.length > 1 ? 's' : ''}: ${roleDisplay}</p>
             </div>
-            <button id="close-popup" class="text-gray-400 hover:text-white p-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-            </button>
+            <button id="close-popup" style="color: #9ca3af; background: none; border: none; padding: 0.5rem; cursor: pointer;">✕</button>
           </div>
-          ${node.collaborations && node.collaborations.length > 0 ? `
-            <div class="text-sm text-gray-300">
-              <strong>Recent Collaborations:</strong>
-              <div class="mt-1 space-y-1">
-                ${node.collaborations.slice(0, 3).map(collab => `<div class="text-xs">${collab}</div>`).join('')}
-              </div>
-            </div>
-          ` : ''}
-          <div class="space-y-2 pt-2">
+          <div style="margin-top: 0.5rem;">
             ${isArtistNode && !mainArtistNode ? `
-              <button id="expand-network" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded">
-                <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242zM21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                Expand ${node.name}'s Network
-              </button>
+              <button id="expand-network" style="width: 100%; background: #2563eb; color: white; border: none; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; cursor: pointer;">Expand ${node.name}'s Network</button>
             ` : ''}
             ${isArtistNode ? `
-              <button id="music-nerd-profile" class="w-full bg-gray-800 hover:bg-gray-700 border-gray-600 text-white text-sm px-4 py-2 rounded border">
-                <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-                </svg>
-                View Music Nerd Profile
-              </button>
+              <button id="music-nerd-profile" style="width: 100%; background: #374151; color: white; border: 1px solid #4b5563; padding: 0.5rem; border-radius: 4px; cursor: pointer;">View Music Nerd Profile</button>
             ` : ''}
           </div>
         </div>
@@ -83,15 +50,17 @@ export default function SimpleMobilePopup({
 
     // Add background overlay
     const overlay = document.createElement('div');
-    overlay.className = 'fixed inset-0 z-40 bg-black/50';
+    overlay.style.cssText = 'position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.5);';
     overlay.id = 'mobile-popup-overlay';
     document.body.appendChild(overlay);
+    console.log(`📱 [SIMPLE POPUP] Overlay created and added to body`);
 
     // Add popup
     const popup = document.createElement('div');
     popup.innerHTML = content;
     popup.id = 'mobile-popup';
     document.body.appendChild(popup);
+    console.log(`📱 [SIMPLE POPUP] Popup created and added to body`);
 
     // Add event listeners
     const closeBtn = document.getElementById('close-popup');
@@ -129,11 +98,14 @@ export default function SimpleMobilePopup({
 
   // Expose showPopup globally so it can be called from the network visualizer
   useEffect(() => {
+    console.log(`📱 [SIMPLE POPUP] Component mounting, setting up global function`);
     (window as any).showMobilePopup = showPopup;
+    console.log(`📱 [SIMPLE POPUP] Global function set:`, typeof (window as any).showMobilePopup);
     return () => {
+      console.log(`📱 [SIMPLE POPUP] Component unmounting, cleaning up global function`);
       delete (window as any).showMobilePopup;
     };
   }, [onExpandNetwork, onOpenMusicNerdProfile]);
 
-  return null; // This component doesn't render anything visible
+  return <div style={{ display: 'none' }} />; // Hidden div
 } 

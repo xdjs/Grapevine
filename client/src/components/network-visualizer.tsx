@@ -3,6 +3,7 @@ import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import ArtistSelectionModal from "./artist-selection-modal";
 import SimpleMobilePopup from "./simple-mobile-popup";
+console.log(`🎯 [IMPORT DEBUG] SimpleMobilePopup imported:`, typeof SimpleMobilePopup);
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface NetworkVisualizerProps {
@@ -991,6 +992,7 @@ export default function NetworkVisualizer({
         onSelectArtist={handleArtistSelection}
       />
       
+      {console.log(`🎯 [RENDER DEBUG] About to render SimpleMobilePopup`)}
       <SimpleMobilePopup
         onExpandNetwork={(artistName) => {
           console.log(`🎯 [CLICK DEBUG] Expanding network for: ${artistName}`);
