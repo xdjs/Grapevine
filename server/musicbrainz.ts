@@ -160,6 +160,17 @@ class MusicBrainzService {
     }
   }
 
+  async getArtistReleases(artistId: string): Promise<any[]> {
+    try {
+      const endpoint = `/release?artist=${artistId}&inc=artist-credits&fmt=json&limit=25`;
+      const result = await this.makeRequest(endpoint);
+      return result.releases || [];
+    } catch (error) {
+      console.error('Error getting artist releases:', error);
+      return [];
+    }
+  }
+
   async getArtistCollaborations(artistName: string): Promise<{
     artists: Array<{ name: string; type: string; relation: string }>;
     works: Array<{ title: string; collaborators: string[] }>;
@@ -434,6 +445,154 @@ class MusicBrainzService {
   private async rateLimitDelay(): Promise<void> {
     // MusicBrainz allows 1 request per second
     return new Promise(resolve => setTimeout(resolve, 1000));
+  }
+
+  async getCollaborationDetails(artist1Name: string, artist2Name: string): Promise<{
+    songs: string[];
+    albums: string[];
+    collaborationType: string;
+    details: string[];
+  }> {
+    try {
+      console.log(`🤝 [DEBUG] Fetching collaboration details between "${artist1Name}" and "${artist2Name}"`);
+      
+      // Search for both artists
+      const [artist1, artist2] = await Promise.all([
+        this.searchArtist(artist1Name),
+        this.searchArtist(artist2Name)
+      ]);
+
+      if (!artist1 || !artist2) {
+        console.log(`❌ [DEBUG] Could not find one or both artists: ${artist1Name}, ${artist2Name}`);
+        return { songs: [], albums: [], collaborationType: 'unknown', details: [] };
+      }
+
+      console.log(`✅ [DEBUG] Found both artists: ${artist1Name} (${artist1.id}), ${artist2Name} (${artist2.id})`);
+
+      const songs: string[] = [];
+      const albums: string[] = [];
+      let collaborationType = 'unknown';
+      const details: string[] = [];
+      const processedRecordings = new Set<string>();
+      const processedReleases = new Set<string>();
+
+      // Get detailed info for both artists
+      const [detailedArtist1, detailedArtist2] = await Promise.all([
+        this.getArtistWithRelations(artist1.id),
+        this.getArtistWithRelations(artist2.id)
+      ]);
+
+      // Check artist-to-artist relations first
+      if (detailedArtist1?.relations) {
+        for (const relation of detailedArtist1.relations) {
+          if (relation["target-type"] === "artist" && 
+              relation.artist?.name.toLowerCase() === artist2Name.toLowerCase()) {
+            const relationType = this.mapRelationType(relation.type);
+            if (relationType) {
+              collaborationType = relation.type;
+              details.push(`${artist1Name} and ${artist2Name} have a "${relation.type}" relationship`);
+              console.log(`🔍 [DEBUG] Found direct relationship: ${relation.type}`);
+            }
+          }
+        }
+      }
+
+      // Get recordings for artist1 to find collaborations
+      await this.rateLimitDelay();
+      const recordings1 = await this.getArtistRecordings(artist1.id);
+      console.log(`🎵 [DEBUG] Found ${recordings1.length} recordings for ${artist1Name}`);
+
+      // Process recordings to find collaborations
+      for (const recording of recordings1.slice(0, 20)) { // Limit to prevent timeout
+        if (processedRecordings.has(recording.id)) continue;
+        processedRecordings.add(recording.id);
+
+        let foundCollaboration = false;
+
+        // Check artist credits
+        if (recording['artist-credit']) {
+          for (const credit of recording['artist-credit']) {
+            if (credit.artist?.name.toLowerCase().includes(artist2Name.toLowerCase()) ||
+                artist2Name.toLowerCase().includes(credit.artist?.name.toLowerCase() || '')) {
+              songs.push(recording.title);
+              foundCollaboration = true;
+              console.log(`🎵 [DEBUG] Found song collaboration: "${recording.title}"`);
+              
+              // Determine collaboration type from credits
+              const joinPhrase = credit.joinphrase || '';
+              if (joinPhrase.toLowerCase().includes('produced')) {
+                collaborationType = 'production';
+                details.push(`${artist2Name} produced "${recording.title}"`);
+              } else if (joinPhrase.toLowerCase().includes('wrote') || joinPhrase.toLowerCase().includes('composed')) {
+                collaborationType = 'songwriting';
+                details.push(`${artist2Name} co-wrote "${recording.title}"`);
+              } else {
+                collaborationType = 'performance';
+                details.push(`${artist2Name} featured on "${recording.title}"`);
+              }
+              break;
+            }
+          }
+        }
+
+        // Check recording relations (producer, engineer, etc.)
+        if (!foundCollaboration && recording.relations) {
+          for (const relation of recording.relations) {
+            if (relation.artist?.name.toLowerCase().includes(artist2Name.toLowerCase()) ||
+                artist2Name.toLowerCase().includes(relation.artist?.name.toLowerCase() || '')) {
+              songs.push(recording.title);
+              foundCollaboration = true;
+              console.log(`🎵 [DEBUG] Found recording relation: "${recording.title}" - ${relation.type}`);
+              
+              const relationType = this.mapRelationType(relation.type);
+              if (relationType === 'producer') {
+                collaborationType = 'production';
+                details.push(`${artist2Name} ${relation.type} on "${recording.title}"`);
+              } else if (relationType === 'songwriter') {
+                collaborationType = 'songwriting';
+                details.push(`${artist2Name} ${relation.type} on "${recording.title}"`);
+              }
+              break;
+            }
+          }
+        }
+      }
+
+      // Get releases (albums) for artist1 to find album collaborations
+      await this.rateLimitDelay();
+      const releases1 = await this.getArtistReleases(artist1.id);
+      console.log(`💿 [DEBUG] Found ${releases1.length} releases for ${artist1Name}`);
+
+      for (const release of releases1.slice(0, 10)) { // Limit to prevent timeout
+        if (processedReleases.has(release.id)) continue;
+        processedReleases.add(release.id);
+
+        // Check release artist credits
+        if (release['artist-credit']) {
+          for (const credit of release['artist-credit']) {
+            if (credit.artist?.name.toLowerCase().includes(artist2Name.toLowerCase()) ||
+                artist2Name.toLowerCase().includes(credit.artist?.name.toLowerCase() || '')) {
+              albums.push(release.title);
+              console.log(`💿 [DEBUG] Found album collaboration: "${release.title}"`);
+              details.push(`Collaborated on album "${release.title}"`);
+              break;
+            }
+          }
+        }
+      }
+
+      console.log(`✅ [DEBUG] Collaboration details found: ${songs.length} songs, ${albums.length} albums`);
+      return {
+        songs: Array.from(new Set(songs)), // Remove duplicates
+        albums: Array.from(new Set(albums)), // Remove duplicates
+        collaborationType,
+        details: Array.from(new Set(details)) // Remove duplicates
+      };
+
+    } catch (error) {
+      console.error(`❌ [DEBUG] Error fetching collaboration details between ${artist1Name} and ${artist2Name}:`, error);
+      return { songs: [], albums: [], collaborationType: 'unknown', details: [] };
+    }
   }
 }
 

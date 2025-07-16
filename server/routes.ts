@@ -2,6 +2,8 @@ import 'dotenv/config';
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
+import { musicBrainzService } from "./musicbrainz.js";
+import { openAIService } from "./openai-service.js";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -141,6 +143,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Clear cache error:", error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get collaboration details between two artists
+  app.get("/api/collaboration/:artist1/:artist2", async (req, res) => {
+    try {
+      const artist1Name = decodeURIComponent(req.params.artist1);
+      const artist2Name = decodeURIComponent(req.params.artist2);
+      
+      console.log(`🤝 [Server] Fetching collaboration details between "${artist1Name}" and "${artist2Name}"`);
+      
+      // Try MusicBrainz first
+      let collaborationDetails = await musicBrainzService.getCollaborationDetails(artist1Name, artist2Name);
+      
+      // If MusicBrainz didn't find much, try OpenAI as fallback
+      if (collaborationDetails.songs.length === 0 && collaborationDetails.albums.length === 0 && 
+          collaborationDetails.details.length === 0 && openAIService.isServiceAvailable()) {
+        console.log(`🔄 [Server] MusicBrainz found no collaboration details, trying OpenAI fallback...`);
+        collaborationDetails = await openAIService.getCollaborationDetails(artist1Name, artist2Name);
+      }
+      
+      // If still no data found, return empty but valid response
+      if (collaborationDetails.songs.length === 0 && collaborationDetails.albums.length === 0 && 
+          collaborationDetails.details.length === 0) {
+        console.log(`❌ [Server] No collaboration data found between "${artist1Name}" and "${artist2Name}"`);
+        return res.json({
+          songs: [],
+          albums: [],
+          collaborationType: 'unknown',
+          details: [],
+          hasData: false
+        });
+      }
+      
+      console.log(`✅ [Server] Found collaboration data: ${collaborationDetails.songs.length} songs, ${collaborationDetails.albums.length} albums`);
+      res.json({
+        ...collaborationDetails,
+        hasData: true
+      });
+      
+    } catch (error) {
+      console.error("Error fetching collaboration details:", error);
+      res.status(500).json({ 
+        message: "Internal server error",
+        songs: [],
+        albums: [],
+        collaborationType: 'unknown',
+        details: [],
+        hasData: false
+      });
     }
   });
 

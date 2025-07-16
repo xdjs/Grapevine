@@ -18,6 +18,13 @@ export interface NetworkNode {
 export interface NetworkLink {
   source: string | NetworkNode;
   target: string | NetworkNode;
+  collaborationDetails?: {
+    songs: string[];
+    albums: string[];
+    collaborationType: string;
+    details: string[];
+    hasData: boolean;
+  };
 }
 
 export interface NetworkData {

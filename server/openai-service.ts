@@ -28,7 +28,76 @@ class OpenAIService {
   }
 
   isServiceAvailable(): boolean {
-    return this.isConfigured;
+    return this.openai !== null;
+  }
+
+  async getCollaborationDetails(artist1Name: string, artist2Name: string): Promise<{
+    songs: string[];
+    albums: string[];
+    collaborationType: string;
+    details: string[];
+  }> {
+    if (!this.openai) {
+      console.log('🤖 [DEBUG] OpenAI not configured, skipping collaboration details');
+      return { songs: [], albums: [], collaborationType: 'unknown', details: [] };
+    }
+
+    try {
+      console.log(`🤖 [DEBUG] Fetching collaboration details from OpenAI for "${artist1Name}" and "${artist2Name}"`);
+
+      const prompt = `What did ${artist1Name} and ${artist2Name} collaborate on? Cite the exact song or project/album, and how they helped work on it.
+
+Return a JSON object with the following structure:
+{
+  "songs": ["Song Title 1", "Song Title 2"],
+  "albums": ["Album Title 1", "Album Title 2"],
+  "collaborationType": "production|songwriting|performance|remix|unknown",
+  "details": ["Brief description of collaboration 1", "Brief description of collaboration 2"]
+}
+
+Be specific about:
+- Exact song titles they worked on together
+- Specific albums or projects
+- How each person contributed to the collaboration
+- What role each played (producer, songwriter, featured artist, etc.)
+
+Only include verified, real collaborations with specific song/album names. If no collaborations exist, return empty arrays and "unknown" for collaborationType.`;
+
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "You are a music industry database expert. Provide accurate, specific information about real musical collaborations between artists. Only include verified collaborations with actual song/album titles."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.1,
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || '{"songs": [], "albums": [], "collaborationType": "unknown", "details": []}');
+      
+      console.log(`✅ [DEBUG] OpenAI collaboration details:`, {
+        songs: result.songs?.length || 0,
+        albums: result.albums?.length || 0,
+        collaborationType: result.collaborationType || 'unknown'
+      });
+
+      return {
+        songs: result.songs || [],
+        albums: result.albums || [],
+        collaborationType: result.collaborationType || 'unknown',
+        details: result.details || []
+      };
+
+    } catch (error) {
+      console.error(`❌ [DEBUG] OpenAI collaboration details error:`, error);
+      return { songs: [], albums: [], collaborationType: 'unknown', details: [] };
+    }
   }
 
   async getArtistCollaborations(artistName: string): Promise<OpenAICollaborationResult> {

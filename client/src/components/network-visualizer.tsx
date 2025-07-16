@@ -363,6 +363,125 @@ export default function NetworkVisualizer({
 
     simulationRef.current = simulation;
 
+    // Create tooltip
+    const tooltip = d3
+      .select("body")
+      .append("div")
+      .attr("class", "network-tooltip")
+      .style("position", "absolute")
+      .style("opacity", 0);
+
+    // Function to show collaboration tooltip
+    function showCollaborationTooltip(event: MouseEvent, link: NetworkLink) {
+      const sourceName = typeof link.source === 'string' ? link.source : link.source.name;
+      const targetName = typeof link.target === 'string' ? link.target : link.target.name;
+      
+      if (!link.collaborationDetails) {
+        // Show loading state
+        const content = `<strong>${sourceName} ↔ ${targetName}</strong><br/><em>Loading collaboration details...</em>`;
+        tooltip.html(content).style("opacity", 1);
+        return;
+      }
+
+      const details = link.collaborationDetails;
+      
+      if (!details.hasData) {
+        // Show no data state
+        const content = `<strong>${sourceName} ↔ ${targetName}</strong><br/><em>No collaboration data found</em><br/><small>This link is not clickable</small>`;
+        tooltip.html(content).style("opacity", 1);
+        return;
+      }
+
+      // Build content with collaboration details
+      let content = `<strong>${sourceName} ↔ ${targetName}</strong><br/>`;
+      
+      if (details.collaborationType && details.collaborationType !== 'unknown') {
+        content += `<em>Collaboration Type: ${details.collaborationType}</em><br/><br/>`;
+      }
+
+      if (details.songs.length > 0) {
+        content += `<strong>Songs:</strong><br/>`;
+        content += details.songs.slice(0, 5).map(song => `• ${song}`).join('<br/>');
+        if (details.songs.length > 5) {
+          content += `<br/>• ... and ${details.songs.length - 5} more`;
+        }
+        content += '<br/><br/>';
+      }
+
+      if (details.albums.length > 0) {
+        content += `<strong>Albums:</strong><br/>`;
+        content += details.albums.slice(0, 3).map(album => `• ${album}`).join('<br/>');
+        if (details.albums.length > 3) {
+          content += `<br/>• ... and ${details.albums.length - 3} more`;
+        }
+        content += '<br/><br/>';
+      }
+
+      if (details.details.length > 0) {
+        content += `<strong>Details:</strong><br/>`;
+        content += details.details.slice(0, 3).join('<br/>');
+        if (details.details.length > 3) {
+          content += `<br/>... and ${details.details.length - 3} more`;
+        }
+      }
+
+      tooltip.html(content).style("opacity", 1);
+    }
+
+    function moveTooltip(event: MouseEvent) {
+      tooltip
+        .style("left", event.pageX + 10 + "px")
+        .style("top", event.pageY - 10 + "px");
+    }
+
+    function hideTooltip() {
+      tooltip.style("opacity", 0);
+    }
+
+    // Function to fetch collaboration details
+    const fetchCollaborationDetails = async (link: NetworkLink, linkElement: any): Promise<void> => {
+      const sourceName = typeof link.source === 'string' ? link.source : link.source.name;
+      const targetName = typeof link.target === 'string' ? link.target : link.target.name;
+      
+      try {
+        console.log(`🤝 [Frontend] Fetching collaboration details between "${sourceName}" and "${targetName}"`);
+        const response = await fetch(`/api/collaboration/${encodeURIComponent(sourceName)}/${encodeURIComponent(targetName)}`);
+        const collaborationData = await response.json();
+        
+        // Store the collaboration details in the link data
+        link.collaborationDetails = collaborationData;
+        console.log(`✅ [Frontend] Collaboration details fetched:`, collaborationData.hasData ? 'Data found' : 'No data');
+        
+        // Update link appearance based on data availability
+        if (collaborationData.hasData) {
+          linkElement
+            .attr("stroke", "#67D1F8") // Light blue for links with data
+            .style("cursor", "pointer")
+            .attr("stroke-dasharray", null); // Solid line
+        } else {
+          linkElement
+            .attr("stroke", "#555555") // Gray for links without data
+            .style("cursor", "not-allowed")
+            .attr("stroke-dasharray", "5,5"); // Dashed line to indicate no data
+        }
+      } catch (error) {
+        console.error(`❌ [Frontend] Error fetching collaboration details:`, error);
+        link.collaborationDetails = {
+          songs: [],
+          albums: [],
+          collaborationType: 'unknown',
+          details: [],
+          hasData: false
+        };
+        
+        // Style as no-data link
+        linkElement
+          .attr("stroke", "#555555")
+          .style("cursor", "not-allowed")
+          .attr("stroke-dasharray", "5,5");
+      }
+    };
+
     // Create links
     const linkElements = networkGroup
       .selectAll(".link")
@@ -370,7 +489,42 @@ export default function NetworkVisualizer({
       .enter()
       .append("line")
       .attr("class", "link network-link")
-      .attr("stroke-width", 2);
+      .attr("stroke-width", 2)
+      .style("cursor", "pointer")
+      .on("mouseenter", async function(event, d) {
+        // Highlight the link
+        d3.select(this)
+          .attr("stroke", "#ffffff")
+          .attr("stroke-width", 4);
+        
+        // Fetch collaboration details if not already fetched
+        if (!d.collaborationDetails) {
+          await fetchCollaborationDetails(d, d3.select(this));
+        }
+        
+        // Show collaboration tooltip
+        showCollaborationTooltip(event, d);
+      })
+      .on("mousemove", moveTooltip)
+      .on("mouseleave", function(event, d) {
+        // Reset link appearance
+        d3.select(this)
+          .attr("stroke", d.collaborationDetails?.hasData ? "#67D1F8" : "#555555")
+          .attr("stroke-width", 2);
+        
+        hideTooltip();
+      })
+      .on("click", function(event, d) {
+        // Only allow clicking if there's collaboration data
+        if (d.collaborationDetails?.hasData) {
+          console.log(`🔗 [Frontend] Link clicked with collaboration data`);
+          // Could add additional functionality here like expanding details
+        } else {
+          console.log(`🔗 [Frontend] Link clicked but no collaboration data available`);
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      });
 
     // Create nodes with multi-role support
     const nodeElements = networkGroup
@@ -548,14 +702,6 @@ export default function NetworkVisualizer({
       .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.8)")
       .text((d) => d.name);
 
-    // Create tooltip
-    const tooltip = d3
-      .select("body")
-      .append("div")
-      .attr("class", "network-tooltip")
-      .style("position", "absolute")
-      .style("opacity", 0);
-
     function showTooltip(event: MouseEvent, d: NetworkNode) {
       const roles = d.types || [d.type];
       const roleDisplay = roles.length > 1 ? roles.join(' + ') : roles[0];
@@ -583,16 +729,6 @@ export default function NetworkVisualizer({
       }
 
       tooltip.html(content).style("opacity", 1);
-    }
-
-    function moveTooltip(event: MouseEvent) {
-      tooltip
-        .style("left", event.pageX + 10 + "px")
-        .style("top", event.pageY - 10 + "px");
-    }
-
-    function hideTooltip() {
-      tooltip.style("opacity", 0);
     }
 
       async function openMusicNerdProfile(artistName: string, artistId?: string | null) {
