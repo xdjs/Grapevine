@@ -62,7 +62,6 @@ export default function ShareButton() {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm text-gray-300">Artist Network Link:</label>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm text-white break-all">
                         {currentUrl}
