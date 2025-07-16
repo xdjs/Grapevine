@@ -4,13 +4,13 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
 import { NetworkData } from "@/types/network";
-import { Search } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Search, X } from "lucide-react";
 import grapevineLogoLarge from "@assets/Grapevine Logo_1752103516040.png";
 import grapevineLogoSmall from "@assets/Grapevine Logo_1752103516040.png";
 
 interface SearchInterfaceProps {
-  onNetworkData: (data: NetworkData) => void;
+  onNetworkData: (data: NetworkData, artistId?: string) => void;
   showNetworkView: boolean;
   clearSearch?: boolean;
   onLoadingChange?: (loading: boolean) => void;
@@ -134,7 +134,9 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       const data = artist.artistId 
         ? await fetchNetworkDataById(artist.artistId)
         : await fetchNetworkData(artist.name.trim());
-      onNetworkData(data);
+      
+      // Pass artist ID to update URL
+      onNetworkData(data, artist.artistId || artist.id);
       
       toast({
         title: "Network Generated",
@@ -160,7 +162,12 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       onLoadingChange?.(true);
       
       const data = await fetchNetworkData(searchQuery.trim());
-      onNetworkData(data);
+      
+      // Try to get artist ID for URL (from the main artist in the network)
+      const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+      const artistId = mainArtist?.artistId || mainArtist?.id;
+      
+      onNetworkData(data, artistId);
       
       toast({
         title: "Network Generated",
@@ -209,7 +216,12 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
           onLoadingChange?.(true);
           
           const data = await fetchNetworkData(artistName.trim());
-          onNetworkData(data);
+          
+          // Try to get artist ID for URL (from the main artist in the network)
+          const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+          const artistId = mainArtist?.artistId || mainArtist?.id;
+          
+          onNetworkData(data, artistId);
           
           toast({
             title: "Network Generated",

@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useParams, useLocation } from "wouter";
 import SearchInterface from "@/components/search-interface";
 import NetworkVisualizer from "@/components/network-visualizer";
 import ZoomControls from "@/components/zoom-controls";
@@ -11,6 +12,8 @@ import { Loader2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile.tsx";
 
 export default function Home() {
+  const params = useParams<{ artistId?: string }>();
+  const [, setLocation] = useLocation();
   const [networkData, setNetworkData] = useState<NetworkData | null>(null);
   const [showNetworkView, setShowNetworkView] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,12 +52,48 @@ export default function Home() {
     };
   }, [showNetworkView]);
 
-  const handleNetworkData = useCallback((data: NetworkData) => {
+  // Load artist network if artistId is in URL
+  useEffect(() => {
+    const loadArtistFromUrl = async () => {
+      if (params.artistId && !networkData && !isLoading) {
+        try {
+          setIsLoading(true);
+          console.log(`🔗 Loading artist network from URL: ${params.artistId}`);
+          
+          // Try to fetch network data by ID
+          const response = await fetch(`/api/network-by-id/${params.artistId}`);
+          if (response.ok) {
+            const data = await response.json();
+            setNetworkData(data);
+            setShowNetworkView(true);
+          } else {
+            console.error(`Failed to load artist ${params.artistId}:`, response.status);
+            // Redirect to home if artist not found
+            setLocation('/');
+          }
+        } catch (error) {
+          console.error(`Error loading artist ${params.artistId}:`, error);
+          setLocation('/');
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadArtistFromUrl();
+  }, [params.artistId, networkData, isLoading, setLocation]);
+
+  const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
     // Replace existing network with new data
     setNetworkData(data);
     setShowNetworkView(true);
     setIsLoading(false);
-  }, []);
+    
+    // Update URL to reflect the artist being displayed
+    if (artistId && window.location.pathname === '/') {
+      setLocation(`/${artistId}`);
+    }
+  }, [setLocation]);
 
   const handleLoadingChange = useCallback((loading: boolean) => {
     setIsLoading(loading);
@@ -68,6 +107,10 @@ export default function Home() {
     setShowNetworkView(false);
     setIsLoading(false);
     setClearSearchField(true);
+    
+    // Reset URL to home
+    setLocation('/');
+    
     // Reset the clear flag after a brief delay
     setTimeout(() => setClearSearchField(false), 100);
   };
