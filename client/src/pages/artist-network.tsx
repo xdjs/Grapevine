@@ -6,6 +6,7 @@ import ZoomControls from "@/components/zoom-controls";
 import FilterControls from "@/components/filter-controls";
 import MobileControls from "@/components/mobile-controls";
 import HelpButton from "@/components/help-button";
+import ShareButton from "@/components/share-button";
 import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft } from "lucide-react";
 
@@ -152,6 +153,9 @@ export default function ArtistNetwork() {
         </>
       )}
 
+      {/* Share Button - Always visible */}
+      <ShareButton />
+      
       {/* Help Button - Always visible */}
       <HelpButton />
     </div>
