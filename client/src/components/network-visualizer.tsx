@@ -578,8 +578,8 @@ export default function NetworkVisualizer({
       }
 
       if (roles.includes('artist')) {
-        content += `<br/><br/><em>Left-click to expand ${d.name}'s network</em>`;
-        content += `<br/><em>Right-click to search on Music Nerd</em>`;
+        content += `<br/><br/><em>Click to expand ${d.name}'s network</em>`;
+        content += `<br/><em>Right-Click to view their Music Nerd profile</em>`;
       }
 
       tooltip.html(content).style("opacity", 1);
