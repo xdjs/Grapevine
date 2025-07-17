@@ -7,6 +7,7 @@ import FilterControls from "@/components/filter-controls";
 import MobileControls from "@/components/mobile-controls";
 import HelpButton from "@/components/help-button";
 import ShareButton from "@/components/share-button";
+import Button from "@/components/ui/button";
 
 import { NetworkData, FilterState } from "@/types/network";
 import { Loader2 } from "lucide-react";
@@ -166,19 +167,39 @@ export default function Home() {
 
       {/* Attribution Content - Only visible when not showing network */}
       {!showNetworkView && (
-        <div className="footer-content fixed bottom-0 left-0 right-0 px-4 py-4 sm:py-6 text-center z-10 bg-gradient-to-t from-black/80 to-transparent" style={{ pointerEvents: 'auto' }}>
-          <div className="max-w-2xl mx-auto space-y-2 sm:space-y-3">
+        <div className="footer-content fixed bottom-0 left-0 right-0 text-center z-10 bg-gradient-to-t from-black/80 to-transparent" style={{ pointerEvents: 'auto' }}>
+          <div className="w-full max-w-2xl mx-auto px-4 py-4 sm:py-6 space-y-3 sm:space-y-4">
             <div className="text-gray-500 text-xs sm:text-sm">
               <p className="mb-1 sm:mb-2">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
               <p className="mb-1 sm:mb-2">Powered by Music Nerd</p>
               <p>Click on artist nodes to visit their Music Nerd profiles</p>
+            </div>
+            
+            {/* Music Nerd Button - Now part of footer */}
+            <div className="flex justify-center">
+              <Button
+                onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
+                className="font-medium py-1 px-3 rounded transition-colors text-white text-xs sm:text-sm"
+                style={{
+                  backgroundColor: '#b427b4',
+                  height: '28px',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#8f1c8f';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#b427b4';
+                }}
+              >
+                Visit Music Nerd
+              </Button>
             </div>
           </div>
         </div>
       )}
 
       {/* Spacer to ensure scrollable content - adjusted for mobile */}
-      <div className="h-32 sm:h-96"></div>
+      <div className="h-40 sm:h-96"></div>
 
       {/* Network Visualization */}
       {networkData && (
