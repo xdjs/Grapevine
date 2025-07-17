@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
-import { NetworkData, SearchHistoryEntry } from "@/types/network";
+import { NetworkData, SearchHistoryEntry, NetworkResponse, NoCollaboratorsResponse } from "@/types/network";
+import NoCollaboratorsPopup from "@/components/no-collaborators-popup";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, X, Clock } from "lucide-react";
 import grapevineLogoLarge from "@assets/Grapevine Logo_1752103516040.png";
@@ -59,6 +60,8 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([]);
+  const [showNoCollaboratorsPopup, setShowNoCollaboratorsPopup] = useState(false);
+  const [pendingArtistInfo, setPendingArtistInfo] = useState<{ name: string; id: string; singleNodeNetwork: NetworkData } | null>(null);
   const { toast } = useToast();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -138,6 +141,92 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     return `${days}d ago`;
   }, []);
 
+  // Helper function to check if response indicates no collaborators
+  const isNoCollaboratorsResponse = (response: NetworkResponse): response is NoCollaboratorsResponse => {
+    return 'noCollaborators' in response && response.noCollaborators === true;
+  };
+
+  // Helper function to handle network response
+  const handleNetworkResponse = useCallback((response: NetworkResponse, artistName: string) => {
+    if (isNoCollaboratorsResponse(response)) {
+      // Show popup for no collaborators
+      setPendingArtistInfo({
+        name: response.artistName,
+        id: response.artistId,
+        singleNodeNetwork: response.singleNodeNetwork
+      });
+      setShowNoCollaboratorsPopup(true);
+    } else {
+      // Normal network data - pass to parent
+      const mainArtist = response.nodes.find(node => node.size === 30 && node.type === 'artist');
+      const artistId = mainArtist?.artistId || mainArtist?.id;
+      onNetworkData(response, artistId);
+      
+      toast({
+        title: "Network Generated",
+        description: `Found collaboration network for ${artistName}`,
+      });
+    }
+  }, [onNetworkData, toast]);
+
+  // Handle user choice from popup
+  const handleShowHallucinations = useCallback(async () => {
+    if (!pendingArtistInfo) return;
+    
+    try {
+      setIsLoading(true);
+      onLoadingChange?.(true);
+      
+      const data = await fetchNetworkData(pendingArtistInfo.name, true); // Request hallucinated data
+      
+      if (isNoCollaboratorsResponse(data)) {
+        // Even with hallucinations, no data found - show single node
+        onNetworkData(data.singleNodeNetwork, pendingArtistInfo.id);
+      } else {
+        // Got hallucinated network
+        const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const artistId = mainArtist?.artistId || pendingArtistInfo.id;
+        onNetworkData(data, artistId);
+      }
+      
+      // Save to search history
+      saveToSearchHistory(pendingArtistInfo.name, pendingArtistInfo.id);
+      
+      setShowNoCollaboratorsPopup(false);
+      setPendingArtistInfo(null);
+      
+      toast({
+        title: "Network Generated",
+        description: `Generated creative network for ${pendingArtistInfo.name}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate hallucinated network",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      onLoadingChange?.(false);
+    }
+  }, [pendingArtistInfo, onNetworkData, onLoadingChange, toast, saveToSearchHistory]);
+
+  const handleClosePopup = useCallback(() => {
+    if (!pendingArtistInfo) return;
+    
+    // Default to single node when popup is closed/cancelled
+    onNetworkData(pendingArtistInfo.singleNodeNetwork, pendingArtistInfo.id);
+    saveToSearchHistory(pendingArtistInfo.name, pendingArtistInfo.id);
+    
+    setShowNoCollaboratorsPopup(false);
+    setPendingArtistInfo(null);
+    
+    toast({
+      title: "Network Generated",
+      description: `Showing ${pendingArtistInfo.name} as single node`,
+    });
+  }, [pendingArtistInfo, onNetworkData, toast, saveToSearchHistory]);
+
   // Fetch artist options for instant search
   const fetchArtistOptions = useCallback(async (query: string) => {
     if (query.trim().length < 1) {
@@ -209,17 +298,14 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         ? await fetchNetworkDataById(artist.artistId)
         : await fetchNetworkData(artist.name.trim());
       
-      // Pass artist ID to update URL
-      const finalArtistId = artist.artistId || artist.id;
-      onNetworkData(data, finalArtistId);
+      // Handle the response (might be network data or no-collaborators response)
+      handleNetworkResponse(data, artist.name);
       
-      // Save to search history
-      saveToSearchHistory(artist.name, finalArtistId);
-      
-      toast({
-        title: "Network Generated",
-        description: `Found collaboration network for ${artist.name}`,
-      });
+      // Save to search history if it's not a popup case (will be handled in popup callbacks)
+      if (!isNoCollaboratorsResponse(data)) {
+        const finalArtistId = artist.artistId || artist.id;
+        saveToSearchHistory(artist.name, finalArtistId);
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -241,19 +327,15 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       
       const data = await fetchNetworkData(searchQuery.trim());
       
-      // Try to get artist ID for URL (from the main artist in the network)
-      const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
-      const artistId = mainArtist?.artistId || mainArtist?.id;
+      // Handle the response (might be network data or no-collaborators response)
+      handleNetworkResponse(data, searchQuery.trim());
       
-      onNetworkData(data, artistId);
-      
-      // Save to search history
-      saveToSearchHistory(searchQuery.trim(), artistId || null);
-      
-      toast({
-        title: "Network Generated",
-        description: `Found collaboration network for ${searchQuery}`,
-      });
+      // Save to search history if it's not a popup case (will be handled in popup callbacks)
+      if (!isNoCollaboratorsResponse(data)) {
+        const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const artistId = mainArtist?.artistId || mainArtist?.id;
+        saveToSearchHistory(searchQuery.trim(), artistId || null);
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -288,15 +370,13 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         ? await fetchNetworkDataById(historyEntry.artistId)
         : await fetchNetworkData(historyEntry.artistName);
       
-             onNetworkData(data, historyEntry.artistId || undefined);
+      // Handle the response (might be network data or no-collaborators response)
+      handleNetworkResponse(data, historyEntry.artistName);
       
-      // Update timestamp for this history entry
-      saveToSearchHistory(historyEntry.artistName, historyEntry.artistId);
-      
-      toast({
-        title: "Network Generated",
-        description: `Found collaboration network for ${historyEntry.artistName}`,
-      });
+      // Update timestamp for this history entry if it's not a popup case
+      if (!isNoCollaboratorsResponse(data)) {
+        saveToSearchHistory(historyEntry.artistName, historyEntry.artistId);
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -333,19 +413,15 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
           
           const data = await fetchNetworkData(artistName.trim());
           
-          // Try to get artist ID for URL (from the main artist in the network)
-          const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
-          const artistId = mainArtist?.artistId || mainArtist?.id;
+          // Handle the response (might be network data or no-collaborators response)
+          handleNetworkResponse(data, artistName.trim());
           
-          onNetworkData(data, artistId);
-          
-          // Save to search history
-          saveToSearchHistory(artistName.trim(), artistId || null);
-          
-          toast({
-            title: "Network Generated",
-            description: `Found collaboration network for ${artistName}`,
-          });
+          // Save to search history if it's not a popup case (will be handled in popup callbacks)
+          if (!isNoCollaboratorsResponse(data)) {
+            const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+            const artistId = mainArtist?.artistId || mainArtist?.id;
+            saveToSearchHistory(artistName.trim(), artistId || null);
+          }
         } catch (error) {
           console.error(`❌ [Search Interface] Error searching for ${artistName}:`, error);
           toast({
@@ -754,6 +830,39 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
           </div>
         </div>
       </div>
+
+      
+      {/* Music Nerd Button - Fixed at bottom of screen */}
+      {!showNetworkView && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
+          <Button
+            onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
+            className="font-medium py-0.5 px-2 rounded transition-colors text-white"
+            style={{
+              backgroundColor: '#b427b4',
+              fontSize: '10px',
+              height: '24px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#8f1c8f';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#b427b4';
+            }}
+          >
+            Visit Music Nerd
+          </Button>
+        </div>
+      )}
+
+      {/* No Collaborators Popup */}
+      <NoCollaboratorsPopup
+        isOpen={showNoCollaboratorsPopup}
+        artistName={pendingArtistInfo?.name || ""}
+        onClose={handleClosePopup}
+        onShowHallucinations={handleShowHallucinations}
+      />
+
     </>
   );
 }

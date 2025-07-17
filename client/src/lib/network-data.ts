@@ -1,12 +1,15 @@
 import { apiRequest } from "./queryClient";
-import { NetworkData } from "../types/network";
+import { NetworkData, NetworkResponse, NoCollaboratorsResponse } from "../types/network";
 
-export async function fetchNetworkData(artistName: string): Promise<NetworkData> {
+export async function fetchNetworkData(artistName: string, allowHallucinations?: boolean): Promise<NetworkResponse> {
   try {
     console.log(`🔍 [Frontend] Fetching network data for: "${artistName}"`);
-    console.log(`🔍 [Frontend] Request URL: /api/network/${encodeURIComponent(artistName)}`);
+    const url = allowHallucinations 
+      ? `/api/network/${encodeURIComponent(artistName)}?allowHallucinations=true`
+      : `/api/network/${encodeURIComponent(artistName)}`;
+    console.log(`🔍 [Frontend] Request URL: ${url}`);
     
-    const response = await apiRequest("GET", `/api/network/${encodeURIComponent(artistName)}`);
+    const response = await apiRequest("GET", url);
     
     console.log(`🔍 [Frontend] Response status: ${response.status}`);
     console.log(`🔍 [Frontend] Response ok: ${response.ok}`);
@@ -43,12 +46,15 @@ export async function fetchNetworkData(artistName: string): Promise<NetworkData>
   }
 }
 
-export async function fetchNetworkDataById(artistId: string): Promise<NetworkData> {
+export async function fetchNetworkDataById(artistId: string, allowHallucinations?: boolean): Promise<NetworkResponse> {
   try {
     console.log(`🔍 [Frontend] Fetching network data for artist ID: "${artistId}"`);
-    console.log(`🔍 [Frontend] Request URL: /api/network-by-id/${encodeURIComponent(artistId)}`);
+    const url = allowHallucinations 
+      ? `/api/network-by-id/${encodeURIComponent(artistId)}?allowHallucinations=true`
+      : `/api/network-by-id/${encodeURIComponent(artistId)}`;
+    console.log(`🔍 [Frontend] Request URL: ${url}`);
     
-    const response = await apiRequest("GET", `/api/network-by-id/${encodeURIComponent(artistId)}`);
+    const response = await apiRequest("GET", url);
     
     console.log(`🔍 [Frontend] Response status: ${response.status}`);
     console.log(`🔍 [Frontend] Response ok: ${response.ok}`);
