@@ -123,13 +123,13 @@ export default function MobileControls({
         </Card>
       )}
 
-      {/* Background overlay to close controls */}
-      {showControls && (
+      {/* Background overlay to close controls - REMOVED FOR MOBILE */}
+      {/* {showControls && (
         <div
           className="fixed inset-0 z-30 bg-black/20"
           onClick={() => setShowControls(false)}
         />
-      )}
+      )} */}
     </>
   );
 }
