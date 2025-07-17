@@ -68,14 +68,18 @@ export default function NetworkVisualizer({
     // Mobile: Use larger square that extends beyond screen for better sharing snapshots
     let width, height;
     if (isMobile) {
-      // Create a large square canvas for mobile to prevent node squishing in shares
-      // Use a significantly larger space to give nodes room to spread out naturally
-      const screenSize = Math.max(window.innerWidth, window.innerHeight);
-      const mobileCanvasSize = Math.max(2000, screenSize * 2.5); // Minimum 2000px, or 2.5x screen size
-      width = mobileCanvasSize;
-      height = mobileCanvasSize;
-      console.log(`📱 MOBILE CANVAS CREATED: ${width}x${height} (screen: ${window.innerWidth}x${window.innerHeight})`);
-      console.log(`📱 Mobile detection: isMobile=${isMobile}, screenSize=${screenSize}, canvasSize=${mobileCanvasSize}`);
+      // Create a square canvas that's as tall as the screen and extends off the sides
+      // This prevents vertical squishing while allowing horizontal overflow for better sharing
+      const screenHeight = window.innerHeight;
+      const screenWidth = window.innerWidth;
+      
+      // Make canvas square using screen height as both width and height
+      // This ensures it fits vertically but extends off horizontally
+      width = screenHeight;
+      height = screenHeight;
+      
+      console.log(`📱 MOBILE CANVAS CREATED: ${width}x${height} (screen: ${screenWidth}x${screenHeight})`);
+      console.log(`📱 Square canvas: height-based square, extends ${(width - screenWidth) / 2}px off each side`);
     } else {
       // Desktop: Use screen size as boundaries
       width = window.innerWidth;
@@ -133,40 +137,36 @@ export default function NetworkVisualizer({
     svg.call(zoom);
     zoomRef.current = zoom;
     
-    // On mobile, start with a reasonable zoom to show the network nicely
+    // On mobile, center the square canvas horizontally and fit it vertically
     if (isMobile) {
-      // Start with a zoom that makes the network visible but not too small
-      const initialScale = 0.25; // Lower zoom to show more of the large canvas
-      const viewportCenterX = window.innerWidth / 2;
-      const viewportCenterY = window.innerHeight / 2;
-      const canvasCenterX = width / 2;
-      const canvasCenterY = height / 2;
+      const screenWidth = window.innerWidth;
+      const screenHeight = window.innerHeight;
       
-      // Center the network canvas in the viewport
-      const translateX = viewportCenterX - (canvasCenterX * initialScale);
-      const translateY = viewportCenterY - (canvasCenterY * initialScale);
+      // Since canvas is square (height x height), center it horizontally
+      // The canvas extends equally off both sides of the screen
+      const horizontalOverflow = (width - screenWidth) / 2;
       
-      console.log(`📱 MOBILE ZOOM SETUP:`);
-      console.log(`📱   Canvas: ${width}x${height}`);
-      console.log(`📱   Viewport: ${window.innerWidth}x${window.innerHeight}`);
-      console.log(`📱   Scale: ${initialScale}`);
-      console.log(`📱   Translate: (${translateX}, ${translateY})`);
-      console.log(`📱   Canvas center: (${canvasCenterX}, ${canvasCenterY})`);
-      console.log(`📱   Viewport center: (${viewportCenterX}, ${viewportCenterY})`);
+      // Position the canvas so it's centered horizontally and aligned to screen top
+      const translateX = -horizontalOverflow; // Move left by half the overflow
+      const translateY = 0; // No vertical offset needed since canvas height = screen height
+      const initialScale = 1; // No scaling needed since canvas fits vertically
       
-      // Apply the initial transform after a short delay to ensure SVG is ready
-      setTimeout(() => {
-        if (svgRef.current) {
-          const currentSvg = d3.select(svgRef.current);
-          currentSvg.call(
-            zoom.transform,
-            d3.zoomIdentity.translate(translateX, translateY).scale(initialScale)
-          );
-          setCurrentZoom(initialScale);
-          onZoomChange({ k: initialScale, x: translateX, y: translateY });
-          console.log(`📱 MOBILE ZOOM APPLIED: scale=${initialScale}, translate=(${translateX}, ${translateY})`);
-        }
-      }, 100);
+      console.log(`📱 MOBILE POSITIONING:`);
+      console.log(`📱   Canvas: ${width}x${height} (square)`);
+      console.log(`📱   Screen: ${screenWidth}x${screenHeight}`);
+      console.log(`📱   Horizontal overflow: ${horizontalOverflow}px per side`);
+      console.log(`📱   Position: translateX=${translateX}, translateY=${translateY}`);
+      console.log(`📱   Scale: ${initialScale} (1:1 ratio)`);
+      
+      // Apply the positioning immediately since we're not scaling
+      svg.call(
+        zoom.transform,
+        d3.zoomIdentity.translate(translateX, translateY).scale(initialScale)
+      );
+      setCurrentZoom(initialScale);
+      onZoomChange({ k: initialScale, x: translateX, y: translateY });
+      
+      console.log(`📱 MOBILE POSITIONING APPLIED: centered square canvas`);
     }
 
     // Completely disable D3's touch handling - we'll handle it manually
@@ -396,8 +396,8 @@ export default function NetworkVisualizer({
             node.x = width / 2;
             node.y = height / 2;
           } else {
-            // On mobile, spread nodes more in the larger canvas space
-            const spreadMultiplier = isMobile ? 300 : 100;
+            // On mobile, spread nodes appropriately for the square canvas
+            const spreadMultiplier = isMobile ? 150 : 100; // Moderate spread for square canvas
             node.x = centerX + (Math.random() - 0.5) * spreadMultiplier;
             node.y = centerY + (Math.random() - 0.5) * spreadMultiplier;
           }
@@ -407,7 +407,7 @@ export default function NetworkVisualizer({
 
     // Create boundary force to keep nodes within canvas
     const boundaryForce = () => {
-      const margin = isMobile ? 200 : 50; // Larger margin on mobile for more spread
+      const margin = isMobile ? 100 : 50; // Reasonable margin for square canvas
       for (const node of data.nodes) {
         if (node.x! < margin) node.x = margin;
         if (node.x! > width - margin) node.x = width - margin;
@@ -426,15 +426,15 @@ export default function NetworkVisualizer({
         d3
           .forceLink<NetworkNode, NetworkLink>(validLinks)
           .id((d) => d.id)
-          .distance(isMobile ? 120 : 80) // Longer links on mobile for better spread
+          .distance(isMobile ? 100 : 80) // Slightly longer links for square canvas
       )
-      .force("charge", d3.forceManyBody().strength(isMobile ? -200 : -150)) // Stronger repulsion on mobile
-      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + (isMobile ? 20 : 10))) // More space on mobile
+      .force("charge", d3.forceManyBody().strength(isMobile ? -175 : -150)) // Moderate repulsion for square canvas
+      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + (isMobile ? 15 : 10))) // Moderate spacing for square canvas
       .force("boundary", boundaryForce)
       .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? (isMobile ? 0.15 : 0.1) : 0))
       .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? (isMobile ? 0.15 : 0.1) : 0));
     
-    console.log(`🔬 FORCES CONFIGURED: linkDistance=${isMobile ? 120 : 80}, charge=${isMobile ? -200 : -150}`);
+    console.log(`🔬 FORCES CONFIGURED: linkDistance=${isMobile ? 100 : 80}, charge=${isMobile ? -175 : -150}, collision=${isMobile ? 15 : 10}`);
 
     simulationRef.current = simulation;
 
@@ -897,10 +897,10 @@ export default function NetworkVisualizer({
     // Get the actual canvas dimensions based on device type
     let canvasWidth, canvasHeight;
     if (isMobile) {
-      const screenSize = Math.max(window.innerWidth, window.innerHeight);
-      const mobileCanvasSize = Math.max(2000, screenSize * 2.5);
-      canvasWidth = mobileCanvasSize;
-      canvasHeight = mobileCanvasSize;
+      // Use same logic as main canvas setup: square based on screen height
+      const screenHeight = window.innerHeight;
+      canvasWidth = screenHeight;
+      canvasHeight = screenHeight;
     } else {
       canvasWidth = window.innerWidth;
       canvasHeight = window.innerHeight;
