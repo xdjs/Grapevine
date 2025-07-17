@@ -37,7 +37,7 @@ export default function ShareButton() {
   };
   
   const shareToInstagram = () => {
-    // Instagram doesn't support direct URL sharing, so we'll copy to clipboard and open Instagram
+    // Instagram doesn't support direct URL sharing, so we'll copy to clipboard and open Instagram's posting interface
     const text = `🎵 Artist collaboration network 🎵\n\nDiscover music connections at ${window.location.href}\n\n#music #artists #collaboration #grapevine`;
     
     navigator.clipboard.writeText(text).then(() => {
@@ -46,15 +46,56 @@ export default function ShareButton() {
         description: "Caption copied. Opening Instagram - paste when creating your post.",
         className: "bg-green-600 border-green-500 text-white",
       });
-      // Open Instagram web (will redirect to app on mobile)
-      window.open('https://www.instagram.com/', '_blank');
+      
+      // Try to open Instagram's posting interface directly
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        // Try to open Instagram app's camera/posting interface
+        const instagramAppUrl = 'instagram://camera';
+        const fallbackUrl = 'https://www.instagram.com/';
+        
+        // Create a hidden iframe to test if the app opens
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = instagramAppUrl;
+        document.body.appendChild(iframe);
+        
+        // If app doesn't open within 2 seconds, open web version
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          window.open(fallbackUrl, '_blank');
+        }, 2000);
+        
+        // Try to open the app immediately
+        window.location.href = instagramAppUrl;
+        
+        // If we're still here after 500ms, the app probably didn't open
+        setTimeout(() => {
+          window.open(fallbackUrl, '_blank');
+        }, 500);
+      } else {
+        // On desktop, open Instagram web and try to go to creation flow
+        window.open('https://www.instagram.com/accounts/login/?next=/create/select/', '_blank');
+      }
     }).catch(() => {
       toast({
         title: "Copy failed",
         description: "Unable to copy caption. Opening Instagram anyway.",
         variant: "destructive",
       });
-      window.open('https://www.instagram.com/', '_blank');
+      
+      // Fallback without clipboard - still try to open posting interface
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        window.open('instagram://camera', '_blank');
+        setTimeout(() => {
+          window.open('https://www.instagram.com/', '_blank');
+        }, 1000);
+      } else {
+        window.open('https://www.instagram.com/accounts/login/?next=/create/select/', '_blank');
+      }
     });
   };
   
@@ -68,8 +109,8 @@ export default function ShareButton() {
   const shareToPinterest = () => {
     const url = encodeURIComponent(window.location.href);
     const description = encodeURIComponent("Artist Collaboration Network - Discover how your favorite artists are connected! Explore music connections and collaborations.");
-    const media = snapshotDataUrl ? encodeURIComponent(snapshotDataUrl) : '';
-    const pinterestUrl = `https://pinterest.com/pin/create/button/?url=${url}&description=${description}${media ? `&media=${media}` : ''}`;
+    // Pinterest doesn't support data URLs, so we'll share without the image
+    const pinterestUrl = `https://pinterest.com/pin/create/button/?url=${url}&description=${description}`;
     window.open(pinterestUrl, '_blank', 'width=600,height=400');
   };
 
