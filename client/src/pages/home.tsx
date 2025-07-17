@@ -176,7 +176,7 @@ export default function Home() {
             </div>
             
             {/* Music Nerd Button - Inside footer */}
-            <div className="flex justify-center mt-4">
+            <div className="flex justify-center mt-4 relative z-20">
               <button
                 onClick={() => {
                   console.log('Music Nerd button clicked!');
@@ -188,7 +188,9 @@ export default function Home() {
                   border: 'none',
                   outline: 'none',
                   boxShadow: '0 4px 12px rgba(180, 39, 180, 0.3)',
-                  pointerEvents: 'auto'
+                  pointerEvents: 'auto',
+                  position: 'relative',
+                  zIndex: 50
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = '#8f1c8f';
