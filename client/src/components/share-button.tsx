@@ -74,10 +74,10 @@ export default function ShareButton() {
         setTimeout(() => {
           window.open(fallbackUrl, '_blank');
         }, 500);
-      } else {
-        // On desktop, open Instagram web and try to go to creation flow
-        window.open('https://www.instagram.com/accounts/login/?next=/create/select/', '_blank');
-      }
+             } else {
+         // On desktop, open Instagram homepage
+         window.open('https://www.instagram.com/', '_blank');
+       }
     }).catch(() => {
       toast({
         title: "Copy failed",
@@ -93,9 +93,9 @@ export default function ShareButton() {
         setTimeout(() => {
           window.open('https://www.instagram.com/', '_blank');
         }, 1000);
-      } else {
-        window.open('https://www.instagram.com/accounts/login/?next=/create/select/', '_blank');
-      }
+             } else {
+         window.open('https://www.instagram.com/', '_blank');
+       }
     });
   };
   
