@@ -217,25 +217,98 @@ Requirements:
       };
       nodeMap.set(artist.name, mainNode);
 
-      // If no collaborators found, return only the main artist
+      // If no collaborators found, check if user wants hallucinated data
       if (!collaborationData.artists || collaborationData.artists.length === 0) {
-        console.log(`⚠️ [Vercel] No collaborators found for "${artist.name}", returning only main artist`);
-        const networkData = { nodes: [mainNode], links: [] };
+        const allowHallucinations = req.query.allowHallucinations === 'true';
         
-        // Cache the generated data by ID
-        try {
-          const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE id = $2';
-          await client.query(updateQuery, [JSON.stringify(networkData), artistId]);
-          console.log(`💾 [Vercel] Cached network data for artist ID ${artistId} (${artist.name})`);
-        } catch (cacheError) {
-          console.warn('⚠️ [Vercel] Failed to cache data:', cacheError);
+        if (!allowHallucinations) {
+          console.log(`⚠️ [Vercel] No collaborators found for "${artist.name}", returning no-collaborators response`);
+          const singleNodeData = { nodes: [mainNode], links: [] };
+          
+          await client.end();
+          
+          // Return special response indicating no collaborators found
+          res.json({
+            noCollaborators: true,
+            artistName: artist.name,
+            artistId: artist.id,
+            singleNodeNetwork: singleNodeData
+          });
+          return;
         }
-
-        await client.end();
-        console.log(`✅ [Vercel] Generated network with 1 node for artist ID ${artistId}`);
         
-        res.json(networkData);
-        return;
+        // User requested hallucinated data - generate creative network
+        console.log(`🎭 [Vercel] No real collaborators found for "${artist.name}", generating hallucinated network as requested`);
+        
+        const hallucinatedPrompt = `Create an imaginative collaboration network for ${artist.name}. Generate plausible but potentially fictional music industry collaborators who could work with this artist. Include both real and creative professionals.
+
+Please respond with JSON in this exact format:
+{
+  "artists": [
+    {
+      "name": "Person Name",
+      "type": "producer",
+      "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
+    },
+    {
+      "name": "Another Person",
+      "type": "songwriter",
+      "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
+    }
+  ]
+}
+
+Guidelines:
+- Mix real industry professionals with plausible fictional ones
+- Create 3-8 collaborators total
+- Include producers, songwriters, and artists
+- Be creative but keep names realistic
+- Include varied collaboration styles that would fit ${artist.name}'s music
+- Return ONLY the JSON object, no other text`;
+
+        try {
+          const hallucinatedCompletion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: hallucinatedPrompt }],
+            temperature: 0.7, // Higher temperature for creativity
+            max_tokens: 2000,
+          });
+
+          let hallucinatedContent = hallucinatedCompletion.choices[0]?.message?.content;
+          if (hallucinatedContent) {
+            // Parse hallucinated content
+            let jsonContent = hallucinatedContent.trim();
+            jsonContent = jsonContent.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
+            
+            const jsonStart = jsonContent.indexOf('{');
+            const jsonEnd = jsonContent.lastIndexOf('}');
+            
+            if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+              jsonContent = jsonContent.substring(jsonStart, jsonEnd + 1);
+            }
+            
+            try {
+              const hallucinatedData = JSON.parse(jsonContent);
+              if (hallucinatedData.artists && hallucinatedData.artists.length > 0) {
+                // Use hallucinated data and continue with normal processing
+                collaborationData = hallucinatedData;
+                console.log(`✨ [Vercel] Generated ${hallucinatedData.artists.length} hallucinated collaborators for "${artist.name}"`);
+              }
+            } catch (parseError) {
+              console.warn('⚠️ [Vercel] Failed to parse hallucinated data, falling back to single node');
+            }
+          }
+        } catch (hallucinationError) {
+          console.warn('⚠️ [Vercel] Failed to generate hallucinated data, falling back to single node');
+        }
+        
+        // If still no collaborators after hallucination attempt, return single node
+        if (!collaborationData.artists || collaborationData.artists.length === 0) {
+          const networkData = { nodes: [mainNode], links: [] };
+          await client.end();
+          res.json(networkData);
+          return;
+        }
       }
 
       // Function to detect fake collaborators
@@ -252,8 +325,8 @@ Requirements:
           'placeholder', 'example', 'sample'
         ];
         return fakePatterns.some(pattern => lowerName.includes(pattern)) ||
-               lowerName.match(/^(artist|producer|songwriter)\s+[a-z]$/i) ||
-               lowerName.match(/^[a-z]{1,2}$/i);
+               !!lowerName.match(/^(artist|producer|songwriter)\s+[a-z]$/i) ||
+               !!lowerName.match(/^[a-z]{1,2}$/i);
       };
 
       // Process producers and songwriters with multi-role consolidation

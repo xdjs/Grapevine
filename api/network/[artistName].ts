@@ -399,25 +399,114 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         }
       }
       
-      // If no collaborators found, return only the main artist
+      // If no collaborators found, check if user wants hallucinated data
       if (collaborators.length === 0) {
-        console.log(`⚠️ [Vercel] No collaborators found for "${correctArtistName}", returning only main artist`);
-        const networkData = { nodes: [mainNode], links: [] };
+        const allowHallucinations = req.query.allowHallucinations === 'true';
         
-        // Cache the generated data
-        try {
-          const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE LOWER(name) = LOWER($2)';
-          await client.query(updateQuery, [JSON.stringify(networkData), correctArtistName]);
-          console.log(`💾 [Vercel] Cached network data for ${correctArtistName}`);
-        } catch (cacheError) {
-          console.warn('⚠️ [Vercel] Failed to cache data:', cacheError);
+        if (!allowHallucinations) {
+          console.log(`⚠️ [Vercel] No collaborators found for "${correctArtistName}", returning no-collaborators response`);
+          const singleNodeData = { nodes: [mainNode], links: [] };
+          
+          await client.end();
+          
+          // Return special response indicating no collaborators found
+          res.json({
+            noCollaborators: true,
+            artistName: correctArtistName,
+            artistId: artistExistsResult.rows[0].id,
+            singleNodeNetwork: singleNodeData
+          });
+          return;
         }
-
-        await client.end();
-        console.log(`✅ [Vercel] Generated network with 1 node for ${artistName}`);
         
-        res.json(networkData);
-        return;
+        // User requested hallucinated data - generate creative network
+        console.log(`🎭 [Vercel] No real collaborators found for "${correctArtistName}", generating hallucinated network as requested`);
+        
+        const hallucinatedPrompt = `Create an imaginative collaboration network for ${correctArtistName}. Generate plausible but potentially fictional music industry collaborators who could work with this artist. Include both real and creative professionals.
+
+Please respond with JSON in this exact format:
+{
+  "collaborators": [
+    {
+      "name": "Person Name",
+      "roles": ["producer", "songwriter"], 
+      "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
+    }
+  ]
+}
+
+Guidelines:
+- Mix real industry professionals with plausible fictional ones
+- Create 3-8 collaborators total
+- Include producers, songwriters, and artists
+- Be creative but keep names realistic
+- Include varied collaboration styles that would fit ${correctArtistName}'s music
+- Return ONLY the JSON object, no other text`;
+
+        try {
+          const hallucinatedCompletion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: hallucinatedPrompt }],
+            temperature: 0.7, // Higher temperature for creativity
+            max_tokens: 2000,
+          });
+
+          let hallucinatedContent = hallucinatedCompletion.choices[0]?.message?.content;
+          if (hallucinatedContent) {
+            // Parse hallucinated content
+            let jsonContent = hallucinatedContent.trim();
+            jsonContent = jsonContent.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
+            
+            const jsonStart = jsonContent.indexOf('{');
+            const jsonEnd = jsonContent.lastIndexOf('}');
+            
+            if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+              jsonContent = jsonContent.substring(jsonStart, jsonEnd + 1);
+            }
+            
+            try {
+              const hallucinatedData = JSON.parse(jsonContent);
+              if (hallucinatedData.collaborators && hallucinatedData.collaborators.length > 0) {
+                // Use hallucinated data and continue with normal processing
+                collaborationData = hallucinatedData;
+                
+                // Reprocess collaborators with hallucinated data
+                for (const person of hallucinatedData.collaborators) {
+                  allPeople.add(person.name);
+                  const roles = person.roles || ['producer'];
+                  for (const role of roles) {
+                    if (role === 'producer' || role === 'songwriter') {
+                      collaborators.push({
+                        name: person.name,
+                        type: role,
+                        topCollaborators: person.topCollaborators || []
+                      });
+                      for (const branchingArtist of person.topCollaborators || []) {
+                        if (branchingArtist !== correctArtistName) {
+                          allPeople.add(branchingArtist);
+                        }
+                      }
+                    }
+                  }
+                }
+                
+                console.log(`✨ [Vercel] Generated ${collaborators.length} hallucinated collaborators for "${correctArtistName}"`);
+              }
+            } catch (parseError) {
+              console.warn('⚠️ [Vercel] Failed to parse hallucinated data, falling back to single node');
+            }
+          }
+        } catch (hallucinationError) {
+          console.warn('⚠️ [Vercel] Failed to generate hallucinated data, falling back to single node');
+        }
+        
+        // If still no collaborators after hallucination attempt, return single node
+        if (collaborators.length === 0) {
+          const networkData = { nodes: [mainNode], links: [] };
+          await client.end();
+          res.json(networkData);
+          return;
+        }
       }
       
       // Batch detect roles for all people at once for performance
