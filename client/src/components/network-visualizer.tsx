@@ -57,14 +57,28 @@ export default function NetworkVisualizer({
   }, []);
 
   useEffect(() => {
-    if (!svgRef.current || !data || !visible) return;
+    if (!data || !visible) {
+      console.log(`⏸️ [Frontend] Skipping visualization - data: ${!!data}, visible: ${visible}`);
+      return;
+    }
+
+    console.log(`🚀 [Frontend] ===== STARTING NETWORK VISUALIZATION =====`);
+    console.log(`📊 [Frontend] Data nodes: ${data.nodes.length}, links: ${data.links.length}`);
+    console.log(`🔗 [Frontend] Link data sample:`, data.links.slice(0, 2));
 
     const svg = d3.select(svgRef.current);
+    if (svg.empty()) {
+      console.error(`❌ [Frontend] SVG ref is empty!`);
+      return;
+    }
+    
+    console.log(`✅ [Frontend] SVG selected successfully`);
+
+    // Clear previous content
+    svg.selectAll("*").remove();
+
     const width = window.innerWidth;
     const height = window.innerHeight;
-
-    // Clear existing content
-    svg.selectAll("*").remove();
 
     // Filter out links where either node doesn't exist or is isolated
     const nodeSet = new Set(data.nodes.map(n => n.id));
@@ -518,7 +532,12 @@ export default function NetworkVisualizer({
       .attr("stroke", "#888888") // Default gray for all links initially
       .attr("stroke-width", 5) // Increased from 2 to 5 for easier interaction
       .style("cursor", "pointer")
-      .style("opacity", 0.8) // Slightly transparent to indicate interactivity
+      .style("opacity", 0.8); // Slightly transparent to indicate interactivity
+    
+    // Add event handlers separately for better debugging
+    console.log(`🎯 [Frontend] Adding event handlers to ${linkElements.size()} link elements`);
+    
+    linkElements
       .on("mouseenter", async function(event, d) {
         console.log(`🖱️ [Frontend] Link mouseenter triggered`, {
           source: typeof d.source === 'string' ? d.source : d.source.name,
@@ -543,7 +562,6 @@ export default function NetworkVisualizer({
         showCollaborationTooltip(event, d);
       })
       .on("mousemove", function(event, d) {
-        console.log(`🖱️ [Frontend] Link mousemove`);
         moveTooltip(event);
       })
       .on("mouseleave", function(event, d) {
@@ -584,6 +602,10 @@ export default function NetworkVisualizer({
           setTimeout(() => hideTooltip(), 3000); // Show tooltip for 3 seconds
         }
       });
+    
+    // Log final link creation status
+    console.log(`✅ [Frontend] Link creation complete. Total links: ${linkElements.size()}`);
+    console.log(`🔍 [Frontend] Sample link data:`, validLinks.slice(0, 2));
 
     // Create nodes with multi-role support
     const nodeElements = networkGroup
@@ -631,8 +653,16 @@ export default function NetworkVisualizer({
             .startAngle(startAngle)
             .endAngle(endAngle);
           
+          // Create proper arc data object
+          const arcData = {
+            innerRadius: d.size - 4,
+            outerRadius: d.size,
+            startAngle: startAngle,
+            endAngle: endAngle
+          };
+          
           group.append("path")
-            .attr("d", arcPath)
+            .attr("d", arcPath(arcData)) // Fix: Call with proper arc data object
             .attr("fill", () => {
               if (role === 'artist') return '#FF0ACF';       // Magenta Pink
               if (role === 'producer') return '#AE53FF';     // Bright Purple  
@@ -685,444 +715,4 @@ export default function NetworkVisualizer({
       })
       .on("click", function(event, d) {
         event.stopPropagation();
-        console.log(`🎯 [CLICK DEBUG] ===== LEFT CLICK EVENT =====`);
-        console.log(`🎯 [CLICK DEBUG] Node: "${d.name}"`);
-        console.log(`🎯 [CLICK DEBUG] Type: ${d.type}`);
-        console.log(`🎯 [CLICK DEBUG] Types: ${JSON.stringify(d.types)}`);
-        console.log(`🎯 [CLICK DEBUG] ArtistId: ${d.artistId}`);
-        
-        // Left-click to expand artist's network (only for artist nodes that aren't the main artist)
-        if ((d.type === 'artist' || (d.types && d.types.includes('artist'))) && onArtistSearch) {
-          const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === 'artist');
-          if (d !== mainArtistNode) {
-            console.log(`🎯 [CLICK DEBUG] Expanding network for artist: ${d.name}`);
-            onArtistSearch(d.name);
-          } else {
-            console.log(`🎯 [CLICK DEBUG] Skipping network expansion for main artist`);
-          }
-        } else {
-          console.log(`🎯 [CLICK DEBUG] Not an artist node or no onArtistSearch callback, skipping action`);
-        }
-        console.log(`🎯 [CLICK DEBUG] ===== END LEFT CLICK EVENT =====`);
-      })
-      .on("contextmenu", function(event, d) {
-        event.preventDefault();
-        event.stopPropagation();
-        console.log(`🎯 [CLICK DEBUG] ===== RIGHT CLICK EVENT =====`);
-        console.log(`🎯 [CLICK DEBUG] Node: "${d.name}"`);
-        console.log(`🎯 [CLICK DEBUG] Type: ${d.type}`);
-        console.log(`🎯 [CLICK DEBUG] Types: ${JSON.stringify(d.types)}`);
-        console.log(`🎯 [CLICK DEBUG] ArtistId: ${d.artistId}`);
-        
-        // Check if this is an artist node
-        const isArtistNode = d.type === 'artist' || (d.types && d.types.includes('artist'));
-        console.log(`🎯 [CLICK DEBUG] Is artist node: ${isArtistNode}`);
-        
-        if (isArtistNode) {
-          console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile...`);
-          
-          // Check if this is the main artist (largest artist node)
-          const isMainArtist = d === mainArtistNode;
-          console.log(`🎯 [CLICK DEBUG] Is main artist: ${isMainArtist}`);
-          
-          try {
-            // Always pass the artistId if available, let openMusicNerdProfile handle the logic
-            console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile with artistId: ${d.artistId}`);
-            openMusicNerdProfile(d.name, d.artistId);
-          } catch (error) {
-            console.error(`🎯 [CLICK DEBUG] Error calling openMusicNerdProfile:`, error);
-          }
-        } else {
-          console.log(`🎯 [CLICK DEBUG] Not an artist node, skipping action`);
-        }
-        console.log(`🎯 [CLICK DEBUG] ===== END RIGHT CLICK EVENT =====`);
-      })
-      .call(
-        d3
-          .drag<SVGGElement, NetworkNode>()
-          .on("start", dragstarted)
-          .on("drag", dragged)
-          .on("end", dragended)
-      );
-
-    // Add labels for all nodes
-    const labelElements = networkGroup
-      .selectAll(".label")
-      .data(data.nodes)
-      .enter()
-      .append("text")
-      .attr("class", "label")
-      .attr("text-anchor", "middle")
-      .attr("dy", "0.35em")
-      .attr("font-size", (d) => d.type === 'artist' ? "14px" : "11px")
-      .attr("font-weight", (d) => d.type === 'artist' ? "600" : "500")
-      .attr("fill", "white")
-      .attr("pointer-events", "none")
-      .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.8)")
-      .text((d) => d.name);
-
-    function showTooltip(event: MouseEvent, d: NetworkNode) {
-      const roles = d.types || [d.type];
-      const roleDisplay = roles.length > 1 ? roles.join(' + ') : roles[0];
-      
-      let content = `<strong>${d.name}</strong><br/>Role${roles.length > 1 ? 's' : ''}: ${roleDisplay}`;
-
-      // Show collaboration information for producers and songwriters
-      const hasProducerRole = roles.includes('producer') || roles.includes('songwriter');
-      // Check both 'collaborations' and 'topCollaborators' fields for compatibility
-      const collaborationData = d.collaborations || (d as any).topCollaborators;
-      if (hasProducerRole && collaborationData && collaborationData.length > 0) {
-        content += `<br/><br/><strong>Top Collaborations:</strong><br/>`;
-        content += collaborationData.join("<br/>");
-      }
-
-      // Show general collaboration info for artists if available
-      if (roles.includes('artist') && d.collaborations && d.collaborations.length > 0) {
-        content += `<br/><br/><strong>Recent Collaborations:</strong><br/>`;
-        content += d.collaborations.slice(0, 3).join("<br/>");
-      }
-
-      if (roles.includes('artist')) {
-        content += `<br/><br/><em>Click to expand ${d.name}'s network</em>`;
-        content += `<br/><em>Right-Click to view their Music Nerd profile</em>`;
-      }
-
-      tooltip.html(content).style("opacity", 1);
-    }
-
-      async function openMusicNerdProfile(artistName: string, artistId?: string | null) {
-      console.log(`🎵 [Frontend] openMusicNerdProfile called for "${artistName}" with artistId: ${artistId}`);
-      
-      // If no specific artist ID provided, check for multiple options
-      if (!artistId) {
-        console.log(`🎵 [Frontend] No artistId provided, checking for multiple options`);
-        
-        try {
-          const response = await fetch(`/api/artist-options/${encodeURIComponent(artistName)}`);
-          const data = await response.json();
-          
-          if (data.options && data.options.length > 1) {
-            // Multiple artists found - show selection modal
-            console.log(`🎵 Multiple artists found for "${artistName}", showing selection modal`);
-            setSelectedArtistName(artistName);
-            setShowArtistModal(true);
-            return;
-          } else if (data.options && data.options.length === 1) {
-            // Single artist found - use its ID
-            artistId = data.options[0].artistId || data.options[0].id;
-            console.log(`🎵 Single artist found for "${artistName}": ${artistId}`);
-          }
-        } catch (error) {
-          console.error(`Error fetching artist options for "${artistName}":`, error);
-        }
-      } else {
-        console.log(`🎵 [Frontend] artistId provided (${artistId}), skipping lookup and going directly to page`);
-      }
-      
-      // Always fetch the current base URL to ensure we have the latest configuration
-      let baseUrl;
-      try {
-        console.log('🔧 [Config] Fetching current base URL from /api/config...');
-        const configResponse = await fetch('/api/config');
-        if (configResponse.ok) {
-          const config = await configResponse.json();
-          baseUrl = config.musicNerdBaseUrl;
-          console.log(`🔧 [Config] Retrieved base URL: ${baseUrl}`);
-          
-          // Update state for consistency
-          if (baseUrl !== musicNerdBaseUrl) {
-            setMusicNerdBaseUrl(baseUrl);
-          }
-        } else {
-          console.error('🔧 [Config] Failed to fetch config, status:', configResponse.status);
-        }
-      } catch (error) {
-        console.error('🔧 [Config] Error fetching config:', error);
-      }
-      
-      if (!baseUrl) {
-        console.error(`🎵 Cannot open MusicNerd profile for "${artistName}": Base URL not configured`);
-        return;
-      }
-      
-      // Use artist ID if available, otherwise go to main page
-      let musicNerdUrl = baseUrl;
-      
-      if (artistId) {
-        musicNerdUrl = `${baseUrl}/artist/${artistId}`;
-        console.log(`🎵 Opening MusicNerd artist page for "${artistName}": ${musicNerdUrl}`);
-      } else {
-        console.log(`🎵 No artist ID found for "${artistName}", opening main MusicNerd page`);
-      }
-      
-      // Try multiple approaches to open the link
-      try {
-        // Method 1: window.open (most reliable for user-initiated actions)
-        const newWindow = window.open(musicNerdUrl, '_blank', 'noopener,noreferrer');
-        
-        // Method 2: Fallback to link click if window.open fails
-        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-          console.log('🎵 Window.open blocked, trying link click method...');
-          const link = document.createElement('a');
-          link.href = musicNerdUrl;
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          
-          // Append to body, click, and remove
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        } else {
-          console.log('🎵 Successfully opened new window');
-        }
-      } catch (error) {
-        console.error('🎵 Error opening MusicNerd page:', error);
-        // Final fallback: copy URL to clipboard and notify user
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(musicNerdUrl).then(() => {
-            alert(`Unable to open page automatically. URL copied to clipboard: ${musicNerdUrl}`);
-          }).catch(() => {
-            alert(`Please visit: ${musicNerdUrl}`);
-          });
-        } else {
-          alert(`Please visit: ${musicNerdUrl}`);
-        }
-      }
-    }
-    function dragstarted(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
-      // Prevent event bubbling to avoid interfering with zoom behavior
-      event.sourceEvent.stopPropagation();
-      if (!event.active) simulation.alphaTarget(0.3).restart();
-      d.fx = d.x;
-      d.fy = d.y;
-    }
-
-    function dragged(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
-      // Prevent event bubbling to avoid interfering with zoom behavior
-      event.sourceEvent.stopPropagation();
-      d.fx = event.x;
-      d.fy = event.y;
-    }
-
-    function dragended(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
-      // Prevent event bubbling to avoid interfering with zoom behavior
-      event.sourceEvent.stopPropagation();
-      if (!event.active) simulation.alphaTarget(0);
-      d.fx = null;
-      d.fy = null;
-    }
-
-    // Update positions on tick
-    simulation.on("tick", () => {
-      linkElements
-        .attr("x1", (d) => (d.source as NetworkNode).x!)
-        .attr("y1", (d) => (d.source as NetworkNode).y!)
-        .attr("x2", (d) => (d.target as NetworkNode).x!)
-        .attr("y2", (d) => (d.target as NetworkNode).y!);
-
-      nodeElements.attr("transform", (d) => `translate(${d.x!}, ${d.y!})`);
-
-      labelElements.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
-    });
-
-    // Cleanup function
-    return () => {
-      tooltip.remove();
-      simulation.stop();
-      cleanup();
-    };
-  }, [data, visible, onZoomChange]);
-
-  // Helper function to check if a node should be visible based on filter state
-  // For multi-role nodes, they are visible if ANY of their roles should be shown
-  const isNodeVisible = (node: NetworkNode, filterState: FilterState): boolean => {
-    if (!node.types || node.types.length === 0) {
-      // Fallback to single type if types array is not available
-      if (node.type === "producer" && !filterState.showProducers) return false;
-      if (node.type === "songwriter" && !filterState.showSongwriters) return false;
-      if (node.type === "artist" && !filterState.showArtists) return false;
-      return true;
-    }
-    
-    // Check if any of the node's roles should be visible
-    for (const role of node.types) {
-      if (role === "producer" && filterState.showProducers) return true;
-      if (role === "songwriter" && filterState.showSongwriters) return true;
-      if (role === "artist" && filterState.showArtists) return true;
-    }
-    
-    return false;
-  };
-
-  // Update visibility based on filter state
-  useEffect(() => {
-    if (!svgRef.current || !visible) return;
-
-    const svg = d3.select(svgRef.current);
-
-    // Helper function to check if a node should be visible based on filter state
-    // For multi-role nodes, they are visible if ANY of their roles should be shown
-    const isNodeVisible = (node: NetworkNode): boolean => {
-      if (node.types && node.types.length > 0) {
-        // Check if any of the node's roles should be visible
-        for (const role of node.types) {
-          if (role === "producer" && filterState.showProducers) return true;
-          if (role === "songwriter" && filterState.showSongwriters) return true;
-          if (role === "artist" && filterState.showArtists) return true;
-        }
-        return false;
-      } else {
-        // Fallback to single type if types array is not available
-        if (node.type === "producer" && !filterState.showProducers) return false;
-        if (node.type === "songwriter" && !filterState.showSongwriters) return false;
-        if (node.type === "artist" && !filterState.showArtists) return false;
-        return true;
-      }
-    };
-
-    // Hide/show nodes based on filter state
-    svg.selectAll(".node-group").style("display", function () {
-      const d = d3.select(this).datum() as NetworkNode;
-      return isNodeVisible(d) ? null : "none";
-    });
-
-    // Hide/show labels based on filter state
-    svg.selectAll(".label").style("display", function () {
-      const d = d3.select(this).datum() as NetworkNode;
-      return isNodeVisible(d) ? null : "none";
-    });
-
-    // Hide/show links based on whether both connected nodes are visible
-    svg.selectAll(".link").style("display", function () {
-      const d = d3.select(this).datum() as NetworkLink;
-      const source = d.source as NetworkNode;
-      const target = d.target as NetworkNode;
-      
-      const sourceVisible = isNodeVisible(source);
-      const targetVisible = isNodeVisible(target);
-      
-      return sourceVisible && targetVisible ? null : "none";
-    });
-  }, [filterState, visible]);
-
-  // SVG viewBox zoom function (working implementation)
-  const applyZoom = (scale: number) => {
-    if (!svgRef.current) return;
-    
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    
-    // Calculate new viewBox dimensions
-    const newWidth = width / scale;
-    const newHeight = height / scale;
-    const offsetX = (width - newWidth) / 2;
-    const offsetY = (height - newHeight) / 2;
-    
-    // Apply smooth transition
-    const svg = d3.select(svgRef.current);
-    svg.transition()
-      .duration(200)
-      .attrTween('viewBox', () => {
-        const currentViewBox = svgRef.current?.getAttribute('viewBox') || `0 0 ${width} ${height}`;
-        const [cx, cy, cw, ch] = currentViewBox.split(' ').map(Number);
-        const interpolator = d3.interpolate([cx, cy, cw, ch], [offsetX, offsetY, newWidth, newHeight]);
-        return (t: number) => {
-          const [x, y, w, h] = interpolator(t);
-          return `${x} ${y} ${w} ${h}`;
-        };
-      });
-  };
-
-  // Handle zoom button clicks
-  const handleZoomIn = () => {
-    const newZoom = Math.min(5, currentZoom * 1.2); // Cap at 5x
-    setCurrentZoom(newZoom);
-    applyZoom(newZoom);
-    console.log(`Zooming from ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
-  };
-
-  const handleZoomOut = () => {
-    const newZoom = Math.max(0.2, currentZoom / 1.2); // Min 0.2x
-    setCurrentZoom(newZoom);
-    applyZoom(newZoom);
-    console.log(`Zooming from ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
-  };
-
-  const handleZoomReset = () => {
-    setCurrentZoom(1);
-    applyZoom(1);
-    console.log('Zoom reset to 1.00');
-  };
-
-  const handleArtistSelection = (artistId: string) => {
-    // Open the specific artist page with the selected ID
-    if (!musicNerdBaseUrl) {
-      console.error('🔧 [Config] MusicNerd base URL not available');
-      return;
-    }
-
-    const musicNerdUrl = `${musicNerdBaseUrl}/artist/${artistId}`;
-
-    console.log(`🎵 Opening selected artist page: ${musicNerdUrl}`);
-    
-    const link = document.createElement('a');
-    link.href = musicNerdUrl;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Handle zoom controls with direct function calls
-  useEffect(() => {
-    const handleZoomEvent = (event: CustomEvent) => {
-      const { action } = event.detail;
-
-      switch (action) {
-        case "in":
-          handleZoomIn();
-          break;
-        case "out":
-          handleZoomOut();
-          break;
-        case "reset":
-          handleZoomReset();
-          break;
-      }
-    };
-
-    if (visible) {
-      window.addEventListener("network-zoom", handleZoomEvent as EventListener);
-    }
-    
-    return () => {
-      window.removeEventListener("network-zoom", handleZoomEvent as EventListener);
-    };
-  }, [visible, currentZoom]);
-
-  function getNodeVisibility(node: NetworkNode, filterState: FilterState): boolean {
-    if (node.type === "producer") return filterState.showProducers;
-    if (node.type === "songwriter") return filterState.showSongwriters;
-    if (node.type === "artist") return filterState.showArtists;
-    return true;
-  }
-
-  return (
-    <div
-      className={`network-container transition-opacity duration-700 ${
-        visible ? "opacity-100" : "opacity-0"
-      }`}
-    >
-      <svg ref={svgRef} className="w-full h-full" />
-      
-      <ArtistSelectionModal
-        isOpen={showArtistModal}
-        onClose={() => setShowArtistModal(false)}
-        artistName={selectedArtistName}
-        onSelectArtist={handleArtistSelection}
-      />
-    </div>
-  );
-}
+        console.log(`
