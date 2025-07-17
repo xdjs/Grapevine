@@ -26,6 +26,15 @@ export interface NetworkData {
   cached?: boolean;
 }
 
+export interface NoCollaboratorsResponse {
+  noCollaborators: true;
+  artistName: string;
+  artistId: string;
+  singleNodeNetwork: NetworkData;
+}
+
+export type NetworkResponse = NetworkData | NoCollaboratorsResponse;
+
 export interface FilterState {
   showProducers: boolean;
   showSongwriters: boolean;
