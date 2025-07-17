@@ -68,18 +68,19 @@ export default function NetworkVisualizer({
     // Mobile: Use larger square that extends beyond screen for better sharing snapshots
     let width, height;
     if (isMobile) {
-      // Create a square canvas that's as tall as the screen and extends off the sides
-      // This prevents vertical squishing while allowing horizontal overflow for better sharing
+      // MOBILE CANVAS: Square with dimensions = screen's vertical height
+      // This creates a perfect square that fits screen height but extends beyond screen width
       const screenHeight = window.innerHeight;
       const screenWidth = window.innerWidth;
       
-      // Make canvas square using screen height as both width and height
-      // This ensures it fits vertically but extends off horizontally
-      width = screenHeight;
-      height = screenHeight;
+      // Set BOTH width and height to screen's vertical height (creates square)
+      width = screenHeight;   // Width = screen vertical height
+      height = screenHeight;  // Height = screen vertical height
       
-      console.log(`📱 MOBILE CANVAS CREATED: ${width}x${height} (screen: ${screenWidth}x${screenHeight})`);
-      console.log(`📱 Square canvas: height-based square, extends ${(width - screenWidth) / 2}px off each side`);
+      console.log(`📱 MOBILE SQUARE CANVAS CREATED:`);
+      console.log(`📱   Canvas: ${width}x${height} (perfect square)`);
+      console.log(`📱   Screen: ${screenWidth}x${screenHeight}`);
+      console.log(`📱   Sides extend: ${(width - screenWidth) / 2}px off each side for centering`);
     } else {
       // Desktop: Use screen size as boundaries
       width = window.innerWidth;
@@ -141,26 +142,22 @@ export default function NetworkVisualizer({
     svg.call(zoom);
     zoomRef.current = zoom;
     
-    // On mobile, center the square canvas so the network appears centered on screen
+    // MOBILE CENTERING: Center the square canvas so sides get cut off equally
     if (isMobile) {
       const screenWidth = window.innerWidth;
       const screenHeight = window.innerHeight;
       
-      // Calculate proper centering transform
-      // Canvas center: (width/2, height/2) = (screenHeight/2, screenHeight/2)
-      // Screen center: (screenWidth/2, screenHeight/2)
-      // To center canvas in screen: translateX = screenWidth/2 - screenHeight/2
-      const translateX = (screenWidth - width) / 2; // Center horizontally
-      const translateY = 0; // No vertical offset needed
+      // CENTER the square canvas horizontally (so equal amounts get cut off each side)
+      const translateX = (screenWidth - width) / 2; // Horizontal centering offset
+      const translateY = 0; // No vertical offset (canvas height = screen height)
       const initialScale = 1; // 1:1 scale
       
-      console.log(`📱 MOBILE CENTERING CALCULATION:`);
-      console.log(`📱   Canvas: ${width}x${height} (square)`);
+      console.log(`📱 MOBILE CANVAS CENTERING:`);
       console.log(`📱   Screen: ${screenWidth}x${screenHeight}`);
-      console.log(`📱   Canvas center should be at: (${screenWidth/2}, ${screenHeight/2})`);
-      console.log(`📱   Transform: translateX=${translateX}, translateY=${translateY}, scale=${initialScale}`);
-      console.log(`📱   Canvas will extend from X=${translateX} to X=${translateX + width}`);
-      console.log(`📱   Main artist will be centered and visible at initial zoom`);
+      console.log(`📱   Canvas: ${width}x${height} (square, height matches screen)`);
+      console.log(`📱   Horizontal centering: translateX=${translateX} (moves canvas to center)`);
+      console.log(`📱   Result: Canvas extends ${Math.abs(translateX)}px off each side`);
+      console.log(`📱   Visible canvas area: ${Math.max(0, -translateX)} to ${Math.min(width, screenWidth - translateX)} (horizontally)`);
       
       // Apply the centering transform
       svg.call(
@@ -170,7 +167,7 @@ export default function NetworkVisualizer({
       setCurrentZoom(initialScale);
       onZoomChange({ k: initialScale, x: translateX, y: translateY });
       
-      console.log(`📱 MOBILE CENTERING APPLIED: network centered at screen center`);
+      console.log(`📱 MOBILE CENTERING APPLIED`);
     }
 
     // Completely disable D3's touch handling - we'll handle it manually
@@ -395,22 +392,15 @@ export default function NetworkVisualizer({
       
       component.forEach(node => {
         if (!node.x && !node.y) {
-          // If this is the main artist node, center it at the VISIBLE screen center
+          // If this is the main artist node, center it in the canvas
           if (node === mainArtistNode) {
             if (isMobile) {
-              // For mobile: position at the visible screen center, accounting for canvas translation
-              const screenWidth = window.innerWidth;
-              const screenHeight = window.innerHeight;
-              const translateX = (screenWidth - width) / 2;
-              
-              // Position at visible screen center (relative to canvas coordinates)
-              node.x = screenWidth / 2 - translateX; // Screen center X in canvas coordinates
-              node.y = screenHeight * 0.4; // Position higher up on screen (40% from top)
+              // For mobile: position in canvas center (canvas is already translated to be centered)
+              node.x = width / 2; // Center of square canvas
+              node.y = height * 0.4; // 40% down from top of canvas (higher up)
               console.log(`🎯 MAIN ARTIST POSITIONED FOR MOBILE: "${node.name}" at (${node.x}, ${node.y})`);
-              console.log(`🎯   Screen size: ${screenWidth}x${screenHeight}`);
-              console.log(`🎯   Positioned at: 40% from top (higher up on screen)`);
-              console.log(`🎯   Canvas translation: ${translateX}`);
-              console.log(`🎯   Result: artist positioned higher up for better visibility`);
+              console.log(`🎯   Canvas center X: ${width / 2}, positioned at Y: ${height * 0.4} (40% down canvas)`);
+              console.log(`🎯   Canvas dimensions: ${width}x${height}`);
             } else {
               // Desktop: center in canvas as before
               node.x = width / 2;
@@ -430,24 +420,18 @@ export default function NetworkVisualizer({
     // Create boundary force to keep nodes within appropriate bounds
     const boundaryForce = () => {
       if (isMobile) {
-        // For mobile: keep nodes within visible screen area plus some margin
-        const screenWidth = window.innerWidth;
-        const screenHeight = window.innerHeight;
-        const translateX = (screenWidth - width) / 2;
+        // For mobile: keep nodes within the canvas bounds (which is properly positioned)
         const margin = 50;
         
-        // Define visible area boundaries in canvas coordinates
-        const leftBound = -translateX + margin;
-        const rightBound = -translateX + screenWidth - margin;
-        const topBound = margin;
-        const bottomBound = screenHeight * 0.8; // Keep nodes in upper portion of screen
-        
+        // Simple canvas boundary - nodes should stay within the square canvas
         for (const node of data.nodes) {
-          if (node.x! < leftBound) node.x = leftBound;
-          if (node.x! > rightBound) node.x = rightBound;
-          if (node.y! < topBound) node.y = topBound;
-          if (node.y! > bottomBound) node.y = bottomBound;
+          if (node.x! < margin) node.x = margin;
+          if (node.x! > width - margin) node.x = width - margin;
+          if (node.y! < margin) node.y = margin;
+          if (node.y! > height - margin) node.y = height - margin;
         }
+        
+        console.log(`📱 BOUNDARY FORCE: keeping nodes within canvas bounds (${margin} to ${width-margin} x ${margin} to ${height-margin})`);
       } else {
         // Desktop: keep within canvas bounds
         const margin = 50;
@@ -466,13 +450,10 @@ export default function NetworkVisualizer({
     // Calculate the correct center point for forces
     let centerX, centerY;
     if (isMobile) {
-      // For mobile: center on visible screen center (in canvas coordinates)
-      const screenWidth = window.innerWidth;
-      const screenHeight = window.innerHeight;
-      const translateX = (screenWidth - width) / 2;
-      centerX = screenWidth / 2 - translateX; // Visible screen center X in canvas coordinates
-      centerY = screenHeight * 0.4; // Position higher up on screen (40% from top)
-      console.log(`🔬 MOBILE CENTERING FORCES: centerX=${centerX}, centerY=${centerY} (higher up on screen)`);
+      // For mobile: center forces in canvas (canvas is already translated properly)
+      centerX = width / 2; // Center of square canvas
+      centerY = height * 0.4; // 40% down from top of canvas (higher up)
+      console.log(`🔬 MOBILE CENTERING FORCES: centerX=${centerX}, centerY=${centerY} (canvas coordinates)`);
     } else {
       // Desktop: center in canvas
       centerX = width / 2;
