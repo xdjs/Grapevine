@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
+import { useIsMobile } from "@/hooks/use-mobile";
 import ArtistSelectionModal from "./artist-selection-modal";
 
 interface NetworkVisualizerProps {
@@ -25,6 +26,7 @@ export default function NetworkVisualizer({
   const [showArtistModal, setShowArtistModal] = useState(false);
   const [selectedArtistName, setSelectedArtistName] = useState("");
   const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("");
+  const isMobile = useIsMobile();
 
   // Fetch configuration on component mount
   useEffect(() => {
@@ -60,8 +62,25 @@ export default function NetworkVisualizer({
     if (!svgRef.current || !data || !visible) return;
 
     const svg = d3.select(svgRef.current);
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    
+    // Set canvas dimensions based on device type
+    // Desktop: Use screen size for natural viewport boundaries
+    // Mobile: Use larger square that extends beyond screen for better sharing snapshots
+    let width, height;
+    if (isMobile) {
+      // Create a large square canvas for mobile to prevent node squishing in shares
+      // Use the larger dimension + extra space to ensure nodes aren't constrained
+      const screenSize = Math.max(window.innerWidth, window.innerHeight);
+      const mobileCanvasSize = Math.max(1200, screenSize * 1.5); // Minimum 1200px, or 1.5x screen size
+      width = mobileCanvasSize;
+      height = mobileCanvasSize;
+      console.log(`📱 Mobile canvas: ${width}x${height} (screen: ${window.innerWidth}x${window.innerHeight})`);
+    } else {
+      // Desktop: Use screen size as boundaries
+      width = window.innerWidth;
+      height = window.innerHeight;
+      console.log(`🖥️ Desktop canvas: ${width}x${height}`);
+    }
 
     // Clear existing content
     svg.selectAll("*").remove();
@@ -419,7 +438,12 @@ export default function NetworkVisualizer({
             .endAngle(endAngle);
           
           group.append("path")
-            .attr("d", arcPath)
+            .attr("d", arcPath({ 
+              innerRadius: d.size - 4,
+              outerRadius: d.size,
+              startAngle, 
+              endAngle 
+            }))
             .attr("fill", () => {
               if (role === 'artist') return '#FF0ACF';       // Magenta Pink
               if (role === 'producer') return '#AE53FF';     // Bright Purple  

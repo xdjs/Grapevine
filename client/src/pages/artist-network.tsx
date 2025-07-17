@@ -143,8 +143,6 @@ export default function ArtistNetwork() {
           
           {/* Mobile Controls */}
           <MobileControls
-            filterState={filterState}
-            onFilterChange={setFilterState}
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
             onZoomReset={handleZoomReset}
