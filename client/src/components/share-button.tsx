@@ -26,7 +26,42 @@ export default function ShareButton() {
   const [snapshotDataUrl, setSnapshotDataUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Native Web Share API for text and URL (much more supported than file sharing)
+  const shareNatively = async () => {
+    const shareData = {
+      title: 'Grapevine - Artist Collaboration Network',
+      text: `🎵 Check out this artist collaboration network! Discover how your favorite artists are connected.\n\n#music #artists #collaboration #grapevine`,
+      url: window.location.href
+    };
 
+    // Check if Web Share API is supported
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData) === true) {
+      try {
+        await navigator.share(shareData);
+        toast({
+          title: "Shared successfully!",
+          description: "Network shared via your device's native sharing.",
+          className: "bg-green-600 border-green-500 text-white",
+        });
+      } catch (error: any) {
+        if (error.name === 'AbortError') {
+          // User cancelled - no need to show error
+          return;
+        }
+        console.error('Native share failed:', error);
+        // Fallback to copying URL
+        copyToClipboard(window.location.href);
+      }
+    } else {
+      // Fallback for browsers without Web Share API
+      toast({
+        title: "Native sharing not available",
+        description: "Using platform-specific buttons below or link copied to clipboard.",
+        variant: "destructive",
+      });
+      copyToClipboard(window.location.href);
+    }
+  };
 
   // Platform-specific share functions - direct URL sharing
   const shareToFacebook = () => {
@@ -37,7 +72,7 @@ export default function ShareButton() {
   };
   
   const shareToInstagram = () => {
-    // Instagram doesn't support direct URL sharing, so we'll copy to clipboard and open Instagram's posting interface
+    // Instagram doesn't support direct URL sharing, so we'll copy to clipboard and open Instagram
     const text = `🎵 Artist collaboration network 🎵\n\nDiscover music connections at ${window.location.href}\n\n#music #artists #collaboration #grapevine`;
     
     navigator.clipboard.writeText(text).then(() => {
@@ -47,36 +82,19 @@ export default function ShareButton() {
         className: "bg-green-600 border-green-500 text-white",
       });
       
-      // Try to open Instagram's posting interface directly
+      // Check if mobile to try app first
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       if (isMobile) {
-        // Try to open Instagram app's camera/posting interface
-        const instagramAppUrl = 'instagram://camera';
-        const fallbackUrl = 'https://www.instagram.com/';
-        
-        // Create a hidden iframe to test if the app opens
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = instagramAppUrl;
-        document.body.appendChild(iframe);
-        
-        // If app doesn't open within 2 seconds, open web version
+        // Try to open Instagram app directly
+        window.location.href = 'instagram://camera';
+        // Fallback to web version after a short delay
         setTimeout(() => {
-          document.body.removeChild(iframe);
-          window.open(fallbackUrl, '_blank');
-        }, 2000);
-        
-        // Try to open the app immediately
-        window.location.href = instagramAppUrl;
-        
-        // If we're still here after 500ms, the app probably didn't open
-        setTimeout(() => {
-          window.open(fallbackUrl, '_blank');
-        }, 500);
+          window.open('https://www.instagram.com/', '_blank');
+        }, 1500);
       } else {
-        // On desktop, open Instagram web and try to go to creation flow
-        window.open('https://www.instagram.com/accounts/login/?next=/create/select/', '_blank');
+        // On desktop, just open Instagram homepage
+        window.open('https://www.instagram.com/', '_blank');
       }
     }).catch(() => {
       toast({
@@ -85,16 +103,16 @@ export default function ShareButton() {
         variant: "destructive",
       });
       
-      // Fallback without clipboard - still try to open posting interface
+      // Fallback - open Instagram without clipboard
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       if (isMobile) {
-        window.open('instagram://camera', '_blank');
+        window.location.href = 'instagram://camera';
         setTimeout(() => {
           window.open('https://www.instagram.com/', '_blank');
-        }, 1000);
+        }, 1500);
       } else {
-        window.open('https://www.instagram.com/accounts/login/?next=/create/select/', '_blank');
+        window.open('https://www.instagram.com/', '_blank');
       }
     });
   };
@@ -493,10 +511,51 @@ export default function ShareButton() {
                     </div>
                   )}
                   
+                  {/* Native Share Button - Available immediately */}
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-white">Quick Share</h4>
+                    <Button
+                      onClick={shareNatively}
+                      className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0"
+                      size="lg"
+                    >
+                      <Share2 className="h-5 w-5 mr-2" />
+                      Share Network
+                    </Button>
+                    <p className="text-xs text-gray-400 text-center">
+                      Opens your device's native sharing menu
+                    </p>
+                  </div>
+                  
+                  {/* Snapshot Section */}
+                  {snapshotDataUrl && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium text-white">Network Snapshot</h4>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={downloadSnapshot}
+                          className="bg-gray-700 hover:bg-gray-600 border-gray-600"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
+                      </div>
+                      <div className="border border-gray-600 rounded overflow-hidden">
+                        <img 
+                          src={snapshotDataUrl} 
+                          alt="Network snapshot" 
+                          className="w-full max-h-96 object-contain bg-black"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
                   {/* Social Media Buttons */}
                   {snapshotDataUrl && (
                     <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-white">Share on Social Media</h4>
+                      <h4 className="text-sm font-medium text-white">Or Share Directly</h4>
                       <div className="flex items-center justify-center gap-3">
                                                  <Button
                            size="icon"
