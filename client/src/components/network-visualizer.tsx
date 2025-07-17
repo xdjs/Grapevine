@@ -565,7 +565,7 @@ export default function NetworkVisualizer({
 
         // Update these paths if the assets live elsewhere
         const networkIconPath = "/grapevine-logo.png"; // grape + clef icon
-        const artistIconPath = "/music_nerd_logo.png";    // provided Music Nerd logo
+        const artistIconPath = "/musicnerd-icon.svg";    // Music Nerd logo in public folder
 
         const content = `
           <div style="max-width:320px;">
