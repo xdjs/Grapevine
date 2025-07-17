@@ -167,7 +167,7 @@ export default function Home() {
 
       {/* Attribution Content - Only visible when not showing network */}
       {!showNetworkView && (
-        <div className="footer-content fixed bottom-0 left-0 right-0 text-center z-10 bg-gradient-to-t from-black/80 to-transparent" style={{ pointerEvents: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' }}>
+        <div className="footer-content fixed bottom-0 left-0 right-0 text-center z-10 bg-gradient-to-t from-black/80 to-transparent" style={{ pointerEvents: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 120px)' }}>
           <div className="w-full max-w-2xl mx-auto px-4 py-4 sm:py-6 space-y-3 sm:space-y-4">
             <div className="text-gray-500 text-xs sm:text-sm">
               <p className="mb-1 sm:mb-2">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
