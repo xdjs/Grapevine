@@ -2,9 +2,22 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { Share2, Copy, Camera, Download } from "lucide-react";
+import { Share2, Copy, Camera, Download, Facebook, Instagram } from "lucide-react";
 import { useState } from "react";
 import html2canvas from "html2canvas";
+
+// Custom SVG icons for social media platforms
+const XIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+  </svg>
+);
+
+const PinterestIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.174-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.097.118.111.222.082.343-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.402.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.357-.629-2.758-1.378l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.55.535 6.624 0 11.99-5.367 11.99-11.987C24.007 5.367 18.641.001 12.017.001z"/>
+  </svg>
+);
 
 export default function ShareButton() {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,6 +25,106 @@ export default function ShareButton() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [snapshotDataUrl, setSnapshotDataUrl] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Convert base64 data URL to blob
+  const dataURLToBlob = (dataURL: string): Blob => {
+    const arr = dataURL.split(',');
+    const mime = arr[0].match(/:(.*?);/)![1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+  };
+
+  // Generic share function using Web Share API
+  const shareImage = async (platform: string, customText?: string) => {
+    if (!snapshotDataUrl) {
+      toast({
+        title: "No image to share",
+        description: "Please wait for the snapshot to load.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if the Web Share API is supported
+    if (!navigator.share) {
+      toast({
+        title: "Sharing not supported",
+        description: "Web Share API is not supported in this browser. The image has been copied to your clipboard.",
+        variant: "destructive",
+      });
+      // Fallback: copy image to clipboard if possible
+      try {
+        const blob = dataURLToBlob(snapshotDataUrl);
+        await navigator.clipboard.write([
+          new ClipboardItem({ [blob.type]: blob })
+        ]);
+      } catch (error) {
+        console.error('Failed to copy image to clipboard:', error);
+      }
+      return;
+    }
+
+    try {
+      const imageBlob = dataURLToBlob(snapshotDataUrl);
+      const fileName = `grapevine-network-${Date.now()}.png`;
+      
+      const shareData = {
+        files: [
+          new File([imageBlob], fileName, {
+            type: imageBlob.type,
+          }),
+        ],
+        title: 'Grapevine - Artist Network',
+        text: customText || `Check out this artist collaboration network!\n\nExplore more at ${window.location.origin}`,
+      };
+
+      // Check if the browser can share this data
+      if (!navigator.canShare(shareData)) {
+        toast({
+          title: "Cannot share image",
+          description: "This browser doesn't support sharing images. The image has been downloaded instead.",
+          variant: "destructive",
+        });
+        downloadSnapshot();
+        return;
+      }
+
+      await navigator.share(shareData);
+      
+      toast({
+        title: "Shared successfully!",
+        description: `Network shared via ${platform}`,
+        className: "bg-green-600 border-green-500 text-white",
+      });
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        // User cancelled the share
+        return;
+      }
+      
+      console.error('Error sharing:', error);
+      toast({
+        title: "Share failed",
+        description: "Unable to share the image. It has been downloaded instead.",
+        variant: "destructive",
+      });
+      downloadSnapshot();
+    }
+  };
+
+  // Platform-specific share functions
+  const shareToFacebook = () => shareImage('Facebook', `Check out this artist collaboration network!\n\nExplore music connections at ${window.location.origin}`);
+  
+  const shareToInstagram = () => shareImage('Instagram', `🎵 Artist collaboration network 🎵\n\nDiscover music connections at ${window.location.origin}\n\n#music #artists #collaboration #grapevine`);
+  
+  const shareToX = () => shareImage('X', `Check out this artist collaboration network! 🎵\n\nExplore music connections at ${window.location.origin}\n\n#music #artists #collaboration`);
+  
+  const shareToPinterest = () => shareImage('Pinterest', `Artist Collaboration Network\n\nDiscover how your favorite artists are connected! Explore more at ${window.location.origin}`);
 
   const copyToClipboard = async (url: string) => {
     try {
@@ -388,6 +501,51 @@ export default function ShareButton() {
                           alt="Network snapshot" 
                           className="w-full max-h-96 object-contain bg-black"
                         />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Social Media Buttons */}
+                  {snapshotDataUrl && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-white">Share on Social Media</h4>
+                      <div className="flex items-center justify-center gap-3">
+                                                 <Button
+                           size="icon"
+                           variant="secondary"
+                           className="w-10 h-10 bg-blue-600 hover:bg-blue-700 border-blue-600 text-white"
+                           title="Share on Facebook"
+                           onClick={shareToFacebook}
+                         >
+                           <Facebook className="h-5 w-5" />
+                         </Button>
+                         <Button
+                           size="icon"
+                           variant="secondary"
+                           className="w-10 h-10 bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 hover:from-purple-700 hover:via-pink-700 hover:to-orange-600 border-transparent text-white"
+                           title="Share on Instagram"
+                           onClick={shareToInstagram}
+                         >
+                           <Instagram className="h-5 w-5" />
+                         </Button>
+                         <Button
+                           size="icon"
+                           variant="secondary"
+                           className="w-10 h-10 bg-black hover:bg-gray-900 border-gray-600 text-white"
+                           title="Share on X"
+                           onClick={shareToX}
+                         >
+                           <XIcon className="h-5 w-5" />
+                         </Button>
+                         <Button
+                           size="icon"
+                           variant="secondary"
+                           className="w-10 h-10 bg-red-600 hover:bg-red-700 border-red-600 text-white"
+                           title="Share on Pinterest"
+                           onClick={shareToPinterest}
+                         >
+                           <PinterestIcon className="h-5 w-5" />
+                         </Button>
                       </div>
                     </div>
                   )}
