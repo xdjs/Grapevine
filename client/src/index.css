@@ -217,16 +217,31 @@
 
   /* Mobile-specific network container styles */
   @media (max-width: 768px) {
-    .network-container svg {
+    .network-container,
+    .mobile-network-container {
+      /* Ensure container doesn't constrain content */
+      overflow: visible !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      position: relative !important;
+    }
+    
+    .network-container svg,
+    .mobile-svg {
       /* Mobile: allow SVG to be larger than viewport */
       width: auto !important;
       height: auto !important;
-      min-width: 100%;
-      min-height: 100%;
+      max-width: none !important;
+      max-height: none !important;
+      min-width: 100% !important;
+      min-height: 100% !important;
       /* Ensure SVG can extend beyond container boundaries */
-      position: absolute;
-      top: 0;
-      left: 0;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      /* Remove any constraints */
+      transform-origin: top left !important;
+      overflow: visible !important;
     }
   }
 
@@ -329,12 +344,7 @@
   
   /* Removed conflicting responsive dropdown rules that were overriding height constraints */
   
-  /* Always show scrollbar on main page - matching dropdown style */
-  html, body {
-    overflow-y: scroll !important;
-    scrollbar-width: thin;
-    scrollbar-color: #AE53FF #1a1a1a;
-  }
+  /* Remove global overflow rules that conflict with mobile canvas */
   
   /* Music Nerd button disguised as link */
   .music-nerd-button {

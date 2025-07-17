@@ -74,7 +74,8 @@ export default function NetworkVisualizer({
       const mobileCanvasSize = Math.max(2000, screenSize * 2.5); // Minimum 2000px, or 2.5x screen size
       width = mobileCanvasSize;
       height = mobileCanvasSize;
-      console.log(`📱 Mobile canvas: ${width}x${height} (screen: ${window.innerWidth}x${window.innerHeight})`);
+      console.log(`📱 MOBILE CANVAS CREATED: ${width}x${height} (screen: ${window.innerWidth}x${window.innerHeight})`);
+      console.log(`📱 Mobile detection: isMobile=${isMobile}, screenSize=${screenSize}, canvasSize=${mobileCanvasSize}`);
     } else {
       // Desktop: Use screen size as boundaries
       width = window.innerWidth;
@@ -89,7 +90,13 @@ export default function NetworkVisualizer({
     svg
       .attr("width", width)
       .attr("height", height)
-      .attr("viewBox", `0 0 ${width} ${height}`);
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .style("width", isMobile ? width + "px" : "100%")
+      .style("height", isMobile ? height + "px" : "100%")
+      .style("max-width", isMobile ? "none" : "100%")
+      .style("max-height", isMobile ? "none" : "100%");
+    
+    console.log(`🎨 SVG configured: ${width}x${height}, isMobile: ${isMobile}`);
 
     // Filter out links where either node doesn't exist or is isolated
     const nodeSet = new Set(data.nodes.map(n => n.id));
@@ -129,7 +136,7 @@ export default function NetworkVisualizer({
     // On mobile, start with a reasonable zoom to show the network nicely
     if (isMobile) {
       // Start with a zoom that makes the network visible but not too small
-      const initialScale = 0.3; // Fixed reasonable zoom level for mobile
+      const initialScale = 0.25; // Lower zoom to show more of the large canvas
       const viewportCenterX = window.innerWidth / 2;
       const viewportCenterY = window.innerHeight / 2;
       const canvasCenterX = width / 2;
@@ -139,14 +146,27 @@ export default function NetworkVisualizer({
       const translateX = viewportCenterX - (canvasCenterX * initialScale);
       const translateY = viewportCenterY - (canvasCenterY * initialScale);
       
-      console.log(`📱 Mobile initial zoom: scale=${initialScale}, translate=(${translateX}, ${translateY})`);
+      console.log(`📱 MOBILE ZOOM SETUP:`);
+      console.log(`📱   Canvas: ${width}x${height}`);
+      console.log(`📱   Viewport: ${window.innerWidth}x${window.innerHeight}`);
+      console.log(`📱   Scale: ${initialScale}`);
+      console.log(`📱   Translate: (${translateX}, ${translateY})`);
+      console.log(`📱   Canvas center: (${canvasCenterX}, ${canvasCenterY})`);
+      console.log(`📱   Viewport center: (${viewportCenterX}, ${viewportCenterY})`);
       
-      svg.call(
-        zoom.transform,
-        d3.zoomIdentity.translate(translateX, translateY).scale(initialScale)
-      );
-      setCurrentZoom(initialScale);
-      onZoomChange({ k: initialScale, x: translateX, y: translateY });
+      // Apply the initial transform after a short delay to ensure SVG is ready
+      setTimeout(() => {
+        if (svgRef.current) {
+          const currentSvg = d3.select(svgRef.current);
+          currentSvg.call(
+            zoom.transform,
+            d3.zoomIdentity.translate(translateX, translateY).scale(initialScale)
+          );
+          setCurrentZoom(initialScale);
+          onZoomChange({ k: initialScale, x: translateX, y: translateY });
+          console.log(`📱 MOBILE ZOOM APPLIED: scale=${initialScale}, translate=(${translateX}, ${translateY})`);
+        }
+      }, 100);
     }
 
     // Completely disable D3's touch handling - we'll handle it manually
@@ -397,6 +417,8 @@ export default function NetworkVisualizer({
     };
 
     // Create simulation with centering force for main artist
+    console.log(`🔬 SIMULATION SETUP: canvas=${width}x${height}, nodes=${data.nodes.length}, mobile=${isMobile}`);
+    
     const simulation = d3
       .forceSimulation<NetworkNode>(data.nodes)
       .force(
@@ -411,6 +433,8 @@ export default function NetworkVisualizer({
       .force("boundary", boundaryForce)
       .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? (isMobile ? 0.15 : 0.1) : 0))
       .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? (isMobile ? 0.15 : 0.1) : 0));
+    
+    console.log(`🔬 FORCES CONFIGURED: linkDistance=${isMobile ? 120 : 80}, charge=${isMobile ? -200 : -150}`);
 
     simulationRef.current = simulation;
 
@@ -983,9 +1007,27 @@ export default function NetworkVisualizer({
     <div
       className={`network-container transition-opacity duration-700 ${
         visible ? "opacity-100" : "opacity-0"
-      }`}
+      } ${isMobile ? "mobile-network-container" : ""}`}
+      style={isMobile ? {
+        width: '100vw',
+        height: '100vh',
+        overflow: 'visible',
+        position: 'relative'
+      } : {}}
     >
-      <svg ref={svgRef} className={isMobile ? "absolute top-0 left-0" : "w-full h-full"} />
+      <svg 
+        ref={svgRef} 
+        className={isMobile ? "mobile-svg" : "w-full h-full"}
+        style={isMobile ? {
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: 'auto',
+          height: 'auto',
+          maxWidth: 'none',
+          maxHeight: 'none'
+        } : {}}
+      />
       
       <ArtistSelectionModal
         isOpen={showArtistModal}
