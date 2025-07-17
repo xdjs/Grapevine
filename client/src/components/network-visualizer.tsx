@@ -158,8 +158,9 @@ export default function NetworkVisualizer({
       console.log(`📱   Canvas: ${width}x${height} (square)`);
       console.log(`📱   Screen: ${screenWidth}x${screenHeight}`);
       console.log(`📱   Canvas center should be at: (${screenWidth/2}, ${screenHeight/2})`);
-      console.log(`📱   Transform: translateX=${translateX}, translateY=${translateY}`);
+      console.log(`📱   Transform: translateX=${translateX}, translateY=${translateY}, scale=${initialScale}`);
       console.log(`📱   Canvas will extend from X=${translateX} to X=${translateX + width}`);
+      console.log(`📱   Main artist will be centered and visible at initial zoom`);
       
       // Apply the centering transform
       svg.call(
@@ -394,11 +395,27 @@ export default function NetworkVisualizer({
       
       component.forEach(node => {
         if (!node.x && !node.y) {
-          // If this is the main artist node, center it in the canvas
+          // If this is the main artist node, center it at the VISIBLE screen center
           if (node === mainArtistNode) {
-            node.x = width / 2;
-            node.y = height / 2;
-            console.log(`🎯 MAIN ARTIST POSITIONED: "${node.name}" at (${node.x}, ${node.y}) in ${width}x${height} canvas`);
+            if (isMobile) {
+              // For mobile: position at the visible screen center, accounting for canvas translation
+              const screenWidth = window.innerWidth;
+              const screenHeight = window.innerHeight;
+              const translateX = (screenWidth - width) / 2;
+              
+              // Position at visible screen center (relative to canvas coordinates)
+              node.x = screenWidth / 2 - translateX; // Screen center X in canvas coordinates
+              node.y = screenHeight / 2; // Screen center Y
+              console.log(`🎯 MAIN ARTIST POSITIONED FOR MOBILE: "${node.name}" at (${node.x}, ${node.y})`);
+              console.log(`🎯   Screen center: (${screenWidth/2}, ${screenHeight/2})`);
+              console.log(`🎯   Canvas translation: ${translateX}`);
+              console.log(`🎯   Result: artist at visible center`);
+            } else {
+              // Desktop: center in canvas as before
+              node.x = width / 2;
+              node.y = height / 2;
+              console.log(`🎯 MAIN ARTIST POSITIONED FOR DESKTOP: "${node.name}" at (${node.x}, ${node.y})`);
+            }
           } else {
             // On mobile, spread nodes appropriately for the square canvas
             const spreadMultiplier = isMobile ? 150 : 100; // Moderate spread for square canvas
@@ -409,19 +426,58 @@ export default function NetworkVisualizer({
       });
     });
 
-    // Create boundary force to keep nodes within canvas
+    // Create boundary force to keep nodes within appropriate bounds
     const boundaryForce = () => {
-      const margin = isMobile ? 100 : 50; // Reasonable margin for square canvas
-      for (const node of data.nodes) {
-        if (node.x! < margin) node.x = margin;
-        if (node.x! > width - margin) node.x = width - margin;
-        if (node.y! < margin) node.y = margin;
-        if (node.y! > height - margin) node.y = height - margin;
+      if (isMobile) {
+        // For mobile: keep nodes within visible screen area plus some margin
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        const translateX = (screenWidth - width) / 2;
+        const margin = 50;
+        
+        // Define visible area boundaries in canvas coordinates
+        const leftBound = -translateX + margin;
+        const rightBound = -translateX + screenWidth - margin;
+        const topBound = margin;
+        const bottomBound = screenHeight - margin;
+        
+        for (const node of data.nodes) {
+          if (node.x! < leftBound) node.x = leftBound;
+          if (node.x! > rightBound) node.x = rightBound;
+          if (node.y! < topBound) node.y = topBound;
+          if (node.y! > bottomBound) node.y = bottomBound;
+        }
+      } else {
+        // Desktop: keep within canvas bounds
+        const margin = 50;
+        for (const node of data.nodes) {
+          if (node.x! < margin) node.x = margin;
+          if (node.x! > width - margin) node.x = width - margin;
+          if (node.y! < margin) node.y = margin;
+          if (node.y! > height - margin) node.y = height - margin;
+        }
       }
     };
 
     // Create simulation with centering force for main artist
     console.log(`🔬 SIMULATION SETUP: canvas=${width}x${height}, nodes=${data.nodes.length}, mobile=${isMobile}`);
+    
+    // Calculate the correct center point for forces
+    let centerX, centerY;
+    if (isMobile) {
+      // For mobile: center on visible screen center (in canvas coordinates)
+      const screenWidth = window.innerWidth;
+      const screenHeight = window.innerHeight;
+      const translateX = (screenWidth - width) / 2;
+      centerX = screenWidth / 2 - translateX; // Visible screen center X in canvas coordinates
+      centerY = screenHeight / 2; // Visible screen center Y
+      console.log(`🔬 MOBILE CENTERING FORCES: centerX=${centerX}, centerY=${centerY} (visible screen center)`);
+    } else {
+      // Desktop: center in canvas
+      centerX = width / 2;
+      centerY = height / 2;
+      console.log(`🔬 DESKTOP CENTERING FORCES: centerX=${centerX}, centerY=${centerY} (canvas center)`);
+    }
     
     const simulation = d3
       .forceSimulation<NetworkNode>(data.nodes)
@@ -435,8 +491,8 @@ export default function NetworkVisualizer({
       .force("charge", d3.forceManyBody().strength(isMobile ? -175 : -150)) // Moderate repulsion for square canvas
       .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + (isMobile ? 15 : 10))) // Moderate spacing for square canvas
       .force("boundary", boundaryForce)
-      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? (isMobile ? 0.15 : 0.1) : 0))
-      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? (isMobile ? 0.15 : 0.1) : 0));
+      .force("centerX", d3.forceX(centerX).strength((d) => d === mainArtistNode ? (isMobile ? 0.15 : 0.1) : 0))
+      .force("centerY", d3.forceY(centerY).strength((d) => d === mainArtistNode ? (isMobile ? 0.15 : 0.1) : 0));
     
     console.log(`🔬 FORCES CONFIGURED: linkDistance=${isMobile ? 100 : 80}, charge=${isMobile ? -175 : -150}, collision=${isMobile ? 15 : 10}`);
 
