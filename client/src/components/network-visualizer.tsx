@@ -131,34 +131,37 @@ export default function NetworkVisualizer({
         networkGroup.attr("transform", transform);
         setCurrentZoom(transform.k);
         onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
+        
+        if (isMobile) {
+          console.log(`📐 MOBILE ZOOM EVENT: k=${transform.k.toFixed(3)}, x=${transform.x.toFixed(1)}, y=${transform.y.toFixed(1)}`);
+        }
       });
 
     // Apply zoom behavior but prevent background dragging and clicking
     svg.call(zoom);
     zoomRef.current = zoom;
     
-    // On mobile, center the square canvas horizontally and fit it vertically
+    // On mobile, center the square canvas so the network appears centered on screen
     if (isMobile) {
       const screenWidth = window.innerWidth;
       const screenHeight = window.innerHeight;
       
-      // Since canvas is square (height x height), center it horizontally
-      // The canvas extends equally off both sides of the screen
-      const horizontalOverflow = (width - screenWidth) / 2;
+      // Calculate proper centering transform
+      // Canvas center: (width/2, height/2) = (screenHeight/2, screenHeight/2)
+      // Screen center: (screenWidth/2, screenHeight/2)
+      // To center canvas in screen: translateX = screenWidth/2 - screenHeight/2
+      const translateX = (screenWidth - width) / 2; // Center horizontally
+      const translateY = 0; // No vertical offset needed
+      const initialScale = 1; // 1:1 scale
       
-      // Position the canvas so it's centered horizontally and aligned to screen top
-      const translateX = -horizontalOverflow; // Move left by half the overflow
-      const translateY = 0; // No vertical offset needed since canvas height = screen height
-      const initialScale = 1; // No scaling needed since canvas fits vertically
-      
-      console.log(`📱 MOBILE POSITIONING:`);
+      console.log(`📱 MOBILE CENTERING CALCULATION:`);
       console.log(`📱   Canvas: ${width}x${height} (square)`);
       console.log(`📱   Screen: ${screenWidth}x${screenHeight}`);
-      console.log(`📱   Horizontal overflow: ${horizontalOverflow}px per side`);
-      console.log(`📱   Position: translateX=${translateX}, translateY=${translateY}`);
-      console.log(`📱   Scale: ${initialScale} (1:1 ratio)`);
+      console.log(`📱   Canvas center should be at: (${screenWidth/2}, ${screenHeight/2})`);
+      console.log(`📱   Transform: translateX=${translateX}, translateY=${translateY}`);
+      console.log(`📱   Canvas will extend from X=${translateX} to X=${translateX + width}`);
       
-      // Apply the positioning immediately since we're not scaling
+      // Apply the centering transform
       svg.call(
         zoom.transform,
         d3.zoomIdentity.translate(translateX, translateY).scale(initialScale)
@@ -166,7 +169,7 @@ export default function NetworkVisualizer({
       setCurrentZoom(initialScale);
       onZoomChange({ k: initialScale, x: translateX, y: translateY });
       
-      console.log(`📱 MOBILE POSITIONING APPLIED: centered square canvas`);
+      console.log(`📱 MOBILE CENTERING APPLIED: network centered at screen center`);
     }
 
     // Completely disable D3's touch handling - we'll handle it manually
@@ -228,7 +231,7 @@ export default function NetworkVisualizer({
     let initialDistance = 0;
     let lastScale = 1;
     let isPinching = false;
-    let pinchThreshold = 0.2; // Increased from 0.1 to 0.2 for less sensitivity
+    const pinchThreshold = 0.2; // Increased from 0.1 to 0.2 for less sensitivity
 
     // Custom touch event handlers using existing zoom functions
     const handleTouchStart = (event: TouchEvent) => {
@@ -278,7 +281,7 @@ export default function NetworkVisualizer({
       }
     };
 
-    const handleTouchEnd = (event: TouchEvent) => {
+    const handleTouchEnd = (_event: TouchEvent) => {
       if (isPinching) {
         console.log("🤏 Ending pinch gesture");
         isPinching = false;
@@ -395,6 +398,7 @@ export default function NetworkVisualizer({
           if (node === mainArtistNode) {
             node.x = width / 2;
             node.y = height / 2;
+            console.log(`🎯 MAIN ARTIST POSITIONED: "${node.name}" at (${node.x}, ${node.y}) in ${width}x${height} canvas`);
           } else {
             // On mobile, spread nodes appropriately for the square canvas
             const spreadMultiplier = isMobile ? 150 : 100; // Moderate spread for square canvas
@@ -645,7 +649,7 @@ export default function NetworkVisualizer({
       // Show collaboration information for producers and songwriters
       const hasProducerRole = roles.includes('producer') || roles.includes('songwriter');
       // Check both 'collaborations' and 'topCollaborators' fields for compatibility
-      const collaborationData = d.collaborations || (d as any).topCollaborators;
+      const collaborationData = d.collaborations || (d as NetworkNode & { topCollaborators?: string[] }).topCollaborators;
       if (hasProducerRole && collaborationData && collaborationData.length > 0) {
         content += `<br/><br/><strong>Top Collaborations:</strong><br/>`;
         content += collaborationData.join("<br/>");
@@ -818,26 +822,7 @@ export default function NetworkVisualizer({
     };
   }, [data, visible, onZoomChange]);
 
-  // Helper function to check if a node should be visible based on filter state
-  // For multi-role nodes, they are visible if ANY of their roles should be shown
-  const isNodeVisible = (node: NetworkNode, filterState: FilterState): boolean => {
-    if (!node.types || node.types.length === 0) {
-      // Fallback to single type if types array is not available
-      if (node.type === "producer" && !filterState.showProducers) return false;
-      if (node.type === "songwriter" && !filterState.showSongwriters) return false;
-      if (node.type === "artist" && !filterState.showArtists) return false;
-      return true;
-    }
-    
-    // Check if any of the node's roles should be visible
-    for (const role of node.types) {
-      if (role === "producer" && filterState.showProducers) return true;
-      if (role === "songwriter" && filterState.showSongwriters) return true;
-      if (role === "artist" && filterState.showArtists) return true;
-    }
-    
-    return false;
-  };
+
 
   // Update visibility based on filter state
   useEffect(() => {
@@ -996,12 +981,7 @@ export default function NetworkVisualizer({
     };
   }, [visible, currentZoom]);
 
-  function getNodeVisibility(node: NetworkNode, filterState: FilterState): boolean {
-    if (node.type === "producer") return filterState.showProducers;
-    if (node.type === "songwriter") return filterState.showSongwriters;
-    if (node.type === "artist") return filterState.showArtists;
-    return true;
-  }
+
 
   return (
     <div
@@ -1012,7 +992,9 @@ export default function NetworkVisualizer({
         width: '100vw',
         height: '100vh',
         overflow: 'visible',
-        position: 'relative'
+        position: 'absolute',
+        top: 0,
+        left: 0
       } : {}}
     >
       <svg 
@@ -1022,8 +1004,6 @@ export default function NetworkVisualizer({
           position: 'absolute',
           top: 0,
           left: 0,
-          width: 'auto',
-          height: 'auto',
           maxWidth: 'none',
           maxHeight: 'none'
         } : {}}

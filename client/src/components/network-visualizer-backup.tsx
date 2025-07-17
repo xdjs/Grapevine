@@ -159,7 +159,7 @@ export default function NetworkVisualizer({
     let initialDistance = 0;
     let lastScale = 1;
     let isPinching = false;
-    let pinchThreshold = 0.2; // Increased from 0.1 to 0.2 for less sensitivity
+    const pinchThreshold = 0.2; // Increased from 0.1 to 0.2 for less sensitivity
 
     // Custom touch event handlers using existing zoom functions
     const handleTouchStart = (event: TouchEvent) => {
