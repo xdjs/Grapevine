@@ -179,10 +179,12 @@ export default function Home() {
             <div className="flex justify-center">
               <Button
                 onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
-                className="font-medium py-1 px-3 rounded transition-colors text-white text-xs sm:text-sm"
+                className="font-medium py-1 px-3 rounded transition-colors text-white text-xs sm:text-sm music-nerd-button"
                 style={{
                   backgroundColor: '#b427b4',
                   height: '28px',
+                  zIndex: 10000,
+                  position: 'relative',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = '#8f1c8f';
