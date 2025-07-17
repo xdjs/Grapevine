@@ -174,36 +174,37 @@ export default function Home() {
               <p className="mb-1 sm:mb-2">Powered by Music Nerd</p>
               <p>Click on artist nodes to visit their Music Nerd profiles</p>
             </div>
-            
-            {/* Music Nerd Button - Now part of footer */}
-            <div className="flex justify-center relative z-50">
-              <button
-                onClick={() => {
-                  console.log('Button clicked!');
-                  window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer');
-                }}
-                className="font-medium py-1 px-3 rounded transition-colors text-white text-xs sm:text-sm cursor-pointer"
-                style={{
-                  backgroundColor: '#b427b4',
-                  height: '28px',
-                  position: 'relative',
-                  zIndex: 100,
-                  pointerEvents: 'auto',
-                  cursor: 'pointer',
-                  border: 'none',
-                  outline: 'none'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#8f1c8f';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#b427b4';
-                }}
-              >
-                Visit Music Nerd
-              </button>
-            </div>
           </div>
+        </div>
+      )}
+
+      {/* Music Nerd Button - Standalone fixed button */}
+      {!showNetworkView && (
+        <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50">
+          <button
+            onClick={() => {
+              console.log('Music Nerd button clicked!');
+              window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer');
+            }}
+            className="font-medium py-2 px-4 rounded-lg transition-colors text-white text-sm cursor-pointer"
+            style={{
+              backgroundColor: '#b427b4',
+              border: 'none',
+              outline: 'none',
+              boxShadow: '0 4px 12px rgba(180, 39, 180, 0.3)',
+              pointerEvents: 'auto'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#8f1c8f';
+              e.currentTarget.style.boxShadow = '0 4px 16px rgba(180, 39, 180, 0.5)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#b427b4';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(180, 39, 180, 0.3)';
+            }}
+          >
+            Visit Music Nerd
+          </button>
         </div>
       )}
 
