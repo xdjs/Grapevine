@@ -757,7 +757,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       
       {/* Music Nerd Button - Fixed at bottom of screen */}
       {!showNetworkView && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
+        <div className="fixed bottom-20 sm:bottom-6 left-1/2 transform -translate-x-1/2 z-50">
           <Button
             onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
             className="font-medium py-0.5 px-2 rounded transition-colors text-white"

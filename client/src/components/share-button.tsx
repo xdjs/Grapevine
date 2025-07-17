@@ -323,7 +323,7 @@ export default function ShareButton() {
   };
 
   return (
-    <div className="fixed bottom-20 right-4 z-30">
+    <div className="fixed bottom-32 sm:bottom-20 right-4 z-30">
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>

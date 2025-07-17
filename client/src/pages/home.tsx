@@ -151,7 +151,7 @@ export default function Home() {
   };
 
   return (
-    <div className={`relative w-full min-h-screen bg-black text-white ${!showNetworkView ? 'overflow-x-hidden' : ''}`} style={{ pointerEvents: 'auto' }}>
+    <div className={`relative w-full min-h-screen bg-black text-white main-container ${!showNetworkView ? 'overflow-x-hidden' : ''}`} style={{ pointerEvents: 'auto' }}>
       {/* Search Interface */}
       <SearchInterface
         onNetworkData={handleNetworkData}
@@ -166,9 +166,9 @@ export default function Home() {
 
       {/* Attribution Content - Only visible when not showing network */}
       {!showNetworkView && (
-        <div className="absolute bottom-16 left-0 right-0 px-4 text-center z-10" style={{ pointerEvents: 'auto' }}>
-          <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
-            <div className="text-gray-500 text-xs mb-2">
+        <div className="footer-content fixed bottom-0 left-0 right-0 px-4 py-4 sm:py-6 text-center z-10 bg-gradient-to-t from-black/80 to-transparent" style={{ pointerEvents: 'auto' }}>
+          <div className="max-w-2xl mx-auto space-y-2 sm:space-y-3">
+            <div className="text-gray-500 text-xs sm:text-sm">
               <p className="mb-1 sm:mb-2">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
               <p className="mb-1 sm:mb-2">Powered by Music Nerd</p>
               <p>Click on artist nodes to visit their Music Nerd profiles</p>
@@ -177,8 +177,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* Spacer to ensure scrollable content */}
-      <div className="h-96"></div>
+      {/* Spacer to ensure scrollable content - adjusted for mobile */}
+      <div className="h-32 sm:h-96"></div>
 
       {/* Network Visualization */}
       {networkData && (
