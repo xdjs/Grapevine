@@ -438,91 +438,16 @@ export default function NetworkVisualizer({
           .attr("stroke-width", 2);
       }
     })
-      .on("mouseover", function(event, d) {
-        // Highlight the entire node group
+      .on("click", function(event, d) {
+        event.stopPropagation();
+
+        // Highlight the node group
         d3.select(this).selectAll("circle, path")
           .attr("stroke", "white")
           .attr("stroke-width", 3);
+
+        // Show the tooltip at the click position
         showTooltip(event, d);
-      })
-      .on("mousemove", moveTooltip)
-      .on("mouseout", function(event, d) {
-        // Reset the stroke colors for the entire node group
-        const group = d3.select(this);
-        const roles = d.types || [d.type];
-        
-        if (roles.length === 1) {
-          group.select("circle")
-            .attr("stroke", () => {
-              if (roles[0] === 'artist') return '#FF0ACF';
-              if (roles[0] === 'producer') return '#AE53FF';
-              if (roles[0] === 'songwriter') return '#67D1F8';
-              return '#355367';
-            })
-            .attr("stroke-width", 4);
-        } else {
-          group.selectAll("path")
-            .attr("stroke", "white")
-            .attr("stroke-width", 1);
-          group.select("circle")
-            .attr("stroke", "white")
-            .attr("stroke-width", 2);
-        }
-        hideTooltip();
-      })
-      .on("click", function(event, d) {
-        event.stopPropagation();
-        console.log(`🎯 [CLICK DEBUG] ===== LEFT CLICK EVENT =====`);
-        console.log(`🎯 [CLICK DEBUG] Node: "${d.name}"`);
-        console.log(`🎯 [CLICK DEBUG] Type: ${d.type}`);
-        console.log(`🎯 [CLICK DEBUG] Types: ${JSON.stringify(d.types)}`);
-        console.log(`🎯 [CLICK DEBUG] ArtistId: ${d.artistId}`);
-        
-        // Left-click to expand artist's network (only for artist nodes that aren't the main artist)
-        if ((d.type === 'artist' || (d.types && d.types.includes('artist'))) && onArtistSearch) {
-          const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === 'artist');
-          if (d !== mainArtistNode) {
-            console.log(`🎯 [CLICK DEBUG] Expanding network for artist: ${d.name}`);
-            onArtistSearch(d.name);
-          } else {
-            console.log(`🎯 [CLICK DEBUG] Skipping network expansion for main artist`);
-          }
-        } else {
-          console.log(`🎯 [CLICK DEBUG] Not an artist node or no onArtistSearch callback, skipping action`);
-        }
-        console.log(`🎯 [CLICK DEBUG] ===== END LEFT CLICK EVENT =====`);
-      })
-      .on("contextmenu", function(event, d) {
-        event.preventDefault();
-        event.stopPropagation();
-        console.log(`🎯 [CLICK DEBUG] ===== RIGHT CLICK EVENT =====`);
-        console.log(`🎯 [CLICK DEBUG] Node: "${d.name}"`);
-        console.log(`🎯 [CLICK DEBUG] Type: ${d.type}`);
-        console.log(`🎯 [CLICK DEBUG] Types: ${JSON.stringify(d.types)}`);
-        console.log(`🎯 [CLICK DEBUG] ArtistId: ${d.artistId}`);
-        
-        // Check if this is an artist node
-        const isArtistNode = d.type === 'artist' || (d.types && d.types.includes('artist'));
-        console.log(`🎯 [CLICK DEBUG] Is artist node: ${isArtistNode}`);
-        
-        if (isArtistNode) {
-          console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile...`);
-          
-          // Check if this is the main artist (largest artist node)
-          const isMainArtist = d === mainArtistNode;
-          console.log(`🎯 [CLICK DEBUG] Is main artist: ${isMainArtist}`);
-          
-          try {
-            // Always pass the artistId if available, let openMusicNerdProfile handle the logic
-            console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile with artistId: ${d.artistId}`);
-            openMusicNerdProfile(d.name, d.artistId);
-          } catch (error) {
-            console.error(`🎯 [CLICK DEBUG] Error calling openMusicNerdProfile:`, error);
-          }
-        } else {
-          console.log(`🎯 [CLICK DEBUG] Not an artist node, skipping action`);
-        }
-        console.log(`🎯 [CLICK DEBUG] ===== END RIGHT CLICK EVENT =====`);
       })
       .call(
         d3
