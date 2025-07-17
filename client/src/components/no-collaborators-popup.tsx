@@ -53,23 +53,25 @@ export default function NoCollaboratorsPopup({
           </p>
         </div>
 
-        <DialogFooter className="flex-col space-y-2 sm:space-y-0 sm:flex-row sm:space-x-2">
+        <DialogFooter className="flex-col space-y-2 sm:space-y-0 sm:flex-row sm:space-x-2 sm:justify-end">
           <Button
             variant="outline"
             onClick={handleShowSingleNode}
-            className="w-full sm:w-auto border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
+            className="w-full sm:w-auto border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white text-sm"
             disabled={isLoading}
           >
-            <User className="h-4 w-4 mr-2" />
-            Show Single Node
+            <User className="h-4 w-4 mr-2 flex-shrink-0" />
+            <span className="whitespace-nowrap">Show Single Node</span>
           </Button>
           <Button
             onClick={handleShowHallucinations}
             disabled={isLoading}
-            className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white"
+            className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white text-sm px-3"
           >
-            <Users className="h-4 w-4 mr-2" />
-            {isLoading ? "Generating..." : "See Potential Collaborators"}
+            <Users className="h-4 w-4 mr-2 flex-shrink-0" />
+            <span className="whitespace-nowrap">
+              {isLoading ? "Generating..." : "See Potential Collaborators"}
+            </span>
           </Button>
         </DialogFooter>
       </DialogContent>
