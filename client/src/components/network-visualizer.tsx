@@ -450,46 +450,59 @@ export default function NetworkVisualizer({
       }
     })
       .on("mouseover", function(event, d) {
-        // Only show tooltip and highlight on desktop
-        if (!isMobile) {
-          // Highlight the entire node group
-          d3.select(this).selectAll("circle, path")
-            .attr("stroke", "white")
-            .attr("stroke-width", 3);
-          showTooltip(event, d);
+        // Desktop: show mobile popup on hover, Mobile: do nothing (popup shows on tap)
+        const currentIsMobile = window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        
+        if (!currentIsMobile) {
+          // Desktop: show mobile popup on hover
+          console.log(`🎯 [HOVER DEBUG] Desktop hover detected, showing popup for: ${d.name}`);
+          if ((window as any).showMobilePopup) {
+            (window as any).showMobilePopup(d, event.pageX, event.pageY);
+          }
         }
+        
+        // Always highlight the node on hover (both desktop and mobile)
+        d3.select(this).selectAll("circle, path")
+          .attr("stroke", "white")
+          .attr("stroke-width", 3);
       })
       .on("mousemove", function(event, d) {
-        // Only move tooltip on desktop
-        if (!isMobile) {
-          moveTooltip(event);
-        }
+        // No longer needed since we're not using tooltips
+        // Keep empty to prevent any issues
       })
       .on("mouseout", function(event, d) {
-        // Only hide tooltip and reset highlight on desktop
-        if (!isMobile) {
-          // Reset the stroke colors for the entire node group
-          const group = d3.select(this);
-          const roles = d.types || [d.type];
-          
-          if (roles.length === 1) {
-            group.select("circle")
-              .attr("stroke", () => {
-                if (roles[0] === 'artist') return '#FF0ACF';
-                if (roles[0] === 'producer') return '#AE53FF';
-                if (roles[0] === 'songwriter') return '#67D1F8';
-                return '#355367';
-              })
-              .attr("stroke-width", 4);
-          } else {
-            group.selectAll("path")
-              .attr("stroke", "white")
-              .attr("stroke-width", 1);
-            group.select("circle")
-              .attr("stroke", "white")
-              .attr("stroke-width", 2);
-          }
-          hideTooltip();
+        // Desktop: hide mobile popup on mouseout, Mobile: do nothing
+        const currentIsMobile = window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        
+        if (!currentIsMobile) {
+          // Desktop: hide mobile popup on mouseout
+          console.log(`🎯 [HOVER DEBUG] Desktop mouseout detected, hiding popup`);
+          const overlay = document.getElementById('mobile-popup-overlay');
+          const popup = document.getElementById('mobile-popup');
+          if (overlay) overlay.remove();
+          if (popup) popup.remove();
+        }
+        
+        // Always reset the stroke colors for the entire node group
+        const group = d3.select(this);
+        const roles = d.types || [d.type];
+        
+        if (roles.length === 1) {
+          group.select("circle")
+            .attr("stroke", () => {
+              if (roles[0] === 'artist') return '#FF0ACF';
+              if (roles[0] === 'producer') return '#AE53FF';
+              if (roles[0] === 'songwriter') return '#67D1F8';
+              return '#355367';
+            })
+            .attr("stroke-width", 4);
+        } else {
+          group.selectAll("path")
+            .attr("stroke", "white")
+            .attr("stroke-width", 1);
+          group.select("circle")
+            .attr("stroke", "white")
+            .attr("stroke-width", 2);
         }
       })
       .on("click", function(event, d) {
