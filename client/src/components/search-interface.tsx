@@ -165,6 +165,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       toast({
         title: "Network Generated",
         description: `Found collaboration network for ${artistName}`,
+        duration: 1000,
       });
     }
   }, [onNetworkData, toast]);
@@ -198,6 +199,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       toast({
         title: "Network Generated",
         description: `Generated creative network for ${pendingArtistInfo.name}`,
+        duration: 1000,
       });
     } catch (error) {
       toast({
@@ -224,6 +226,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     toast({
       title: "Network Generated",
       description: `Showing ${pendingArtistInfo.name} as single node`,
+      duration: 1000,
     });
   }, [pendingArtistInfo, onNetworkData, toast, saveToSearchHistory]);
 
