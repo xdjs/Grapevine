@@ -558,31 +558,73 @@ export default function NetworkVisualizer({
 
     function showTooltip(event: MouseEvent, d: NetworkNode) {
       const roles = d.types || [d.type];
-      const roleDisplay = roles.length > 1 ? roles.join(' + ') : roles[0];
-      
-      let content = `<strong>${d.name}</strong><br/>Role${roles.length > 1 ? 's' : ''}: ${roleDisplay}`;
 
-      // Show collaboration information for producers and songwriters
-      const hasProducerRole = roles.includes('producer') || roles.includes('songwriter');
-      // Check both 'collaborations' and 'topCollaborators' fields for compatibility
-      const collaborationData = d.collaborations || (d as any).topCollaborators;
-      if (hasProducerRole && collaborationData && collaborationData.length > 0) {
-        content += `<br/><br/><strong>Top Collaborations:</strong><br/>`;
-        content += collaborationData.join("<br/>");
+      // Use enhanced layout only for artist nodes
+      if (roles.includes("artist")) {
+        const roleDisplay = roles.length > 1 ? roles.join(", ") : roles[0];
+
+        // Update these paths if the assets live elsewhere
+        const networkIconPath = "/grapevine-logo.png"; // grape + clef icon
+        const artistIconPath = "/music_nerd_logo.png";   // Music Nerd logo PNG served from public
+
+        const content = `
+          <div style="max-width:320px;">
+            <div style="font-weight:bold; font-size:18px; line-height:1.2; text-align:left;">${d.name}</div>
+            <div style="margin-top:4px; font-size:14px; text-align:left;">Roles: ${roleDisplay}</div>
+            <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <img src="${networkIconPath}" alt="Network" style="width:48px;height:48px;border-radius:50%;" />
+                <a href="#" class="popup-action network-link" style="font-size:15px; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s network</a>
+              </div>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <img src="${artistIconPath}" alt="Artist Page" style="width:48px;height:48px;border-radius:50%;" />
+                <a href="#" class="popup-action artist-page-link" style="font-size:15px; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s Music Nerd profile</a>
+              </div>
+            </div>
+          </div>`;
+
+        tooltip.html(content).style("opacity", 1);
+
+        // Attach click handlers to the inline buttons
+        const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === "artist");
+
+        tooltip.select(".network-link").on("click", (e: any) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (onArtistSearch && d !== mainArtistNode) {
+            onArtistSearch(d.name);
+          }
+        });
+
+        tooltip.select(".artist-page-link").on("click", (e: any) => {
+          e.preventDefault();
+          e.stopPropagation();
+          openMusicNerdProfile(d.name, d.artistId);
+        });
+      } else {
+        /* ---- ORIGINAL NON-ARTIST TOOLTIP BEHAVIOUR ---- */
+        const roleDisplay = roles.length > 1 ? roles.join(" + ") : roles[0];
+        let content = `<div style="text-align:center; max-width:320px;">
+                          <strong>${d.name}</strong><br/>Role${roles.length > 1 ? "s" : ""}: ${roleDisplay}`;
+
+        // Show collaboration information for producers and songwriters
+        const hasProducerRole = roles.includes("producer") || roles.includes("songwriter");
+        const collaborationData = d.collaborations || (d as any).topCollaborators;
+        if (hasProducerRole && collaborationData && collaborationData.length > 0) {
+          content += `<br/><br/><strong>Top Collaborations:</strong><br/>`;
+          content += collaborationData.join("<br/>");
+        }
+
+        // Show general collaboration info for artists if available
+        if (roles.includes("artist") && d.collaborations && d.collaborations.length > 0) {
+          content += `<br/><br/><strong>Recent Collaborations:</strong><br/>`;
+          content += d.collaborations.slice(0, 3).join("<br/>");
+        }
+
+        // Close container div
+        content += `</div>`;
+        tooltip.html(content).style("opacity", 1);
       }
-
-      // Show general collaboration info for artists if available
-      if (roles.includes('artist') && d.collaborations && d.collaborations.length > 0) {
-        content += `<br/><br/><strong>Recent Collaborations:</strong><br/>`;
-        content += d.collaborations.slice(0, 3).join("<br/>");
-      }
-
-      if (roles.includes('artist')) {
-        content += `<br/><br/><em>Click to expand ${d.name}'s network</em>`;
-        content += `<br/><em>Right-Click to view their Music Nerd profile</em>`;
-      }
-
-      tooltip.html(content).style("opacity", 1);
     }
 
     function moveTooltip(event: MouseEvent) {
