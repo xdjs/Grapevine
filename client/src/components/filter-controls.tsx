@@ -19,7 +19,7 @@ export default function FilterControls({
   };
 
   return (
-    <div className="fixed bottom-3 sm:bottom-6 left-2 sm:left-6 bg-gray-900/90 backdrop-blur border border-gray-700 rounded-xl p-3 sm:p-4 opacity-100 transition-opacity duration-500 z-30 max-w-[calc(100vw-1rem)] sm:max-w-none">
+    <div className="fixed bottom-6 sm:bottom-3 left-2 sm:left-6 bg-gray-900/90 backdrop-blur border border-gray-700 rounded-xl p-3 sm:p-4 opacity-100 transition-opacity duration-500 z-30 max-w-[calc(100vw-1rem)] sm:max-w-none">
       <h3 className="text-xs sm:text-sm font-semibold text-gray-300 mb-2 sm:mb-3">Filter by Type</h3>
       <div className="space-y-2 sm:space-y-3">
         <div className="flex items-center gap-2 sm:gap-3">

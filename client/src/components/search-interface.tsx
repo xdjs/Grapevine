@@ -830,6 +830,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
           </div>
         </div>
       </div>
+
       
       {/* Music Nerd Button - Fixed at bottom of screen */}
       {!showNetworkView && (
@@ -861,6 +862,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         onClose={handleClosePopup}
         onShowHallucinations={handleShowHallucinations}
       />
+
     </>
   );
 }
