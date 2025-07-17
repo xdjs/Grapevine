@@ -211,9 +211,10 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     }
   }, [pendingArtistInfo, onNetworkData, onLoadingChange, toast, saveToSearchHistory]);
 
-  const handleShowSingleNode = useCallback(() => {
+  const handleClosePopup = useCallback(() => {
     if (!pendingArtistInfo) return;
     
+    // Default to single node when popup is closed/cancelled
     onNetworkData(pendingArtistInfo.singleNodeNetwork, pendingArtistInfo.id);
     saveToSearchHistory(pendingArtistInfo.name, pendingArtistInfo.id);
     
@@ -857,12 +858,8 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       <NoCollaboratorsPopup
         isOpen={showNoCollaboratorsPopup}
         artistName={pendingArtistInfo?.name || ""}
-        onClose={() => {
-          setShowNoCollaboratorsPopup(false);
-          setPendingArtistInfo(null);
-        }}
+        onClose={handleClosePopup}
         onShowHallucinations={handleShowHallucinations}
-        onShowSingleNode={handleShowSingleNode}
       />
     </>
   );
