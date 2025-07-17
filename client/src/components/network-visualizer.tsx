@@ -613,7 +613,9 @@ export default function NetworkVisualizer({
       .style("opacity", 0);
 
     function showTooltip(event: MouseEvent, d: NetworkNode) {
-      if (isMobile) return; // Disable tooltip on mobile
+      // Bulletproof mobile detection: block tooltip on any mobile/touch device
+      const robustMobile = isMobile || window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      if (robustMobile) return;
       const roles = d.types || [d.type];
       const roleDisplay = roles.length > 1 ? roles.join(' + ') : roles[0];
       
@@ -647,14 +649,16 @@ export default function NetworkVisualizer({
     }
 
     function moveTooltip(event: MouseEvent) {
-      if (isMobile) return; // Disable tooltip on mobile
+      const robustMobile = isMobile || window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      if (robustMobile) return;
       tooltip
         .style("left", event.pageX + 10 + "px")
         .style("top", event.pageY - 10 + "px");
     }
 
     function hideTooltip() {
-      if (isMobile) return; // Disable tooltip on mobile
+      const robustMobile = isMobile || window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      if (robustMobile) return;
       tooltip.style("opacity", 0);
     }
 
