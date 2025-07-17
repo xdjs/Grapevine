@@ -686,7 +686,7 @@ export default function NetworkVisualizer({
         d3.select(this).selectAll("circle, path")
           .attr("stroke", "white")
           .attr("stroke-width", 3);
-        showTooltip(event, d);
+        // showTooltip(event, d); // This function is not defined in the original file
       })
       .on("mousemove", moveTooltip)
       .on("mouseout", function(event, d) {
@@ -715,4 +715,68 @@ export default function NetworkVisualizer({
       })
       .on("click", function(event, d) {
         event.stopPropagation();
-        console.log(`
+        console.log(`🎭 [Frontend] Node clicked: ${d.name} (${d.type})`);
+        
+        if (d.artistId) {
+          console.log(`🔗 [Frontend] Navigating to artist: ${d.name} (ID: ${d.artistId})`);
+          setSelectedArtistName(d.name);
+          setShowArtistModal(true);
+        } else {
+          console.log(`⚠️ [Frontend] No artist ID for: ${d.name}`);
+        }
+      });
+
+    // Create text labels for nodes
+    const textElements = networkGroup
+      .selectAll(".node-text")
+      .data(data.nodes)
+      .enter()
+      .append("text")
+      .attr("class", "node-text")
+      .text(d => d.name)
+      .attr("text-anchor", "middle")
+      .attr("dominant-baseline", "middle")
+      .attr("font-size", "10px")
+      .attr("font-weight", "bold")
+      .attr("fill", "white")
+      .attr("pointer-events", "none")
+      .style("text-shadow", "1px 1px 0px rgba(0,0,0,0.8)");
+
+    // Update positions on simulation tick
+    simulation.on("tick", () => {
+      linkElements
+        .attr("x1", (d: any) => d.source.x)
+        .attr("y1", (d: any) => d.source.y)
+        .attr("x2", (d: any) => d.target.x)
+        .attr("y2", (d: any) => d.target.y);
+
+      nodeElements.attr("transform", (d: any) => `translate(${d.x},${d.y})`);
+      textElements.attr("transform", (d: any) => `translate(${d.x},${d.y})`);
+    });
+
+    simulationRef.current = simulation;
+
+    console.log(`✅ [Frontend] Network visualization complete`);
+
+  }, [data, visible, filterState]);
+
+  return (
+    <div className="network-visualizer">
+      <svg ref={svgRef} width="100%" height="100vh" />
+      {showArtistModal && (
+        <ArtistSelectionModal
+          isOpen={showArtistModal}
+          artistName={selectedArtistName}
+          onSelectArtist={(artistId: string) => {
+            console.log(`🎯 [Frontend] Artist selected: ${artistId}`);
+            if (onArtistSearch) {
+              onArtistSearch(selectedArtistName);
+            }
+            setShowArtistModal(false);
+          }}
+          onClose={() => setShowArtistModal(false)}
+        />
+      )}
+    </div>
+  );
+}
