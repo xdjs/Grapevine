@@ -568,17 +568,17 @@ export default function NetworkVisualizer({
         const artistIconPath = "/musicnerd-icon.png";   // glasses icon
 
         const content = `
-          <div style="text-align:center; max-width:220px;">
-            <div style="font-weight:bold; font-size:18px; line-height:1.2;">${d.name}</div>
-            <div style="margin-top:4px; font-size:14px;">Roles: ${roleDisplay}</div>
-            <div style="display:flex; justify-content:center; gap:20px; margin-top:12px;">
-              <div class="popup-action network-link" style="cursor:pointer;">
-                <img src="${networkIconPath}" alt="Network" style="width:64px;height:64px;border-radius:50%;" />
-                <div style="margin-top:6px; font-size:14px;">Network</div>
+          <div style="max-width:260px;">
+            <div style="font-weight:bold; font-size:18px; line-height:1.2; text-align:left;">${d.name}</div>
+            <div style="margin-top:4px; font-size:14px; text-align:left;">Roles: ${roleDisplay}</div>
+            <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <img src="${networkIconPath}" alt="Network" style="width:48px;height:48px;border-radius:50%;" />
+                <a href="#" class="popup-action network-link" style="font-size:15px; font-style:italic; text-decoration:underline; cursor:pointer;">${d.name}'s network</a>
               </div>
-              <div class="popup-action artist-page-link" style="cursor:pointer;">
-                <img src="${artistIconPath}" alt="Artist Page" style="width:64px;height:64px;border-radius:50%;" />
-                <div style="margin-top:6px; font-size:14px;">Artist Page</div>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <img src="${artistIconPath}" alt="Artist Page" style="width:48px;height:48px;border-radius:50%;" />
+                <a href="#" class="popup-action artist-page-link" style="font-size:15px; font-style:italic; text-decoration:underline; cursor:pointer;">${d.name}'s Music Nerd profile</a>
               </div>
             </div>
           </div>`;
@@ -604,7 +604,8 @@ export default function NetworkVisualizer({
       } else {
         /* ---- ORIGINAL NON-ARTIST TOOLTIP BEHAVIOUR ---- */
         const roleDisplay = roles.length > 1 ? roles.join(" + ") : roles[0];
-        let content = `<strong>${d.name}</strong><br/>Role${roles.length > 1 ? "s" : ""}: ${roleDisplay}`;
+        let content = `<div style="text-align:center; max-width:220px;">
+                          <strong>${d.name}</strong><br/>Role${roles.length > 1 ? "s" : ""}: ${roleDisplay}`;
 
         // Show collaboration information for producers and songwriters
         const hasProducerRole = roles.includes("producer") || roles.includes("songwriter");
@@ -620,6 +621,8 @@ export default function NetworkVisualizer({
           content += d.collaborations.slice(0, 3).join("<br/>");
         }
 
+        // Close container div
+        content += `</div>`;
         tooltip.html(content).style("opacity", 1);
       }
     }
