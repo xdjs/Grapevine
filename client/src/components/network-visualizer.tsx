@@ -446,8 +446,9 @@ export default function NetworkVisualizer({
           .attr("stroke", "white")
           .attr("stroke-width", 3);
 
-        // Show the tooltip at the click position
+        // Show the tooltip and anchor it near the clicked node
         showTooltip(event, d);
+        positionTooltipNearNode(this as SVGGElement);
       })
       .call(
         d3
@@ -493,7 +494,8 @@ export default function NetworkVisualizer({
         const artistIconPath = "/music_nerd_logo.png";   // Music Nerd logo PNG served from public
 
         const content = `
-          <div style="max-width:320px;">
+          <div style="position:relative; max-width:320px;">
+            <span class="tooltip-close" style="position:absolute; top:6px; right:10px; cursor:pointer; font-size:18px; color:white;">&times;</span>
             <div style="font-weight:bold; font-size:18px; line-height:1.2; text-align:left;">${d.name}</div>
             <div style="margin-top:4px; font-size:14px; text-align:left;">Roles: ${roleDisplay}</div>
             <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
@@ -526,10 +528,16 @@ export default function NetworkVisualizer({
           e.stopPropagation();
           openMusicNerdProfile(d.name, d.artistId);
         });
+
+        // Close button handler
+        tooltip.select(".tooltip-close").on("click", () => {
+          hideTooltip();
+        });
       } else {
         /* ---- ORIGINAL NON-ARTIST TOOLTIP BEHAVIOUR ---- */
         const roleDisplay = roles.length > 1 ? roles.join(" + ") : roles[0];
-        let content = `<div style="text-align:center; max-width:320px;">
+        let content = `<div style="position:relative; text-align:center; max-width:320px;">
+                        <span class="tooltip-close" style="position:absolute; top:6px; right:10px; cursor:pointer; font-size:18px; color:white;">&times;</span>
                           <strong>${d.name}</strong><br/>Role${roles.length > 1 ? "s" : ""}: ${roleDisplay}`;
 
         // Show collaboration information for producers and songwriters
@@ -549,7 +557,22 @@ export default function NetworkVisualizer({
         // Close container div
         content += `</div>`;
         tooltip.html(content).style("opacity", 1);
+
+        tooltip.select(".tooltip-close").on("click", () => {
+          hideTooltip();
+        });
       }
+    }
+
+    // Helper to position tooltip next to a node element
+    function positionTooltipNearNode(nodeEl: SVGGElement) {
+      const rect = nodeEl.getBoundingClientRect();
+      const pageX = rect.right + 12; // 12px to the right of node
+      const pageY = rect.top + window.scrollY - 10; // align vertically
+
+      tooltip
+        .style("left", pageX + "px")
+        .style("top", pageY + "px");
     }
 
     function moveTooltip(event: MouseEvent) {
