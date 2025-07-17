@@ -613,6 +613,7 @@ export default function NetworkVisualizer({
       .style("opacity", 0);
 
     function showTooltip(event: MouseEvent, d: NetworkNode) {
+      if (isMobile) return; // Disable tooltip on mobile
       const roles = d.types || [d.type];
       const roleDisplay = roles.length > 1 ? roles.join(' + ') : roles[0];
       
@@ -646,12 +647,14 @@ export default function NetworkVisualizer({
     }
 
     function moveTooltip(event: MouseEvent) {
+      if (isMobile) return; // Disable tooltip on mobile
       tooltip
         .style("left", event.pageX + 10 + "px")
         .style("top", event.pageY - 10 + "px");
     }
 
     function hideTooltip() {
+      if (isMobile) return; // Disable tooltip on mobile
       tooltip.style("opacity", 0);
     }
 
