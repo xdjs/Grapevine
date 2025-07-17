@@ -17,8 +17,24 @@ export default function SimpleMobilePopup({
     // Remove any existing popup first
     const existingOverlay = document.getElementById('mobile-popup-overlay');
     const existingPopup = document.getElementById('mobile-popup');
-    if (existingOverlay) existingOverlay.remove();
-    if (existingPopup) existingPopup.remove();
+    console.log(`📱 [SIMPLE POPUP] Found existing overlay:`, !!existingOverlay);
+    console.log(`📱 [SIMPLE POPUP] Found existing popup:`, !!existingPopup);
+    if (existingOverlay) {
+      existingOverlay.remove();
+      console.log(`📱 [SIMPLE POPUP] Removed existing overlay`);
+    }
+    if (existingPopup) {
+      existingPopup.remove();
+      console.log(`📱 [SIMPLE POPUP] Removed existing popup`);
+    }
+    
+    // Double-check that no other overlays exist
+    const allOverlays = document.querySelectorAll('[id*="overlay"], [id*="popup"]');
+    console.log(`📱 [SIMPLE POPUP] Found ${allOverlays.length} total overlay/popup elements:`, Array.from(allOverlays).map(el => el.id));
+    
+    // Check for any black overlays
+    const blackOverlays = document.querySelectorAll('div[style*="background: rgba(0, 0, 0"], div[style*="background-color: rgba(0, 0, 0"], div[style*="background: black"], div[style*="background-color: black"]');
+    console.log(`📱 [SIMPLE POPUP] Found ${blackOverlays.length} black overlay elements:`, Array.from(blackOverlays).map(el => el.outerHTML.substring(0, 100)));
 
     // Create simple popup content
     const roles = node.types || [node.type];
@@ -53,14 +69,14 @@ export default function SimpleMobilePopup({
     overlay.style.cssText = 'position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.5);';
     overlay.id = 'mobile-popup-overlay';
     document.body.appendChild(overlay);
-    console.log(`📱 [SIMPLE POPUP] Overlay created and added to body`);
+    console.log(`📱 [SIMPLE POPUP] Overlay created and added to body with ID:`, overlay.id);
 
     // Add popup
     const popup = document.createElement('div');
     popup.innerHTML = content;
     popup.id = 'mobile-popup';
     document.body.appendChild(popup);
-    console.log(`📱 [SIMPLE POPUP] Popup created and added to body`);
+    console.log(`📱 [SIMPLE POPUP] Popup created and added to body with ID:`, popup.id);
 
     // Add event listeners
     const closeBtn = document.getElementById('close-popup');
@@ -89,18 +105,37 @@ export default function SimpleMobilePopup({
   };
 
   const hidePopup = () => {
+    console.log(`📱 [SIMPLE POPUP] hidePopup called`);
     const overlay = document.getElementById('mobile-popup-overlay');
     const popup = document.getElementById('mobile-popup');
     
-    if (overlay) overlay.remove();
-    if (popup) popup.remove();
+    console.log(`📱 [SIMPLE POPUP] Found overlay to remove:`, !!overlay);
+    console.log(`📱 [SIMPLE POPUP] Found popup to remove:`, !!popup);
+    
+    if (overlay) {
+      overlay.remove();
+      console.log(`📱 [SIMPLE POPUP] Removed overlay`);
+    }
+    if (popup) {
+      popup.remove();
+      console.log(`📱 [SIMPLE POPUP] Removed popup`);
+    }
   };
 
   // Expose showPopup globally so it can be called from the network visualizer
   useEffect(() => {
     console.log(`📱 [SIMPLE POPUP] Component mounting, setting up global function`);
+    
+    // Check if there's already a global function
+    if ((window as any).showMobilePopup) {
+      console.log(`📱 [SIMPLE POPUP] WARNING: Global function already exists!`);
+      // Don't overwrite if it already exists
+      return;
+    }
+    
     (window as any).showMobilePopup = showPopup;
     console.log(`📱 [SIMPLE POPUP] Global function set:`, typeof (window as any).showMobilePopup);
+    
     return () => {
       console.log(`📱 [SIMPLE POPUP] Component unmounting, cleaning up global function`);
       delete (window as any).showMobilePopup;
