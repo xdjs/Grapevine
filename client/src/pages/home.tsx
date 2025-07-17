@@ -7,7 +7,7 @@ import FilterControls from "@/components/filter-controls";
 import MobileControls from "@/components/mobile-controls";
 import HelpButton from "@/components/help-button";
 import ShareButton from "@/components/share-button";
-import Button from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 
 import { NetworkData, FilterState } from "@/types/network";
 import { Loader2 } from "lucide-react";
