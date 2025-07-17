@@ -453,12 +453,23 @@ export default function NetworkVisualizer({
         // Desktop: show mobile popup on hover, Mobile: do nothing (popup shows on tap)
         const currentIsMobile = window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         
+        console.log(`🎯 [HOVER DEBUG] Mouseover event triggered for: ${d.name}`);
+        console.log(`🎯 [HOVER DEBUG] window.innerWidth: ${window.innerWidth}`);
+        console.log(`🎯 [HOVER DEBUG] 'ontouchstart' in window: ${'ontouchstart' in window}`);
+        console.log(`🎯 [HOVER DEBUG] navigator.maxTouchPoints: ${navigator.maxTouchPoints}`);
+        console.log(`🎯 [HOVER DEBUG] currentIsMobile: ${currentIsMobile}`);
+        
         if (!currentIsMobile) {
           // Desktop: show mobile popup on hover
           console.log(`🎯 [HOVER DEBUG] Desktop hover detected, showing popup for: ${d.name}`);
           if ((window as any).showMobilePopup) {
             (window as any).showMobilePopup(d, event.pageX, event.pageY);
+            console.log(`🎯 [HOVER DEBUG] showMobilePopup called successfully`);
+          } else {
+            console.log(`🎯 [HOVER DEBUG] showMobilePopup function not available`);
           }
+        } else {
+          console.log(`🎯 [HOVER DEBUG] Mobile detected, skipping popup on hover`);
         }
         
         // Always highlight the node on hover (both desktop and mobile)
