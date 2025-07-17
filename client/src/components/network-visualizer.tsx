@@ -126,11 +126,20 @@ export default function NetworkVisualizer({
     svg.call(zoom);
     zoomRef.current = zoom;
     
-    // On mobile, start zoomed out to show the larger canvas
+    // On mobile, start with a reasonable zoom to show the network nicely
     if (isMobile) {
-      const initialScale = Math.min(window.innerWidth / width, window.innerHeight / height) * 0.8;
-      const translateX = (window.innerWidth - width * initialScale) / 2;
-      const translateY = (window.innerHeight - height * initialScale) / 2;
+      // Start with a zoom that makes the network visible but not too small
+      const initialScale = 0.3; // Fixed reasonable zoom level for mobile
+      const viewportCenterX = window.innerWidth / 2;
+      const viewportCenterY = window.innerHeight / 2;
+      const canvasCenterX = width / 2;
+      const canvasCenterY = height / 2;
+      
+      // Center the network canvas in the viewport
+      const translateX = viewportCenterX - (canvasCenterX * initialScale);
+      const translateY = viewportCenterY - (canvasCenterY * initialScale);
+      
+      console.log(`📱 Mobile initial zoom: scale=${initialScale}, translate=(${translateX}, ${translateY})`);
       
       svg.call(
         zoom.transform,
@@ -398,10 +407,10 @@ export default function NetworkVisualizer({
           .distance(isMobile ? 120 : 80) // Longer links on mobile for better spread
       )
       .force("charge", d3.forceManyBody().strength(isMobile ? -200 : -150)) // Stronger repulsion on mobile
-      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
+      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + (isMobile ? 20 : 10))) // More space on mobile
       .force("boundary", boundaryForce)
-      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
-      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.1 : 0));
+      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? (isMobile ? 0.15 : 0.1) : 0))
+      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? (isMobile ? 0.15 : 0.1) : 0));
 
     simulationRef.current = simulation;
 
@@ -857,25 +866,34 @@ export default function NetworkVisualizer({
     });
   }, [filterState, visible]);
 
-  // SVG viewBox zoom function (working implementation)
+  // SVG viewBox zoom function - UPDATED to use correct canvas dimensions
   const applyZoom = (scale: number) => {
     if (!svgRef.current) return;
     
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    // Get the actual canvas dimensions based on device type
+    let canvasWidth, canvasHeight;
+    if (isMobile) {
+      const screenSize = Math.max(window.innerWidth, window.innerHeight);
+      const mobileCanvasSize = Math.max(2000, screenSize * 2.5);
+      canvasWidth = mobileCanvasSize;
+      canvasHeight = mobileCanvasSize;
+    } else {
+      canvasWidth = window.innerWidth;
+      canvasHeight = window.innerHeight;
+    }
     
-    // Calculate new viewBox dimensions
-    const newWidth = width / scale;
-    const newHeight = height / scale;
-    const offsetX = (width - newWidth) / 2;
-    const offsetY = (height - newHeight) / 2;
+    // Calculate new viewBox dimensions based on actual canvas size
+    const newWidth = canvasWidth / scale;
+    const newHeight = canvasHeight / scale;
+    const offsetX = (canvasWidth - newWidth) / 2;
+    const offsetY = (canvasHeight - newHeight) / 2;
     
     // Apply smooth transition
     const svg = d3.select(svgRef.current);
     svg.transition()
       .duration(200)
       .attrTween('viewBox', () => {
-        const currentViewBox = svgRef.current?.getAttribute('viewBox') || `0 0 ${width} ${height}`;
+        const currentViewBox = svgRef.current?.getAttribute('viewBox') || `0 0 ${canvasWidth} ${canvasHeight}`;
         const [cx, cy, cw, ch] = currentViewBox.split(' ').map(Number);
         const interpolator = d3.interpolate([cx, cy, cw, ch], [offsetX, offsetY, newWidth, newHeight]);
         return (t: number) => {
@@ -967,7 +985,7 @@ export default function NetworkVisualizer({
         visible ? "opacity-100" : "opacity-0"
       }`}
     >
-      <svg ref={svgRef} className="w-full h-full" />
+      <svg ref={svgRef} className={isMobile ? "absolute top-0 left-0" : "w-full h-full"} />
       
       <ArtistSelectionModal
         isOpen={showArtistModal}
