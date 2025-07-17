@@ -395,11 +395,11 @@ export default function NetworkVisualizer({
           // If this is the main artist node, center it in the canvas
           if (node === mainArtistNode) {
             if (isMobile) {
-              // For mobile: position in canvas center (canvas is already translated to be centered)
+              // For mobile: position in canvas center horizontally, very close to top vertically
               node.x = width / 2; // Center of square canvas
-              node.y = height * 0.4; // 40% down from top of canvas (higher up)
+              node.y = height * 0.25; // 25% down from top of canvas (very close to top)
               console.log(`🎯 MAIN ARTIST POSITIONED FOR MOBILE: "${node.name}" at (${node.x}, ${node.y})`);
-              console.log(`🎯   Canvas center X: ${width / 2}, positioned at Y: ${height * 0.4} (40% down canvas)`);
+              console.log(`🎯   Canvas center X: ${width / 2}, positioned at Y: ${height * 0.25} (25% down - very close to top)`);
               console.log(`🎯   Canvas dimensions: ${width}x${height}`);
             } else {
               // Desktop: center in canvas as before
@@ -408,8 +408,8 @@ export default function NetworkVisualizer({
               console.log(`🎯 MAIN ARTIST POSITIONED FOR DESKTOP: "${node.name}" at (${node.x}, ${node.y})`);
             }
           } else {
-            // On mobile, spread nodes appropriately for the square canvas
-            const spreadMultiplier = isMobile ? 150 : 100; // Moderate spread for square canvas
+            // On mobile, spread nodes appropriately around the top-positioned center
+            const spreadMultiplier = isMobile ? 120 : 100; // Slightly tighter spread for top positioning
             node.x = centerX + (Math.random() - 0.5) * spreadMultiplier;
             node.y = centerY + (Math.random() - 0.5) * spreadMultiplier;
           }
@@ -420,18 +420,19 @@ export default function NetworkVisualizer({
     // Create boundary force to keep nodes within appropriate bounds
     const boundaryForce = () => {
       if (isMobile) {
-        // For mobile: keep nodes within the canvas bounds (which is properly positioned)
-        const margin = 50;
+        // For mobile: keep nodes within canvas bounds optimized for top-positioned network
+        const topMargin = 30; // Smaller top margin since network is close to top
+        const bottomMargin = 80; // Larger bottom margin for network spread
+        const sideMargin = 50; // Standard side margins
         
-        // Simple canvas boundary - nodes should stay within the square canvas
         for (const node of data.nodes) {
-          if (node.x! < margin) node.x = margin;
-          if (node.x! > width - margin) node.x = width - margin;
-          if (node.y! < margin) node.y = margin;
-          if (node.y! > height - margin) node.y = height - margin;
+          if (node.x! < sideMargin) node.x = sideMargin;
+          if (node.x! > width - sideMargin) node.x = width - sideMargin;
+          if (node.y! < topMargin) node.y = topMargin;
+          if (node.y! > height - bottomMargin) node.y = height - bottomMargin;
         }
         
-        console.log(`📱 BOUNDARY FORCE: keeping nodes within canvas bounds (${margin} to ${width-margin} x ${margin} to ${height-margin})`);
+        console.log(`📱 BOUNDARY FORCE: optimized for top position (X: ${sideMargin} to ${width-sideMargin}, Y: ${topMargin} to ${height-bottomMargin})`);
       } else {
         // Desktop: keep within canvas bounds
         const margin = 50;
@@ -452,8 +453,8 @@ export default function NetworkVisualizer({
     if (isMobile) {
       // For mobile: center forces in canvas (canvas is already translated properly)
       centerX = width / 2; // Center of square canvas
-      centerY = height * 0.4; // 40% down from top of canvas (higher up)
-      console.log(`🔬 MOBILE CENTERING FORCES: centerX=${centerX}, centerY=${centerY} (canvas coordinates)`);
+      centerY = height * 0.25; // 25% down from top of canvas (very close to top)
+      console.log(`🔬 MOBILE CENTERING FORCES: centerX=${centerX}, centerY=${centerY} (very close to top)`);
     } else {
       // Desktop: center in canvas
       centerX = width / 2;
@@ -473,8 +474,8 @@ export default function NetworkVisualizer({
       .force("charge", d3.forceManyBody().strength(isMobile ? -175 : -150)) // Moderate repulsion for square canvas
       .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + (isMobile ? 15 : 10))) // Moderate spacing for square canvas
       .force("boundary", boundaryForce)
-      .force("centerX", d3.forceX(centerX).strength((d) => d === mainArtistNode ? (isMobile ? 0.15 : 0.1) : 0))
-      .force("centerY", d3.forceY(centerY).strength((d) => d === mainArtistNode ? (isMobile ? 0.15 : 0.1) : 0));
+      .force("centerX", d3.forceX(centerX).strength((d) => d === mainArtistNode ? (isMobile ? 0.2 : 0.1) : 0))
+      .force("centerY", d3.forceY(centerY).strength((d) => d === mainArtistNode ? (isMobile ? 0.2 : 0.1) : 0));
     
     console.log(`🔬 FORCES CONFIGURED: linkDistance=${isMobile ? 100 : 80}, charge=${isMobile ? -175 : -150}, collision=${isMobile ? 15 : 10}`);
 
