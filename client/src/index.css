@@ -205,12 +205,16 @@
     left: 0;
     right: 0;
     bottom: 0;
+    overflow: hidden; /* Allow content to extend beyond viewport */
   }
 
   .network-container svg {
     width: 100%;
     height: 100%;
     display: block;
+    /* Allow SVG to extend beyond container on mobile for larger canvas */
+    min-width: 100%;
+    min-height: 100%;
   }
 
   /* Custom scrollbar styling for artist dropdown */

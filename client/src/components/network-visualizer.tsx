@@ -69,9 +69,9 @@ export default function NetworkVisualizer({
     let width, height;
     if (isMobile) {
       // Create a large square canvas for mobile to prevent node squishing in shares
-      // Use the larger dimension + extra space to ensure nodes aren't constrained
+      // Use a significantly larger space to give nodes room to spread out naturally
       const screenSize = Math.max(window.innerWidth, window.innerHeight);
-      const mobileCanvasSize = Math.max(1200, screenSize * 1.5); // Minimum 1200px, or 1.5x screen size
+      const mobileCanvasSize = Math.max(2000, screenSize * 2.5); // Minimum 2000px, or 2.5x screen size
       width = mobileCanvasSize;
       height = mobileCanvasSize;
       console.log(`📱 Mobile canvas: ${width}x${height} (screen: ${window.innerWidth}x${window.innerHeight})`);
@@ -84,6 +84,12 @@ export default function NetworkVisualizer({
 
     // Clear existing content
     svg.selectAll("*").remove();
+    
+    // Set SVG dimensions to match our calculated canvas size
+    svg
+      .attr("width", width)
+      .attr("height", height)
+      .attr("viewBox", `0 0 ${width} ${height}`);
 
     // Filter out links where either node doesn't exist or is isolated
     const nodeSet = new Set(data.nodes.map(n => n.id));
@@ -119,6 +125,20 @@ export default function NetworkVisualizer({
     // Apply zoom behavior but prevent background dragging and clicking
     svg.call(zoom);
     zoomRef.current = zoom;
+    
+    // On mobile, start zoomed out to show the larger canvas
+    if (isMobile) {
+      const initialScale = Math.min(window.innerWidth / width, window.innerHeight / height) * 0.8;
+      const translateX = (window.innerWidth - width * initialScale) / 2;
+      const translateY = (window.innerHeight - height * initialScale) / 2;
+      
+      svg.call(
+        zoom.transform,
+        d3.zoomIdentity.translate(translateX, translateY).scale(initialScale)
+      );
+      setCurrentZoom(initialScale);
+      onZoomChange({ k: initialScale, x: translateX, y: translateY });
+    }
 
     // Completely disable D3's touch handling - we'll handle it manually
     svg.on("mousedown.drag", null)
@@ -132,21 +152,22 @@ export default function NetworkVisualizer({
     const applyZoom = (scale: number) => {
       if (!svgRef.current) return;
       
-      const width = window.innerWidth;
-      const height = window.innerHeight;
+      // Use our calculated canvas dimensions instead of just window size
+      const canvasWidth = width;
+      const canvasHeight = height;
       
       // Calculate new viewBox dimensions
-      const newWidth = width / scale;
-      const newHeight = height / scale;
-      const offsetX = (width - newWidth) / 2;
-      const offsetY = (height - newHeight) / 2;
+      const newWidth = canvasWidth / scale;
+      const newHeight = canvasHeight / scale;
+      const offsetX = (canvasWidth - newWidth) / 2;
+      const offsetY = (canvasHeight - newHeight) / 2;
       
       // Apply smooth transition
       const svg = d3.select(svgRef.current);
       svg.transition()
         .duration(200)
         .attrTween('viewBox', () => {
-          const currentViewBox = svgRef.current?.getAttribute('viewBox') || `0 0 ${width} ${height}`;
+          const currentViewBox = svgRef.current?.getAttribute('viewBox') || `0 0 ${canvasWidth} ${canvasHeight}`;
           const [cx, cy, cw, ch] = currentViewBox.split(' ').map(Number);
           const interpolator = d3.interpolate([cx, cy, cw, ch], [offsetX, offsetY, newWidth, newHeight]);
           return (t: number) => {
@@ -341,21 +362,23 @@ export default function NetworkVisualizer({
       
       component.forEach(node => {
         if (!node.x && !node.y) {
-          // If this is the main artist node, center it in the viewport
+          // If this is the main artist node, center it in the canvas
           if (node === mainArtistNode) {
             node.x = width / 2;
             node.y = height / 2;
           } else {
-            node.x = centerX + (Math.random() - 0.5) * 100;
-            node.y = centerY + (Math.random() - 0.5) * 100;
+            // On mobile, spread nodes more in the larger canvas space
+            const spreadMultiplier = isMobile ? 300 : 100;
+            node.x = centerX + (Math.random() - 0.5) * spreadMultiplier;
+            node.y = centerY + (Math.random() - 0.5) * spreadMultiplier;
           }
         }
       });
     });
 
-    // Create boundary force to keep nodes within viewport
+    // Create boundary force to keep nodes within canvas
     const boundaryForce = () => {
-      const margin = 50;
+      const margin = isMobile ? 200 : 50; // Larger margin on mobile for more spread
       for (const node of data.nodes) {
         if (node.x! < margin) node.x = margin;
         if (node.x! > width - margin) node.x = width - margin;
@@ -372,9 +395,9 @@ export default function NetworkVisualizer({
         d3
           .forceLink<NetworkNode, NetworkLink>(validLinks)
           .id((d) => d.id)
-          .distance(80)
+          .distance(isMobile ? 120 : 80) // Longer links on mobile for better spread
       )
-      .force("charge", d3.forceManyBody().strength(-150))
+      .force("charge", d3.forceManyBody().strength(isMobile ? -200 : -150)) // Stronger repulsion on mobile
       .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
       .force("boundary", boundaryForce)
       .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
