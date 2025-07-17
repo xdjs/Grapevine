@@ -37,7 +37,7 @@ export default function ShareButton() {
   };
   
   const shareToInstagram = () => {
-    // Instagram doesn't support direct URL sharing, so we'll copy to clipboard and open Instagram
+    // Instagram doesn't support direct URL sharing, so we'll copy to clipboard and open Instagram's posting interface
     const text = `🎵 Artist collaboration network 🎵\n\nDiscover music connections at ${window.location.href}\n\n#music #artists #collaboration #grapevine`;
     
     navigator.clipboard.writeText(text).then(() => {
@@ -47,19 +47,36 @@ export default function ShareButton() {
         className: "bg-green-600 border-green-500 text-white",
       });
       
-      // Check if mobile to try app first
+      // Try to open Instagram's posting interface directly
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       if (isMobile) {
-        // Try to open Instagram app directly
-        window.location.href = 'instagram://camera';
-        // Fallback to web version after a short delay
+        // Try to open Instagram app's camera/posting interface
+        const instagramAppUrl = 'instagram://camera';
+        const fallbackUrl = 'https://www.instagram.com/';
+        
+        // Create a hidden iframe to test if the app opens
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = instagramAppUrl;
+        document.body.appendChild(iframe);
+        
+        // If app doesn't open within 2 seconds, open web version
         setTimeout(() => {
-          window.open('https://www.instagram.com/', '_blank');
-        }, 1500);
+          document.body.removeChild(iframe);
+          window.open(fallbackUrl, '_blank');
+        }, 2000);
+        
+        // Try to open the app immediately
+        window.location.href = instagramAppUrl;
+        
+        // If we're still here after 500ms, the app probably didn't open
+        setTimeout(() => {
+          window.open(fallbackUrl, '_blank');
+        }, 500);
       } else {
-        // On desktop, just open Instagram homepage
-        window.open('https://www.instagram.com/', '_blank');
+        // On desktop, open Instagram web and try to go to creation flow
+        window.open('https://www.instagram.com/accounts/login/?next=/create/select/', '_blank');
       }
     }).catch(() => {
       toast({
@@ -68,16 +85,16 @@ export default function ShareButton() {
         variant: "destructive",
       });
       
-      // Fallback - open Instagram without clipboard
+      // Fallback without clipboard - still try to open posting interface
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       if (isMobile) {
-        window.location.href = 'instagram://camera';
+        window.open('instagram://camera', '_blank');
         setTimeout(() => {
           window.open('https://www.instagram.com/', '_blank');
-        }, 1500);
+        }, 1000);
       } else {
-        window.open('https://www.instagram.com/', '_blank');
+        window.open('https://www.instagram.com/accounts/login/?next=/create/select/', '_blank');
       }
     });
   };
