@@ -403,7 +403,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
             : "opacity-0 pointer-events-none -translate-y-12"
         }`}
       >
-        <div className="bg-black/90 backdrop-blur-sm border-b border-gray-800 px-3 sm:px-6 py-3 sm:py-4">
+        <div className="bg-black/70 sm:bg-black/90 backdrop-blur-sm border-b border-gray-800 px-3 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button 
