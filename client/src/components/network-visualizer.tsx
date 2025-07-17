@@ -456,23 +456,15 @@ export default function NetworkVisualizer({
         const hasTouch = 'ontouchstart' in window && navigator.maxTouchPoints > 0;
         const currentIsMobile = isSmallWindow && hasTouch;
         
-        console.log(`🎯 [HOVER DEBUG] Mouseover event triggered for: ${d.name}`);
-        console.log(`🎯 [HOVER DEBUG] window.innerWidth: ${window.innerWidth}`);
-        console.log(`🎯 [HOVER DEBUG] 'ontouchstart' in window: ${'ontouchstart' in window}`);
-        console.log(`🎯 [HOVER DEBUG] navigator.maxTouchPoints: ${navigator.maxTouchPoints}`);
-        console.log(`🎯 [HOVER DEBUG] isSmallWindow: ${isSmallWindow}, hasTouch: ${hasTouch}, currentIsMobile: ${currentIsMobile}`);
-        
         if (!currentIsMobile) {
-          // Desktop: show mobile popup on hover
-          console.log(`🎯 [HOVER DEBUG] Desktop hover detected, showing popup for: ${d.name}`);
-          if ((window as any).showMobilePopup) {
-            (window as any).showMobilePopup(d, event.pageX, event.pageY);
-            console.log(`🎯 [HOVER DEBUG] showMobilePopup called successfully`);
-          } else {
-            console.log(`🎯 [HOVER DEBUG] showMobilePopup function not available`);
+          // Desktop: show mobile popup on hover with delay to prevent glitching
+          const existingPopup = document.getElementById('mobile-popup');
+          if (!existingPopup) {
+            console.log(`🎯 [HOVER DEBUG] Desktop hover detected, showing popup for: ${d.name}`);
+            if ((window as any).showMobilePopup) {
+              (window as any).showMobilePopup(d, event.pageX, event.pageY);
+            }
           }
-        } else {
-          console.log(`🎯 [HOVER DEBUG] Mobile detected, skipping popup on hover`);
         }
         
         // Always highlight the node on hover (both desktop and mobile)
@@ -492,12 +484,13 @@ export default function NetworkVisualizer({
         const currentIsMobile = isSmallWindow && hasTouch;
         
         if (!currentIsMobile) {
-          // Desktop: hide mobile popup on mouseout
-          console.log(`🎯 [HOVER DEBUG] Desktop mouseout detected, hiding popup`);
-          const overlay = document.getElementById('mobile-popup-overlay');
-          const popup = document.getElementById('mobile-popup');
-          if (overlay) overlay.remove();
-          if (popup) popup.remove();
+          // Desktop: hide mobile popup on mouseout with small delay to prevent glitching
+          setTimeout(() => {
+            const overlay = document.getElementById('mobile-popup-overlay');
+            const popup = document.getElementById('mobile-popup');
+            if (overlay) overlay.remove();
+            if (popup) popup.remove();
+          }, 100); // Small delay to prevent rapid show/hide
         }
         
         // Always reset the stroke colors for the entire node group
