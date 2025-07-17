@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import ArtistSelectionModal from "./artist-selection-modal";
-import musicNerdIcon from "@/assets/music_nerd_icon.png";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -566,7 +565,7 @@ export default function NetworkVisualizer({
 
         // Update these paths if the assets live elsewhere
         const networkIconPath = "/grapevine-logo.png"; // grape + clef icon
-        const artistIconPath = musicNerdIcon;   // Music Nerd logo PNG requested
+        const artistIconPath = "/music_nerd_logo.png";   // Music Nerd logo PNG served from public
 
         const content = `
           <div style="max-width:320px;">
