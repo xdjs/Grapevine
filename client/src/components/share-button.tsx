@@ -26,105 +26,52 @@ export default function ShareButton() {
   const [snapshotDataUrl, setSnapshotDataUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Convert base64 data URL to blob
-  const dataURLToBlob = (dataURL: string): Blob => {
-    const arr = dataURL.split(',');
-    const mime = arr[0].match(/:(.*?);/)![1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new Blob([u8arr], { type: mime });
+
+
+  // Platform-specific share functions - direct URL sharing
+  const shareToFacebook = () => {
+    const url = encodeURIComponent(window.location.href);
+    const text = encodeURIComponent("Check out this artist collaboration network! Discover how your favorite artists are connected.");
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${text}`;
+    window.open(facebookUrl, '_blank', 'width=600,height=400');
   };
-
-  // Generic share function using Web Share API
-  const shareImage = async (platform: string, customText?: string) => {
-    if (!snapshotDataUrl) {
+  
+  const shareToInstagram = () => {
+    // Instagram doesn't support direct URL sharing, so we'll copy to clipboard and open Instagram
+    const text = `🎵 Artist collaboration network 🎵\n\nDiscover music connections at ${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    
+    navigator.clipboard.writeText(text).then(() => {
       toast({
-        title: "No image to share",
-        description: "Please wait for the snapshot to load.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check if the Web Share API is supported
-    if (!navigator.share) {
-      toast({
-        title: "Sharing not supported",
-        description: "Web Share API is not supported in this browser. The image has been copied to your clipboard.",
-        variant: "destructive",
-      });
-      // Fallback: copy image to clipboard if possible
-      try {
-        const blob = dataURLToBlob(snapshotDataUrl);
-        await navigator.clipboard.write([
-          new ClipboardItem({ [blob.type]: blob })
-        ]);
-      } catch (error) {
-        console.error('Failed to copy image to clipboard:', error);
-      }
-      return;
-    }
-
-    try {
-      const imageBlob = dataURLToBlob(snapshotDataUrl);
-      const fileName = `grapevine-network-${Date.now()}.png`;
-      
-      const shareData = {
-        files: [
-          new File([imageBlob], fileName, {
-            type: imageBlob.type,
-          }),
-        ],
-        title: 'Grapevine - Artist Network',
-        text: customText || `Check out this artist collaboration network!\n\nExplore more at ${window.location.origin}`,
-      };
-
-      // Check if the browser can share this data
-      if (!navigator.canShare(shareData)) {
-        toast({
-          title: "Cannot share image",
-          description: "This browser doesn't support sharing images. The image has been downloaded instead.",
-          variant: "destructive",
-        });
-        downloadSnapshot();
-        return;
-      }
-
-      await navigator.share(shareData);
-      
-      toast({
-        title: "Shared successfully!",
-        description: `Network shared via ${platform}`,
+        title: "Copied to clipboard!",
+        description: "Caption copied. Opening Instagram - paste when creating your post.",
         className: "bg-green-600 border-green-500 text-white",
       });
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
-        // User cancelled the share
-        return;
-      }
-      
-      console.error('Error sharing:', error);
+      // Open Instagram web (will redirect to app on mobile)
+      window.open('https://www.instagram.com/', '_blank');
+    }).catch(() => {
       toast({
-        title: "Share failed",
-        description: "Unable to share the image. It has been downloaded instead.",
+        title: "Copy failed",
+        description: "Unable to copy caption. Opening Instagram anyway.",
         variant: "destructive",
       });
-      downloadSnapshot();
-    }
+      window.open('https://www.instagram.com/', '_blank');
+    });
   };
-
-  // Platform-specific share functions
-  const shareToFacebook = () => shareImage('Facebook', `Check out this artist collaboration network!\n\nExplore music connections at ${window.location.origin}`);
   
-  const shareToInstagram = () => shareImage('Instagram', `🎵 Artist collaboration network 🎵\n\nDiscover music connections at ${window.location.origin}\n\n#music #artists #collaboration #grapevine`);
+  const shareToX = () => {
+    const text = encodeURIComponent(`Check out this artist collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+    const url = encodeURIComponent(window.location.href);
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
+    window.open(twitterUrl, '_blank', 'width=600,height=400');
+  };
   
-  const shareToX = () => shareImage('X', `Check out this artist collaboration network! 🎵\n\nExplore music connections at ${window.location.origin}\n\n#music #artists #collaboration`);
-  
-  const shareToPinterest = () => shareImage('Pinterest', `Artist Collaboration Network\n\nDiscover how your favorite artists are connected! Explore more at ${window.location.origin}`);
+  const shareToPinterest = () => {
+    const url = encodeURIComponent(window.location.href);
+    const description = encodeURIComponent("Artist Collaboration Network - Discover how your favorite artists are connected! Explore music connections and collaborations.");
+    const media = snapshotDataUrl ? encodeURIComponent(snapshotDataUrl) : '';
+    const pinterestUrl = `https://pinterest.com/pin/create/button/?url=${url}&description=${description}${media ? `&media=${media}` : ''}`;
+    window.open(pinterestUrl, '_blank', 'width=600,height=400');
+  };
 
   const copyToClipboard = async (url: string) => {
     try {
