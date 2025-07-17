@@ -92,8 +92,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Check if we have cached network data
       if (artist.webmapdata) {
         console.log(`💾 [Vercel] Found cached webmapdata for artist ID "${artistId}" (${artist.name})`);
-        await client.end();
-        return res.json(artist.webmapdata);
+        
+        // Check if this is a single-node network (no collaborators)
+        const cachedData = artist.webmapdata;
+        const isSingleNode = cachedData.nodes && cachedData.nodes.length === 1 && 
+                            (!cachedData.links || cachedData.links.length === 0);
+        
+        if (isSingleNode) {
+          // Always show popup for single-node networks, don't use cache for this case
+          console.log(`🎭 [Vercel] Single-node network found, checking if user wants hallucinations`);
+          const allowHallucinations = req.query.allowHallucinations === 'true';
+          
+          if (!allowHallucinations) {
+            // Return special response to trigger popup
+            await client.end();
+            return res.json({
+              noCollaborators: true,
+              artistName: artist.name,
+              artistId: artist.id,
+              singleNodeNetwork: cachedData
+            });
+          }
+          // If hallucinations requested, continue to generation logic below
+        } else {
+          // Multi-node network, return cached data normally
+          await client.end();
+          return res.json(cachedData);
+        }
       }
       
       // If no cached data and no OpenAI key, return error
