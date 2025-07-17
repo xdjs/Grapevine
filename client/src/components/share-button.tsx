@@ -45,6 +45,7 @@ export default function ShareButton() {
         title: "Copied to clipboard!",
         description: "Caption copied. Opening Instagram - paste when creating your post.",
         className: "bg-green-600 border-green-500 text-white",
+        duration: 1500,
       });
       
       // Try to open Instagram's posting interface directly
@@ -83,6 +84,7 @@ export default function ShareButton() {
         title: "Copy failed",
         description: "Unable to copy caption. Opening Instagram anyway.",
         variant: "destructive",
+        duration: 1500,
       });
       
       // Fallback without clipboard - still try to open posting interface
@@ -121,6 +123,7 @@ export default function ShareButton() {
         title: "Link copied!",
         description: "The artist network link has been copied to your clipboard.",
         className: "bg-green-600 border-green-500 text-white",
+        duration: 1500,
       });
     } catch (error) {
       console.error("Failed to copy to clipboard:", error);
@@ -128,6 +131,7 @@ export default function ShareButton() {
         title: "Copy failed",
         description: "Unable to copy link to clipboard.",
         variant: "destructive",
+        duration: 1500,
       });
     }
   };
@@ -138,12 +142,14 @@ export default function ShareButton() {
       toast({
         title: "Copied!",
         className: "bg-green-600 border-green-500 text-white",
+        duration: 1500,
       });
     } catch (error) {
       console.error("Failed to copy to clipboard:", error);
       toast({
         title: "Copy failed",
         variant: "destructive",
+        duration: 1500,
       });
     }
   };
@@ -396,6 +402,7 @@ export default function ShareButton() {
       title: "Downloaded!",
       description: "Network snapshot saved to your downloads.",
       className: "bg-green-600 border-green-500 text-white",
+      duration: 1500,
     });
   };
 
@@ -419,6 +426,7 @@ export default function ShareButton() {
         title: "Snapshot failed",
         description: "Unable to create page snapshot, but link was copied.",
         variant: "destructive",
+        duration: 1500,
       });
     }
   };
