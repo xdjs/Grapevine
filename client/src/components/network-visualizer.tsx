@@ -446,9 +446,9 @@ export default function NetworkVisualizer({
           .attr("stroke", "white")
           .attr("stroke-width", 3);
 
-        // Show the tooltip and anchor it near the clicked node
+        // Show the tooltip and use cursor coordinates for placement
         showTooltip(event, d);
-        positionTooltipNearNode(this as SVGGElement);
+        moveTooltip(event as unknown as MouseEvent);
       })
       .call(
         d3
