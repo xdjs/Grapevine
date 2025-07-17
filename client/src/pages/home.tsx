@@ -176,16 +176,22 @@ export default function Home() {
             </div>
             
             {/* Music Nerd Button - Now part of footer */}
-            <div className="flex justify-center relative z-20">
-              <Button
-                onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
+            <div className="flex justify-center relative z-50">
+              <button
+                onClick={() => {
+                  console.log('Button clicked!');
+                  window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer');
+                }}
                 className="font-medium py-1 px-3 rounded transition-colors text-white text-xs sm:text-sm cursor-pointer"
                 style={{
                   backgroundColor: '#b427b4',
                   height: '28px',
                   position: 'relative',
-                  zIndex: 50,
-                  pointerEvents: 'auto'
+                  zIndex: 100,
+                  pointerEvents: 'auto',
+                  cursor: 'pointer',
+                  border: 'none',
+                  outline: 'none'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = '#8f1c8f';
@@ -195,7 +201,7 @@ export default function Home() {
                 }}
               >
                 Visit Music Nerd
-              </Button>
+              </button>
             </div>
           </div>
         </div>
