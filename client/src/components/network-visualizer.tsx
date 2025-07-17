@@ -405,11 +405,12 @@ export default function NetworkVisualizer({
               
               // Position at visible screen center (relative to canvas coordinates)
               node.x = screenWidth / 2 - translateX; // Screen center X in canvas coordinates
-              node.y = screenHeight / 2; // Screen center Y
+              node.y = screenHeight * 0.4; // Position higher up on screen (40% from top)
               console.log(`🎯 MAIN ARTIST POSITIONED FOR MOBILE: "${node.name}" at (${node.x}, ${node.y})`);
-              console.log(`🎯   Screen center: (${screenWidth/2}, ${screenHeight/2})`);
+              console.log(`🎯   Screen size: ${screenWidth}x${screenHeight}`);
+              console.log(`🎯   Positioned at: 40% from top (higher up on screen)`);
               console.log(`🎯   Canvas translation: ${translateX}`);
-              console.log(`🎯   Result: artist at visible center`);
+              console.log(`🎯   Result: artist positioned higher up for better visibility`);
             } else {
               // Desktop: center in canvas as before
               node.x = width / 2;
@@ -439,7 +440,7 @@ export default function NetworkVisualizer({
         const leftBound = -translateX + margin;
         const rightBound = -translateX + screenWidth - margin;
         const topBound = margin;
-        const bottomBound = screenHeight - margin;
+        const bottomBound = screenHeight * 0.8; // Keep nodes in upper portion of screen
         
         for (const node of data.nodes) {
           if (node.x! < leftBound) node.x = leftBound;
@@ -470,8 +471,8 @@ export default function NetworkVisualizer({
       const screenHeight = window.innerHeight;
       const translateX = (screenWidth - width) / 2;
       centerX = screenWidth / 2 - translateX; // Visible screen center X in canvas coordinates
-      centerY = screenHeight / 2; // Visible screen center Y
-      console.log(`🔬 MOBILE CENTERING FORCES: centerX=${centerX}, centerY=${centerY} (visible screen center)`);
+      centerY = screenHeight * 0.4; // Position higher up on screen (40% from top)
+      console.log(`🔬 MOBILE CENTERING FORCES: centerX=${centerX}, centerY=${centerY} (higher up on screen)`);
     } else {
       // Desktop: center in canvas
       centerX = width / 2;
