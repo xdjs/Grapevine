@@ -451,13 +451,16 @@ export default function NetworkVisualizer({
     })
       .on("mouseover", function(event, d) {
         // Desktop: show mobile popup on hover, Mobile: do nothing (popup shows on tap)
-        const currentIsMobile = window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        // More lenient mobile detection: only consider mobile if window is very small AND has touch
+        const isSmallWindow = window.innerWidth < 480;
+        const hasTouch = 'ontouchstart' in window && navigator.maxTouchPoints > 0;
+        const currentIsMobile = isSmallWindow && hasTouch;
         
         console.log(`🎯 [HOVER DEBUG] Mouseover event triggered for: ${d.name}`);
         console.log(`🎯 [HOVER DEBUG] window.innerWidth: ${window.innerWidth}`);
         console.log(`🎯 [HOVER DEBUG] 'ontouchstart' in window: ${'ontouchstart' in window}`);
         console.log(`🎯 [HOVER DEBUG] navigator.maxTouchPoints: ${navigator.maxTouchPoints}`);
-        console.log(`🎯 [HOVER DEBUG] currentIsMobile: ${currentIsMobile}`);
+        console.log(`🎯 [HOVER DEBUG] isSmallWindow: ${isSmallWindow}, hasTouch: ${hasTouch}, currentIsMobile: ${currentIsMobile}`);
         
         if (!currentIsMobile) {
           // Desktop: show mobile popup on hover
@@ -483,7 +486,10 @@ export default function NetworkVisualizer({
       })
       .on("mouseout", function(event, d) {
         // Desktop: hide mobile popup on mouseout, Mobile: do nothing
-        const currentIsMobile = window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        // More lenient mobile detection: only consider mobile if window is very small AND has touch
+        const isSmallWindow = window.innerWidth < 480;
+        const hasTouch = 'ontouchstart' in window && navigator.maxTouchPoints > 0;
+        const currentIsMobile = isSmallWindow && hasTouch;
         
         if (!currentIsMobile) {
           // Desktop: hide mobile popup on mouseout
