@@ -565,19 +565,19 @@ export default function NetworkVisualizer({
 
         // Update these paths if the assets live elsewhere
         const networkIconPath = "/grapevine-logo.png"; // grape + clef icon
-        const artistIconPath = "/artist-page-icon.png"; // glasses icon
+        const artistIconPath = "/musicnerd-icon.png";   // glasses icon
 
         const content = `
-          <div style="text-align:center; max-width:260px;">
+          <div style="text-align:center; max-width:220px;">
             <div style="font-weight:bold; font-size:18px; line-height:1.2;">${d.name}</div>
             <div style="margin-top:4px; font-size:14px;">Roles: ${roleDisplay}</div>
-            <div style="display:flex; justify-content:center; gap:40px; margin-top:12px;">
+            <div style="display:flex; justify-content:center; gap:20px; margin-top:12px;">
               <div class="popup-action network-link" style="cursor:pointer;">
-                <img src="${networkIconPath}" alt="Network" style="width:72px;height:72px;border-radius:50%;" />
+                <img src="${networkIconPath}" alt="Network" style="width:64px;height:64px;border-radius:50%;" />
                 <div style="margin-top:6px; font-size:14px;">Network</div>
               </div>
               <div class="popup-action artist-page-link" style="cursor:pointer;">
-                <img src="${artistIconPath}" alt="Artist Page" style="width:72px;height:72px;border-radius:50%;" />
+                <img src="${artistIconPath}" alt="Artist Page" style="width:64px;height:64px;border-radius:50%;" />
                 <div style="margin-top:6px; font-size:14px;">Artist Page</div>
               </div>
             </div>
