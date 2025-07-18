@@ -174,6 +174,9 @@ export default function Home() {
               <p className="mb-1 sm:mb-2">Powered by Music Nerd</p>
               <p>Click on artist nodes to visit their Music Nerd profiles</p>
             </div>
+            
+            {/* Empty space for button to overlap */}
+            <div className="h-32"></div>
           </div>
         </div>
       )}
