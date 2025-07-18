@@ -513,7 +513,7 @@ export default function NetworkVisualizer({
             </div>
           </div>`;
 
-        tooltip.html(content).style("opacity", 1);
+        tooltip.html(content).style("opacity", 1).style("pointer-events", "auto");
 
         // Attach click handlers to the inline buttons
         const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === "artist");
@@ -563,7 +563,7 @@ export default function NetworkVisualizer({
 
         // Close container div
         content += `</div>`;
-        tooltip.html(content).style("opacity", 1);
+        tooltip.html(content).style("opacity", 1).style("pointer-events", "auto");
 
         tooltip.select(".tooltip-close").on("click", () => {
           hideTooltip();
@@ -589,7 +589,7 @@ export default function NetworkVisualizer({
     }
 
     function hideTooltip() {
-      tooltip.style("opacity", 0);
+      tooltip.style("opacity", 0).style("pointer-events", "none");
     }
 
       async function openMusicNerdProfile(artistName: string, artistId?: string | null) {
