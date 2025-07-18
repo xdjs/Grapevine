@@ -178,9 +178,9 @@ export default function Home() {
         </div>
       )}
 
-      {/* Music Nerd Button - Below footer */}
+      {/* Music Nerd Button - Overlapping footer empty space */}
       {!showNetworkView && (
-        <div className="fixed left-1/2 transform -translate-x-1/2 z-50" style={{ bottom: 'calc(env(safe-area-inset-bottom, 16px) + 20px)' }}>
+        <div className="fixed left-1/2 transform -translate-x-1/2 z-50" style={{ bottom: 'calc(env(safe-area-inset-bottom, 16px) + 100px)' }}>
           <button
             onClick={() => {
               console.log('Music Nerd button clicked!');
