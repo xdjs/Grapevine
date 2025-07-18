@@ -516,6 +516,13 @@ export default function NetworkVisualizer({
 
         tooltip.html(content).style("opacity", 1).style("pointer-events", "auto");
         const networkHandler = (e: any) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (onArtistSearch && d !== mainArtistNode) {
+            // Prefer artistId when it exists so we can deep-link immediately; fall back to name otherwise
+            onArtistSearch(d.artistId || d.name);
+          }
+
         };
 
         tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
