@@ -322,32 +322,38 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
   // Register search function with parent
   useEffect(() => {
     if (onSearchFunction) {
-      onSearchFunction(async (artistName: string) => {
-        console.log(`🔍 [Search Interface] Triggered search for: ${artistName}`);
-        setSearchQuery(artistName);
-        
-        // Trigger search immediately with the new artist name
+      onSearchFunction(async (artistIdentifier: string) => {
+        console.log(`🔍 [Search Interface] Triggered search for: ${artistIdentifier}`);
+        setSearchQuery(artistIdentifier);
+
+        // Helper: rudimentary UUID v4 check (MusicBrainz IDs are UUIDs)
+        const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
         try {
           setIsLoading(true);
           onLoadingChange?.(true);
-          
-          const data = await fetchNetworkData(artistName.trim());
-          
+
+          const trimmed = artistIdentifier.trim();
+          const data = isUUID(trimmed)
+            ? await fetchNetworkDataById(trimmed)
+            : await fetchNetworkData(trimmed);
+
           // Try to get artist ID for URL (from the main artist in the network)
           const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
           const artistId = mainArtist?.artistId || mainArtist?.id;
-          
+
           onNetworkData(data, artistId);
-          
-          // Save to search history
-          saveToSearchHistory(artistName.trim(), artistId || null);
-          
+
+          // Save to search history using resolved name if available
+          const historyName = mainArtist?.name || trimmed;
+          saveToSearchHistory(historyName, artistId || null);
+
           toast({
             title: "Network Generated",
-            description: `Found collaboration network for ${artistName}`,
+            description: `Found collaboration network for ${historyName}`,
           });
         } catch (error) {
-          console.error(`❌ [Search Interface] Error searching for ${artistName}:`, error);
+          console.error(`❌ [Search Interface] Error searching for ${artistIdentifier}:`, error);
           toast({
             title: "Error",
             description: error instanceof Error ? error.message : "Failed to fetch network data",

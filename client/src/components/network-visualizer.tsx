@@ -522,7 +522,8 @@ export default function NetworkVisualizer({
           e.preventDefault();
           e.stopPropagation();
           if (onArtistSearch && d !== mainArtistNode) {
-            onArtistSearch(d.name);
+            // Prefer artistId when it exists so we can deep-link immediately; fall back to name otherwise
+            onArtistSearch(d.artistId || d.name);
           }
         };
 
