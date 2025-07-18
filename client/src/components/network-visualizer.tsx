@@ -438,91 +438,17 @@ export default function NetworkVisualizer({
           .attr("stroke-width", 2);
       }
     })
-      .on("mouseover", function(event, d) {
-        // Highlight the entire node group
+      .on("click", function(event, d) {
+        event.stopPropagation();
+
+        // Highlight the node group
         d3.select(this).selectAll("circle, path")
           .attr("stroke", "white")
           .attr("stroke-width", 3);
+
+        // Show the tooltip and use cursor coordinates for placement
         showTooltip(event, d);
-      })
-      .on("mousemove", moveTooltip)
-      .on("mouseout", function(event, d) {
-        // Reset the stroke colors for the entire node group
-        const group = d3.select(this);
-        const roles = d.types || [d.type];
-        
-        if (roles.length === 1) {
-          group.select("circle")
-            .attr("stroke", () => {
-              if (roles[0] === 'artist') return '#FF0ACF';
-              if (roles[0] === 'producer') return '#AE53FF';
-              if (roles[0] === 'songwriter') return '#67D1F8';
-              return '#355367';
-            })
-            .attr("stroke-width", 4);
-        } else {
-          group.selectAll("path")
-            .attr("stroke", "white")
-            .attr("stroke-width", 1);
-          group.select("circle")
-            .attr("stroke", "white")
-            .attr("stroke-width", 2);
-        }
-        hideTooltip();
-      })
-      .on("click", function(event, d) {
-        event.stopPropagation();
-        console.log(`🎯 [CLICK DEBUG] ===== LEFT CLICK EVENT =====`);
-        console.log(`🎯 [CLICK DEBUG] Node: "${d.name}"`);
-        console.log(`🎯 [CLICK DEBUG] Type: ${d.type}`);
-        console.log(`🎯 [CLICK DEBUG] Types: ${JSON.stringify(d.types)}`);
-        console.log(`🎯 [CLICK DEBUG] ArtistId: ${d.artistId}`);
-        
-        // Left-click to expand artist's network (only for artist nodes that aren't the main artist)
-        if ((d.type === 'artist' || (d.types && d.types.includes('artist'))) && onArtistSearch) {
-          const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === 'artist');
-          if (d !== mainArtistNode) {
-            console.log(`🎯 [CLICK DEBUG] Expanding network for artist: ${d.name}`);
-            onArtistSearch(d.name);
-          } else {
-            console.log(`🎯 [CLICK DEBUG] Skipping network expansion for main artist`);
-          }
-        } else {
-          console.log(`🎯 [CLICK DEBUG] Not an artist node or no onArtistSearch callback, skipping action`);
-        }
-        console.log(`🎯 [CLICK DEBUG] ===== END LEFT CLICK EVENT =====`);
-      })
-      .on("contextmenu", function(event, d) {
-        event.preventDefault();
-        event.stopPropagation();
-        console.log(`🎯 [CLICK DEBUG] ===== RIGHT CLICK EVENT =====`);
-        console.log(`🎯 [CLICK DEBUG] Node: "${d.name}"`);
-        console.log(`🎯 [CLICK DEBUG] Type: ${d.type}`);
-        console.log(`🎯 [CLICK DEBUG] Types: ${JSON.stringify(d.types)}`);
-        console.log(`🎯 [CLICK DEBUG] ArtistId: ${d.artistId}`);
-        
-        // Check if this is an artist node
-        const isArtistNode = d.type === 'artist' || (d.types && d.types.includes('artist'));
-        console.log(`🎯 [CLICK DEBUG] Is artist node: ${isArtistNode}`);
-        
-        if (isArtistNode) {
-          console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile...`);
-          
-          // Check if this is the main artist (largest artist node)
-          const isMainArtist = d === mainArtistNode;
-          console.log(`🎯 [CLICK DEBUG] Is main artist: ${isMainArtist}`);
-          
-          try {
-            // Always pass the artistId if available, let openMusicNerdProfile handle the logic
-            console.log(`🎯 [CLICK DEBUG] Calling openMusicNerdProfile with artistId: ${d.artistId}`);
-            openMusicNerdProfile(d.name, d.artistId);
-          } catch (error) {
-            console.error(`🎯 [CLICK DEBUG] Error calling openMusicNerdProfile:`, error);
-          }
-        } else {
-          console.log(`🎯 [CLICK DEBUG] Not an artist node, skipping action`);
-        }
-        console.log(`🎯 [CLICK DEBUG] ===== END RIGHT CLICK EVENT =====`);
+        moveTooltip(event as unknown as MouseEvent);
       })
       .call(
         d3
@@ -558,31 +484,102 @@ export default function NetworkVisualizer({
 
     function showTooltip(event: MouseEvent, d: NetworkNode) {
       const roles = d.types || [d.type];
-      const roleDisplay = roles.length > 1 ? roles.join(' + ') : roles[0];
-      
-      let content = `<strong>${d.name}</strong><br/>Role${roles.length > 1 ? 's' : ''}: ${roleDisplay}`;
 
-      // Show collaboration information for producers and songwriters
-      const hasProducerRole = roles.includes('producer') || roles.includes('songwriter');
-      // Check both 'collaborations' and 'topCollaborators' fields for compatibility
-      const collaborationData = d.collaborations || (d as any).topCollaborators;
-      if (hasProducerRole && collaborationData && collaborationData.length > 0) {
-        content += `<br/><br/><strong>Top Collaborations:</strong><br/>`;
-        content += collaborationData.join("<br/>");
+      // Use enhanced layout only for artist nodes
+      if (roles.includes("artist")) {
+        const roleDisplay = roles.length > 1 ? roles.join(", ") : roles[0];
+
+        // Update these paths if the assets live elsewhere
+        const networkIconPath = "/grapevine-logo.png"; // grape + clef icon
+        const artistIconPath = "/music_nerd_logo.png";   // Music Nerd logo PNG served from public
+
+        // Scale icon size to match node diameter
+        const iconSize = 40; // static diameter matching small node size
+
+        const content = `
+          <div style="position:relative; max-width:320px;">
+            <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:24px; color:white;">&times;</span>
+            <div style="font-weight:bold; font-size:16px; line-height:1.2; text-align:left;">${d.name}</div>
+            <div style="margin-top:2px; font-size:12px; text-align:left;">Roles: ${roleDisplay}</div>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+              <div style="display:flex; align-items:center; gap:10px; cursor:pointer;" class="network-action">
+                <img src="${networkIconPath}" alt="Network" class="network-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
+                <a href="#" class="popup-action network-link" style="font-size:13px; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s network</a>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; cursor:pointer;" class="artist-action">
+                <img src="${artistIconPath}" alt="Artist Page" class="artist-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
+                <a href="#" class="popup-action artist-page-link" style="font-size:13px; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s Music Nerd profile</a>
+              </div>
+            </div>
+          </div>`;
+
+        tooltip.html(content).style("opacity", 1).style("pointer-events", "auto");
+
+        // Attach click handlers to the inline buttons
+        const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === "artist");
+
+        const networkHandler = (e: any) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (onArtistSearch && d !== mainArtistNode) {
+            onArtistSearch(d.name);
+          }
+        };
+
+        tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
+
+        const profileHandler = (e: any) => {
+          e.preventDefault();
+          e.stopPropagation();
+          openMusicNerdProfile(d.name, d.artistId);
+        };
+
+        tooltip.selectAll(".artist-page-link, .artist-icon, .artist-action").on("click", profileHandler);
+
+        // Close button handler
+        tooltip.select(".tooltip-close").on("click", () => {
+          hideTooltip();
+        });
+      } else {
+        /* ---- ORIGINAL NON-ARTIST TOOLTIP BEHAVIOUR ---- */
+        const roleDisplay = roles.length > 1 ? roles.join(" + ") : roles[0];
+        let content = `<div style="position:relative; text-align:center; max-width:320px;">
+                        <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:24px; color:white;">&times;</span>
+                         <strong style="font-size:14px;">${d.name}</strong><br/>Role${roles.length > 1 ? "s" : ""}: ${roleDisplay}`;
+
+        // Show collaboration information for producers and songwriters
+        const hasProducerRole = roles.includes("producer") || roles.includes("songwriter");
+        const collaborationData = d.collaborations || (d as any).topCollaborators;
+        if (hasProducerRole && collaborationData && collaborationData.length > 0) {
+          content += `<br/><br/><strong>Top Collaborations:</strong><br/>`;
+          content += collaborationData.join("<br/>");
+        }
+
+        // Show general collaboration info for artists if available
+        if (roles.includes("artist") && d.collaborations && d.collaborations.length > 0) {
+          content += `<br/><br/><strong>Recent Collaborations:</strong><br/>`;
+          content += d.collaborations.slice(0, 3).join("<br/>");
+        }
+
+        // Close container div
+        content += `</div>`;
+        tooltip.html(content).style("opacity", 1).style("pointer-events", "auto");
+
+        tooltip.select(".tooltip-close").on("click", () => {
+          hideTooltip();
+        });
       }
+    }
 
-      // Show general collaboration info for artists if available
-      if (roles.includes('artist') && d.collaborations && d.collaborations.length > 0) {
-        content += `<br/><br/><strong>Recent Collaborations:</strong><br/>`;
-        content += d.collaborations.slice(0, 3).join("<br/>");
-      }
+    // Helper to position tooltip next to a node element
+    function positionTooltipNearNode(nodeEl: SVGGElement) {
+      const rect = nodeEl.getBoundingClientRect();
+      const pageX = rect.right + 12; // 12px to the right of node
+      const pageY = rect.top + window.scrollY - 10; // align vertically
 
-      if (roles.includes('artist')) {
-        content += `<br/><br/><em>Click to expand ${d.name}'s network</em>`;
-        content += `<br/><em>Right-Click to view their Music Nerd profile</em>`;
-      }
-
-      tooltip.html(content).style("opacity", 1);
+      tooltip
+        .style("left", pageX + "px")
+        .style("top", pageY + "px");
     }
 
     function moveTooltip(event: MouseEvent) {
@@ -592,7 +589,7 @@ export default function NetworkVisualizer({
     }
 
     function hideTooltip() {
-      tooltip.style("opacity", 0);
+      tooltip.style("opacity", 0).style("pointer-events", "none");
     }
 
       async function openMusicNerdProfile(artistName: string, artistId?: string | null) {
