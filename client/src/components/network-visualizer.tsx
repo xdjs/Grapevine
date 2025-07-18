@@ -516,6 +516,50 @@ export default function NetworkVisualizer({
 
         tooltip.html(content).style("opacity", 1).style("pointer-events", "auto");
         const networkHandler = (e: any) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Construct the Grapevine network URL using the artist ID
+          if (d.artistId) {
+            const grapevineUrl = `https://grapevine.musicnerd.xyz/${d.artistId}`;
+            console.log(`🔗 Opening Grapevine network for ${d.name}: ${grapevineUrl}`);
+            
+            try {
+              // Try multiple approaches to open the link
+              const newWindow = window.open(grapevineUrl, '_blank', 'noopener,noreferrer');
+              
+              // Fallback to link click if window.open fails
+              if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                console.log('🔗 Window.open blocked, trying link click method...');
+                const link = document.createElement('a');
+                link.href = grapevineUrl;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }
+            } catch (error) {
+              console.error('🔗 Error opening Grapevine network:', error);
+              // Final fallback: copy URL to clipboard and notify user
+              if (navigator.clipboard) {
+                navigator.clipboard.writeText(grapevineUrl).then(() => {
+                  alert(`Unable to open page automatically. URL copied to clipboard: ${grapevineUrl}`);
+                }).catch(() => {
+                  alert(`Please visit: ${grapevineUrl}`);
+                });
+              } else {
+                alert(`Please visit: ${grapevineUrl}`);
+              }
+            }
+          } else {
+            console.warn(`🔗 No artist ID available for ${d.name}, cannot open Grapevine network`);
+            alert(`Sorry, network link not available for ${d.name}`);
+          }
+          
+          // Hide the tooltip after clicking
+          hideTooltip();
         };
 
         tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
