@@ -502,12 +502,12 @@ export default function NetworkVisualizer({
             <div style="font-weight:bold; font-size:16px; line-height:1.2; text-align:left;">${d.name}</div>
             <div style="margin-top:2px; font-size:12px; text-align:left;">Roles: ${roleDisplay}</div>
             <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
-              <div style="display:flex; align-items:center; gap:10px;">
-                <img src="${networkIconPath}" alt="Network" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%;" />
+              <div style="display:flex; align-items:center; gap:10px; cursor:pointer;" class="network-action">
+                <img src="${networkIconPath}" alt="Network" class="network-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
                 <a href="#" class="popup-action network-link" style="font-size:13px; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s network</a>
               </div>
-              <div style="display:flex; align-items:center; gap:10px;">
-                <img src="${artistIconPath}" alt="Artist Page" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%;" />
+              <div style="display:flex; align-items:center; gap:10px; cursor:pointer;" class="artist-action">
+                <img src="${artistIconPath}" alt="Artist Page" class="artist-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
                 <a href="#" class="popup-action artist-page-link" style="font-size:13px; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s Music Nerd profile</a>
               </div>
             </div>
@@ -518,19 +518,23 @@ export default function NetworkVisualizer({
         // Attach click handlers to the inline buttons
         const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === "artist");
 
-        tooltip.select(".network-link").on("click", (e: any) => {
+        const networkHandler = (e: any) => {
           e.preventDefault();
           e.stopPropagation();
           if (onArtistSearch && d !== mainArtistNode) {
             onArtistSearch(d.name);
           }
-        });
+        };
 
-        tooltip.select(".artist-page-link").on("click", (e: any) => {
+        tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
+
+        const profileHandler = (e: any) => {
           e.preventDefault();
           e.stopPropagation();
           openMusicNerdProfile(d.name, d.artistId);
-        });
+        };
+
+        tooltip.selectAll(".artist-page-link, .artist-icon, .artist-action").on("click", profileHandler);
 
         // Close button handler
         tooltip.select(".tooltip-close").on("click", () => {
