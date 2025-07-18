@@ -515,7 +515,70 @@ export default function NetworkVisualizer({
           </div>`;
 
         tooltip.html(content).style("opacity", 1).style("pointer-events", "auto");
-        const networkHandler = (e: any) => {
+        const networkHandler = async (e: any) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          let artistId = d.artistId;
+          
+          // If no artist ID, try to look it up via the artist options API
+          if (!artistId) {
+            console.log(`🔗 No artistId for ${d.name}, attempting lookup...`);
+            try {
+              const response = await fetch(`/api/artist-options/${encodeURIComponent(d.name)}`);
+              const data = await response.json();
+              
+              if (data.options && data.options.length > 0) {
+                // Use the first matching artist's ID
+                artistId = data.options[0].artistId || data.options[0].id;
+                console.log(`🔗 Found artistId for ${d.name}: ${artistId}`);
+              }
+            } catch (error) {
+              console.error(`🔗 Error looking up artist ID for ${d.name}:`, error);
+            }
+          }
+          
+          // Construct the Grapevine network URL using the artist ID
+          if (artistId) {
+            const grapevineUrl = `https://grapevine.musicnerd.xyz/${artistId}`;
+            console.log(`🔗 Opening Grapevine network for ${d.name}: ${grapevineUrl}`);
+            
+            try {
+              // Try multiple approaches to open the link
+              const newWindow = window.open(grapevineUrl, '_blank', 'noopener,noreferrer');
+              
+              // Fallback to link click if window.open fails
+              if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                console.log('🔗 Window.open blocked, trying link click method...');
+                const link = document.createElement('a');
+                link.href = grapevineUrl;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }
+            } catch (error) {
+              console.error('🔗 Error opening Grapevine network:', error);
+              // Final fallback: copy URL to clipboard and notify user
+              if (navigator.clipboard) {
+                navigator.clipboard.writeText(grapevineUrl).then(() => {
+                  alert(`Unable to open page automatically. URL copied to clipboard: ${grapevineUrl}`);
+                }).catch(() => {
+                  alert(`Please visit: ${grapevineUrl}`);
+                });
+              } else {
+                alert(`Please visit: ${grapevineUrl}`);
+              }
+            }
+          } else {
+            console.warn(`🔗 Could not find artist ID for ${d.name} in MusicNerd database`);
+            alert(`Sorry, ${d.name} is not available in the Grapevine network yet. They may be added in future updates!`);
+          }
+          
+          // Hide the tooltip after clicking
+          hideTooltip();
         };
 
         tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
