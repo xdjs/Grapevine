@@ -7,10 +7,10 @@ import FilterControls from "@/components/filter-controls";
 import MobileControls from "@/components/mobile-controls";
 import HelpButton from "@/components/help-button";
 import ShareButton from "@/components/share-button";
+import LoadingScreen from "@/components/loading-screen";
 import { Button } from "@/components/ui/button";
 
 import { NetworkData, FilterState } from "@/types/network";
-import { Loader2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile.tsx";
 
 export default function Home() {
@@ -19,6 +19,7 @@ export default function Home() {
   const [networkData, setNetworkData] = useState<NetworkData | null>(null);
   const [showNetworkView, setShowNetworkView] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentArtistName, setCurrentArtistName] = useState<string>("");
   const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
   const [clearSearchField, setClearSearchField] = useState(false);
   const [filterState, setFilterState] = useState<FilterState>({
@@ -97,10 +98,15 @@ export default function Home() {
     }
   }, [setLocation]);
 
-  const handleLoadingChange = useCallback((loading: boolean) => {
+  const handleLoadingChange = useCallback((loading: boolean, artistName?: string) => {
     setIsLoading(loading);
     if (loading) {
       setShowNetworkView(true); // Show network view when loading starts
+      if (artistName) {
+        setCurrentArtistName(artistName);
+      }
+    } else {
+      setCurrentArtistName("");
     }
   }, []);
 
@@ -228,18 +234,8 @@ export default function Home() {
         />
       )}
 
-      {/* Loading Spinner */}
-      {isLoading && showNetworkView && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-30 p-4">
-          <div className="bg-black/80 rounded-lg p-4 sm:p-8 flex flex-col items-center space-y-3 sm:space-y-4 max-w-sm sm:max-w-md">
-            <Loader2 className="h-10 w-10 sm:h-12 sm:w-12 animate-spin text-pink-500" />
-            <p className="text-base sm:text-lg font-medium text-white text-center">Creating collaboration network...</p>
-            <p className="text-xs sm:text-sm text-gray-400 text-center">
-              Analyzing authentic collaboration data from MusicBrainz, OpenAI, and Spotify
-            </p>
-          </div>
-        </div>
-      )}
+      {/* Loading Screen */}
+      <LoadingScreen isVisible={isLoading && showNetworkView} artistName={currentArtistName} />
 
       {/* Controls - Only show when network is visible */}
       {showNetworkView && (

@@ -14,7 +14,7 @@ interface SearchInterfaceProps {
   onNetworkData: (data: NetworkData, artistId?: string) => void;
   showNetworkView: boolean;
   clearSearch?: boolean;
-  onLoadingChange?: (loading: boolean) => void;
+  onLoadingChange?: (loading: boolean, artistName?: string) => void;
   onSearchFunction?: (searchFn: (artistName: string) => void) => void;
   onClearAll?: () => void;
 }
@@ -176,7 +176,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     
     try {
       setIsLoading(true);
-      onLoadingChange?.(true);
+      onLoadingChange?.(true, pendingArtistInfo.name);
       
       const data = await fetchNetworkData(pendingArtistInfo.name, true); // Request hallucinated data
       
@@ -294,7 +294,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     // Use artist ID if available, otherwise fall back to name
     try {
       setIsLoading(true);
-      onLoadingChange?.(true);
+      onLoadingChange?.(true, artist.name);
       
       // Use artist ID if available, otherwise fall back to name
       const data = artist.artistId 
@@ -326,7 +326,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     
     try {
       setIsLoading(true);
-      onLoadingChange?.(true);
+      onLoadingChange?.(true, searchQuery.trim());
       
       const data = await fetchNetworkData(searchQuery.trim());
       
@@ -366,7 +366,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     
     try {
       setIsLoading(true);
-      onLoadingChange?.(true);
+      onLoadingChange?.(true, historyEntry.artistName);
       
       // Use artist ID if available, otherwise fall back to name
       const data = historyEntry.artistId 
@@ -412,7 +412,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         // Trigger search immediately with the new artist name
         try {
           setIsLoading(true);
-          onLoadingChange?.(true);
+          onLoadingChange?.(true, artistName.trim());
           
           const data = await fetchNetworkData(artistName.trim());
           
