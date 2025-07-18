@@ -9,6 +9,7 @@ interface NetworkVisualizerProps {
   filterState: FilterState;
   onZoomChange: (transform: { k: number; x: number; y: number }) => void;
   onArtistSearch?: (artistName: string) => void;
+  onArtistNodeClick?: (artistName: string, artistId?: string) => void;
 }
 
 export default function NetworkVisualizer({
@@ -17,6 +18,7 @@ export default function NetworkVisualizer({
   filterState,
   onZoomChange,
   onArtistSearch,
+  onArtistNodeClick,
 }: NetworkVisualizerProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
@@ -538,30 +540,13 @@ export default function NetworkVisualizer({
             }
           }
           
-          // Construct the Grapevine network URL using the artist ID
-          if (artistId) {
-            const grapevineUrl = `https://grapevine.musicnerd.xyz/${artistId}`;
-            console.log(`🔗 Navigating to Grapevine network for ${d.name}: ${grapevineUrl}`);
-            
-            try {
-              // Navigate to the Grapevine URL in the same tab
-              window.location.href = grapevineUrl;
-            } catch (error) {
-              console.error('🔗 Error navigating to Grapevine network:', error);
-              // Fallback: copy URL to clipboard and notify user
-              if (navigator.clipboard) {
-                navigator.clipboard.writeText(grapevineUrl).then(() => {
-                  alert(`Unable to navigate automatically. URL copied to clipboard: ${grapevineUrl}`);
-                }).catch(() => {
-                  alert(`Please visit: ${grapevineUrl}`);
-                });
-              } else {
-                alert(`Please visit: ${grapevineUrl}`);
-              }
-            }
+          // Call the callback to load the artist's network within the app
+          if (onArtistNodeClick) {
+            console.log(`🔗 Loading ${d.name}'s network within the app`);
+            onArtistNodeClick(d.name, artistId);
           } else {
-            console.warn(`🔗 Could not find artist ID for ${d.name} in MusicNerd database`);
-            alert(`Sorry, ${d.name} is not available in the Grapevine network yet. They may be added in future updates!`);
+            console.warn(`🔗 No onArtistNodeClick callback provided for ${d.name}`);
+            alert(`Sorry, ${d.name} is not available in the network yet. They may be added in future updates!`);
           }
           
           // Hide the tooltip after clicking
