@@ -493,19 +493,22 @@ export default function NetworkVisualizer({
         const networkIconPath = "/grapevine-logo.png"; // grape + clef icon
         const artistIconPath = "/music_nerd_logo.png";   // Music Nerd logo PNG served from public
 
+        // Scale icon size to match node diameter
+        const iconSize = (d.size ? d.size * 2 : 40); // fallback 40px if size not provided
+
         const content = `
           <div style="position:relative; max-width:320px;">
-            <span class="tooltip-close" style="position:absolute; top:6px; right:10px; cursor:pointer; font-size:18px; color:white;">&times;</span>
-            <div style="font-weight:bold; font-size:18px; line-height:1.2; text-align:left;">${d.name}</div>
-            <div style="margin-top:4px; font-size:14px; text-align:left;">Roles: ${roleDisplay}</div>
-            <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
-              <div style="display:flex; align-items:center; gap:12px;">
-                <img src="${networkIconPath}" alt="Network" style="width:48px;height:48px;border-radius:50%;" />
-                <a href="#" class="popup-action network-link" style="font-size:15px; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s network</a>
+            <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:24px; color:white;">&times;</span>
+            <div style="font-weight:bold; font-size:16px; line-height:1.2; text-align:left;">${d.name}</div>
+            <div style="margin-top:2px; font-size:12px; text-align:left;">Roles: ${roleDisplay}</div>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <img src="${networkIconPath}" alt="Network" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%;" />
+                <a href="#" class="popup-action network-link" style="font-size:13px; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s network</a>
               </div>
-              <div style="display:flex; align-items:center; gap:12px;">
-                <img src="${artistIconPath}" alt="Artist Page" style="width:48px;height:48px;border-radius:50%;" />
-                <a href="#" class="popup-action artist-page-link" style="font-size:15px; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s Music Nerd profile</a>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <img src="${artistIconPath}" alt="Artist Page" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%;" />
+                <a href="#" class="popup-action artist-page-link" style="font-size:13px; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s Music Nerd profile</a>
               </div>
             </div>
           </div>`;
@@ -537,8 +540,8 @@ export default function NetworkVisualizer({
         /* ---- ORIGINAL NON-ARTIST TOOLTIP BEHAVIOUR ---- */
         const roleDisplay = roles.length > 1 ? roles.join(" + ") : roles[0];
         let content = `<div style="position:relative; text-align:center; max-width:320px;">
-                        <span class="tooltip-close" style="position:absolute; top:6px; right:10px; cursor:pointer; font-size:18px; color:white;">&times;</span>
-                          <strong>${d.name}</strong><br/>Role${roles.length > 1 ? "s" : ""}: ${roleDisplay}`;
+                        <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:24px; color:white;">&times;</span>
+                         <strong style="font-size:14px;">${d.name}</strong><br/>Role${roles.length > 1 ? "s" : ""}: ${roleDisplay}`;
 
         // Show collaboration information for producers and songwriters
         const hasProducerRole = roles.includes("producer") || roles.includes("songwriter");
