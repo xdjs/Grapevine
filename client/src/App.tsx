@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/home";
 import ArtistNetwork from "@/pages/artist-network";
 import NotFound from "@/pages/not-found";
+import { useViewportHeight } from "@/hooks/use-mobile";
 
 function Router() {
   return (
@@ -19,6 +20,8 @@ function Router() {
 }
 
 function App() {
+  useViewportHeight(); // Manage viewport height for mobile devices
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

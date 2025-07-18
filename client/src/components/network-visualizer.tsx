@@ -509,15 +509,12 @@ export default function NetworkVisualizer({
               <div style="display:flex; align-items:center; gap:10px; cursor:pointer;" class="artist-action">
                 <img src="${artistIconPath}" alt="Artist Page" class="artist-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
                 <a href="#" class="popup-action artist-page-link" style="font-size:13px; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s Music Nerd profile</a>
+      
               </div>
             </div>
           </div>`;
 
         tooltip.html(content).style("opacity", 1).style("pointer-events", "auto");
-
-        // Attach click handlers to the inline buttons
-        const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === "artist");
-
         const networkHandler = (e: any) => {
           e.preventDefault();
           e.stopPropagation();
@@ -525,6 +522,7 @@ export default function NetworkVisualizer({
             // Prefer artistId when it exists so we can deep-link immediately; fall back to name otherwise
             onArtistSearch(d.artistId || d.name);
           }
+
         };
 
         tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
@@ -544,6 +542,7 @@ export default function NetworkVisualizer({
       } else {
         /* ---- ORIGINAL NON-ARTIST TOOLTIP BEHAVIOUR ---- */
         const roleDisplay = roles.length > 1 ? roles.join(" + ") : roles[0];
+
         let content = `<div style="position:relative; text-align:center; max-width:320px;">
                         <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:24px; color:white;">&times;</span>
                          <strong style="font-size:14px;">${d.name}</strong><br/>Role${roles.length > 1 ? "s" : ""}: ${roleDisplay}`;
