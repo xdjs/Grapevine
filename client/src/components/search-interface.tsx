@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Search, X, Clock } from "lucide-react";
 import grapevineLogoLarge from "@assets/Grapevine Logo_1752103516040.png";
 import grapevineLogoSmall from "@assets/Grapevine Logo_1752103516040.png";
+import { useLocation } from "wouter";
 
 interface SearchInterfaceProps {
   onNetworkData: (data: NetworkData, artistId?: string) => void;
@@ -63,6 +64,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
   const [showNoCollaboratorsPopup, setShowNoCollaboratorsPopup] = useState(false);
   const [pendingArtistInfo, setPendingArtistInfo] = useState<{ name: string; id: string; singleNodeNetwork: NetworkData } | null>(null);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const networkSearchInputRef = useRef<HTMLInputElement>(null);
@@ -216,19 +218,24 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
   const handleClosePopup = useCallback(() => {
     if (!pendingArtistInfo) return;
     
-    // Default to single node when popup is closed/cancelled
-    onNetworkData(pendingArtistInfo.singleNodeNetwork, pendingArtistInfo.id);
-    saveToSearchHistory(pendingArtistInfo.name, pendingArtistInfo.id);
-    
+    // Reset everything and navigate back to homepage when popup is closed/cancelled
     setShowNoCollaboratorsPopup(false);
     setPendingArtistInfo(null);
     
+    // Call onClearAll to properly reset parent component state and navigate home
+    if (onClearAll) {
+      onClearAll();
+    } else {
+      // Fallback if onClearAll is not provided
+      setLocation('/');
+    }
+    
     toast({
-      title: "Network Generated",
-      description: `Showing ${pendingArtistInfo.name} as single node`,
+      title: "Search Cancelled",
+      description: `Returned to homepage`,
       duration: 1000,
     });
-  }, [pendingArtistInfo, onNetworkData, toast, saveToSearchHistory]);
+  }, [pendingArtistInfo, onClearAll, setLocation, toast]);
 
   // Fetch artist options for instant search
   const fetchArtistOptions = useCallback(async (query: string) => {
