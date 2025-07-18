@@ -661,10 +661,14 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                   className="w-6 h-6 sm:w-8 sm:h-8 object-contain"
                 />
               </button>
-              <h2 className="text-sm sm:text-xl font-semibold text-white truncate">
+              <button
+                onClick={onClearAll}
+                className="text-sm sm:text-xl font-semibold text-white truncate hover:opacity-80 transition-opacity"
+                title="Go Home"
+              >
                 <span className="hidden sm:inline">Grapevine</span>
                 <span className="sm:hidden">Grapevine</span>
-              </h2>
+              </button>
             </div>
             
             <div className="flex-1 relative search-dropdown-container">
