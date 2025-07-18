@@ -218,17 +218,24 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
   const handleClosePopup = useCallback(() => {
     if (!pendingArtistInfo) return;
     
-    // Navigate back to homepage when popup is closed/cancelled
+    // Reset everything and navigate back to homepage when popup is closed/cancelled
     setShowNoCollaboratorsPopup(false);
     setPendingArtistInfo(null);
-    setLocation('/');
+    
+    // Call onClearAll to properly reset parent component state and navigate home
+    if (onClearAll) {
+      onClearAll();
+    } else {
+      // Fallback if onClearAll is not provided
+      setLocation('/');
+    }
     
     toast({
       title: "Search Cancelled",
       description: `Returned to homepage`,
       duration: 1000,
     });
-  }, [pendingArtistInfo, setLocation, toast]);
+  }, [pendingArtistInfo, onClearAll, setLocation, toast]);
 
   // Fetch artist options for instant search
   const fetchArtistOptions = useCallback(async (query: string) => {
