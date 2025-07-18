@@ -521,7 +521,9 @@ export default function NetworkVisualizer({
         const networkHandler = (e: any) => {
           e.preventDefault();
           e.stopPropagation();
+          // Switch map only when clicking on a node that isn't already the main focus
           if (onArtistSearch && d !== mainArtistNode) {
+            hideTooltip();
             onArtistSearch(d.name);
           }
         };
