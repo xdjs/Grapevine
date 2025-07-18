@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft } from "lucide-react";
 
 import { NetworkData, FilterState } from "@/types/network";
+import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function ArtistNetwork() {
@@ -43,6 +44,38 @@ export default function ArtistNetwork() {
       triggerSearchRef.current(artistName);
     }
   };
+
+  const handleArtistNodeClick = useCallback(async (artistName: string, artistId?: string) => {
+    console.log(`🔗 [Artist Network] Artist node clicked: ${artistName} (ID: ${artistId})`);
+    
+    // Immediately show loading state
+    setIsLoading(true);
+    setCurrentArtistName(artistName);
+    
+    try {
+      // Use artist ID if available, otherwise fall back to name
+      const data = artistId 
+        ? await fetchNetworkDataById(artistId)
+        : await fetchNetworkData(artistName.trim());
+      
+      // Handle the response (might be network data or no-collaborators response)
+      if (data && 'nodes' in data) {
+        // Normal network data - pass to parent
+        const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const finalArtistId = mainArtist?.artistId || mainArtist?.id || artistId;
+        handleNetworkData(data, finalArtistId);
+      } else {
+        // Handle no collaborators response
+        console.warn(`No network data found for ${artistName}`);
+        // You might want to show a message or handle this case differently
+      }
+    } catch (error) {
+      console.error(`Error loading network for ${artistName}:`, error);
+      // Handle error - maybe show a toast or reset state
+      setIsLoading(false);
+      setCurrentArtistName("");
+    }
+  }, [handleNetworkData]);
 
   const handleZoomIn = () => {
     const event = new CustomEvent('network-zoom', { detail: { action: 'in' } });
@@ -112,6 +145,7 @@ export default function ArtistNetwork() {
           filterState={filterState}
           onZoomChange={handleZoomChange}
           onArtistSearch={handleArtistSearch}
+          onArtistNodeClick={handleArtistNodeClick}
         />
       )}
 
