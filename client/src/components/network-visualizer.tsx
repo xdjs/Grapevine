@@ -494,7 +494,7 @@ export default function NetworkVisualizer({
         const artistIconPath = "/music_nerd_logo.png";   // Music Nerd logo PNG served from public
 
         // Scale icon size to match node diameter
-        const iconSize = (d.size ? d.size * 2 : 40); // fallback 40px if size not provided
+        const iconSize = 40; // static diameter matching small node size
 
         const content = `
           <div style="position:relative; max-width:320px;">
