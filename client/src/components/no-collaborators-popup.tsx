@@ -50,7 +50,7 @@ export default function NoCollaboratorsPopup({
           <Button
             onClick={handleShowHallucinations}
             disabled={isLoading}
-            className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-6"
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm px-6"
           >
             <Users className="h-4 w-4 mr-2 flex-shrink-0" />
             <span className="whitespace-nowrap">
