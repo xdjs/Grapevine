@@ -541,30 +541,17 @@ export default function NetworkVisualizer({
           // Construct the Grapevine network URL using the artist ID
           if (artistId) {
             const grapevineUrl = `https://grapevine.musicnerd.xyz/${artistId}`;
-            console.log(`🔗 Opening Grapevine network for ${d.name}: ${grapevineUrl}`);
+            console.log(`🔗 Navigating to Grapevine network for ${d.name}: ${grapevineUrl}`);
             
             try {
-              // Try multiple approaches to open the link
-              const newWindow = window.open(grapevineUrl, '_blank', 'noopener,noreferrer');
-              
-              // Fallback to link click if window.open fails
-              if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-                console.log('🔗 Window.open blocked, trying link click method...');
-                const link = document.createElement('a');
-                link.href = grapevineUrl;
-                link.target = '_blank';
-                link.rel = 'noopener noreferrer';
-                
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-              }
+              // Navigate to the Grapevine URL in the same tab
+              window.location.href = grapevineUrl;
             } catch (error) {
-              console.error('🔗 Error opening Grapevine network:', error);
-              // Final fallback: copy URL to clipboard and notify user
+              console.error('🔗 Error navigating to Grapevine network:', error);
+              // Fallback: copy URL to clipboard and notify user
               if (navigator.clipboard) {
                 navigator.clipboard.writeText(grapevineUrl).then(() => {
-                  alert(`Unable to open page automatically. URL copied to clipboard: ${grapevineUrl}`);
+                  alert(`Unable to navigate automatically. URL copied to clipboard: ${grapevineUrl}`);
                 }).catch(() => {
                   alert(`Please visit: ${grapevineUrl}`);
                 });
