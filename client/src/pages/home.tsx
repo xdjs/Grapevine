@@ -176,7 +176,7 @@ export default function Home() {
             </div>
             
             {/* Empty space for button to overlap */}
-            <div className="h-32"></div>
+            <div className="h-16"></div>
           </div>
         </div>
       )}
