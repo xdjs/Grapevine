@@ -834,30 +834,6 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         </div>
       </div>
 
-      
-      {/* Music Nerd Button - Fixed at bottom of screen */}
-      {!showNetworkView && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
-          <Button
-            onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
-            className="font-medium py-0.5 px-2 rounded transition-colors text-white"
-            style={{
-              backgroundColor: '#b427b4',
-              fontSize: '10px',
-              height: '24px',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#8f1c8f';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#b427b4';
-            }}
-          >
-            Visit Music Nerd
-          </Button>
-        </div>
-      )}
-
       {/* No Collaborators Popup */}
       <NoCollaboratorsPopup
         isOpen={showNoCollaboratorsPopup}
