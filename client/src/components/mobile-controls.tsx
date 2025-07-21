@@ -542,7 +542,17 @@ export default function MobileControls({
 
       {/* Mobile Controls Panel */}
       {showControls && (
-        <Card className="fixed bottom-24 sm:bottom-20 right-4 z-40 bg-gray-900/95 backdrop-blur p-4 max-w-[calc(100vw-2rem)] border-2" style={{ borderColor: '#b427b4' }}>
+        <Card className="fixed bottom-24 sm:bottom-20 right-4 z-40 bg-gray-900/95 backdrop-blur p-4 max-w-[calc(100vw-2rem)] border-2 relative" style={{ borderColor: '#b427b4' }}>
+          {/* Close Button in Corner */}
+          <Button
+            onClick={() => setShowControls(false)}
+            size="icon"
+            variant="ghost"
+            className="absolute top-2 right-2 w-6 h-6 bg-gray-800/50 hover:bg-gray-700/50 rounded-full"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+          
           <div className="space-y-4">
             {/* Zoom Controls */}
             <div>
@@ -589,17 +599,6 @@ export default function MobileControls({
             >
               <X className="w-4 h-4 mr-2" />
               Clear All
-            </Button>
-
-            {/* Close Settings Button */}
-            <Button
-              onClick={() => setShowControls(false)}
-              size="sm"
-              variant="secondary"
-              className="w-full bg-gray-800 hover:bg-gray-700 border-gray-600"
-            >
-              <X className="w-4 h-4 mr-2" />
-              Close
             </Button>
           </div>
         </Card>
