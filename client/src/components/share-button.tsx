@@ -215,9 +215,9 @@ export default function ShareButton() {
                                  Math.abs(width - containerWidth) < 10 && 
                                  Math.abs(height - containerHeight) < 10;
           
-          if (isAtDefaultZoom) {
-            // Apply 40% zoom out and move network down to avoid watermark
-            const zoomOutFactor = 0.6;
+                      if (isAtDefaultZoom) {
+              // Apply 50% zoom out on mobile to ensure nodes don't get cut off
+              const zoomOutFactor = 0.5;
             const newWidth = width / zoomOutFactor;
             const newHeight = height / zoomOutFactor;
             const offsetX = x - (newWidth - width) / 2;
@@ -234,7 +234,7 @@ export default function ShareButton() {
             
             // Apply the adjusted viewBox
             svgElement.setAttribute('viewBox', `${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
-            console.log(`📱 Mobile snapshot (default zoom): Zoomed out and positioned below watermark: ${originalViewBox} → ${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
+            console.log(`📱 Mobile snapshot (default zoom): 50% zoom out and positioned below watermark: ${originalViewBox} → ${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
             
             // Wait for the changes to apply
             await new Promise(resolve => setTimeout(resolve, 50));
@@ -311,18 +311,19 @@ export default function ShareButton() {
                 }
               });
             
-            // Add minimal padding around the network for tight fit (using predefined constants)
-            minX = Math.max(0, minX - sidePadding);
-            maxX = Math.min(canvas.width, maxX + sidePadding);
+            // Add proper padding around all sides to prevent node cutoffs
+            const extraPadding = (isMobileForSpacing ? 40 : 20) * highScale; // Extra padding for mobile
+            minX = Math.max(0, minX - sidePadding - extraPadding);
+            maxX = Math.min(canvas.width, maxX + sidePadding + extraPadding);
             
             // Calculate exact watermark space needed
             const borderSpace = 20 * highScale; // Border space below watermark
             const totalWatermarkArea = topWatermarkSpace + borderSpace;
             
-            // Ensure network starts below watermark area with border
-            minY = Math.max(totalWatermarkArea, minY - sidePadding);
-            // Crop exactly at the bottom of the content - zero footer space
-            maxY = Math.min(canvas.height, maxY);
+            // Ensure network starts below watermark area with border and add top padding
+            minY = Math.max(totalWatermarkArea, minY - sidePadding - extraPadding);
+            // Add bottom padding to prevent cutoffs
+            maxY = Math.min(canvas.height, maxY + extraPadding);
             
             networkBounds = { minX, minY, maxX, maxY };
           }
@@ -341,14 +342,12 @@ export default function ShareButton() {
       let finalWidth, finalHeight;
       
       if (isMobile) {
-        // Mobile: Use exact network bounds for ultra-tight fit (eliminate all empty space)
-        const minSize = 320 * highScale;
+        // Mobile: Dynamic sizing will be calculated during crop phase based on actual bounds
+        // This ensures proper padding and watermark space allocation
+        finalWidth = networkWidth; // Temporary, will be overridden in crop logic
+        finalHeight = networkHeight + topWatermarkSpace; // Temporary, will be overridden in crop logic
         
-        // Use actual network dimensions - only apply minimum if absolutely necessary
-        finalWidth = Math.max(minSize, networkWidth);
-        finalHeight = networkHeight; // Use exact height to eliminate footer space
-        
-        console.log(`📱 MOBILE DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}, finalWidth=${finalWidth}, finalHeight=${finalHeight}`);
+        console.log(`📱 MOBILE SETUP: networkWidth=${networkWidth}, networkHeight=${networkHeight}, will calculate final dimensions during crop`);
       } else {
         // Desktop: Keep square format
         const minSize = 400 * highScale;
@@ -363,18 +362,17 @@ export default function ShareButton() {
       let cropX, cropY;
       
       if (isMobile) {
-        // Mobile: Center horizontally, crop from watermark top to network bottom (zero footer)
-        const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
-        cropX = Math.max(0, Math.min(canvas.width - finalWidth, networkCenterX - finalWidth / 2));
+        // Mobile: Dynamic crop - fit web content with padding and empty watermark space at top
         
-        // Start from top to capture watermark, end exactly at network content bottom
-        cropY = 0; // Start from absolute top to include watermark area
+        // Crop to include network bounds with padding
+        cropX = Math.max(0, networkBounds.minX);
+        cropY = Math.max(0, networkBounds.minY - topWatermarkSpace); // Include empty watermark space above web
         
-        // Adjust final height to eliminate any footer space - crop exactly to content
-        const actualContentHeight = networkBounds.maxY - 0; // From top to bottom of network
-        finalHeight = Math.min(finalHeight, actualContentHeight);
+        // Final dimensions = network bounds + watermark space (already includes padding from bounds calculation)
+        finalWidth = networkBounds.maxX - networkBounds.minX;
+        finalHeight = (networkBounds.maxY - networkBounds.minY) + topWatermarkSpace;
         
-        console.log(`📱 MOBILE CROP: networkBounds minY=${networkBounds.minY}, maxY=${networkBounds.maxY}, actualHeight=${actualContentHeight}, finalHeight=${finalHeight}`);
+        console.log(`📱 MOBILE DYNAMIC CROP: cropX=${cropX}, cropY=${cropY}, finalWidth=${finalWidth}, finalHeight=${finalHeight}, networkBounds=${JSON.stringify(networkBounds)}`);
       } else {
         // Desktop: Center the crop around network center
         const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
