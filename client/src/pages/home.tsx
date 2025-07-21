@@ -308,7 +308,6 @@ export default function Home() {
             bottom: 'env(safe-area-inset-bottom, 0px)',
             maxHeight: 'calc(100vh - 200px)',
             overflow: 'hidden',
-            paddingRight: isMobile ? '72px' : '0px',
             zIndex: 60
           }}
         >
