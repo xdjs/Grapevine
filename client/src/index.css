@@ -266,6 +266,14 @@
       max-height: calc(100vh - 56px - env(safe-area-inset-bottom, 0px)) !important;
       max-height: calc(calc(var(--vh, 1vh) * 100) - 56px - env(safe-area-inset-bottom, 0px)) !important;
     }
+    
+    /* Ensure very small screens fit all content */
+    .main-container {
+      height: 100vh !important;
+      height: calc(var(--vh, 1vh) * 100) !important;
+      height: -webkit-fill-available !important;
+      overflow: hidden !important;
+    }
   }
   
   /* Small screens (large phones) */

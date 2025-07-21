@@ -208,15 +208,15 @@ export default function Home() {
       {/* Attribution Content - Only visible when not showing network */}
       {!showNetworkView && (
         <div className="footer-content absolute bottom-0 left-0 right-0 text-center z-10 bg-gradient-to-t from-black/80 to-transparent" style={{ pointerEvents: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}>
-          <div className="w-full max-w-2xl mx-auto px-4 py-4 space-y-2">
-            <div className="text-gray-500 text-xs">
+          <div className="w-full max-w-2xl mx-auto px-4 py-2 sm:py-3 md:py-4 space-y-1 sm:space-y-2">
+            <div className="text-gray-500 text-xs sm:text-sm">
               <p className="mb-1">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
               <p className="mb-1">Powered by Music Nerd</p>
               <p>Click on artist nodes to visit their Music Nerd profiles</p>
             </div>
             
             {/* Empty space for button to overlap */}
-            <div className="h-4"></div>
+            <div className="h-2 sm:h-3 md:h-4"></div>
           </div>
         </div>
       )}
@@ -229,7 +229,7 @@ export default function Home() {
               console.log('Music Nerd button clicked!');
               window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer');
             }}
-            className="font-medium py-2 px-4 rounded-lg transition-colors text-white text-sm cursor-pointer"
+            className="font-medium py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg transition-colors text-white text-xs sm:text-sm cursor-pointer"
             style={{
               backgroundColor: '#b427b4',
               border: 'none',
