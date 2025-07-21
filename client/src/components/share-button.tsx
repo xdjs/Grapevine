@@ -199,6 +199,11 @@ export default function ShareButton() {
       const devicePixelRatio = window.devicePixelRatio || 1;
       const highScale = Math.max(2, devicePixelRatio); // At least 2x, or device pixel ratio
       
+      // Define spacing constants for consistent use
+      const sidePadding = 40 * highScale; // Minimal side padding
+      const bottomPadding = 40 * highScale; // Minimal bottom padding
+      const topWatermarkSpace = 80 * highScale; // Extra space at top for watermark
+      
       const canvas = await html2canvas(networkContainer, {
         useCORS: true,
         allowTaint: true,
@@ -248,12 +253,11 @@ export default function ShareButton() {
                 }
               });
             
-            // Add padding around the network (scaled for high resolution)
-            const padding = 80 * highScale;
-            minX = Math.max(0, minX - padding);
-            minY = Math.max(0, minY - padding);
-            maxX = Math.min(canvas.width, maxX + padding);
-            maxY = Math.min(canvas.height, maxY + padding);
+            // Add minimal padding around the network for tight fit (using predefined constants)
+            minX = Math.max(0, minX - sidePadding);
+            minY = Math.max(0, minY - topWatermarkSpace); // Extra space at top
+            maxX = Math.min(canvas.width, maxX + sidePadding);
+            maxY = Math.min(canvas.height, maxY + bottomPadding);
             
             networkBounds = { minX, minY, maxX, maxY };
           }
@@ -344,7 +348,7 @@ export default function ShareButton() {
       return new Promise((resolve, reject) => {
         logo.onload = () => {
           try {
-            // Calculate watermark size and position (top-left corner) - scaled for high res
+            // Calculate watermark size and position - avoid network overlap
             const logoSize = Math.min(60 * highScale, Math.min(finalWidth, finalHeight) * 0.08);
             const padding = 12 * highScale;
             
@@ -352,12 +356,66 @@ export default function ShareButton() {
             const textSize = Math.max(10 * highScale, logoSize * 0.3);
             const textSpacing = 6 * highScale;
             
-            // Create a semi-transparent background for the watermark
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            // Calculate watermark dimensions
             const bgWidth = logoSize + textSpacing + (textSize * 5.5); // Dynamic width based on text size
             const bgHeight = logoSize + 20;
-            const bgX = padding - 10;
-            const bgY = padding - 10;
+            
+            // Position watermark in the top area that we reserved
+            // Priority: top-left, top-right, then bottom corners as fallback
+            const corners = [
+              { x: padding - 10, y: padding - 10, name: 'top-left', priority: 1 }, // Top-left (highest priority)
+              { x: finalWidth - bgWidth - padding + 10, y: padding - 10, name: 'top-right', priority: 2 }, // Top-right
+              { x: padding - 10, y: finalHeight - bgHeight - padding + 10, name: 'bottom-left', priority: 3 }, // Bottom-left (fallback)
+              { x: finalWidth - bgWidth - padding + 10, y: finalHeight - bgHeight - padding + 10, name: 'bottom-right', priority: 4 } // Bottom-right (fallback)
+            ];
+            
+            // Calculate which corner has the least network content overlap
+            let bestCorner = corners[0]; // Default to top-left
+            let minScore = Infinity;
+            
+            // Calculate actual network content area in the cropped space
+            // The network starts after the top watermark space we reserved
+            const networkStartY = Math.max(0, topWatermarkSpace / highScale); // Convert back to crop scale
+            
+            // Check each corner for overlap with network area
+            for (const corner of corners) {
+              const watermarkRight = corner.x + bgWidth;
+              const watermarkBottom = corner.y + bgHeight;
+              
+              // Calculate overlap with actual network content area (excluding top watermark space)
+              const networkContentTop = networkStartY;
+              const overlapLeft = Math.max(corner.x, 0);
+              const overlapTop = Math.max(corner.y, networkContentTop);
+              const overlapRight = Math.min(watermarkRight, finalWidth);
+              const overlapBottom = Math.min(watermarkBottom, finalHeight);
+              
+              const overlapWidth = Math.max(0, overlapRight - overlapLeft);
+              const overlapHeight = Math.max(0, overlapBottom - overlapTop);
+              const overlapArea = overlapWidth * overlapHeight;
+              
+              // Heavily prioritize top positions since we reserved space there
+              const priorityBonus = corner.priority * 1000; // Higher priority = lower score
+              
+              // Prefer corners in the reserved top space
+              const isInTopSpace = corner.y + bgHeight <= networkStartY;
+              const topSpaceBonus = isInTopSpace ? -5000 : 0; // Big bonus for fitting in top space
+              
+              // Combined score: overlap + priority + top space preference
+              const score = overlapArea + priorityBonus + topSpaceBonus;
+              
+              if (score < minScore) {
+                minScore = score;
+                bestCorner = corner;
+              }
+            }
+            
+            console.log(`🎯 Watermark positioned at ${bestCorner.name} to avoid network overlap`);
+            
+            const bgX = bestCorner.x;
+            const bgY = bestCorner.y;
+            
+            // Create a semi-transparent background for the watermark
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             
             // Use roundRect if available, otherwise use regular rect
             const cornerRadius = 6 * highScale;
@@ -368,14 +426,16 @@ export default function ShareButton() {
             }
             ctx.fill();
             
-            // Draw the logo
-            ctx.drawImage(logo, padding, padding, logoSize, logoSize);
+            // Draw the logo at the calculated position
+            const logoX = bgX + 10; // Small offset from background edge
+            const logoY = bgY + 10;
+            ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
             
             // Add "Grapevine" text next to the logo
             ctx.fillStyle = 'white';
             ctx.font = `bold ${textSize}px Arial, sans-serif`;
             ctx.textAlign = 'left';
-            ctx.fillText('Grapevine', padding + logoSize + textSpacing, padding + logoSize/2 + textSize/3);
+            ctx.fillText('Grapevine', logoX + logoSize + textSpacing, logoY + logoSize/2 + textSize/3);
             
             // Convert to high-quality PNG (1.0 = maximum quality)
             const dataUrl = watermarkedCanvas.toDataURL('image/png', 1.0);
