@@ -52,6 +52,80 @@ const useViewportHeight = () => {
   return viewportHeight;
 };
 
+// Hook for dynamic spacing based on actual visible space
+const useDynamicSpacing = () => {
+  const [spacing, setSpacing] = useState({
+    topPadding: '24px',
+    bottomPadding: '120px'
+  });
+
+  useEffect(() => {
+    const updateSpacing = () => {
+      const height = window.innerHeight;
+      
+      // Use visualViewport if available for more accurate measurements
+      const viewportHeight = window.visualViewport ? window.visualViewport.height : height;
+      const visibleHeight = Math.min(viewportHeight, height);
+      
+      // Very aggressive spacing to ensure content fits above browser UI
+      if (visibleHeight < 600) {
+        setSpacing({
+          topPadding: '0px',
+          bottomPadding: '30px'
+        });
+      } else if (visibleHeight < 650) {
+        setSpacing({
+          topPadding: '2px',
+          bottomPadding: '40px'
+        });
+      } else if (visibleHeight < 700) {
+        setSpacing({
+          topPadding: '4px',
+          bottomPadding: '50px'
+        });
+      } else if (visibleHeight < 750) {
+        setSpacing({
+          topPadding: '8px',
+          bottomPadding: '60px'
+        });
+      } else {
+        setSpacing({
+          topPadding: '12px',
+          bottomPadding: '80px'
+        });
+      }
+    };
+
+    updateSpacing();
+    window.addEventListener('resize', updateSpacing);
+    window.addEventListener('orientationchange', updateSpacing);
+    
+    // Also update on focus/blur to catch browser UI changes
+    window.addEventListener('focus', updateSpacing);
+    window.addEventListener('blur', updateSpacing);
+    
+    // Use visualViewport events if available
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateSpacing);
+      window.visualViewport.addEventListener('scroll', updateSpacing);
+    }
+    
+    return () => {
+      window.removeEventListener('resize', updateSpacing);
+      window.removeEventListener('orientationchange', updateSpacing);
+      window.removeEventListener('focus', updateSpacing);
+      window.removeEventListener('blur', updateSpacing);
+      
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', updateSpacing);
+        window.visualViewport.removeEventListener('scroll', updateSpacing);
+      }
+    };
+  }, []);
+
+  return spacing;
+};
+
 function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction, onClearAll }: SearchInterfaceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentSearch, setCurrentSearch] = useState("");
@@ -69,6 +143,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
   const searchInputRef = useRef<HTMLInputElement>(null);
   const networkSearchInputRef = useRef<HTMLInputElement>(null);
   const viewportHeight = useViewportHeight();
+  const spacing = useDynamicSpacing();
   
   // Calculate dynamic dropdown height based on available space
   const calculateDropdownHeight = useCallback((baseHeight: number, isNetworkView: boolean = false) => {
@@ -513,28 +588,46 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     <>
       {/* Centered Search - Initial View */}
       <div
-        className={`absolute inset-0 flex items-start justify-center z-20 transition-all duration-700 px-4 pt-8 sm:pt-16 ${
+        className={`absolute inset-0 flex items-start justify-center z-20 transition-all duration-700 px-4 ${
           showNetworkView
             ? "opacity-0 pointer-events-none -translate-y-12"
             : "opacity-100"
         }`}
+        style={{
+          paddingTop: `calc(env(safe-area-inset-top, 0px) + ${spacing.topPadding})`,
+          paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + ${spacing.bottomPadding})`
+        }}
       >
         <div className="text-center w-full max-w-md">
-          <div className="mb-6 sm:mb-8 flex justify-center">
+          <div className="mb-2 sm:mb-4 md:mb-6 lg:mb-8 flex justify-center">
             <img 
               src={grapevineLogoLarge} 
               alt="Grapevine Logo" 
-              className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 object-contain"
+              className={`object-contain ${
+                (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 600 ? 'w-12 h-12' :
+                (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 650 ? 'w-16 h-16' :
+                (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 700 ? 'w-20 h-20' :
+                'w-20 h-20 sm:w-32 sm:h-32 md:w-40 md:h-40'
+              }`}
             />
           </div>
           
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-4 sm:mb-6 text-white">
+          <h1 className={`font-bold mb-2 sm:mb-3 md:mb-4 lg:mb-6 text-white ${
+            (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 600 ? 'text-lg' :
+            (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 650 ? 'text-xl' :
+            (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 700 ? 'text-2xl' :
+            'text-xl sm:text-2xl md:text-3xl lg:text-5xl xl:text-6xl'
+          }`}>
             Grapevine
           </h1>
 
           {/* Tip Section */}
-          <div className="mb-4 text-center">
-            <p className="text-sm text-gray-300">
+          <div className="mb-2 sm:mb-3 md:mb-4 text-center">
+            <p className={`text-gray-300 ${
+              (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 600 ? 'text-xs' :
+              (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 650 ? 'text-sm' :
+              'text-xs sm:text-sm md:text-base'
+            }`}>
               <span className="font-medium">Tip:</span> Try searching for Taylor Swift, Drake, or Ariana Grande.
             </p>
           </div>
@@ -710,7 +803,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
 
       {/* Top Bar Search - Network View */}
       <div
-        className={`absolute top-0 left-0 right-0 z-30 transition-all duration-700 ${
+        className={`absolute top-0 left-0 right-0 z-30 transition-all duration-700 mobile-fixed-header ${
           showNetworkView
             ? "opacity-100 pointer-events-auto translate-y-0"
             : "opacity-0 pointer-events-none -translate-y-12"
