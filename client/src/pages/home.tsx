@@ -319,36 +319,40 @@ export default function Home() {
               <p>Click on artist nodes to visit their Music Nerd profiles</p>
             </div>
 
-            {/* Button placed below footer text */}
-            <div className="mt-2 flex justify-center">
-              <button
-                onClick={() => {
-                  console.log('Music Nerd button clicked!');
-                  window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer');
-                }}
-                className="font-medium py-1 sm:py-1.5 px-2 sm:px-3 rounded-lg transition-colors text-white text-xs sm:text-sm cursor-pointer"
-                style={{
-                  backgroundColor: '#b427b4',
-                  border: 'none',
-                  outline: 'none',
-                  boxShadow: '0 4px 12px rgba(180, 39, 180, 0.3)',
-                  pointerEvents: 'auto',
-                  zIndex: 9999,
-                  position: 'relative'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#8f1c8f';
-                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(180, 39, 180, 0.5)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#b427b4';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(180, 39, 180, 0.3)';
-                }}
-              >
-                Visit Music Nerd
-              </button>
-            </div>
+            {/* Spacer to make room for overlay button */}
+            <div className="h-12"></div>
           </div>
+        </div>
+      )}
+
+      {/* Visit Music Nerd Button - fixed overlay below footer text */}
+      {!showNetworkView && (
+        <div
+          className="fixed left-1/2 transform -translate-x-1/2 z-70"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
+        >
+          <button
+            onClick={() => {
+              window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer');
+            }}
+            className="font-medium py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg transition-colors text-white text-xs sm:text-sm"
+            style={{
+              backgroundColor: '#b427b4',
+              border: 'none',
+              outline: 'none',
+              boxShadow: '0 4px 12px rgba(180, 39, 180, 0.3)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#8f1c8f';
+              e.currentTarget.style.boxShadow = '0 4px 16px rgba(180, 39, 180, 0.5)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#b427b4';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(180, 39, 180, 0.3)';
+            }}
+          >
+            Visit Music Nerd
+          </button>
         </div>
       )}
 
