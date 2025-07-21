@@ -297,11 +297,11 @@ export default function Home() {
         </>
       )}
 
-      {/* Share Button - Always visible */}
-      <ShareButton />
+      {/* Share Button - Hide on mobile when network view is shown */}
+      {(!showNetworkView || !isMobile) && <ShareButton />}
       
-      {/* Help Button - Always visible */}
-      <HelpButton />
+      {/* Help Button - Hide on mobile when network view is shown */}
+      {(!showNetworkView || !isMobile) && <HelpButton />}
     </div>
   );
 }
