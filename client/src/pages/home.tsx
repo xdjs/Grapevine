@@ -218,6 +218,7 @@ export default function Home() {
   const handleClearNetwork = () => {
     setNetworkData(null);
     setIsLoading(false);
+    setCurrentArtistName("");
     setClearSearchField(true);
     // Keep showNetworkView as true to stay on the map page
     // Reset the clear flag after a brief delay
