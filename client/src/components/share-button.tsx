@@ -199,10 +199,11 @@ export default function ShareButton() {
       const devicePixelRatio = window.devicePixelRatio || 1;
       const highScale = Math.max(2, devicePixelRatio); // At least 2x, or device pixel ratio
       
-      // Define spacing constants for consistent use
-      const sidePadding = 40 * highScale; // Minimal side padding
-      const bottomPadding = 40 * highScale; // Minimal bottom padding
-      const topWatermarkSpace = 80 * highScale; // Extra space at top for watermark
+      // Define spacing constants for consistent use - detect mobile for different sizing
+      const isMobileForSpacing = window.innerWidth <= 768;
+      const sidePadding = (isMobileForSpacing ? 60 : 40) * highScale; // More side padding on mobile for node names
+      const bottomPadding = 20 * highScale; // Minimal bottom padding - tight crop at bottom
+      const topWatermarkSpace = (isMobileForSpacing ? 120 : 80) * highScale; // Bigger watermark space on mobile
       
       const canvas = await html2canvas(networkContainer, {
         useCORS: true,
@@ -348,17 +349,22 @@ export default function ShareButton() {
       return new Promise((resolve, reject) => {
         logo.onload = () => {
           try {
-            // Calculate watermark size and position - avoid network overlap
-            const logoSize = Math.min(60 * highScale, Math.min(finalWidth, finalHeight) * 0.08);
-            const padding = 12 * highScale;
+            // Calculate watermark size and position - bigger on mobile
+            const isMobileWatermark = window.innerWidth <= 768;
+            const baseLogoSize = isMobileWatermark ? 80 : 60; // Bigger logo on mobile
+            const logoSize = Math.min(baseLogoSize * highScale, Math.min(finalWidth, finalHeight) * (isMobileWatermark ? 0.12 : 0.08));
+            const padding = (isMobileWatermark ? 16 : 12) * highScale; // More padding on mobile
             
-            // Calculate dynamic text size based on logoSize
-            const textSize = Math.max(10 * highScale, logoSize * 0.3);
-            const textSpacing = 6 * highScale;
+            // Calculate dynamic text size based on logoSize - bigger on mobile
+            const baseTextMultiplier = isMobileWatermark ? 0.35 : 0.3;
+            const minTextSize = isMobileWatermark ? 14 : 10;
+            const textSize = Math.max(minTextSize * highScale, logoSize * baseTextMultiplier);
+            const textSpacing = (isMobileWatermark ? 8 : 6) * highScale;
             
-            // Calculate watermark dimensions
+            // Calculate watermark dimensions - adjust for mobile
             const bgWidth = logoSize + textSpacing + (textSize * 5.5); // Dynamic width based on text size
-            const bgHeight = logoSize + 20;
+            const bgHeightPadding = isMobileWatermark ? 30 : 20; // More padding on mobile
+            const bgHeight = logoSize + bgHeightPadding;
             
             // Position watermark in the top area that we reserved
             // Priority: top-left, top-right, then bottom corners as fallback
