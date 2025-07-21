@@ -320,7 +320,7 @@ export default function Home() {
             </div>
 
             {/* Spacer to make room for overlay button */}
-            <div className="h-12"></div>
+            <div className="h-20"></div>
           </div>
         </div>
       )}
