@@ -216,8 +216,8 @@ export default function ShareButton() {
                                  Math.abs(height - containerHeight) < 10;
           
           if (isAtDefaultZoom) {
-            // Apply 30% zoom out only if at default zoom to capture all content
-            const zoomOutFactor = 0.7;
+            // Apply 40% zoom out only if at default zoom to capture all content and prevent cutoffs
+            const zoomOutFactor = 0.6;
             const newWidth = width / zoomOutFactor;
             const newHeight = height / zoomOutFactor;
             const offsetX = x - (newWidth - width) / 2;
@@ -292,10 +292,13 @@ export default function ShareButton() {
                     // Scale the node positions to match the high-resolution canvas
                     const x = parseFloat(match[1]) * highScale;
                     const y = parseFloat(match[2]) * highScale;
-                    minX = Math.min(minX, x);
-                    minY = Math.min(minY, y);
-                    maxX = Math.max(maxX, x);
-                    maxY = Math.max(maxY, y);
+                    
+                    // Account for node size and text labels that extend beyond node center
+                    const nodeRadius = 30 * highScale; // Approximate node size + text extension
+                    minX = Math.min(minX, x - nodeRadius);
+                    minY = Math.min(minY, y - nodeRadius);
+                    maxX = Math.max(maxX, x + nodeRadius);
+                    maxY = Math.max(maxY, y + nodeRadius);
                   }
                 }
               });
@@ -325,24 +328,12 @@ export default function ShareButton() {
       let finalWidth, finalHeight;
       
       if (isMobile) {
-        // Mobile: Use rectangle that fits mobile screen proportions (9:16 aspect ratio)
+        // Mobile: Use network bounds directly for tight fit (no forced aspect ratio)
         const minSize = 320 * highScale;
-        const mobileAspectRatio = 9 / 16; // width / height
         
-        // Start with network dimensions and adjust to mobile aspect ratio
-        let baseWidth = Math.max(minSize, networkWidth);
-        let baseHeight = Math.max(minSize, networkHeight);
-        
-        // Adjust to mobile aspect ratio while encompassing the network
-        if (baseWidth / baseHeight > mobileAspectRatio) {
-          // Too wide, adjust height
-          finalWidth = baseWidth;
-          finalHeight = baseWidth / mobileAspectRatio;
-        } else {
-          // Too tall, adjust width
-          finalHeight = baseHeight;
-          finalWidth = baseHeight * mobileAspectRatio;
-        }
+        // Use actual network dimensions with minimal size constraints
+        finalWidth = Math.max(minSize, networkWidth);
+        finalHeight = Math.max(minSize, networkHeight);
         
         console.log(`📱 MOBILE DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}, finalWidth=${finalWidth}, finalHeight=${finalHeight}`);
       } else {
@@ -355,15 +346,25 @@ export default function ShareButton() {
         console.log(`🔳 DESKTOP DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}, squareSize=${squareSize}`);
       }
       
-      // Center the crop around the network center
-      const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
-      const networkCenterY = (networkBounds.minY + networkBounds.maxY) / 2;
+      // Use network bounds directly for tight cropping (especially at bottom)
+      let cropX, cropY;
       
-      // Calculate crop coordinates
-      const halfWidth = finalWidth / 2;
-      const halfHeight = finalHeight / 2;
-      const cropX = Math.max(0, Math.min(canvas.width - finalWidth, networkCenterX - halfWidth));
-      const cropY = Math.max(0, Math.min(canvas.height - finalHeight, networkCenterY - halfHeight));
+      if (isMobile) {
+        // Mobile: Center horizontally, but crop tightly at bottom
+        const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
+        cropX = Math.max(0, Math.min(canvas.width - finalWidth, networkCenterX - finalWidth / 2));
+        
+        // Start crop from the network top (includes watermark space) 
+        cropY = Math.max(0, networkBounds.minY);
+        
+        console.log(`📱 MOBILE CROP: networkBounds minY=${networkBounds.minY}, maxY=${networkBounds.maxY}, cropY=${cropY}`);
+      } else {
+        // Desktop: Center the crop around network center
+        const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
+        const networkCenterY = (networkBounds.minY + networkBounds.maxY) / 2;
+        cropX = Math.max(0, Math.min(canvas.width - finalWidth, networkCenterX - finalWidth / 2));
+        cropY = Math.max(0, Math.min(canvas.height - finalHeight, networkCenterY - finalHeight / 2));
+      }
 
       // Create canvas with appropriate dimensions
       const watermarkedCanvas = document.createElement('canvas');
