@@ -14,41 +14,91 @@ import { NetworkData, FilterState } from "@/types/network";
 import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
 import { useIsMobile } from "@/hooks/use-mobile.tsx";
 
-// Hook for dynamic spacing based on screen height
+// Hook for dynamic spacing based on actual visible space
 const useDynamicSpacing = () => {
   const [spacing, setSpacing] = useState({
     topPadding: '24px',
     bottomPadding: '24px',
-    buttonBottom: '20px'
+    buttonBottom: '20px',
+    searchBottomPadding: '120px'
   });
 
   useEffect(() => {
     const updateSpacing = () => {
       const height = window.innerHeight;
-      if (height < 600) {
+      const width = window.innerWidth;
+      
+      // Use visualViewport if available for more accurate measurements
+      const viewportHeight = window.visualViewport ? window.visualViewport.height : height;
+      const viewportWidth = window.visualViewport ? window.visualViewport.width : width;
+      
+      // Calculate the actual visible area
+      const visibleHeight = Math.min(viewportHeight, height);
+      
+      // More aggressive spacing for smaller screens
+      if (visibleHeight < 600) {
+        setSpacing({
+          topPadding: '2px',
+          bottomPadding: '6px',
+          buttonBottom: '6px',
+          searchBottomPadding: '50px'
+        });
+      } else if (visibleHeight < 650) {
+        setSpacing({
+          topPadding: '4px',
+          bottomPadding: '8px',
+          buttonBottom: '8px',
+          searchBottomPadding: '60px'
+        });
+      } else if (visibleHeight < 700) {
         setSpacing({
           topPadding: '8px',
-          bottomPadding: '16px',
-          buttonBottom: '12px'
+          bottomPadding: '12px',
+          buttonBottom: '12px',
+          searchBottomPadding: '80px'
         });
-      } else if (height < 700) {
+      } else if (visibleHeight < 750) {
         setSpacing({
-          topPadding: '16px',
-          bottomPadding: '20px',
-          buttonBottom: '16px'
+          topPadding: '12px',
+          bottomPadding: '16px',
+          buttonBottom: '16px',
+          searchBottomPadding: '100px'
         });
       } else {
         setSpacing({
-          topPadding: '24px',
-          bottomPadding: '24px',
-          buttonBottom: '20px'
+          topPadding: '16px',
+          bottomPadding: '20px',
+          buttonBottom: '18px',
+          searchBottomPadding: '110px'
         });
       }
     };
 
     updateSpacing();
     window.addEventListener('resize', updateSpacing);
-    return () => window.removeEventListener('resize', updateSpacing);
+    window.addEventListener('orientationchange', updateSpacing);
+    
+    // Also update on focus/blur to catch browser UI changes
+    window.addEventListener('focus', updateSpacing);
+    window.addEventListener('blur', updateSpacing);
+    
+    // Use visualViewport events if available
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateSpacing);
+      window.visualViewport.addEventListener('scroll', updateSpacing);
+    }
+    
+    return () => {
+      window.removeEventListener('resize', updateSpacing);
+      window.removeEventListener('orientationchange', updateSpacing);
+      window.removeEventListener('focus', updateSpacing);
+      window.removeEventListener('blur', updateSpacing);
+      
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', updateSpacing);
+        window.visualViewport.removeEventListener('scroll', updateSpacing);
+      }
+    };
   }, []);
 
   return spacing;

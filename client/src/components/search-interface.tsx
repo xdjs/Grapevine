@@ -52,7 +52,7 @@ const useViewportHeight = () => {
   return viewportHeight;
 };
 
-// Hook for dynamic spacing based on screen height
+// Hook for dynamic spacing based on actual visible space
 const useDynamicSpacing = () => {
   const [spacing, setSpacing] = useState({
     topPadding: '24px',
@@ -62,27 +62,65 @@ const useDynamicSpacing = () => {
   useEffect(() => {
     const updateSpacing = () => {
       const height = window.innerHeight;
-      if (height < 600) {
+      
+      // Use visualViewport if available for more accurate measurements
+      const viewportHeight = window.visualViewport ? window.visualViewport.height : height;
+      const visibleHeight = Math.min(viewportHeight, height);
+      
+      // More aggressive spacing for smaller screens
+      if (visibleHeight < 600) {
+        setSpacing({
+          topPadding: '2px',
+          bottomPadding: '50px'
+        });
+      } else if (visibleHeight < 650) {
+        setSpacing({
+          topPadding: '4px',
+          bottomPadding: '60px'
+        });
+      } else if (visibleHeight < 700) {
         setSpacing({
           topPadding: '8px',
           bottomPadding: '80px'
         });
-      } else if (height < 700) {
+      } else if (visibleHeight < 750) {
         setSpacing({
-          topPadding: '16px',
+          topPadding: '12px',
           bottomPadding: '100px'
         });
       } else {
         setSpacing({
-          topPadding: '24px',
-          bottomPadding: '120px'
+          topPadding: '16px',
+          bottomPadding: '110px'
         });
       }
     };
 
     updateSpacing();
     window.addEventListener('resize', updateSpacing);
-    return () => window.removeEventListener('resize', updateSpacing);
+    window.addEventListener('orientationchange', updateSpacing);
+    
+    // Also update on focus/blur to catch browser UI changes
+    window.addEventListener('focus', updateSpacing);
+    window.addEventListener('blur', updateSpacing);
+    
+    // Use visualViewport events if available
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateSpacing);
+      window.visualViewport.addEventListener('scroll', updateSpacing);
+    }
+    
+    return () => {
+      window.removeEventListener('resize', updateSpacing);
+      window.removeEventListener('orientationchange', updateSpacing);
+      window.removeEventListener('focus', updateSpacing);
+      window.removeEventListener('blur', updateSpacing);
+      
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', updateSpacing);
+        window.visualViewport.removeEventListener('scroll', updateSpacing);
+      }
+    };
   }, []);
 
   return spacing;
@@ -503,17 +541,31 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
             <img 
               src={grapevineLogoLarge} 
               alt="Grapevine Logo" 
-              className="w-20 h-20 sm:w-32 sm:h-32 md:w-40 md:h-40 object-contain"
+              className={`object-contain ${
+                (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 600 ? 'w-12 h-12' :
+                (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 650 ? 'w-16 h-16' :
+                (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 700 ? 'w-20 h-20' :
+                'w-20 h-20 sm:w-32 sm:h-32 md:w-40 md:h-40'
+              }`}
             />
           </div>
           
-          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-5xl xl:text-6xl font-bold mb-2 sm:mb-3 md:mb-4 lg:mb-6 text-white">
+          <h1 className={`font-bold mb-2 sm:mb-3 md:mb-4 lg:mb-6 text-white ${
+            (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 600 ? 'text-lg' :
+            (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 650 ? 'text-xl' :
+            (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 700 ? 'text-2xl' :
+            'text-xl sm:text-2xl md:text-3xl lg:text-5xl xl:text-6xl'
+          }`}>
             Grapevine
           </h1>
 
           {/* Tip Section */}
           <div className="mb-2 sm:mb-3 md:mb-4 text-center">
-            <p className="text-xs sm:text-sm md:text-base text-gray-300">
+            <p className={`text-gray-300 ${
+              (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 600 ? 'text-xs' :
+              (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 650 ? 'text-sm' :
+              'text-xs sm:text-sm md:text-base'
+            }`}>
               <span className="font-medium">Tip:</span> Try searching for Taylor Swift, Drake, or Ariana Grande.
             </p>
           </div>
