@@ -552,10 +552,10 @@
   overflow: hidden !important;
 }
 
-/* Ensure button is always visible */
+/* Ensure button is always visible and below footer text */
 .footer-content + div {
   position: absolute !important;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 60px) !important;
   z-index: 50 !important;
   max-bottom: calc(100vh - 60px) !important;
 }
@@ -569,7 +569,7 @@
   }
   
   .footer-content + div {
-    bottom: max(calc(env(safe-area-inset-bottom, 0px) + 8px), 68px) !important;
+    bottom: max(calc(env(safe-area-inset-bottom, 0px) + 60px), 120px) !important;
   }
 }
 
@@ -582,6 +582,6 @@
   }
   
   .footer-content + div {
-    bottom: max(calc(env(safe-area-inset-bottom, 0px) + 4px), 84px) !important;
+    bottom: max(calc(env(safe-area-inset-bottom, 0px) + 60px), 140px) !important;
   }
 }

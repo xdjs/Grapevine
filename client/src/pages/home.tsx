@@ -316,9 +316,6 @@ export default function Home() {
               <p className="mb-1">Powered by Music Nerd</p>
               <p>Click on artist nodes to visit their Music Nerd profiles</p>
             </div>
-            
-            {/* Empty space for button to overlap */}
-            <div className="h-1 sm:h-2 md:h-3"></div>
           </div>
         </div>
       )}
@@ -328,7 +325,7 @@ export default function Home() {
         <div 
           className="absolute left-1/2 transform -translate-x-1/2 z-50" 
           style={{ 
-            bottom: `calc(env(safe-area-inset-bottom, 0px) + ${spacing.buttonBottom})`,
+            bottom: `calc(env(safe-area-inset-bottom, 0px) + ${parseInt(spacing.buttonBottom) + 60}px)`,
             // Ensure button is always visible
             maxBottom: 'calc(100vh - 60px)'
           }}
