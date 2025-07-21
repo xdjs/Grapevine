@@ -547,22 +547,30 @@ export default function NetworkVisualizer({
         const networkIconPath = "/grapevine-logo.png"; // grape + clef icon
         const artistIconPath = "/music_nerd_logo.png";   // Music Nerd logo PNG served from public
 
-        // Scale icon size to match node diameter
-        const iconSize = 40; // static diameter matching small node size
+        // Detect mobile and adjust sizes accordingly
+        const isMobile = window.innerWidth <= 768;
+        const maxWidth = isMobile ? "280px" : "320px";
+        const iconSize = isMobile ? 28 : 40;
+        const titleFontSize = isMobile ? "14px" : "16px";
+        const roleFontSize = isMobile ? "11px" : "12px";
+        const linkFontSize = isMobile ? "12px" : "13px";
+        const closeButtonSize = isMobile ? "20px" : "24px";
+        const paddingRight = isMobile ? "25px" : "30px";
+        const gap = isMobile ? "8px" : "10px";
 
         const content = `
-          <div style="position:relative; max-width:320px; padding-right:30px;">
-            <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:24px; color:white;">&times;</span>
-            <div style="font-weight:bold; font-size:16px; line-height:1.2; text-align:left;">${d.name}</div>
-            <div style="margin-top:2px; font-size:12px; text-align:left;">Roles: ${roleDisplay}</div>
-            <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
-              <div style="display:flex; align-items:center; gap:10px; cursor:pointer;" class="network-action">
+          <div style="position:relative; max-width:${maxWidth}; padding-right:${paddingRight};">
+            <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:${closeButtonSize}; color:white;">&times;</span>
+            <div style="font-weight:bold; font-size:${titleFontSize}; line-height:1.2; text-align:left;">${d.name}</div>
+            <div style="margin-top:2px; font-size:${roleFontSize}; text-align:left;">Roles: ${roleDisplay}</div>
+            <div style="display:flex; flex-direction:column; gap:${gap}; margin-top:${gap};">
+              <div style="display:flex; align-items:center; gap:${gap}; cursor:pointer;" class="network-action">
                 <img src="${networkIconPath}" alt="Network" class="network-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
-                <a href="#" class="popup-action network-link" style="font-size:13px; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s network</a>
+                <a href="#" class="popup-action network-link" style="font-size:${linkFontSize}; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s network</a>
               </div>
-              <div style="display:flex; align-items:center; gap:10px; cursor:pointer;" class="artist-action">
+              <div style="display:flex; align-items:center; gap:${gap}; cursor:pointer;" class="artist-action">
                 <img src="${artistIconPath}" alt="Artist Page" class="artist-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
-                <a href="#" class="popup-action artist-page-link" style="font-size:13px; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s Music Nerd profile</a>
+                <a href="#" class="popup-action artist-page-link" style="font-size:${linkFontSize}; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s Music Nerd profile</a>
       
               </div>
             </div>
@@ -623,9 +631,16 @@ export default function NetworkVisualizer({
         /* ---- ORIGINAL NON-ARTIST TOOLTIP BEHAVIOUR ---- */
         const roleDisplay = roles.length > 1 ? roles.join(" + ") : roles[0];
 
-        let content = `<div style="position:relative; text-align:center; max-width:320px; padding-right:30px;">
-                        <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:24px; color:white;">&times;</span>
-                         <strong style="font-size:14px;">${d.name}</strong><br/>Role${roles.length > 1 ? "s" : ""}: ${roleDisplay}`;
+        // Mobile optimization for non-artist tooltips too
+        const isMobile = window.innerWidth <= 768;
+        const maxWidth = isMobile ? "260px" : "320px";
+        const titleFontSize = isMobile ? "13px" : "14px";
+        const closeButtonSize = isMobile ? "20px" : "24px";
+        const paddingRight = isMobile ? "25px" : "30px";
+
+        let content = `<div style="position:relative; text-align:center; max-width:${maxWidth}; padding-right:${paddingRight};">
+                        <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:${closeButtonSize}; color:white;">&times;</span>
+                         <strong style="font-size:${titleFontSize};">${d.name}</strong><br/>Role${roles.length > 1 ? "s" : ""}: ${roleDisplay}`;
 
         // Show collaboration information for producers and songwriters
         const hasProducerRole = roles.includes("producer") || roles.includes("songwriter");
@@ -663,9 +678,52 @@ export default function NetworkVisualizer({
     }
 
     function moveTooltip(event: MouseEvent) {
+      const isMobile = window.innerWidth <= 768;
+      const tooltipNode = tooltip.node() as HTMLElement;
+      
+      if (!tooltipNode) return;
+      
+      // Get tooltip dimensions (need to be visible first to measure)
+      const rect = tooltipNode.getBoundingClientRect();
+      const tooltipWidth = rect.width || 280; // fallback width
+      const tooltipHeight = rect.height || 150; // fallback height
+      
+      // Get viewport dimensions
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      let left = event.pageX + 10;
+      let top = event.pageY - 10;
+      
+      // Adjust for mobile - center the tooltip more and avoid edges
+      if (isMobile) {
+        // On mobile, try to center the tooltip horizontally
+        left = Math.max(10, Math.min(viewportWidth - tooltipWidth - 10, event.pageX - tooltipWidth / 2));
+        
+        // On mobile, position tooltip above the click point if there's space, otherwise below
+        if (event.pageY - tooltipHeight - 20 > 0) {
+          top = event.pageY - tooltipHeight - 20; // Above the click point
+        } else {
+          top = event.pageY + 20; // Below the click point
+        }
+      } else {
+        // Desktop positioning with boundary checks
+        if (left + tooltipWidth > viewportWidth - 10) {
+          left = event.pageX - tooltipWidth - 10; // Position to the left instead
+        }
+        
+        if (top + tooltipHeight > viewportHeight - 10) {
+          top = event.pageY - tooltipHeight - 10; // Position above instead
+        }
+      }
+      
+      // Final boundary checks
+      left = Math.max(10, Math.min(viewportWidth - tooltipWidth - 10, left));
+      top = Math.max(10, Math.min(viewportHeight - tooltipHeight - 10, top));
+      
       tooltip
-        .style("left", event.pageX + 10 + "px")
-        .style("top", event.pageY - 10 + "px");
+        .style("left", left + "px")
+        .style("top", top + "px");
     }
 
     function resetNodeHighlight() {
