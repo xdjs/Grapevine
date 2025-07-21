@@ -484,23 +484,23 @@ export default function MobileControls({
       {showMenu && (
         <div className="fixed bottom-24 sm:bottom-20 right-4 z-50 flex flex-col items-end gap-2">
           {/* Share Button */}
+          <Button
+            size="icon"
+            variant="secondary"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
+            title="Share"
+            onClick={handleShareClick}
+            disabled={isCapturing}
+          >
+            {isCapturing ? (
+              <Camera className="w-6 h-6 animate-pulse" />
+            ) : (
+              <Share2 className="w-6 h-6" />
+            )}
+          </Button>
+
+          {/* Share Dialog */}
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button
-                size="icon"
-                variant="secondary"
-                className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
-                title="Share"
-                onClick={handleShareClick}
-                disabled={isCapturing}
-              >
-                {isCapturing ? (
-                  <Camera className="w-6 h-6 animate-pulse" />
-                ) : (
-                  <Share2 className="w-6 h-6" />
-                )}
-              </Button>
-            </DialogTrigger>
             <DialogContent className="max-w-2xl bg-gray-900 border-gray-700">
               <DialogHeader>
                 <DialogTitle className="text-white">
@@ -622,18 +622,21 @@ export default function MobileControls({
           </Button>
 
           {/* Help Button */}
+          <Button
+            size="icon"
+            variant="secondary"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
+            title="Help"
+            onClick={() => {
+              setShowHelp(true);
+              setShowMenu(false);
+            }}
+          >
+            <HelpCircle className="w-6 h-6" />
+          </Button>
+
+          {/* Help Dialog */}
           <Dialog open={showHelp} onOpenChange={setShowHelp}>
-            <DialogTrigger asChild>
-              <Button
-                size="icon"
-                variant="secondary"
-                className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
-                title="Help"
-                onClick={() => setShowMenu(false)}
-              >
-                <HelpCircle className="w-6 h-6" />
-              </Button>
-            </DialogTrigger>
             <DialogContent className="max-w-md bg-gray-900 border-gray-700">
               <DialogHeader>
                 <DialogTitle className="text-white">How To Use</DialogTitle>
