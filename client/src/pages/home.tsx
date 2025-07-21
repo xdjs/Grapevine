@@ -192,7 +192,7 @@ export default function Home() {
   };
 
   return (
-    <div className={`relative w-full min-h-screen bg-black text-white main-container`} style={{ pointerEvents: 'auto' }}>
+    <div className={`relative w-full min-h-screen bg-black text-white main-container ${showNetworkView ? 'network-visible' : ''}`} style={{ pointerEvents: 'auto' }}>
       {/* Search Interface */}
       <SearchInterface
         onNetworkData={handleNetworkData}

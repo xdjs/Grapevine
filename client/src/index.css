@@ -62,11 +62,11 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
     background-color: #000000 !important;
-    overflow: hidden !important;
+    overflow: auto !important;
   }
   
   body.network-hidden {
-    overflow: hidden !important;
+    overflow: auto !important;
   }
   
   body.network-visible {
@@ -75,13 +75,13 @@
   
   html {
     background-color: #000000 !important;
-    overflow: hidden !important;
+    overflow: auto !important;
     height: 100% !important;
     width: 100% !important;
   }
   
   body {
-    overflow: hidden !important;
+    overflow: auto !important;
     height: 100% !important;
     width: 100% !important;
     margin: 0 !important;
@@ -135,7 +135,7 @@
     position: relative !important;
     top: 0 !important;
     left: 0 !important;
-    overflow: hidden !important;
+    overflow: auto !important;
     margin: 0 !important;
     padding: 0 !important;
   }
@@ -196,8 +196,8 @@
       z-index: 10 !important; /* Ensure it's above other content but below controls */
     }
     
-    /* Ensure network visualization is completely contained */
-    .mobile-network-container .network-container {
+    /* Ensure network visualization is completely contained - only when network is visible */
+    .mobile-network-container.network-visible .network-container {
       position: absolute !important;
       top: 0 !important;
       left: 0 !important;
@@ -210,8 +210,8 @@
       max-height: 100% !important;
     }
     
-    /* Prevent any scrolling or movement outside bounds */
-    .mobile-network-container svg {
+    /* Prevent any scrolling or movement outside bounds - only when network is visible */
+    .mobile-network-container.network-visible svg {
       width: 100% !important;
       height: 100% !important;
       max-width: 100% !important;
@@ -222,15 +222,15 @@
       left: 0 !important;
     }
     
-    /* Prevent any touch scrolling on the network container */
-    .mobile-network-container {
+    /* Prevent any touch scrolling on the network container - only when network is visible */
+    .mobile-network-container.network-visible {
       touch-action: none !important;
       -webkit-overflow-scrolling: none !important;
       overscroll-behavior: none !important;
     }
     
-    /* Ensure the network group stays within bounds */
-    .mobile-network-container .network-group {
+    /* Ensure the network group stays within bounds - only when network is visible */
+    .mobile-network-container.network-visible .network-group {
       transform-origin: center center !important;
       max-width: 100% !important;
       max-height: 100% !important;
@@ -241,6 +241,10 @@
       min-height: 100vh !important;
       min-height: calc(var(--vh, 1vh) * 100) !important;
       min-height: -webkit-fill-available !important;
+    }
+    
+    /* Only hide overflow when network is visible */
+    .main-container.network-visible {
       overflow: hidden !important;
     }
     
