@@ -95,6 +95,8 @@ export default function ArtistNetwork() {
     setIsLoading(false);
     setCurrentArtistName("");
     setClearSearchField(true);
+    // Clear the URL to remove artist ID
+    setLocation('/');
     setTimeout(() => setClearSearchField(false), 100);
   };
 

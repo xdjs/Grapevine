@@ -222,6 +222,8 @@ export default function Home() {
     setIsLoading(false);
     setCurrentArtistName("");
     setClearSearchField(true);
+    // Clear the URL to remove artist ID
+    setLocation('/');
     // Keep showNetworkView as true to stay on the map page
     // Reset the clear flag after a brief delay
     setTimeout(() => {
