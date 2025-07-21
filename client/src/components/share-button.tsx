@@ -196,7 +196,7 @@ export default function ShareButton() {
       // Wait a brief moment for elements to hide
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Zoom out slightly before snapshot on mobile - only if at default zoom
+      // Zoom out and move network down on mobile to avoid watermark overlap
       const isMobileSnapshot = window.innerWidth <= 768;
       const svgElement = networkContainer.querySelector('svg') as SVGSVGElement;
       
@@ -216,18 +216,23 @@ export default function ShareButton() {
                                  Math.abs(height - containerHeight) < 10;
           
           if (isAtDefaultZoom) {
-            // Apply 40% zoom out only if at default zoom to capture all content and prevent cutoffs
+            // Apply 40% zoom out and move network down to avoid watermark
             const zoomOutFactor = 0.6;
             const newWidth = width / zoomOutFactor;
             const newHeight = height / zoomOutFactor;
             const offsetX = x - (newWidth - width) / 2;
-            const offsetY = y - (newHeight - height) / 2;
             
-            // Apply the zoomed out viewBox
+            // Move the network down significantly to create clear space for watermark at top
+            const isMobileForSpacing = window.innerWidth <= 768;
+            const localTopWatermarkSpace = (isMobileForSpacing ? 120 : 80) * Math.max(2, window.devicePixelRatio || 1);
+            const watermarkSpace = (localTopWatermarkSpace / Math.max(2, window.devicePixelRatio || 1)) * 1.5; // Extra space to avoid overlap
+            const offsetY = y - (newHeight - height) / 2 + watermarkSpace;
+            
+            // Apply the adjusted viewBox
             svgElement.setAttribute('viewBox', `${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
-            console.log(`📱 Mobile snapshot (default zoom): Zoomed out for capture: ${originalViewBox} → ${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
+            console.log(`📱 Mobile snapshot (default zoom): Zoomed out and moved down: ${originalViewBox} → ${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
             
-            // Wait for the zoom to apply
+            // Wait for the changes to apply
             await new Promise(resolve => setTimeout(resolve, 50));
           } else {
             console.log(`📱 Mobile snapshot (custom zoom): Using current zoom level for capture: ${originalViewBox}`);
@@ -243,7 +248,6 @@ export default function ShareButton() {
       const isMobileForSpacing = window.innerWidth <= 768;
       const sidePadding = (isMobileForSpacing ? 60 : 40) * highScale; // More side padding on mobile for node names
       const topWatermarkSpace = (isMobileForSpacing ? 120 : 80) * highScale; // Bigger watermark space on mobile
-      const minBottomPadding = 10 * highScale; // Minimal bottom padding to avoid cutting nodes
       
       const canvas = await html2canvas(networkContainer, {
         useCORS: true,
@@ -309,7 +313,7 @@ export default function ShareButton() {
             
             // Reserve dedicated watermark space at top - network content starts below this
             minY = Math.max(topWatermarkSpace, minY - sidePadding); // Ensure network starts below watermark space
-            maxY = Math.min(canvas.height, maxY + minBottomPadding); // Ultra-tight crop at bottom - minimal footer space
+            maxY = Math.min(canvas.height, maxY); // Extremely tight crop at bottom - no footer space at all
             
             networkBounds = { minX, minY, maxX, maxY };
           }
@@ -350,12 +354,12 @@ export default function ShareButton() {
       let cropX, cropY;
       
       if (isMobile) {
-        // Mobile: Center horizontally, but crop tightly at bottom
+        // Mobile: Center horizontally, but crop extremely tightly at bottom
         const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
         cropX = Math.max(0, Math.min(canvas.width - finalWidth, networkCenterX - finalWidth / 2));
         
-        // Start crop from the network top (includes watermark space) 
-        cropY = Math.max(0, networkBounds.minY);
+        // Start crop from the very top to include watermark space, end exactly at network bottom
+        cropY = 0; // Start from absolute top to capture watermark space
         
         console.log(`📱 MOBILE CROP: networkBounds minY=${networkBounds.minY}, maxY=${networkBounds.maxY}, cropY=${cropY}`);
       } else {
