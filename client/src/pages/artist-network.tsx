@@ -135,7 +135,7 @@ export default function ArtistNetwork() {
         onClearAll={handleClearNetwork}
       />
 
-      {/* Network Visualization */}
+      {/* Network Visualization - Only show when network data exists */}
       {networkData && (
         <NetworkVisualizer
           key={`network-${Date.now()}`}

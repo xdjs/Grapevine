@@ -355,19 +355,17 @@ export default function Home() {
         </div>
       )}
 
-      {/* Network Visualization */}
-      {networkData && (
-        <div className={`mobile-network-container ${showNetworkView ? 'network-visible' : ''}`}>
-          <NetworkVisualizer
-            key={`network-${networkData.nodes[0]?.id || 'empty'}-${Date.now()}`}
-            data={networkData}
-            visible={showNetworkView}
-            filterState={filterState}
-            onZoomChange={handleZoomChange}
-            onArtistSearch={handleArtistSearch}
-            onArtistNodeClick={handleArtistNodeClick}
-          />
-        </div>
+      {/* Network Visualization - Only show when network data exists */}
+      {networkData && showNetworkView && (
+        <NetworkVisualizer
+          key={`network-${networkData.nodes[0]?.id || 'empty'}-${Date.now()}`}
+          data={networkData}
+          visible={true}
+          filterState={filterState}
+          onZoomChange={handleZoomChange}
+          onArtistSearch={handleArtistSearch}
+          onArtistNodeClick={handleArtistNodeClick}
+        />
       )}
 
       {/* Loading Screen */}
