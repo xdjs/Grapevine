@@ -266,23 +266,53 @@ export default function ShareButton() {
       const networkWidth = networkBounds.maxX - networkBounds.minX;
       const networkHeight = networkBounds.maxY - networkBounds.minY;
       
-      // FORCE a perfect square - use the larger dimension for BOTH width and height
-      // Ensure minimum size (scaled for high resolution)
-      const minSize = 400 * highScale;
-      const squareSize = Math.max(minSize, Math.max(networkWidth, networkHeight));
+      // Detect mobile vs desktop for different crop formats
+      const isMobile = window.innerWidth <= 768;
       
-      console.log(`🔳 SQUARE DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}, squareSize=${squareSize}`);
+      let finalWidth, finalHeight;
       
-      // Center the square crop around the network center
+      if (isMobile) {
+        // Mobile: Use rectangle that fits mobile screen proportions (9:16 aspect ratio)
+        const minSize = 320 * highScale;
+        const mobileAspectRatio = 9 / 16; // width / height
+        
+        // Start with network dimensions and adjust to mobile aspect ratio
+        let baseWidth = Math.max(minSize, networkWidth);
+        let baseHeight = Math.max(minSize, networkHeight);
+        
+        // Adjust to mobile aspect ratio while encompassing the network
+        if (baseWidth / baseHeight > mobileAspectRatio) {
+          // Too wide, adjust height
+          finalWidth = baseWidth;
+          finalHeight = baseWidth / mobileAspectRatio;
+        } else {
+          // Too tall, adjust width
+          finalHeight = baseHeight;
+          finalWidth = baseHeight * mobileAspectRatio;
+        }
+        
+        console.log(`📱 MOBILE DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}, finalWidth=${finalWidth}, finalHeight=${finalHeight}`);
+      } else {
+        // Desktop: Keep square format
+        const minSize = 400 * highScale;
+        const squareSize = Math.max(minSize, Math.max(networkWidth, networkHeight));
+        finalWidth = squareSize;
+        finalHeight = squareSize;
+        
+        console.log(`🔳 DESKTOP DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}, squareSize=${squareSize}`);
+      }
+      
+      // Center the crop around the network center
       const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
       const networkCenterY = (networkBounds.minY + networkBounds.maxY) / 2;
       
-      // Calculate square crop coordinates - FORCE square dimensions
-      const halfSquare = squareSize / 2;
-      const cropX = Math.max(0, Math.min(canvas.width - squareSize, networkCenterX - halfSquare));
-      const cropY = Math.max(0, Math.min(canvas.height - squareSize, networkCenterY - halfSquare));
+      // Calculate crop coordinates
+      const halfWidth = finalWidth / 2;
+      const halfHeight = finalHeight / 2;
+      const cropX = Math.max(0, Math.min(canvas.width - finalWidth, networkCenterX - halfWidth));
+      const cropY = Math.max(0, Math.min(canvas.height - finalHeight, networkCenterY - halfHeight));
 
-      // Create a PERFECTLY SQUARE canvas
+      // Create canvas with appropriate dimensions
       const watermarkedCanvas = document.createElement('canvas');
       const ctx = watermarkedCanvas.getContext('2d');
       
@@ -290,21 +320,21 @@ export default function ShareButton() {
         throw new Error('Failed to get canvas context');
       }
 
-      // FORCE the canvas to be perfectly square - width MUST equal height
-      watermarkedCanvas.width = squareSize;
-      watermarkedCanvas.height = squareSize;
+      // Set canvas dimensions based on device type
+      watermarkedCanvas.width = finalWidth;
+      watermarkedCanvas.height = finalHeight;
       
-      console.log(`🔳 CANVAS DEBUG: width=${watermarkedCanvas.width}, height=${watermarkedCanvas.height}, isSquare=${watermarkedCanvas.width === watermarkedCanvas.height}`);
+      console.log(`📐 CANVAS DEBUG: width=${watermarkedCanvas.width}, height=${watermarkedCanvas.height}, isMobile=${isMobile}`);
 
       // Fill with black background
       ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, squareSize, squareSize);
+      ctx.fillRect(0, 0, finalWidth, finalHeight);
 
-      // Draw EXACTLY a square crop - source and destination are both perfect squares
+      // Draw the cropped image
       ctx.drawImage(
         canvas,
-        cropX, cropY, squareSize, squareSize, // Source: SQUARE crop from original
-        0, 0, squareSize, squareSize // Destination: SQUARE on new canvas
+        cropX, cropY, finalWidth, finalHeight, // Source: crop from original
+        0, 0, finalWidth, finalHeight // Destination: full new canvas
       );
 
       // Load the Grapevine logo
@@ -315,7 +345,7 @@ export default function ShareButton() {
         logo.onload = () => {
           try {
             // Calculate watermark size and position (top-left corner) - scaled for high res
-            const logoSize = Math.min(60 * highScale, squareSize * 0.08);
+            const logoSize = Math.min(60 * highScale, Math.min(finalWidth, finalHeight) * 0.08);
             const padding = 12 * highScale;
             
             // Calculate dynamic text size based on logoSize
