@@ -9,7 +9,9 @@ import {
   Settings,
   MoreHorizontal,
   Share2,
+  HelpCircle,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -28,6 +30,7 @@ export default function MobileControls({
 }: MobileControlsProps) {
   const [showControls, setShowControls] = useState(false); // existing zoom / clear panel
   const [showMenu, setShowMenu] = useState(false); // new three-dot options menu
+  const [showHelp, setShowHelp] = useState(false); // help dialog state
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -94,6 +97,44 @@ export default function MobileControls({
           >
             <Settings className="w-6 h-6" />
           </Button>
+
+          {/* Help Button */}
+          <Dialog open={showHelp} onOpenChange={setShowHelp}>
+            <DialogTrigger asChild>
+              <Button
+                size="icon"
+                variant="secondary"
+                className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
+                title="Help"
+                onClick={() => setShowMenu(false)}
+              >
+                <HelpCircle className="w-6 h-6" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md bg-gray-900 border-gray-700">
+              <DialogHeader>
+                <DialogTitle className="text-white">How To Use</DialogTitle>
+              </DialogHeader>
+              <div className="flex justify-center items-center py-4">
+                <img 
+                  key={showHelp ? 'gif-playing' : 'gif-stopped'}
+                  src="/help-button.gif" 
+                  alt="Help instructions" 
+                  className="max-w-full max-h-96 rounded-lg border-2"
+                  style={{ borderColor: '#b427b4' }}
+                  loading="eager"
+                  decoding="async"
+                  onLoad={() => {
+                    console.log('Help GIF loaded successfully');
+                  }}
+                  onError={(e) => {
+                    console.error('Failed to load help GIF:', e);
+                    console.error('Current src:', (e.target as HTMLImageElement).src);
+                  }}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Close Button */}
           <Button
