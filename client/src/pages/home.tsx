@@ -113,6 +113,7 @@ export default function Home() {
   const [currentArtistName, setCurrentArtistName] = useState<string>("");
   const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
   const [clearSearchField, setClearSearchField] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
   const [filterState, setFilterState] = useState<FilterState>({
     showProducers: true,
     showSongwriters: true,
@@ -150,7 +151,7 @@ export default function Home() {
   // Load artist network if artistId is in URL
   useEffect(() => {
     const loadArtistFromUrl = async () => {
-      if (params.artistId && !networkData && !isLoading) {
+      if (params.artistId && !networkData && !isLoading && !isClearing) {
         try {
           setIsLoading(true);
           console.log(`🔗 Loading artist network from URL: ${params.artistId}`);
@@ -176,7 +177,7 @@ export default function Home() {
     };
 
     loadArtistFromUrl();
-  }, [params.artistId, networkData, isLoading, setLocation]);
+  }, [params.artistId, networkData, isLoading, isClearing, setLocation]);
 
   const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
     // Replace existing network with new data
@@ -216,13 +217,17 @@ export default function Home() {
   };
 
   const handleClearNetwork = () => {
+    setIsClearing(true);
     setNetworkData(null);
     setIsLoading(false);
     setCurrentArtistName("");
     setClearSearchField(true);
     // Keep showNetworkView as true to stay on the map page
     // Reset the clear flag after a brief delay
-    setTimeout(() => setClearSearchField(false), 100);
+    setTimeout(() => {
+      setClearSearchField(false);
+      setIsClearing(false);
+    }, 100);
   };
 
   const handleZoomChange = (transform: { k: number; x: number; y: number }) => {
