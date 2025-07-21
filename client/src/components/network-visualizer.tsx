@@ -62,8 +62,11 @@ export default function NetworkVisualizer({
     if (!svgRef.current || !data || !visible) return;
 
     const svg = d3.select(svgRef.current);
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    const container = svgRef.current.parentElement;
+    
+    // Use container dimensions instead of window dimensions to avoid browser UI areas
+    const width = container ? container.clientWidth : window.innerWidth;
+    const height = container ? container.clientHeight : window.innerHeight;
 
     // Clear existing content
     svg.selectAll("*").remove();
@@ -111,14 +114,23 @@ export default function NetworkVisualizer({
        .on("touchmove.zoom", null)
        .on("touchend.zoom", null);
 
-    // EXACT COPY of the working zoom button functions
+    // Add background click handler to hide tooltip and reset highlighting
+    svg.on("click", function(event) {
+      // Only trigger if clicking on the background (not on a node)
+      if (event.target === this || event.target.tagName === 'svg') {
+        hideTooltip();
+      }
+    });
+
+    // Zoom function for buttons (centered zoom)
     const applyZoom = (scale: number) => {
       if (!svgRef.current) return;
       
-      const width = window.innerWidth;
-      const height = window.innerHeight;
+      const container = svgRef.current.parentElement;
+      const width = container ? container.clientWidth : window.innerWidth;
+      const height = container ? container.clientHeight : window.innerHeight;
       
-      // Calculate new viewBox dimensions
+      // Calculate new viewBox dimensions centered
       const newWidth = width / scale;
       const newHeight = height / scale;
       const offsetX = (width - newWidth) / 2;
@@ -139,20 +151,57 @@ export default function NetworkVisualizer({
         });
     };
 
-    const handlePinchZoomIn = () => {
+    // Zoom function for pinch gestures (zoom around focal point)
+    const applyPinchZoom = (scale: number, focalX: number, focalY: number) => {
+      if (!svgRef.current) return;
+      
+      const container = svgRef.current.parentElement;
+      const width = container ? container.clientWidth : window.innerWidth;
+      const height = container ? container.clientHeight : window.innerHeight;
+      
+      // Get current viewBox
+      const currentViewBox = svgRef.current.getAttribute('viewBox') || `0 0 ${width} ${height}`;
+      const [currentX, currentY, currentWidth, currentHeight] = currentViewBox.split(' ').map(Number);
+      
+      // Calculate new dimensions
+      const newWidth = width / scale;
+      const newHeight = height / scale;
+      
+      // Calculate focal point in viewBox coordinates
+      const focalXInViewBox = currentX + (focalX / width) * currentWidth;
+      const focalYInViewBox = currentY + (focalY / height) * currentHeight;
+      
+      // Calculate new viewBox position to keep focal point in same screen position
+      const newX = focalXInViewBox - (focalX / width) * newWidth;
+      const newY = focalYInViewBox - (focalY / height) * newHeight;
+      
+      // Apply transition
+      const svg = d3.select(svgRef.current);
+      svg.transition()
+        .duration(100) // Shorter duration for more responsive pinch zoom
+        .attrTween('viewBox', () => {
+          const interpolator = d3.interpolate([currentX, currentY, currentWidth, currentHeight], [newX, newY, newWidth, newHeight]);
+          return (t: number) => {
+            const [x, y, w, h] = interpolator(t);
+            return `${x} ${y} ${w} ${h}`;
+          };
+        });
+    };
+
+    const handlePinchZoomIn = (focalX: number, focalY: number) => {
       setCurrentZoom(prevZoom => {
         const newZoom = Math.min(5, prevZoom * 1.2); // Cap at 5x
         console.log(`🤏 Pinch zoom in: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
-        applyZoom(newZoom);
+        applyPinchZoom(newZoom, focalX, focalY);
         return newZoom;
       });
     };
 
-    const handlePinchZoomOut = () => {
+    const handlePinchZoomOut = (focalX: number, focalY: number) => {
       setCurrentZoom(prevZoom => {
         const newZoom = Math.max(0.2, prevZoom / 1.2); // Min 0.2x
         console.log(`🤏 Pinch zoom out: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
-        applyZoom(newZoom);
+        applyPinchZoom(newZoom, focalX, focalY);
         return newZoom;
       });
     };
@@ -162,6 +211,8 @@ export default function NetworkVisualizer({
     let lastScale = 1;
     let isPinching = false;
     let pinchThreshold = 0.2; // Increased from 0.1 to 0.2 for less sensitivity
+    let pinchCenterX = 0;
+    let pinchCenterY = 0;
 
     // Custom touch event handlers using existing zoom functions
     const handleTouchStart = (event: TouchEvent) => {
@@ -170,10 +221,17 @@ export default function NetworkVisualizer({
         isPinching = true;
         const touch1 = event.touches[0];
         const touch2 = event.touches[1];
+        
+        // Calculate initial distance and center point
         initialDistance = Math.sqrt(
           Math.pow(touch2.clientX - touch1.clientX, 2) + 
           Math.pow(touch2.clientY - touch1.clientY, 2)
         );
+        
+        // Store the center point of the pinch gesture
+        pinchCenterX = (touch1.clientX + touch2.clientX) / 2;
+        pinchCenterY = (touch1.clientY + touch2.clientY) / 2;
+        
         lastScale = 1;
         event.preventDefault();
         event.stopPropagation();
@@ -191,17 +249,21 @@ export default function NetworkVisualizer({
           Math.pow(touch2.clientY - touch1.clientY, 2)
         );
         
+        // Update the center point of the pinch gesture
+        const currentCenterX = (touch1.clientX + touch2.clientX) / 2;
+        const currentCenterY = (touch1.clientY + touch2.clientY) / 2;
+        
         if (initialDistance > 0) {
           const scaleChange = currentDistance / initialDistance;
           
           // Use threshold to prevent too frequent updates
           if (Math.abs(scaleChange - lastScale) > pinchThreshold) {
             if (scaleChange > lastScale) {
-              // Pinch out - zoom in using EXACT same code as zoom buttons
-              handlePinchZoomIn();
+              // Pinch out - zoom in using focal point
+              handlePinchZoomIn(currentCenterX, currentCenterY);
             } else {
-              // Pinch in - zoom out using EXACT same code as zoom buttons
-              handlePinchZoomOut();
+              // Pinch in - zoom out using focal point
+              handlePinchZoomOut(currentCenterX, currentCenterY);
             }
             lastScale = scaleChange;
           }
@@ -234,15 +296,19 @@ export default function NetworkVisualizer({
       }
       lastWheelTime = now;
       
+      // Use mouse position as focal point for wheel zoom
+      const focalX = event.clientX;
+      const focalY = event.clientY;
+      
       // Determine zoom direction based on deltaY
       const zoomIn = event.deltaY < 0;
       
       // Immediate zoom for smooth response
       if (zoomIn) {
-        handlePinchZoomIn();
+        handlePinchZoomIn(focalX, focalY);
         console.log(event.ctrlKey ? '🖱️ Trackpad pinch zoom in' : '🖱️ Mouse wheel zoom in');
       } else {
-        handlePinchZoomOut();
+        handlePinchZoomOut(focalX, focalY);
         console.log(event.ctrlKey ? '🖱️ Trackpad pinch zoom out' : '🖱️ Mouse wheel zoom out');
       }
     };
@@ -261,6 +327,9 @@ export default function NetworkVisualizer({
       svgElement.removeEventListener('touchend', handleTouchEnd);
       svgElement.removeEventListener('wheel', handleWheelZoom);
     };
+
+    // Variable to track currently highlighted node
+    let currentlyHighlightedNode: d3.Selection<SVGGElement, unknown, null, undefined> | null = null;
 
     // Find connected components for cluster positioning
     const findConnectedComponents = () => {
@@ -338,12 +407,23 @@ export default function NetworkVisualizer({
 
     // Create boundary force to keep nodes within viewport
     const boundaryForce = () => {
-      const margin = 50;
+      const margin = 30; // Reduced margin for tighter bounds
+      const container = svgRef.current?.parentElement;
+      const currentWidth = container ? container.clientWidth : width;
+      const currentHeight = container ? container.clientHeight : height;
+      
       for (const node of data.nodes) {
+        // Ensure nodes stay well within bounds
         if (node.x! < margin) node.x = margin;
-        if (node.x! > width - margin) node.x = width - margin;
+        if (node.x! > currentWidth - margin) node.x = currentWidth - margin;
         if (node.y! < margin) node.y = margin;
-        if (node.y! > height - margin) node.y = height - margin;
+        if (node.y! > currentHeight - margin) node.y = currentHeight - margin;
+        
+        // Additional safety check - if somehow a node is outside, bring it back
+        if (node.x! < 0 || node.x! > currentWidth || node.y! < 0 || node.y! > currentHeight) {
+          node.x = Math.max(margin, Math.min(currentWidth - margin, node.x!));
+          node.y = Math.max(margin, Math.min(currentHeight - margin, node.y!));
+        }
       }
     };
 
@@ -364,6 +444,25 @@ export default function NetworkVisualizer({
       .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.1 : 0));
 
     simulationRef.current = simulation;
+
+    // Add resize listener to handle orientation changes
+    const handleResize = () => {
+      if (svgRef.current && simulationRef.current) {
+        const container = svgRef.current.parentElement;
+        const newWidth = container ? container.clientWidth : window.innerWidth;
+        const newHeight = container ? container.clientHeight : window.innerHeight;
+        
+        // Update simulation forces with new dimensions
+        simulationRef.current
+          .force("centerX", d3.forceX(newWidth / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
+          .force("centerY", d3.forceY(newHeight / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
+          .alpha(0.3) // Restart simulation
+          .restart();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
 
     // Create links
     const linkElements = networkGroup
@@ -443,10 +542,17 @@ export default function NetworkVisualizer({
       .on("click", function(event, d) {
         event.stopPropagation();
 
-        // Highlight the node group
-        d3.select(this).selectAll("circle, path")
+        // Reset previous node highlighting
+        resetNodeHighlight();
+
+        // Highlight the current node group
+        const currentNode = d3.select(this);
+        currentNode.selectAll("circle, path")
           .attr("stroke", "white")
           .attr("stroke-width", 3);
+        
+        // Track this node as highlighted
+        currentlyHighlightedNode = currentNode;
 
         // Show the tooltip and use cursor coordinates for placement
         showTooltip(event, d);
@@ -495,22 +601,30 @@ export default function NetworkVisualizer({
         const networkIconPath = "/grapevine-logo.png"; // grape + clef icon
         const artistIconPath = "/music_nerd_logo.png";   // Music Nerd logo PNG served from public
 
-        // Scale icon size to match node diameter
-        const iconSize = 40; // static diameter matching small node size
+        // Detect mobile and adjust sizes accordingly
+        const isMobile = window.innerWidth <= 768;
+        const maxWidth = isMobile ? "280px" : "320px";
+        const iconSize = isMobile ? 28 : 40;
+        const titleFontSize = isMobile ? "14px" : "16px";
+        const roleFontSize = isMobile ? "11px" : "12px";
+        const linkFontSize = isMobile ? "12px" : "13px";
+        const closeButtonSize = isMobile ? "20px" : "24px";
+        const paddingRight = isMobile ? "25px" : "30px";
+        const gap = isMobile ? "8px" : "10px";
 
         const content = `
-          <div style="position:relative; max-width:320px;">
-            <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:24px; color:white;">&times;</span>
-            <div style="font-weight:bold; font-size:16px; line-height:1.2; text-align:left;">${d.name}</div>
-            <div style="margin-top:2px; font-size:12px; text-align:left;">Roles: ${roleDisplay}</div>
-            <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
-              <div style="display:flex; align-items:center; gap:10px; cursor:pointer;" class="network-action">
+          <div style="position:relative; max-width:${maxWidth}; padding-right:${paddingRight};">
+            <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:${closeButtonSize}; color:white;">&times;</span>
+            <div style="font-weight:bold; font-size:${titleFontSize}; line-height:1.2; text-align:left;">${d.name}</div>
+            <div style="margin-top:2px; font-size:${roleFontSize}; text-align:left;">Roles: ${roleDisplay}</div>
+            <div style="display:flex; flex-direction:column; gap:${gap}; margin-top:${gap};">
+              <div style="display:flex; align-items:center; gap:${gap}; cursor:pointer;" class="network-action">
                 <img src="${networkIconPath}" alt="Network" class="network-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
-                <a href="#" class="popup-action network-link" style="font-size:13px; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s network</a>
+                <a href="#" class="popup-action network-link" style="font-size:${linkFontSize}; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s network</a>
               </div>
-              <div style="display:flex; align-items:center; gap:10px; cursor:pointer;" class="artist-action">
+              <div style="display:flex; align-items:center; gap:${gap}; cursor:pointer;" class="artist-action">
                 <img src="${artistIconPath}" alt="Artist Page" class="artist-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
-                <a href="#" class="popup-action artist-page-link" style="font-size:13px; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s Music Nerd profile</a>
+                <a href="#" class="popup-action artist-page-link" style="font-size:${linkFontSize}; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s Music Nerd profile</a>
       
               </div>
             </div>
@@ -571,9 +685,16 @@ export default function NetworkVisualizer({
         /* ---- ORIGINAL NON-ARTIST TOOLTIP BEHAVIOUR ---- */
         const roleDisplay = roles.length > 1 ? roles.join(" + ") : roles[0];
 
-        let content = `<div style="position:relative; text-align:center; max-width:320px;">
-                        <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:24px; color:white;">&times;</span>
-                         <strong style="font-size:14px;">${d.name}</strong><br/>Role${roles.length > 1 ? "s" : ""}: ${roleDisplay}`;
+        // Mobile optimization for non-artist tooltips too
+        const isMobile = window.innerWidth <= 768;
+        const maxWidth = isMobile ? "260px" : "320px";
+        const titleFontSize = isMobile ? "13px" : "14px";
+        const closeButtonSize = isMobile ? "20px" : "24px";
+        const paddingRight = isMobile ? "25px" : "30px";
+
+        let content = `<div style="position:relative; text-align:center; max-width:${maxWidth}; padding-right:${paddingRight};">
+                        <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:${closeButtonSize}; color:white;">&times;</span>
+                         <strong style="font-size:${titleFontSize};">${d.name}</strong><br/>Role${roles.length > 1 ? "s" : ""}: ${roleDisplay}`;
 
         // Show collaboration information for producers and songwriters
         const hasProducerRole = roles.includes("producer") || roles.includes("songwriter");
@@ -611,13 +732,88 @@ export default function NetworkVisualizer({
     }
 
     function moveTooltip(event: MouseEvent) {
+      const isMobile = window.innerWidth <= 768;
+      const tooltipNode = tooltip.node() as HTMLElement;
+      
+      if (!tooltipNode) return;
+      
+      // Get tooltip dimensions (need to be visible first to measure)
+      const rect = tooltipNode.getBoundingClientRect();
+      const tooltipWidth = rect.width || 280; // fallback width
+      const tooltipHeight = rect.height || 150; // fallback height
+      
+      // Get viewport dimensions
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      let left = event.pageX + 10;
+      let top = event.pageY - 10;
+      
+      // Adjust for mobile - center the tooltip more and avoid edges
+      if (isMobile) {
+        // On mobile, try to center the tooltip horizontally
+        left = Math.max(10, Math.min(viewportWidth - tooltipWidth - 10, event.pageX - tooltipWidth / 2));
+        
+        // On mobile, position tooltip above the click point if there's space, otherwise below
+        if (event.pageY - tooltipHeight - 20 > 0) {
+          top = event.pageY - tooltipHeight - 20; // Above the click point
+        } else {
+          top = event.pageY + 20; // Below the click point
+        }
+      } else {
+        // Desktop positioning with boundary checks
+        if (left + tooltipWidth > viewportWidth - 10) {
+          left = event.pageX - tooltipWidth - 10; // Position to the left instead
+        }
+        
+        if (top + tooltipHeight > viewportHeight - 10) {
+          top = event.pageY - tooltipHeight - 10; // Position above instead
+        }
+      }
+      
+      // Final boundary checks
+      left = Math.max(10, Math.min(viewportWidth - tooltipWidth - 10, left));
+      top = Math.max(10, Math.min(viewportHeight - tooltipHeight - 10, top));
+      
       tooltip
-        .style("left", event.pageX + 10 + "px")
-        .style("top", event.pageY - 10 + "px");
+        .style("left", left + "px")
+        .style("top", top + "px");
+    }
+
+    function resetNodeHighlight() {
+      if (currentlyHighlightedNode) {
+        const nodeData = currentlyHighlightedNode.datum() as NetworkNode;
+        const roles = nodeData.types || [nodeData.type];
+        
+        // Reset to original styling
+        if (roles.length === 1) {
+          // Single role - reset to original stroke color and width
+          currentlyHighlightedNode.selectAll("circle")
+            .attr("stroke", () => {
+              if (roles[0] === 'artist') return '#FF0ACF';       // Magenta Pink
+              if (roles[0] === 'producer') return '#AE53FF';     // Bright Purple  
+              if (roles[0] === 'songwriter') return '#67D1F8';   // Light Blue
+              return '#355367';  // Police Blue
+            })
+            .attr("stroke-width", 4);
+        } else {
+          // Multiple roles - reset path strokes and inner circle
+          currentlyHighlightedNode.selectAll("path")
+            .attr("stroke", "white")
+            .attr("stroke-width", 1);
+          
+          currentlyHighlightedNode.selectAll("circle")
+            .attr("stroke", "white")
+            .attr("stroke-width", 2);
+        }
+        
+        currentlyHighlightedNode = null;
+      }
     }
 
     function hideTooltip() {
       tooltip.style("opacity", 0).style("pointer-events", "none");
+      resetNodeHighlight();
     }
 
       async function openMusicNerdProfile(artistName: string, artistId?: string | null) {
@@ -760,6 +956,8 @@ export default function NetworkVisualizer({
       tooltip.remove();
       simulation.stop();
       cleanup();
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
     };
   }, [data, visible, onZoomChange]);
 
@@ -839,8 +1037,9 @@ export default function NetworkVisualizer({
   const applyZoom = (scale: number) => {
     if (!svgRef.current) return;
     
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    const container = svgRef.current.parentElement;
+    const width = container ? container.clientWidth : window.innerWidth;
+    const height = container ? container.clientHeight : window.innerHeight;
     
     // Calculate new viewBox dimensions
     const newWidth = width / scale;
@@ -879,9 +1078,20 @@ export default function NetworkVisualizer({
   };
 
   const handleZoomReset = () => {
+    if (!svgRef.current) return;
+    
+    const container = svgRef.current.parentElement;
+    const width = container ? container.clientWidth : window.innerWidth;
+    const height = container ? container.clientHeight : window.innerHeight;
+    
+    // Reset to default viewBox (centered, 1x zoom)
+    const svg = d3.select(svgRef.current);
+    svg.transition()
+      .duration(300)
+      .attr('viewBox', `0 0 ${width} ${height}`);
+    
     setCurrentZoom(1);
-    applyZoom(1);
-    console.log('Zoom reset to 1.00');
+    console.log('Zoom and position reset to center');
   };
 
   const handleArtistSelection = (artistId: string) => {
@@ -941,7 +1151,7 @@ export default function NetworkVisualizer({
 
   return (
     <div
-      className={`network-container transition-opacity duration-700 ${
+      className={`network-container transition-opacity duration-700 w-full h-full ${
         visible ? "opacity-100" : "opacity-0"
       }`}
     >
