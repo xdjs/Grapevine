@@ -51,7 +51,7 @@ export default function MobileControls({
   const [showControls, setShowControls] = useState(false); // existing zoom / clear panel
   const [showMenu, setShowMenu] = useState(false); // new three-dot options menu
   const [showHelp, setShowHelp] = useState(false); // help dialog state
-  const [showShareDialog, setShowShareDialog] = useState(false); // share dialog state
+  const [isOpen, setIsOpen] = useState(false); // share dialog state
   const [currentUrl, setCurrentUrl] = useState("");
   const [isCapturing, setIsCapturing] = useState(false);
   const [snapshotDataUrl, setSnapshotDataUrl] = useState<string | null>(null);
@@ -446,7 +446,10 @@ export default function MobileControls({
     await copyToClipboard(url);
     
     // Open the dialog first
-    setShowShareDialog(true);
+    setIsOpen(true);
+    
+    // Close the options menu
+    setShowMenu(false);
     
     // Create snapshot after dialog is open
     try {
@@ -481,7 +484,7 @@ export default function MobileControls({
       {showMenu && (
         <div className="fixed bottom-24 sm:bottom-20 right-4 z-50 flex flex-col items-end gap-2">
           {/* Share Button */}
-          <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+          <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
               <Button
                 size="icon"
