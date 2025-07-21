@@ -308,7 +308,8 @@ export default function Home() {
             bottom: 'env(safe-area-inset-bottom, 0px)',
             maxHeight: 'calc(100vh - 200px)',
             overflow: 'hidden',
-            paddingRight: isMobile ? '72px' : '0px'
+            paddingRight: isMobile ? '72px' : '0px',
+            zIndex: 60
           }}
         >
           <div className="w-full max-w-2xl mx-auto px-4 py-1 sm:py-2 md:py-3 space-y-1 sm:space-y-2">
