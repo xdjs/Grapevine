@@ -242,8 +242,8 @@ export default function ShareButton() {
       // Define spacing constants for consistent use - detect mobile for different sizing
       const isMobileForSpacing = window.innerWidth <= 768;
       const sidePadding = (isMobileForSpacing ? 60 : 40) * highScale; // More side padding on mobile for node names
-      const bottomPadding = 20 * highScale; // Minimal bottom padding - tight crop at bottom
       const topWatermarkSpace = (isMobileForSpacing ? 120 : 80) * highScale; // Bigger watermark space on mobile
+      const minBottomPadding = 10 * highScale; // Minimal bottom padding to avoid cutting nodes
       
       const canvas = await html2canvas(networkContainer, {
         useCORS: true,
@@ -302,9 +302,11 @@ export default function ShareButton() {
             
             // Add minimal padding around the network for tight fit (using predefined constants)
             minX = Math.max(0, minX - sidePadding);
-            minY = Math.max(0, minY - topWatermarkSpace); // Extra space at top
             maxX = Math.min(canvas.width, maxX + sidePadding);
-            maxY = Math.min(canvas.height, maxY + bottomPadding);
+            
+            // Reserve dedicated watermark space at top - network content starts below this
+            minY = Math.max(topWatermarkSpace, minY - sidePadding); // Ensure network starts below watermark space
+            maxY = Math.min(canvas.height, maxY + minBottomPadding); // Ultra-tight crop at bottom - minimal footer space
             
             networkBounds = { minX, minY, maxX, maxY };
           }
@@ -427,7 +429,7 @@ export default function ShareButton() {
             
             // Calculate actual network content area in the cropped space
             // The network starts after the top watermark space we reserved
-            const networkStartY = Math.max(0, topWatermarkSpace / highScale); // Convert back to crop scale
+            const networkStartY = topWatermarkSpace; // Network content starts below this line in canvas coordinates
             
             // Check each corner for overlap with network area
             for (const corner of corners) {
@@ -450,7 +452,7 @@ export default function ShareButton() {
               
               // Prefer corners in the reserved top space
               const isInTopSpace = corner.y + bgHeight <= networkStartY;
-              const topSpaceBonus = isInTopSpace ? -5000 : 0; // Big bonus for fitting in top space
+              const topSpaceBonus = isInTopSpace ? -10000 : 0; // Extra big bonus for fitting in reserved top space
               
               // Combined score: overlap + priority + top space preference
               const score = overlapArea + priorityBonus + topSpaceBonus;
