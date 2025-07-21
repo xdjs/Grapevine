@@ -7,7 +7,7 @@ export default function HelpButton() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="fixed right-4 z-30 help-button" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}>
+    <div className="fixed bottom-6 sm:bottom-4 right-4 z-30">
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           <Button

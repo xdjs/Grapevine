@@ -27,25 +27,15 @@ export default function MobileControls({
       {/* Mobile Control Toggle Button */}
       <Button
         onClick={() => setShowControls(!showControls)}
-        className="fixed right-4 z-40 w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg mobile-controls"
+        className="fixed bottom-6 sm:bottom-4 right-4 z-40 w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg"
         size="icon"
-        style={{
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)'
-        }}
       >
         <Settings className="w-5 h-5" />
       </Button>
 
       {/* Mobile Controls Panel */}
       {showControls && (
-        <Card 
-          className="fixed right-4 z-40 bg-gray-900/95 backdrop-blur p-4 max-w-[calc(100vw-2rem)] border-2 mobile-controls" 
-          style={{ 
-            borderColor: '#b427b4',
-            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
-            maxHeight: 'calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 120px)'
-          }}
-        >
+        <Card className="fixed bottom-24 sm:bottom-20 right-4 z-40 bg-gray-900/95 backdrop-blur p-4 max-w-[calc(100vw-2rem)] border-2" style={{ borderColor: '#b427b4' }}>
           <div className="space-y-4">
             {/* Zoom Controls */}
             <div>
