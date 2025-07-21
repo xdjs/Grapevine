@@ -62,8 +62,11 @@ export default function NetworkVisualizer({
     if (!svgRef.current || !data || !visible) return;
 
     const svg = d3.select(svgRef.current);
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    const container = svgRef.current.parentElement;
+    
+    // Use container dimensions instead of window dimensions to avoid browser UI areas
+    const width = container ? container.clientWidth : window.innerWidth;
+    const height = container ? container.clientHeight : window.innerHeight;
 
     // Clear existing content
     svg.selectAll("*").remove();
@@ -115,8 +118,9 @@ export default function NetworkVisualizer({
     const applyZoom = (scale: number) => {
       if (!svgRef.current) return;
       
-      const width = window.innerWidth;
-      const height = window.innerHeight;
+      const container = svgRef.current.parentElement;
+      const width = container ? container.clientWidth : window.innerWidth;
+      const height = container ? container.clientHeight : window.innerHeight;
       
       // Calculate new viewBox dimensions
       const newWidth = width / scale;
@@ -339,11 +343,15 @@ export default function NetworkVisualizer({
     // Create boundary force to keep nodes within viewport
     const boundaryForce = () => {
       const margin = 50;
+      const container = svgRef.current?.parentElement;
+      const currentWidth = container ? container.clientWidth : width;
+      const currentHeight = container ? container.clientHeight : height;
+      
       for (const node of data.nodes) {
         if (node.x! < margin) node.x = margin;
-        if (node.x! > width - margin) node.x = width - margin;
+        if (node.x! > currentWidth - margin) node.x = currentWidth - margin;
         if (node.y! < margin) node.y = margin;
-        if (node.y! > height - margin) node.y = height - margin;
+        if (node.y! > currentHeight - margin) node.y = currentHeight - margin;
       }
     };
 
@@ -364,6 +372,25 @@ export default function NetworkVisualizer({
       .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.1 : 0));
 
     simulationRef.current = simulation;
+
+    // Add resize listener to handle orientation changes
+    const handleResize = () => {
+      if (svgRef.current && simulationRef.current) {
+        const container = svgRef.current.parentElement;
+        const newWidth = container ? container.clientWidth : window.innerWidth;
+        const newHeight = container ? container.clientHeight : window.innerHeight;
+        
+        // Update simulation forces with new dimensions
+        simulationRef.current
+          .force("centerX", d3.forceX(newWidth / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
+          .force("centerY", d3.forceY(newHeight / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
+          .alpha(0.3) // Restart simulation
+          .restart();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
 
     // Create links
     const linkElements = networkGroup
@@ -760,6 +787,8 @@ export default function NetworkVisualizer({
       tooltip.remove();
       simulation.stop();
       cleanup();
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
     };
   }, [data, visible, onZoomChange]);
 
@@ -839,8 +868,9 @@ export default function NetworkVisualizer({
   const applyZoom = (scale: number) => {
     if (!svgRef.current) return;
     
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    const container = svgRef.current.parentElement;
+    const width = container ? container.clientWidth : window.innerWidth;
+    const height = container ? container.clientHeight : window.innerHeight;
     
     // Calculate new viewBox dimensions
     const newWidth = width / scale;

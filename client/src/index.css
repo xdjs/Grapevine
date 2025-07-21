@@ -185,11 +185,12 @@
       top: 60px !important; /* Height of fixed header */
       left: 0 !important;
       right: 0 !important;
-      bottom: 0 !important;
+      bottom: env(safe-area-inset-bottom, 0px) !important; /* Account for browser UI */
       width: 100% !important;
-      height: calc(100vh - 60px) !important;
-      height: calc(calc(var(--vh, 1vh) * 100) - 60px) !important;
+      height: calc(100vh - 60px - env(safe-area-inset-bottom, 0px)) !important;
+      height: calc(calc(var(--vh, 1vh) * 100) - 60px - env(safe-area-inset-bottom, 0px)) !important;
       overflow: hidden !important;
+      padding-bottom: env(safe-area-inset-bottom, 0px) !important; /* Additional padding for safety */
     }
     
     /* Adjust main container for mobile */
@@ -214,8 +215,8 @@
     
     .mobile-network-container {
       top: 56px !important;
-      height: calc(100vh - 56px) !important;
-      height: calc(calc(var(--vh, 1vh) * 100) - 56px) !important;
+      height: calc(100vh - 56px - env(safe-area-inset-bottom, 0px)) !important;
+      height: calc(calc(var(--vh, 1vh) * 100) - 56px - env(safe-area-inset-bottom, 0px)) !important;
     }
   }
   
@@ -227,8 +228,8 @@
     
     .mobile-network-container {
       top: 60px !important;
-      height: calc(100vh - 60px) !important;
-      height: calc(calc(var(--vh, 1vh) * 100) - 60px) !important;
+      height: calc(100vh - 60px - env(safe-area-inset-bottom, 0px)) !important;
+      height: calc(calc(var(--vh, 1vh) * 100) - 60px - env(safe-area-inset-bottom, 0px)) !important;
     }
   }
   
@@ -240,8 +241,8 @@
     
     .mobile-network-container {
       top: 64px !important;
-      height: calc(100vh - 64px) !important;
-      height: calc(calc(var(--vh, 1vh) * 100) - 64px) !important;
+      height: calc(100vh - 64px - env(safe-area-inset-bottom, 0px)) !important;
+      height: calc(calc(var(--vh, 1vh) * 100) - 64px - env(safe-area-inset-bottom, 0px)) !important;
     }
   }
   
@@ -253,8 +254,8 @@
     
     .mobile-network-container {
       top: 68px !important;
-      height: calc(100vh - 68px) !important;
-      height: calc(calc(var(--vh, 1vh) * 100) - 68px) !important;
+      height: calc(100vh - 68px - env(safe-area-inset-bottom, 0px)) !important;
+      height: calc(calc(var(--vh, 1vh) * 100) - 68px - env(safe-area-inset-bottom, 0px)) !important;
     }
   }
 }
