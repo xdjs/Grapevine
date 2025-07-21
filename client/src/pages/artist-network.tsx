@@ -155,8 +155,8 @@ export default function ArtistNetwork() {
       {/* Loading Screen */}
       <LoadingScreen isVisible={isLoading} artistName={currentArtistName} />
 
-      {/* Controls - Only show when network is loaded */}
-      {networkData && (
+      {/* Controls - Always show on artist network page */}
+      (
         <>
           {/* Desktop Controls */}
           {!isMobile && (
