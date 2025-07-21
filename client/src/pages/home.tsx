@@ -207,7 +207,7 @@ export default function Home() {
 
       {/* Attribution Content - Only visible when not showing network */}
       {!showNetworkView && (
-        <div className="footer-content flex-1 flex items-end justify-center text-center z-10 bg-gradient-to-t from-black/80 to-transparent" style={{ pointerEvents: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}>
+        <div className="footer-content absolute bottom-0 left-0 right-0 text-center z-10 bg-gradient-to-t from-black/80 to-transparent" style={{ pointerEvents: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}>
           <div className="w-full max-w-2xl mx-auto px-4 py-4 space-y-2">
             <div className="text-gray-500 text-xs">
               <p className="mb-1">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
@@ -221,9 +221,9 @@ export default function Home() {
         </div>
       )}
 
-      {/* Music Nerd Button - Overlapping footer empty space */}
+      {/* Music Nerd Button - Below footer text */}
       {!showNetworkView && (
-        <div className="fixed left-1/2 transform -translate-x-1/2 z-50" style={{ bottom: 'calc(env(safe-area-inset-bottom, 16px) + 20px)' }}>
+        <div className="absolute left-1/2 transform -translate-x-1/2 z-50" style={{ bottom: 'calc(env(safe-area-inset-bottom, 16px) + 20px)' }}>
           <button
             onClick={() => {
               console.log('Music Nerd button clicked!');

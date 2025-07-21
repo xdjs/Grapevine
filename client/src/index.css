@@ -240,8 +240,6 @@
       height: calc(var(--vh, 1vh) * 100) !important;
       height: -webkit-fill-available !important;
       overflow: hidden !important;
-      display: flex !important;
-      flex-direction: column !important;
     }
     
     /* Only hide overflow when network is visible */
