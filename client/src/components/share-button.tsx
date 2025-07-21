@@ -208,8 +208,8 @@ export default function ShareButton() {
           // Parse current viewBox
           const [x, y, width, height] = originalViewBox.split(' ').map(Number);
           
-          // Apply 15% zoom out to ensure nothing is cut off on mobile
-          const zoomOutFactor = 0.85;
+          // Apply 30% zoom out to ensure nothing is cut off on mobile (including node names)
+          const zoomOutFactor = 0.7;
           const newWidth = width / zoomOutFactor;
           const newHeight = height / zoomOutFactor;
           const offsetX = x - (newWidth - width) / 2;
