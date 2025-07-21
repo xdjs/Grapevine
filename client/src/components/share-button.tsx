@@ -432,7 +432,7 @@ export default function ShareButton() {
   };
 
   return (
-    <div className="fixed bottom-32 sm:bottom-20 right-4 z-30">
+    <div className="fixed right-4 z-30 share-button" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' }}>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>

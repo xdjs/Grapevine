@@ -342,16 +342,24 @@ export default function NetworkVisualizer({
 
     // Create boundary force to keep nodes within viewport
     const boundaryForce = () => {
-      const margin = 50;
+      const margin = 80; // Increased margin to account for browser UI
       const container = svgRef.current?.parentElement;
       const currentWidth = container ? container.clientWidth : width;
       const currentHeight = container ? container.clientHeight : height;
       
+      // Additional safe area margins for mobile
+      const safeAreaBottom = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-bottom') || '0');
+      const safeAreaTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-top') || '0');
+      
+      const effectiveBottomMargin = margin + safeAreaBottom;
+      const effectiveTopMargin = margin + safeAreaTop;
+      
       for (const node of data.nodes) {
+        // Ensure nodes stay within the visible container
         if (node.x! < margin) node.x = margin;
         if (node.x! > currentWidth - margin) node.x = currentWidth - margin;
-        if (node.y! < margin) node.y = margin;
-        if (node.y! > currentHeight - margin) node.y = currentHeight - margin;
+        if (node.y! < effectiveTopMargin) node.y = effectiveTopMargin;
+        if (node.y! > currentHeight - effectiveBottomMargin) node.y = currentHeight - effectiveBottomMargin;
       }
     };
 
@@ -369,7 +377,21 @@ export default function NetworkVisualizer({
       .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
       .force("boundary", boundaryForce)
       .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
-      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.1 : 0));
+      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
+      .on("tick", () => {
+        // Apply boundary constraints on every tick to ensure nodes stay within bounds
+        boundaryForce();
+        
+        // Update node positions
+        nodeElements.attr("transform", (d) => `translate(${d.x!}, ${d.y!})`);
+        linkElements
+          .attr("x1", (d) => (d.source as NetworkNode).x!)
+          .attr("y1", (d) => (d.source as NetworkNode).y!)
+          .attr("x2", (d) => (d.target as NetworkNode).x!)
+          .attr("y2", (d) => (d.target as NetworkNode).y!);
+
+        labelElements.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
+      });
 
     simulationRef.current = simulation;
 
@@ -762,25 +784,10 @@ export default function NetworkVisualizer({
     }
 
     function dragended(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
-      // Prevent event bubbling to avoid interfering with zoom behavior
-      event.sourceEvent.stopPropagation();
       if (!event.active) simulation.alphaTarget(0);
       d.fx = null;
       d.fy = null;
     }
-
-    // Update positions on tick
-    simulation.on("tick", () => {
-      linkElements
-        .attr("x1", (d) => (d.source as NetworkNode).x!)
-        .attr("y1", (d) => (d.source as NetworkNode).y!)
-        .attr("x2", (d) => (d.target as NetworkNode).x!)
-        .attr("y2", (d) => (d.target as NetworkNode).y!);
-
-      nodeElements.attr("transform", (d) => `translate(${d.x!}, ${d.y!})`);
-
-      labelElements.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
-    });
 
     // Cleanup function
     return () => {
