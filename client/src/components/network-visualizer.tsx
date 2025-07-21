@@ -122,7 +122,7 @@ export default function NetworkVisualizer({
       }
     });
 
-    // EXACT COPY of the working zoom button functions
+    // Zoom function for buttons (centered zoom)
     const applyZoom = (scale: number) => {
       if (!svgRef.current) return;
       
@@ -130,7 +130,7 @@ export default function NetworkVisualizer({
       const width = container ? container.clientWidth : window.innerWidth;
       const height = container ? container.clientHeight : window.innerHeight;
       
-      // Calculate new viewBox dimensions
+      // Calculate new viewBox dimensions centered
       const newWidth = width / scale;
       const newHeight = height / scale;
       const offsetX = (width - newWidth) / 2;
@@ -151,20 +151,57 @@ export default function NetworkVisualizer({
         });
     };
 
-    const handlePinchZoomIn = () => {
+    // Zoom function for pinch gestures (zoom around focal point)
+    const applyPinchZoom = (scale: number, focalX: number, focalY: number) => {
+      if (!svgRef.current) return;
+      
+      const container = svgRef.current.parentElement;
+      const width = container ? container.clientWidth : window.innerWidth;
+      const height = container ? container.clientHeight : window.innerHeight;
+      
+      // Get current viewBox
+      const currentViewBox = svgRef.current.getAttribute('viewBox') || `0 0 ${width} ${height}`;
+      const [currentX, currentY, currentWidth, currentHeight] = currentViewBox.split(' ').map(Number);
+      
+      // Calculate new dimensions
+      const newWidth = width / scale;
+      const newHeight = height / scale;
+      
+      // Calculate focal point in viewBox coordinates
+      const focalXInViewBox = currentX + (focalX / width) * currentWidth;
+      const focalYInViewBox = currentY + (focalY / height) * currentHeight;
+      
+      // Calculate new viewBox position to keep focal point in same screen position
+      const newX = focalXInViewBox - (focalX / width) * newWidth;
+      const newY = focalYInViewBox - (focalY / height) * newHeight;
+      
+      // Apply transition
+      const svg = d3.select(svgRef.current);
+      svg.transition()
+        .duration(100) // Shorter duration for more responsive pinch zoom
+        .attrTween('viewBox', () => {
+          const interpolator = d3.interpolate([currentX, currentY, currentWidth, currentHeight], [newX, newY, newWidth, newHeight]);
+          return (t: number) => {
+            const [x, y, w, h] = interpolator(t);
+            return `${x} ${y} ${w} ${h}`;
+          };
+        });
+    };
+
+    const handlePinchZoomIn = (focalX: number, focalY: number) => {
       setCurrentZoom(prevZoom => {
         const newZoom = Math.min(5, prevZoom * 1.2); // Cap at 5x
         console.log(`🤏 Pinch zoom in: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
-        applyZoom(newZoom);
+        applyPinchZoom(newZoom, focalX, focalY);
         return newZoom;
       });
     };
 
-    const handlePinchZoomOut = () => {
+    const handlePinchZoomOut = (focalX: number, focalY: number) => {
       setCurrentZoom(prevZoom => {
         const newZoom = Math.max(0.2, prevZoom / 1.2); // Min 0.2x
         console.log(`🤏 Pinch zoom out: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
-        applyZoom(newZoom);
+        applyPinchZoom(newZoom, focalX, focalY);
         return newZoom;
       });
     };
@@ -174,6 +211,8 @@ export default function NetworkVisualizer({
     let lastScale = 1;
     let isPinching = false;
     let pinchThreshold = 0.2; // Increased from 0.1 to 0.2 for less sensitivity
+    let pinchCenterX = 0;
+    let pinchCenterY = 0;
 
     // Custom touch event handlers using existing zoom functions
     const handleTouchStart = (event: TouchEvent) => {
@@ -182,10 +221,17 @@ export default function NetworkVisualizer({
         isPinching = true;
         const touch1 = event.touches[0];
         const touch2 = event.touches[1];
+        
+        // Calculate initial distance and center point
         initialDistance = Math.sqrt(
           Math.pow(touch2.clientX - touch1.clientX, 2) + 
           Math.pow(touch2.clientY - touch1.clientY, 2)
         );
+        
+        // Store the center point of the pinch gesture
+        pinchCenterX = (touch1.clientX + touch2.clientX) / 2;
+        pinchCenterY = (touch1.clientY + touch2.clientY) / 2;
+        
         lastScale = 1;
         event.preventDefault();
         event.stopPropagation();
@@ -203,17 +249,21 @@ export default function NetworkVisualizer({
           Math.pow(touch2.clientY - touch1.clientY, 2)
         );
         
+        // Update the center point of the pinch gesture
+        const currentCenterX = (touch1.clientX + touch2.clientX) / 2;
+        const currentCenterY = (touch1.clientY + touch2.clientY) / 2;
+        
         if (initialDistance > 0) {
           const scaleChange = currentDistance / initialDistance;
           
           // Use threshold to prevent too frequent updates
           if (Math.abs(scaleChange - lastScale) > pinchThreshold) {
             if (scaleChange > lastScale) {
-              // Pinch out - zoom in using EXACT same code as zoom buttons
-              handlePinchZoomIn();
+              // Pinch out - zoom in using focal point
+              handlePinchZoomIn(currentCenterX, currentCenterY);
             } else {
-              // Pinch in - zoom out using EXACT same code as zoom buttons
-              handlePinchZoomOut();
+              // Pinch in - zoom out using focal point
+              handlePinchZoomOut(currentCenterX, currentCenterY);
             }
             lastScale = scaleChange;
           }
@@ -246,15 +296,19 @@ export default function NetworkVisualizer({
       }
       lastWheelTime = now;
       
+      // Use mouse position as focal point for wheel zoom
+      const focalX = event.clientX;
+      const focalY = event.clientY;
+      
       // Determine zoom direction based on deltaY
       const zoomIn = event.deltaY < 0;
       
       // Immediate zoom for smooth response
       if (zoomIn) {
-        handlePinchZoomIn();
+        handlePinchZoomIn(focalX, focalY);
         console.log(event.ctrlKey ? '🖱️ Trackpad pinch zoom in' : '🖱️ Mouse wheel zoom in');
       } else {
-        handlePinchZoomOut();
+        handlePinchZoomOut(focalX, focalY);
         console.log(event.ctrlKey ? '🖱️ Trackpad pinch zoom out' : '🖱️ Mouse wheel zoom out');
       }
     };
@@ -1024,9 +1078,20 @@ export default function NetworkVisualizer({
   };
 
   const handleZoomReset = () => {
+    if (!svgRef.current) return;
+    
+    const container = svgRef.current.parentElement;
+    const width = container ? container.clientWidth : window.innerWidth;
+    const height = container ? container.clientHeight : window.innerHeight;
+    
+    // Reset to default viewBox (centered, 1x zoom)
+    const svg = d3.select(svgRef.current);
+    svg.transition()
+      .duration(300)
+      .attr('viewBox', `0 0 ${width} ${height}`);
+    
     setCurrentZoom(1);
-    applyZoom(1);
-    console.log('Zoom reset to 1.00');
+    console.log('Zoom and position reset to center');
   };
 
   const handleArtistSelection = (artistId: string) => {
