@@ -196,7 +196,7 @@ export default function ShareButton() {
       // Wait a brief moment for elements to hide
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Zoom out slightly before snapshot on mobile to ensure nothing is cut off
+      // Zoom out slightly before snapshot on mobile - only if at default zoom
       const isMobileSnapshot = window.innerWidth <= 768;
       const svgElement = networkContainer.querySelector('svg') as SVGSVGElement;
       
@@ -208,19 +208,30 @@ export default function ShareButton() {
           // Parse current viewBox
           const [x, y, width, height] = originalViewBox.split(' ').map(Number);
           
-          // Apply 30% zoom out to ensure nothing is cut off on mobile (including node names)
-          const zoomOutFactor = 0.7;
-          const newWidth = width / zoomOutFactor;
-          const newHeight = height / zoomOutFactor;
-          const offsetX = x - (newWidth - width) / 2;
-          const offsetY = y - (newHeight - height) / 2;
+          // Check if user is at default zoom (viewBox starts at 0,0 and matches container size)
+          const containerWidth = networkContainer.offsetWidth;
+          const containerHeight = networkContainer.offsetHeight;
+          const isAtDefaultZoom = Math.abs(x) < 10 && Math.abs(y) < 10 && 
+                                 Math.abs(width - containerWidth) < 10 && 
+                                 Math.abs(height - containerHeight) < 10;
           
-          // Apply the zoomed out viewBox
-          svgElement.setAttribute('viewBox', `${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
-          console.log(`📱 Mobile snapshot: Zoomed out for capture: ${originalViewBox} → ${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
-          
-          // Wait for the zoom to apply
-          await new Promise(resolve => setTimeout(resolve, 50));
+          if (isAtDefaultZoom) {
+            // Apply 30% zoom out only if at default zoom to capture all content
+            const zoomOutFactor = 0.7;
+            const newWidth = width / zoomOutFactor;
+            const newHeight = height / zoomOutFactor;
+            const offsetX = x - (newWidth - width) / 2;
+            const offsetY = y - (newHeight - height) / 2;
+            
+            // Apply the zoomed out viewBox
+            svgElement.setAttribute('viewBox', `${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
+            console.log(`📱 Mobile snapshot (default zoom): Zoomed out for capture: ${originalViewBox} → ${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
+            
+            // Wait for the zoom to apply
+            await new Promise(resolve => setTimeout(resolve, 50));
+          } else {
+            console.log(`📱 Mobile snapshot (custom zoom): Using current zoom level for capture: ${originalViewBox}`);
+          }
         }
       }
 
