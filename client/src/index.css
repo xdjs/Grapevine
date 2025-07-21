@@ -65,17 +65,8 @@
     overflow: auto !important;
   }
   
-  body.network-hidden {
-    overflow: auto !important;
-  }
-  
-  body.network-visible {
-    overflow: hidden !important;
-  }
-  
   html {
     background-color: #000000 !important;
-    overflow: auto !important;
     height: 100% !important;
     width: 100% !important;
   }
@@ -86,6 +77,14 @@
     width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
+  }
+  
+  body.network-hidden {
+    overflow: auto !important;
+  }
+  
+  body.network-visible {
+    overflow: hidden !important;
   }
   
   /* Hide scrollbars everywhere except dropdown */
@@ -135,7 +134,6 @@
     position: relative !important;
     top: 0 !important;
     left: 0 !important;
-    overflow: auto !important;
     margin: 0 !important;
     padding: 0 !important;
   }
@@ -151,7 +149,7 @@
     html, body {
       height: 100% !important;
       min-height: 100vh !important;
-      overflow: hidden !important;
+      overflow: hidden !important; /* Prevent scrolling on home page */
     }
     
     /* Handle dynamic viewport height on mobile browsers */
@@ -179,7 +177,7 @@
       border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
     
-    /* Network container fills remaining space below header */
+    /* Network container fills remaining space below header - only when network is visible */
     .mobile-network-container {
       position: fixed !important;
       top: 60px !important; /* Height of fixed header */
@@ -236,11 +234,14 @@
       max-height: 100% !important;
     }
     
-    /* Adjust main container for mobile */
+    /* Adjust main container for mobile - fit everything in viewport */
     .main-container {
-      min-height: 100vh !important;
-      min-height: calc(var(--vh, 1vh) * 100) !important;
-      min-height: -webkit-fill-available !important;
+      height: 100vh !important;
+      height: calc(var(--vh, 1vh) * 100) !important;
+      height: -webkit-fill-available !important;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
     }
     
     /* Only hide overflow when network is visible */
@@ -472,7 +473,6 @@
   
   /* Always show scrollbar on main page - matching dropdown style */
   html, body {
-    overflow-y: hidden !important;
     scrollbar-width: thin;
     scrollbar-color: #AE53FF #1a1a1a;
   }

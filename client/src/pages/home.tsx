@@ -192,7 +192,7 @@ export default function Home() {
   };
 
   return (
-    <div className={`relative w-full min-h-screen bg-black text-white main-container ${showNetworkView ? 'network-visible' : ''}`} style={{ pointerEvents: 'auto' }}>
+    <div className={`relative w-full h-screen bg-black text-white main-container ${showNetworkView ? 'network-visible' : ''}`} style={{ pointerEvents: 'auto' }}>
       {/* Search Interface */}
       <SearchInterface
         onNetworkData={handleNetworkData}
@@ -207,23 +207,23 @@ export default function Home() {
 
       {/* Attribution Content - Only visible when not showing network */}
       {!showNetworkView && (
-        <div className="footer-content fixed bottom-0 left-0 right-0 text-center z-10 bg-gradient-to-t from-black/80 to-transparent" style={{ pointerEvents: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 200px)' }}>
-          <div className="w-full max-w-2xl mx-auto px-4 py-8 sm:py-10 space-y-3 sm:space-y-4">
-            <div className="text-gray-500 text-xs sm:text-sm">
-              <p className="mb-1 sm:mb-2">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
-              <p className="mb-1 sm:mb-2">Powered by Music Nerd</p>
+        <div className="footer-content flex-1 flex items-end justify-center text-center z-10 bg-gradient-to-t from-black/80 to-transparent" style={{ pointerEvents: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}>
+          <div className="w-full max-w-2xl mx-auto px-4 py-4 space-y-2">
+            <div className="text-gray-500 text-xs">
+              <p className="mb-1">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
+              <p className="mb-1">Powered by Music Nerd</p>
               <p>Click on artist nodes to visit their Music Nerd profiles</p>
             </div>
             
             {/* Empty space for button to overlap */}
-            <div className="h-8"></div>
+            <div className="h-4"></div>
           </div>
         </div>
       )}
 
       {/* Music Nerd Button - Overlapping footer empty space */}
       {!showNetworkView && (
-        <div className="fixed left-1/2 transform -translate-x-1/2 z-50" style={{ bottom: 'calc(env(safe-area-inset-bottom, 16px) + 40px)' }}>
+        <div className="fixed left-1/2 transform -translate-x-1/2 z-50" style={{ bottom: 'calc(env(safe-area-inset-bottom, 16px) + 20px)' }}>
           <button
             onClick={() => {
               console.log('Music Nerd button clicked!');
