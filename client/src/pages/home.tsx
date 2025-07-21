@@ -192,7 +192,7 @@ export default function Home() {
   };
 
   return (
-    <div className={`relative w-full min-h-screen bg-black text-white main-container ${!showNetworkView ? 'overflow-x-hidden' : ''}`} style={{ pointerEvents: 'auto' }}>
+    <div className={`relative w-full min-h-screen bg-black text-white main-container`} style={{ pointerEvents: 'auto' }}>
       {/* Search Interface */}
       <SearchInterface
         onNetworkData={handleNetworkData}
@@ -253,20 +253,19 @@ export default function Home() {
         </div>
       )}
 
-      {/* Spacer to ensure scrollable content - adjusted for mobile */}
-      <div className="h-40 sm:h-96"></div>
-
       {/* Network Visualization */}
       {networkData && (
-        <NetworkVisualizer
-          key={`network-${networkData.nodes[0]?.id || 'empty'}-${Date.now()}`}
-          data={networkData}
-          visible={showNetworkView}
-          filterState={filterState}
-          onZoomChange={handleZoomChange}
-          onArtistSearch={handleArtistSearch}
-          onArtistNodeClick={handleArtistNodeClick}
-        />
+        <div className={`mobile-network-container ${showNetworkView ? 'network-visible' : ''}`}>
+          <NetworkVisualizer
+            key={`network-${networkData.nodes[0]?.id || 'empty'}-${Date.now()}`}
+            data={networkData}
+            visible={showNetworkView}
+            filterState={filterState}
+            onZoomChange={handleZoomChange}
+            onArtistSearch={handleArtistSearch}
+            onArtistNodeClick={handleArtistNodeClick}
+          />
+        </div>
       )}
 
       {/* Loading Screen */}

@@ -62,26 +62,26 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
     background-color: #000000 !important;
-    overflow: auto;
+    overflow: hidden !important;
   }
   
   body.network-hidden {
-    overflow: auto;
+    overflow: hidden !important;
   }
   
   body.network-visible {
-    overflow: hidden;
+    overflow: hidden !important;
   }
   
   html {
     background-color: #000000 !important;
-    overflow: auto !important;
+    overflow: hidden !important;
     height: 100% !important;
     width: 100% !important;
   }
   
   body {
-    overflow: auto !important;
+    overflow: hidden !important;
     height: 100% !important;
     width: 100% !important;
     margin: 0 !important;
@@ -135,7 +135,7 @@
     position: relative !important;
     top: 0 !important;
     left: 0 !important;
-    overflow: auto !important;
+    overflow: hidden !important;
     margin: 0 !important;
     padding: 0 !important;
   }
@@ -151,7 +151,7 @@
     html, body {
       height: 100% !important;
       min-height: 100vh !important;
-      overflow-x: hidden !important;
+      overflow: hidden !important;
     }
     
     /* Handle dynamic viewport height on mobile browsers */
@@ -167,17 +167,29 @@
       min-height: -webkit-fill-available !important;
     }
     
-    /* Ensure footer is always visible */
-    .footer-content {
+    /* Fixed header for mobile */
+    .mobile-fixed-header {
       position: fixed !important;
-      bottom: 0 !important;
+      top: 0 !important;
       left: 0 !important;
       right: 0 !important;
-      z-index: 10 !important;
-      min-height: 120px !important; /* Ensure minimum height for content */
-      display: flex !important;
-      align-items: flex-end !important;
-      padding-bottom: env(safe-area-inset-bottom, 0) !important; /* iOS safe area */
+      z-index: 50 !important;
+      background: rgba(0, 0, 0, 0.95) !important;
+      backdrop-filter: blur(10px) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    /* Network container fills remaining space below header */
+    .mobile-network-container {
+      position: fixed !important;
+      top: 60px !important; /* Height of fixed header */
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100% !important;
+      height: calc(100vh - 60px) !important;
+      height: calc(calc(var(--vh, 1vh) * 100) - 60px) !important;
+      overflow: hidden !important;
     }
     
     /* Adjust main container for mobile */
@@ -185,55 +197,64 @@
       min-height: 100vh !important;
       min-height: calc(var(--vh, 1vh) * 100) !important;
       min-height: -webkit-fill-available !important;
-      padding-bottom: 140px !important; /* Increased space for footer with button */
+      overflow: hidden !important;
+    }
+    
+    /* Hide footer content on mobile when network is visible */
+    .footer-content.network-visible {
+      display: none !important;
     }
   }
   
   /* Extra small screens (phones) */
   @media (max-width: 480px) {
-    .footer-content {
-      min-height: 100px !important;
-      padding: 12px 16px !important;
+    .mobile-fixed-header {
+      height: 56px !important;
     }
     
-    .main-container {
-      padding-bottom: 120px !important;
+    .mobile-network-container {
+      top: 56px !important;
+      height: calc(100vh - 56px) !important;
+      height: calc(calc(var(--vh, 1vh) * 100) - 56px) !important;
     }
   }
   
   /* Small screens (large phones) */
   @media (min-width: 481px) and (max-width: 768px) {
-    .footer-content {
-      min-height: 120px !important;
-      padding: 16px 20px !important;
+    .mobile-fixed-header {
+      height: 60px !important;
     }
     
-    .main-container {
-      padding-bottom: 140px !important;
+    .mobile-network-container {
+      top: 60px !important;
+      height: calc(100vh - 60px) !important;
+      height: calc(calc(var(--vh, 1vh) * 100) - 60px) !important;
     }
   }
   
   /* Medium screens (tablets) */
   @media (min-width: 769px) and (max-width: 1024px) {
-    .footer-content {
-      min-height: 140px !important;
-      padding: 20px 24px !important;
+    .mobile-fixed-header {
+      height: 64px !important;
     }
     
-    .main-container {
-      padding-bottom: 160px !important;
+    .mobile-network-container {
+      top: 64px !important;
+      height: calc(100vh - 64px) !important;
+      height: calc(calc(var(--vh, 1vh) * 100) - 64px) !important;
     }
   }
   
   /* Large screens (desktops) */
   @media (min-width: 1025px) {
-    .footer-content {
-      min-height: 160px !important;
-      padding: 24px 32px !important;
+    .mobile-fixed-header {
+      height: 68px !important;
     }
     
-    .main-container {
-      padding-bottom: 180px !important;
+    .mobile-network-container {
+      top: 68px !important;
+      height: calc(100vh - 68px) !important;
+      height: calc(calc(var(--vh, 1vh) * 100) - 68px) !important;
     }
   }
 }
@@ -283,12 +304,9 @@
   /* Network visualization container constraints */
   .network-container {
     width: 100%;
-    height: 100vh;
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    height: 100%;
+    position: relative;
+    display: block;
   }
 
   .network-container svg {
@@ -398,7 +416,7 @@
   
   /* Always show scrollbar on main page - matching dropdown style */
   html, body {
-    overflow-y: scroll !important;
+    overflow-y: hidden !important;
     scrollbar-width: thin;
     scrollbar-color: #AE53FF #1a1a1a;
   }

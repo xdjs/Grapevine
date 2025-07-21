@@ -648,7 +648,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
 
       {/* Top Bar Search - Network View */}
       <div
-        className={`absolute top-0 left-0 right-0 z-30 transition-all duration-700 ${
+        className={`absolute top-0 left-0 right-0 z-30 transition-all duration-700 mobile-fixed-header ${
           showNetworkView
             ? "opacity-100 pointer-events-auto translate-y-0"
             : "opacity-0 pointer-events-none -translate-y-12"
