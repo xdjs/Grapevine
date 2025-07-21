@@ -52,6 +52,42 @@ const useViewportHeight = () => {
   return viewportHeight;
 };
 
+// Hook for dynamic spacing based on screen height
+const useDynamicSpacing = () => {
+  const [spacing, setSpacing] = useState({
+    topPadding: '24px',
+    bottomPadding: '120px'
+  });
+
+  useEffect(() => {
+    const updateSpacing = () => {
+      const height = window.innerHeight;
+      if (height < 600) {
+        setSpacing({
+          topPadding: '8px',
+          bottomPadding: '80px'
+        });
+      } else if (height < 700) {
+        setSpacing({
+          topPadding: '16px',
+          bottomPadding: '100px'
+        });
+      } else {
+        setSpacing({
+          topPadding: '24px',
+          bottomPadding: '120px'
+        });
+      }
+    };
+
+    updateSpacing();
+    window.addEventListener('resize', updateSpacing);
+    return () => window.removeEventListener('resize', updateSpacing);
+  }, []);
+
+  return spacing;
+};
+
 function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction, onClearAll }: SearchInterfaceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentSearch, setCurrentSearch] = useState("");
@@ -69,6 +105,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
   const searchInputRef = useRef<HTMLInputElement>(null);
   const networkSearchInputRef = useRef<HTMLInputElement>(null);
   const viewportHeight = useViewportHeight();
+  const spacing = useDynamicSpacing();
   
   // Calculate dynamic dropdown height based on available space
   const calculateDropdownHeight = useCallback((baseHeight: number, isNetworkView: boolean = false) => {
@@ -451,18 +488,22 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     <>
       {/* Centered Search - Initial View */}
       <div
-        className={`absolute inset-0 flex items-start justify-center z-20 transition-all duration-700 px-4 pt-2 sm:pt-4 md:pt-8 lg:pt-16 ${
+        className={`absolute inset-0 flex items-start justify-center z-20 transition-all duration-700 px-4 ${
           showNetworkView
             ? "opacity-0 pointer-events-none -translate-y-12"
             : "opacity-100"
         }`}
+        style={{
+          paddingTop: `calc(env(safe-area-inset-top, 0px) + ${spacing.topPadding})`,
+          paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + ${spacing.bottomPadding})`
+        }}
       >
         <div className="text-center w-full max-w-md">
           <div className="mb-2 sm:mb-4 md:mb-6 lg:mb-8 flex justify-center">
             <img 
               src={grapevineLogoLarge} 
               alt="Grapevine Logo" 
-              className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-32 lg:h-32 xl:w-40 xl:h-40 object-contain"
+              className="w-20 h-20 sm:w-32 sm:h-32 md:w-40 md:h-40 object-contain"
             />
           </div>
           

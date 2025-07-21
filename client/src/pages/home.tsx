@@ -14,6 +14,46 @@ import { NetworkData, FilterState } from "@/types/network";
 import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
 import { useIsMobile } from "@/hooks/use-mobile.tsx";
 
+// Hook for dynamic spacing based on screen height
+const useDynamicSpacing = () => {
+  const [spacing, setSpacing] = useState({
+    topPadding: '24px',
+    bottomPadding: '24px',
+    buttonBottom: '20px'
+  });
+
+  useEffect(() => {
+    const updateSpacing = () => {
+      const height = window.innerHeight;
+      if (height < 600) {
+        setSpacing({
+          topPadding: '8px',
+          bottomPadding: '16px',
+          buttonBottom: '12px'
+        });
+      } else if (height < 700) {
+        setSpacing({
+          topPadding: '16px',
+          bottomPadding: '20px',
+          buttonBottom: '16px'
+        });
+      } else {
+        setSpacing({
+          topPadding: '24px',
+          bottomPadding: '24px',
+          buttonBottom: '20px'
+        });
+      }
+    };
+
+    updateSpacing();
+    window.addEventListener('resize', updateSpacing);
+    return () => window.removeEventListener('resize', updateSpacing);
+  }, []);
+
+  return spacing;
+};
+
 export default function Home() {
   const params = useParams<{ artistId?: string }>();
   const [, setLocation] = useLocation();
@@ -30,6 +70,7 @@ export default function Home() {
   });
   const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
   const isMobile = useIsMobile();
+  const spacing = useDynamicSpacing();
 
   // Manage body overflow classes based on network view state
   useEffect(() => {
@@ -207,7 +248,14 @@ export default function Home() {
 
       {/* Attribution Content - Only visible when not showing network */}
       {!showNetworkView && (
-        <div className="footer-content absolute bottom-0 left-0 right-0 text-center z-10 bg-gradient-to-t from-black/80 to-transparent" style={{ pointerEvents: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}>
+        <div 
+          className="footer-content absolute bottom-0 left-0 right-0 text-center z-10 bg-gradient-to-t from-black/80 to-transparent" 
+          style={{ 
+            pointerEvents: 'auto', 
+            paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + ${spacing.bottomPadding})`,
+            paddingTop: spacing.topPadding
+          }}
+        >
           <div className="w-full max-w-2xl mx-auto px-4 py-2 sm:py-3 md:py-4 space-y-1 sm:space-y-2">
             <div className="text-gray-500 text-xs sm:text-sm">
               <p className="mb-1">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
@@ -223,7 +271,12 @@ export default function Home() {
 
       {/* Music Nerd Button - Below footer text */}
       {!showNetworkView && (
-        <div className="absolute left-1/2 transform -translate-x-1/2 z-50" style={{ bottom: 'calc(env(safe-area-inset-bottom, 16px) + 20px)' }}>
+        <div 
+          className="absolute left-1/2 transform -translate-x-1/2 z-50" 
+          style={{ 
+            bottom: `calc(env(safe-area-inset-bottom, 16px) + ${spacing.buttonBottom})`
+          }}
+        >
           <button
             onClick={() => {
               console.log('Music Nerd button clicked!');
