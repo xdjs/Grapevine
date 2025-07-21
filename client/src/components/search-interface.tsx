@@ -67,31 +67,31 @@ const useDynamicSpacing = () => {
       const viewportHeight = window.visualViewport ? window.visualViewport.height : height;
       const visibleHeight = Math.min(viewportHeight, height);
       
-      // More aggressive spacing for smaller screens
+      // Very aggressive spacing to ensure content fits above browser UI
       if (visibleHeight < 600) {
         setSpacing({
-          topPadding: '2px',
-          bottomPadding: '50px'
+          topPadding: '0px',
+          bottomPadding: '30px'
         });
       } else if (visibleHeight < 650) {
         setSpacing({
-          topPadding: '4px',
-          bottomPadding: '60px'
+          topPadding: '2px',
+          bottomPadding: '40px'
         });
       } else if (visibleHeight < 700) {
         setSpacing({
-          topPadding: '8px',
-          bottomPadding: '80px'
+          topPadding: '4px',
+          bottomPadding: '50px'
         });
       } else if (visibleHeight < 750) {
         setSpacing({
-          topPadding: '12px',
-          bottomPadding: '100px'
+          topPadding: '8px',
+          bottomPadding: '60px'
         });
       } else {
         setSpacing({
-          topPadding: '16px',
-          bottomPadding: '110px'
+          topPadding: '12px',
+          bottomPadding: '80px'
         });
       }
     };

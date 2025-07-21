@@ -540,3 +540,48 @@
     background: #C970FF;
   }
 }
+
+/* Ensure footer is always visible above browser UI */
+.footer-content {
+  position: absolute !important;
+  bottom: env(safe-area-inset-bottom, 0px) !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 10 !important;
+  max-height: calc(100vh - 200px) !important;
+  overflow: hidden !important;
+}
+
+/* Ensure button is always visible */
+.footer-content + div {
+  position: absolute !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
+  z-index: 50 !important;
+  max-bottom: calc(100vh - 60px) !important;
+}
+
+/* Mobile-specific footer positioning */
+@media (max-width: 768px) {
+  .footer-content {
+    bottom: max(env(safe-area-inset-bottom, 0px), 60px) !important;
+    padding-bottom: 8px !important;
+    padding-top: 4px !important;
+  }
+  
+  .footer-content + div {
+    bottom: max(calc(env(safe-area-inset-bottom, 0px) + 8px), 68px) !important;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .footer-content {
+    bottom: max(env(safe-area-inset-bottom, 0px), 80px) !important;
+    padding-bottom: 4px !important;
+    padding-top: 2px !important;
+  }
+  
+  .footer-content + div {
+    bottom: max(calc(env(safe-area-inset-bottom, 0px) + 4px), 84px) !important;
+  }
+}

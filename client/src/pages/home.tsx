@@ -35,41 +35,41 @@ const useDynamicSpacing = () => {
       // Calculate the actual visible area
       const visibleHeight = Math.min(viewportHeight, height);
       
-      // More aggressive spacing for smaller screens
+      // Very aggressive spacing to ensure footer is always visible
       if (visibleHeight < 600) {
         setSpacing({
-          topPadding: '2px',
-          bottomPadding: '6px',
-          buttonBottom: '6px',
-          searchBottomPadding: '50px'
+          topPadding: '0px',
+          bottomPadding: '0px',
+          buttonBottom: '0px',
+          searchBottomPadding: '30px'
         });
       } else if (visibleHeight < 650) {
         setSpacing({
+          topPadding: '2px',
+          bottomPadding: '2px',
+          buttonBottom: '2px',
+          searchBottomPadding: '40px'
+        });
+      } else if (visibleHeight < 700) {
+        setSpacing({
           topPadding: '4px',
+          bottomPadding: '4px',
+          buttonBottom: '4px',
+          searchBottomPadding: '50px'
+        });
+      } else if (visibleHeight < 750) {
+        setSpacing({
+          topPadding: '8px',
           bottomPadding: '8px',
           buttonBottom: '8px',
           searchBottomPadding: '60px'
         });
-      } else if (visibleHeight < 700) {
+      } else {
         setSpacing({
-          topPadding: '8px',
+          topPadding: '12px',
           bottomPadding: '12px',
           buttonBottom: '12px',
           searchBottomPadding: '80px'
-        });
-      } else if (visibleHeight < 750) {
-        setSpacing({
-          topPadding: '12px',
-          bottomPadding: '16px',
-          buttonBottom: '16px',
-          searchBottomPadding: '100px'
-        });
-      } else {
-        setSpacing({
-          topPadding: '16px',
-          bottomPadding: '20px',
-          buttonBottom: '18px',
-          searchBottomPadding: '110px'
         });
       }
     };
@@ -303,10 +303,14 @@ export default function Home() {
           style={{ 
             pointerEvents: 'auto', 
             paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + ${spacing.bottomPadding})`,
-            paddingTop: spacing.topPadding
+            paddingTop: spacing.topPadding,
+            // Force footer to be above browser UI
+            bottom: 'env(safe-area-inset-bottom, 0px)',
+            maxHeight: 'calc(100vh - 200px)',
+            overflow: 'hidden'
           }}
         >
-          <div className="w-full max-w-2xl mx-auto px-4 py-2 sm:py-3 md:py-4 space-y-1 sm:space-y-2">
+          <div className="w-full max-w-2xl mx-auto px-4 py-1 sm:py-2 md:py-3 space-y-1 sm:space-y-2">
             <div className="text-gray-500 text-xs sm:text-sm">
               <p className="mb-1">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
               <p className="mb-1">Powered by Music Nerd</p>
@@ -314,7 +318,7 @@ export default function Home() {
             </div>
             
             {/* Empty space for button to overlap */}
-            <div className="h-2 sm:h-3 md:h-4"></div>
+            <div className="h-1 sm:h-2 md:h-3"></div>
           </div>
         </div>
       )}
@@ -324,7 +328,9 @@ export default function Home() {
         <div 
           className="absolute left-1/2 transform -translate-x-1/2 z-50" 
           style={{ 
-            bottom: `calc(env(safe-area-inset-bottom, 16px) + ${spacing.buttonBottom})`
+            bottom: `calc(env(safe-area-inset-bottom, 0px) + ${spacing.buttonBottom})`,
+            // Ensure button is always visible
+            maxBottom: 'calc(100vh - 60px)'
           }}
         >
           <button
@@ -332,7 +338,7 @@ export default function Home() {
               console.log('Music Nerd button clicked!');
               window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer');
             }}
-            className="font-medium py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg transition-colors text-white text-xs sm:text-sm cursor-pointer"
+            className="font-medium py-1 sm:py-1.5 px-2 sm:px-3 rounded-lg transition-colors text-white text-xs sm:text-sm cursor-pointer"
             style={{
               backgroundColor: '#b427b4',
               border: 'none',
