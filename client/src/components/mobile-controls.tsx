@@ -590,6 +590,17 @@ export default function MobileControls({
               <X className="w-4 h-4 mr-2" />
               Clear All
             </Button>
+
+            {/* Close Settings Button */}
+            <Button
+              onClick={() => setShowControls(false)}
+              size="sm"
+              variant="secondary"
+              className="w-full bg-gray-800 hover:bg-gray-700 border-gray-600"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Close
+            </Button>
           </div>
         </Card>
       )}
