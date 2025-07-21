@@ -183,11 +183,11 @@ export default function ArtistNetwork() {
         </>
       )}
 
-      {/* Share Button - Always visible */}
-      <ShareButton />
+      {/* Share Button - Only visible on desktop */}
+      {!isMobile && <ShareButton />}
       
-      {/* Help Button - Always visible */}
-      <HelpButton />
+      {/* Help Button - Only visible on desktop */}
+      {!isMobile && <HelpButton />}
     </div>
   );
 }
