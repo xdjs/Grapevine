@@ -162,6 +162,7 @@ export default function ShareButton() {
     let originalDisplays: string[] = [];
     let currentDialog: HTMLElement | null = null;
     let dialogDisplay = '';
+    let originalViewBox = '';
     
     try {
       // Find the network container element
@@ -195,6 +196,34 @@ export default function ShareButton() {
       // Wait a brief moment for elements to hide
       await new Promise(resolve => setTimeout(resolve, 100));
 
+      // Zoom out slightly before snapshot on mobile to ensure nothing is cut off
+      const isMobileSnapshot = window.innerWidth <= 768;
+      const svgElement = networkContainer.querySelector('svg') as SVGSVGElement;
+      
+      if (svgElement && isMobileSnapshot) {
+        // Store original viewBox
+        originalViewBox = svgElement.getAttribute('viewBox') || '';
+        
+        if (originalViewBox) {
+          // Parse current viewBox
+          const [x, y, width, height] = originalViewBox.split(' ').map(Number);
+          
+          // Apply 15% zoom out to ensure nothing is cut off on mobile
+          const zoomOutFactor = 0.85;
+          const newWidth = width / zoomOutFactor;
+          const newHeight = height / zoomOutFactor;
+          const offsetX = x - (newWidth - width) / 2;
+          const offsetY = y - (newHeight - height) / 2;
+          
+          // Apply the zoomed out viewBox
+          svgElement.setAttribute('viewBox', `${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
+          console.log(`📱 Mobile snapshot: Zoomed out for capture: ${originalViewBox} → ${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
+          
+          // Wait for the zoom to apply
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+      }
+
       // Capture only the network visualization at high quality
       const devicePixelRatio = window.devicePixelRatio || 1;
       const highScale = Math.max(2, devicePixelRatio); // At least 2x, or device pixel ratio
@@ -214,6 +243,12 @@ export default function ShareButton() {
         width: networkContainer.offsetWidth,
         height: networkContainer.offsetHeight,
       });
+
+      // Restore original zoom level immediately after capture
+      if (svgElement && originalViewBox) {
+        svgElement.setAttribute('viewBox', originalViewBox);
+        console.log(`📸 Restored original zoom after snapshot: ${originalViewBox}`);
+      }
 
       // Restore original display values
       elementsToHide.forEach((element, index) => {
@@ -467,6 +502,13 @@ export default function ShareButton() {
         logo.src = '/grapevine-logo.png';
       });
     } catch (error) {
+      // Restore original zoom level if error occurs
+      const svgElement = document.querySelector('.network-container svg') as SVGSVGElement;
+      if (svgElement && originalViewBox) {
+        svgElement.setAttribute('viewBox', originalViewBox);
+        console.log(`📸 Restored zoom after error: ${originalViewBox}`);
+      }
+      
       // Ensure we restore elements even if there's an error
       elementsToHide.forEach((element, index) => {
         if (element) {
