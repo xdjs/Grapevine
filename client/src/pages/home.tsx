@@ -217,9 +217,9 @@ export default function Home() {
 
   const handleClearNetwork = () => {
     setNetworkData(null);
+    setShowNetworkView(false);
     setIsLoading(false);
     setClearSearchField(true);
-    // Keep showNetworkView as true to stay on the network page
     // Reset the clear flag after a brief delay
     setTimeout(() => setClearSearchField(false), 100);
   };

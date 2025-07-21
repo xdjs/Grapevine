@@ -91,6 +91,7 @@ export default function ArtistNetwork() {
   };
 
   const handleClearNetwork = () => {
+    setNetworkData(null);
     setClearSearchField(true);
     setTimeout(() => setClearSearchField(false), 100);
   };
