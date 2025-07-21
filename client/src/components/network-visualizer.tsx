@@ -342,16 +342,23 @@ export default function NetworkVisualizer({
 
     // Create boundary force to keep nodes within viewport
     const boundaryForce = () => {
-      const margin = 50;
+      const margin = 30; // Reduced margin for tighter bounds
       const container = svgRef.current?.parentElement;
       const currentWidth = container ? container.clientWidth : width;
       const currentHeight = container ? container.clientHeight : height;
       
       for (const node of data.nodes) {
+        // Ensure nodes stay well within bounds
         if (node.x! < margin) node.x = margin;
         if (node.x! > currentWidth - margin) node.x = currentWidth - margin;
         if (node.y! < margin) node.y = margin;
         if (node.y! > currentHeight - margin) node.y = currentHeight - margin;
+        
+        // Additional safety check - if somehow a node is outside, bring it back
+        if (node.x! < 0 || node.x! > currentWidth || node.y! < 0 || node.y! > currentHeight) {
+          node.x = Math.max(margin, Math.min(currentWidth - margin, node.x!));
+          node.y = Math.max(margin, Math.min(currentHeight - margin, node.y!));
+        }
       }
     };
 

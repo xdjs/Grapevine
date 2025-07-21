@@ -191,6 +191,49 @@
       height: calc(calc(var(--vh, 1vh) * 100) - 60px - env(safe-area-inset-bottom, 0px)) !important;
       overflow: hidden !important;
       padding-bottom: env(safe-area-inset-bottom, 0px) !important; /* Additional padding for safety */
+      max-height: calc(100vh - 60px - env(safe-area-inset-bottom, 0px)) !important; /* Prevent overflow */
+      max-height: calc(calc(var(--vh, 1vh) * 100) - 60px - env(safe-area-inset-bottom, 0px)) !important;
+      z-index: 10 !important; /* Ensure it's above other content but below controls */
+    }
+    
+    /* Ensure network visualization is completely contained */
+    .mobile-network-container .network-container {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      overflow: hidden !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+    }
+    
+    /* Prevent any scrolling or movement outside bounds */
+    .mobile-network-container svg {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      overflow: hidden !important;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+    }
+    
+    /* Prevent any touch scrolling on the network container */
+    .mobile-network-container {
+      touch-action: none !important;
+      -webkit-overflow-scrolling: none !important;
+      overscroll-behavior: none !important;
+    }
+    
+    /* Ensure the network group stays within bounds */
+    .mobile-network-container .network-group {
+      transform-origin: center center !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
     }
     
     /* Adjust main container for mobile */
@@ -217,6 +260,8 @@
       top: 56px !important;
       height: calc(100vh - 56px - env(safe-area-inset-bottom, 0px)) !important;
       height: calc(calc(var(--vh, 1vh) * 100) - 56px - env(safe-area-inset-bottom, 0px)) !important;
+      max-height: calc(100vh - 56px - env(safe-area-inset-bottom, 0px)) !important;
+      max-height: calc(calc(var(--vh, 1vh) * 100) - 56px - env(safe-area-inset-bottom, 0px)) !important;
     }
   }
   
@@ -230,6 +275,8 @@
       top: 60px !important;
       height: calc(100vh - 60px - env(safe-area-inset-bottom, 0px)) !important;
       height: calc(calc(var(--vh, 1vh) * 100) - 60px - env(safe-area-inset-bottom, 0px)) !important;
+      max-height: calc(100vh - 60px - env(safe-area-inset-bottom, 0px)) !important;
+      max-height: calc(calc(var(--vh, 1vh) * 100) - 60px - env(safe-area-inset-bottom, 0px)) !important;
     }
   }
   
@@ -243,6 +290,8 @@
       top: 64px !important;
       height: calc(100vh - 64px - env(safe-area-inset-bottom, 0px)) !important;
       height: calc(calc(var(--vh, 1vh) * 100) - 64px - env(safe-area-inset-bottom, 0px)) !important;
+      max-height: calc(100vh - 64px - env(safe-area-inset-bottom, 0px)) !important;
+      max-height: calc(calc(var(--vh, 1vh) * 100) - 64px - env(safe-area-inset-bottom, 0px)) !important;
     }
   }
   
@@ -256,6 +305,8 @@
       top: 68px !important;
       height: calc(100vh - 68px - env(safe-area-inset-bottom, 0px)) !important;
       height: calc(calc(var(--vh, 1vh) * 100) - 68px - env(safe-area-inset-bottom, 0px)) !important;
+      max-height: calc(100vh - 68px - env(safe-area-inset-bottom, 0px)) !important;
+      max-height: calc(calc(var(--vh, 1vh) * 100) - 68px - env(safe-area-inset-bottom, 0px)) !important;
     }
   }
 }
