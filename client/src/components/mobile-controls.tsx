@@ -542,7 +542,7 @@ export default function MobileControls({
 
       {/* Mobile Controls Panel */}
       {showControls && (
-        <Card className="fixed bottom-6 sm:bottom-4 left-4 z-40 bg-gray-900/95 backdrop-blur p-3 max-w-[calc(100vw-2rem)] border-2 relative" style={{ borderColor: '#b427b4' }}>
+        <Card className="fixed bottom-6 sm:bottom-4 left-4 z-50 bg-gray-900/95 backdrop-blur p-3 max-w-[calc(100vw-2rem)] border-2" style={{ borderColor: '#b427b4', position: 'fixed', bottom: '24px', left: '16px' }}>
           {/* Close Button in Corner */}
           <Button
             onClick={() => setShowControls(false)}
