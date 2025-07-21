@@ -307,7 +307,8 @@ export default function Home() {
             // Force footer to be above browser UI
             bottom: 'env(safe-area-inset-bottom, 0px)',
             maxHeight: 'calc(100vh - 200px)',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            paddingRight: isMobile ? '72px' : '0px'
           }}
         >
           <div className="w-full max-w-2xl mx-auto px-4 py-1 sm:py-2 md:py-3 space-y-1 sm:space-y-2">
@@ -331,7 +332,8 @@ export default function Home() {
                   outline: 'none',
                   boxShadow: '0 4px 12px rgba(180, 39, 180, 0.3)',
                   pointerEvents: 'auto',
-                  zIndex: 100
+                  zIndex: 9999,
+                  position: 'relative'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = '#8f1c8f';
