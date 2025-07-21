@@ -111,6 +111,14 @@ export default function NetworkVisualizer({
        .on("touchmove.zoom", null)
        .on("touchend.zoom", null);
 
+    // Add background click handler to hide tooltip and reset highlighting
+    svg.on("click", function(event) {
+      // Only trigger if clicking on the background (not on a node)
+      if (event.target === this || event.target.tagName === 'svg') {
+        hideTooltip();
+      }
+    });
+
     // EXACT COPY of the working zoom button functions
     const applyZoom = (scale: number) => {
       if (!svgRef.current) return;
@@ -261,6 +269,9 @@ export default function NetworkVisualizer({
       svgElement.removeEventListener('touchend', handleTouchEnd);
       svgElement.removeEventListener('wheel', handleWheelZoom);
     };
+
+    // Variable to track currently highlighted node
+    let currentlyHighlightedNode: d3.Selection<SVGGElement, unknown, null, undefined> | null = null;
 
     // Find connected components for cluster positioning
     const findConnectedComponents = () => {
@@ -443,10 +454,17 @@ export default function NetworkVisualizer({
       .on("click", function(event, d) {
         event.stopPropagation();
 
-        // Highlight the node group
-        d3.select(this).selectAll("circle, path")
+        // Reset previous node highlighting
+        resetNodeHighlight();
+
+        // Highlight the current node group
+        const currentNode = d3.select(this);
+        currentNode.selectAll("circle, path")
           .attr("stroke", "white")
           .attr("stroke-width", 3);
+        
+        // Track this node as highlighted
+        currentlyHighlightedNode = currentNode;
 
         // Show the tooltip and use cursor coordinates for placement
         showTooltip(event, d);
@@ -616,8 +634,40 @@ export default function NetworkVisualizer({
         .style("top", event.pageY - 10 + "px");
     }
 
+    function resetNodeHighlight() {
+      if (currentlyHighlightedNode) {
+        const nodeData = currentlyHighlightedNode.datum() as NetworkNode;
+        const roles = nodeData.types || [nodeData.type];
+        
+        // Reset to original styling
+        if (roles.length === 1) {
+          // Single role - reset to original stroke color and width
+          currentlyHighlightedNode.selectAll("circle")
+            .attr("stroke", () => {
+              if (roles[0] === 'artist') return '#FF0ACF';       // Magenta Pink
+              if (roles[0] === 'producer') return '#AE53FF';     // Bright Purple  
+              if (roles[0] === 'songwriter') return '#67D1F8';   // Light Blue
+              return '#355367';  // Police Blue
+            })
+            .attr("stroke-width", 4);
+        } else {
+          // Multiple roles - reset path strokes and inner circle
+          currentlyHighlightedNode.selectAll("path")
+            .attr("stroke", "white")
+            .attr("stroke-width", 1);
+          
+          currentlyHighlightedNode.selectAll("circle")
+            .attr("stroke", "white")
+            .attr("stroke-width", 2);
+        }
+        
+        currentlyHighlightedNode = null;
+      }
+    }
+
     function hideTooltip() {
       tooltip.style("opacity", 0).style("pointer-events", "none");
+      resetNodeHighlight();
     }
 
       async function openMusicNerdProfile(artistName: string, artistId?: string | null) {
