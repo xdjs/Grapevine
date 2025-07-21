@@ -91,7 +91,12 @@ export default function ArtistNetwork() {
   };
 
   const handleClearNetwork = () => {
+    setNetworkData(null);
+    setIsLoading(false);
+    setCurrentArtistName("");
     setClearSearchField(true);
+    // Clear the URL to remove artist ID
+    setLocation('/');
     setTimeout(() => setClearSearchField(false), 100);
   };
 
@@ -134,7 +139,7 @@ export default function ArtistNetwork() {
         onClearAll={handleClearNetwork}
       />
 
-      {/* Network Visualization */}
+      {/* Network Visualization - Only show when network data exists */}
       {networkData && (
         <NetworkVisualizer
           key={`network-${Date.now()}`}
