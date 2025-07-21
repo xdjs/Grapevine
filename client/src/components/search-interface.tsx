@@ -148,29 +148,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     return 'noCollaborators' in response && response.noCollaborators === true;
   };
 
-  // Helper function to handle network response
-  const handleNetworkResponse = useCallback((response: NetworkResponse, artistName: string) => {
-    if (isNoCollaboratorsResponse(response)) {
-      // Show popup for no collaborators
-      setPendingArtistInfo({
-        name: response.artistName,
-        id: response.artistId,
-        singleNodeNetwork: response.singleNodeNetwork
-      });
-      setShowNoCollaboratorsPopup(true);
-    } else {
-      // Normal network data - pass to parent
-      const mainArtist = response.nodes.find(node => node.size === 30 && node.type === 'artist');
-      const artistId = mainArtist?.artistId || mainArtist?.id;
-      onNetworkData(response, artistId);
-      
-      toast({
-        title: "Network Generated",
-        description: `Found collaboration network for ${artistName}`,
-        duration: 1000,
-      });
-    }
-  }, [onNetworkData, toast]);
+
 
   // Handle user choice from popup
   const handleShowHallucinations = useCallback(async () => {
@@ -308,12 +286,31 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         ? await fetchNetworkDataById(artist.artistId)
         : await fetchNetworkData(artist.name.trim());
       
+      // Get the artist ID for URL updating
+      const finalArtistId = artist.artistId || artist.id;
+      
       // Handle the response (might be network data or no-collaborators response)
-      handleNetworkResponse(data, artist.name);
+      if (isNoCollaboratorsResponse(data)) {
+        // Show popup for no collaborators
+        setPendingArtistInfo({
+          name: data.artistName,
+          id: data.artistId || finalArtistId,
+          singleNodeNetwork: data.singleNodeNetwork
+        });
+        setShowNoCollaboratorsPopup(true);
+      } else {
+        // Normal network data - pass to parent with explicit artist ID
+        onNetworkData(data, finalArtistId);
+        
+        toast({
+          title: "Network Generated",
+          description: `Found collaboration network for ${artist.name}`,
+          duration: 1000,
+        });
+      }
       
       // Save to search history if it's not a popup case (will be handled in popup callbacks)
       if (!isNoCollaboratorsResponse(data)) {
-        const finalArtistId = artist.artistId || artist.id;
         saveToSearchHistory(artist.name, finalArtistId);
       }
     } catch (error) {
@@ -338,7 +335,26 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       const data = await fetchNetworkData(searchQuery.trim());
       
       // Handle the response (might be network data or no-collaborators response)
-      handleNetworkResponse(data, searchQuery.trim());
+      if (isNoCollaboratorsResponse(data)) {
+        // Show popup for no collaborators
+        setPendingArtistInfo({
+          name: data.artistName,
+          id: data.artistId,
+          singleNodeNetwork: data.singleNodeNetwork
+        });
+        setShowNoCollaboratorsPopup(true);
+      } else {
+        // Normal network data - pass to parent with artist ID from network data
+        const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const artistId = mainArtist?.artistId || mainArtist?.id;
+        onNetworkData(data, artistId);
+        
+        toast({
+          title: "Network Generated",
+          description: `Found collaboration network for ${searchQuery.trim()}`,
+          duration: 1000,
+        });
+      }
       
       // Save to search history if it's not a popup case (will be handled in popup callbacks)
       if (!isNoCollaboratorsResponse(data)) {
@@ -381,7 +397,34 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         : await fetchNetworkData(historyEntry.artistName);
       
       // Handle the response (might be network data or no-collaborators response)
-      handleNetworkResponse(data, historyEntry.artistName);
+      if (isNoCollaboratorsResponse(data)) {
+        // Show popup for no collaborators
+        const artistId = data.artistId || historyEntry.artistId;
+        if (artistId) {
+          setPendingArtistInfo({
+            name: data.artistName,
+            id: artistId,
+            singleNodeNetwork: data.singleNodeNetwork
+          });
+          setShowNoCollaboratorsPopup(true);
+        } else {
+          // No artist ID available, handle as regular network data
+          const mainArtist = data.singleNodeNetwork.nodes.find(node => node.size === 30 && node.type === 'artist');
+          const fallbackArtistId = mainArtist?.artistId || mainArtist?.id;
+          onNetworkData(data.singleNodeNetwork, fallbackArtistId);
+        }
+      } else {
+        // Normal network data - pass to parent with explicit artist ID
+        const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const artistId = historyEntry.artistId || mainArtist?.artistId || mainArtist?.id;
+        onNetworkData(data, artistId);
+        
+        toast({
+          title: "Network Generated",
+          description: `Found collaboration network for ${historyEntry.artistName}`,
+          duration: 1000,
+        });
+      }
       
       // Update timestamp for this history entry if it's not a popup case
       if (!isNoCollaboratorsResponse(data)) {
@@ -424,7 +467,26 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
           const data = await fetchNetworkData(artistName.trim());
           
           // Handle the response (might be network data or no-collaborators response)
-          handleNetworkResponse(data, artistName.trim());
+          if (isNoCollaboratorsResponse(data)) {
+            // Show popup for no collaborators
+            setPendingArtistInfo({
+              name: data.artistName,
+              id: data.artistId,
+              singleNodeNetwork: data.singleNodeNetwork
+            });
+            setShowNoCollaboratorsPopup(true);
+          } else {
+            // Normal network data - pass to parent with artist ID from network data
+            const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+            const artistId = mainArtist?.artistId || mainArtist?.id;
+            onNetworkData(data, artistId);
+            
+            toast({
+              title: "Network Generated",
+              description: `Found collaboration network for ${artistName.trim()}`,
+              duration: 1000,
+            });
+          }
           
           // Save to search history if it's not a popup case (will be handled in popup callbacks)
           if (!isNoCollaboratorsResponse(data)) {

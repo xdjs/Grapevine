@@ -517,7 +517,7 @@ export default function NetworkVisualizer({
         const iconSize = 40; // static diameter matching small node size
 
         const content = `
-          <div style="position:relative; max-width:320px;">
+          <div style="position:relative; max-width:320px; padding-right:30px;">
             <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:24px; color:white;">&times;</span>
             <div style="font-weight:bold; font-size:16px; line-height:1.2; text-align:left;">${d.name}</div>
             <div style="margin-top:2px; font-size:12px; text-align:left;">Roles: ${roleDisplay}</div>
@@ -589,7 +589,7 @@ export default function NetworkVisualizer({
         /* ---- ORIGINAL NON-ARTIST TOOLTIP BEHAVIOUR ---- */
         const roleDisplay = roles.length > 1 ? roles.join(" + ") : roles[0];
 
-        let content = `<div style="position:relative; text-align:center; max-width:320px;">
+        let content = `<div style="position:relative; text-align:center; max-width:320px; padding-right:30px;">
                         <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:24px; color:white;">&times;</span>
                          <strong style="font-size:14px;">${d.name}</strong><br/>Role${roles.length > 1 ? "s" : ""}: ${roleDisplay}`;
 
