@@ -542,47 +542,47 @@ export default function MobileControls({
 
       {/* Mobile Controls Panel */}
       {showControls && (
-        <Card className="fixed bottom-24 sm:bottom-20 right-4 z-40 bg-gray-900/95 backdrop-blur p-4 max-w-[calc(100vw-2rem)] border-2 relative" style={{ borderColor: '#b427b4' }}>
+        <Card className="fixed bottom-24 sm:bottom-20 left-4 z-40 bg-gray-900/95 backdrop-blur p-3 max-w-[calc(100vw-2rem)] border-2 relative" style={{ borderColor: '#b427b4' }}>
           {/* Close Button in Corner */}
           <Button
             onClick={() => setShowControls(false)}
             size="icon"
             variant="ghost"
-            className="absolute top-2 right-2 w-6 h-6 bg-gray-800/50 hover:bg-gray-700/50 rounded-full"
+            className="absolute top-1 right-1 w-5 h-5 bg-gray-800/50 hover:bg-gray-700/50 rounded-full"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3 h-3" />
           </Button>
           
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Zoom Controls */}
             <div>
-              <h3 className="text-sm font-semibold text-white mb-2">Zoom</h3>
-              <div className="flex gap-2">
+              <h3 className="text-xs font-semibold text-white mb-1">Zoom</h3>
+              <div className="flex gap-1">
                 <Button
                   onClick={onZoomIn}
                   size="sm"
                   variant="secondary"
-                  className="flex-1 bg-gray-800 hover:bg-gray-700 border-gray-600"
+                  className="flex-1 bg-gray-800 hover:bg-gray-700 border-gray-600 text-xs px-2 py-1"
                 >
-                  <Plus className="w-4 h-4 mr-1" />
+                  <Plus className="w-3 h-3 mr-1" />
                   In
                 </Button>
                 <Button
                   onClick={onZoomOut}
                   size="sm"
                   variant="secondary"
-                  className="flex-1 bg-gray-800 hover:bg-gray-700 border-gray-600"
+                  className="flex-1 bg-gray-800 hover:bg-gray-700 border-gray-600 text-xs px-2 py-1"
                 >
-                  <Minus className="w-4 h-4 mr-1" />
+                  <Minus className="w-3 h-3 mr-1" />
                   Out
                 </Button>
                 <Button
                   onClick={onZoomReset}
                   size="sm"
                   variant="secondary"
-                  className="flex-1 bg-gray-800 hover:bg-gray-700 border-gray-600"
+                  className="flex-1 bg-gray-800 hover:bg-gray-700 border-gray-600 text-xs px-2 py-1"
                 >
-                  <RotateCcw className="w-4 h-4 mr-1" />
+                  <RotateCcw className="w-3 h-3 mr-1" />
                   Reset
                 </Button>
               </div>
@@ -595,9 +595,9 @@ export default function MobileControls({
               onClick={onClearAll}
               size="sm"
               variant="destructive"
-              className="w-full bg-red-900/90 hover:bg-red-800 border-red-700"
+              className="w-full bg-red-900/90 hover:bg-red-800 border-red-700 text-xs px-2 py-1"
             >
-              <X className="w-4 h-4 mr-2" />
+              <X className="w-3 h-3 mr-1" />
               Clear All
             </Button>
           </div>
