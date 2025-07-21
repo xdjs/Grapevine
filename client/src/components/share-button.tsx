@@ -222,15 +222,19 @@ export default function ShareButton() {
             const newHeight = height / zoomOutFactor;
             const offsetX = x - (newWidth - width) / 2;
             
-            // Move the network down significantly to create clear space for watermark at top
+            // Move the network down to position it below watermark with border space
             const isMobileForSpacing = window.innerWidth <= 768;
             const localTopWatermarkSpace = (isMobileForSpacing ? 120 : 80) * Math.max(2, window.devicePixelRatio || 1);
-            const watermarkSpace = (localTopWatermarkSpace / Math.max(2, window.devicePixelRatio || 1)) * 1.5; // Extra space to avoid overlap
-            const offsetY = y - (newHeight - height) / 2 + watermarkSpace;
+            const borderSpace = 20 * Math.max(2, window.devicePixelRatio || 1);
+            const totalWatermarkArea = localTopWatermarkSpace + borderSpace;
+            
+            // Position network below the watermark area (convert to viewBox scale)
+            const watermarkSpaceInViewBox = totalWatermarkArea / Math.max(2, window.devicePixelRatio || 1);
+            const offsetY = y - (newHeight - height) / 2 + watermarkSpaceInViewBox;
             
             // Apply the adjusted viewBox
             svgElement.setAttribute('viewBox', `${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
-            console.log(`📱 Mobile snapshot (default zoom): Zoomed out and moved down: ${originalViewBox} → ${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
+            console.log(`📱 Mobile snapshot (default zoom): Zoomed out and positioned below watermark: ${originalViewBox} → ${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
             
             // Wait for the changes to apply
             await new Promise(resolve => setTimeout(resolve, 50));
@@ -311,9 +315,14 @@ export default function ShareButton() {
             minX = Math.max(0, minX - sidePadding);
             maxX = Math.min(canvas.width, maxX + sidePadding);
             
-            // Reserve dedicated watermark space at top - network content starts below this
-            minY = Math.max(topWatermarkSpace, minY - sidePadding); // Ensure network starts below watermark space
-            maxY = Math.min(canvas.height, maxY); // Extremely tight crop at bottom - no footer space at all
+            // Calculate exact watermark space needed
+            const borderSpace = 20 * highScale; // Border space below watermark
+            const totalWatermarkArea = topWatermarkSpace + borderSpace;
+            
+            // Ensure network starts below watermark area with border
+            minY = Math.max(totalWatermarkArea, minY - sidePadding);
+            // Crop exactly at the bottom of the content - zero footer space
+            maxY = Math.min(canvas.height, maxY);
             
             networkBounds = { minX, minY, maxX, maxY };
           }
@@ -332,12 +341,12 @@ export default function ShareButton() {
       let finalWidth, finalHeight;
       
       if (isMobile) {
-        // Mobile: Use network bounds directly for tight fit (no forced aspect ratio)
+        // Mobile: Use exact network bounds for ultra-tight fit (eliminate all empty space)
         const minSize = 320 * highScale;
         
-        // Use actual network dimensions with minimal size constraints
+        // Use actual network dimensions - only apply minimum if absolutely necessary
         finalWidth = Math.max(minSize, networkWidth);
-        finalHeight = Math.max(minSize, networkHeight);
+        finalHeight = networkHeight; // Use exact height to eliminate footer space
         
         console.log(`📱 MOBILE DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}, finalWidth=${finalWidth}, finalHeight=${finalHeight}`);
       } else {
@@ -354,14 +363,18 @@ export default function ShareButton() {
       let cropX, cropY;
       
       if (isMobile) {
-        // Mobile: Center horizontally, but crop extremely tightly at bottom
+        // Mobile: Center horizontally, crop from watermark top to network bottom (zero footer)
         const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
         cropX = Math.max(0, Math.min(canvas.width - finalWidth, networkCenterX - finalWidth / 2));
         
-        // Start crop from the very top to include watermark space, end exactly at network bottom
-        cropY = 0; // Start from absolute top to capture watermark space
+        // Start from top to capture watermark, end exactly at network content bottom
+        cropY = 0; // Start from absolute top to include watermark area
         
-        console.log(`📱 MOBILE CROP: networkBounds minY=${networkBounds.minY}, maxY=${networkBounds.maxY}, cropY=${cropY}`);
+        // Adjust final height to eliminate any footer space - crop exactly to content
+        const actualContentHeight = networkBounds.maxY - 0; // From top to bottom of network
+        finalHeight = Math.min(finalHeight, actualContentHeight);
+        
+        console.log(`📱 MOBILE CROP: networkBounds minY=${networkBounds.minY}, maxY=${networkBounds.maxY}, actualHeight=${actualContentHeight}, finalHeight=${finalHeight}`);
       } else {
         // Desktop: Center the crop around network center
         const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
@@ -433,8 +446,9 @@ export default function ShareButton() {
             let minScore = Infinity;
             
             // Calculate actual network content area in the cropped space
-            // The network starts after the top watermark space we reserved
-            const networkStartY = topWatermarkSpace; // Network content starts below this line in canvas coordinates
+            // The network starts after the watermark space + border we reserved
+            const borderSpace = 20 * highScale;
+            const networkStartY = topWatermarkSpace + borderSpace; // Network content starts below watermark + border
             
             // Check each corner for overlap with network area
             for (const corner of corners) {
