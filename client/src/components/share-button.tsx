@@ -216,19 +216,19 @@ export default function ShareButton() {
                                  Math.abs(height - containerHeight) < 10;
           
                       if (isAtDefaultZoom) {
-              // Apply 50% zoom out on mobile to ensure nodes don't get cut off
-              const zoomOutFactor = 0.5;
+              // Apply 60% zoom out on mobile to make web smaller and prevent overlap
+              const zoomOutFactor = 0.4;
             const newWidth = width / zoomOutFactor;
             const newHeight = height / zoomOutFactor;
             const offsetX = x - (newWidth - width) / 2;
             
-            // Move the network down to position it below watermark with border space
+            // Move the network down to position it below the dedicated watermark bar
             const isMobileForSpacing = window.innerWidth <= 768;
-            const localTopWatermarkSpace = (isMobileForSpacing ? 120 : 80) * Math.max(2, window.devicePixelRatio || 1);
-            const borderSpace = 20 * Math.max(2, window.devicePixelRatio || 1);
+            const localTopWatermarkSpace = (isMobileForSpacing ? 160 : 80) * Math.max(2, window.devicePixelRatio || 1);
+            const borderSpace = 30 * Math.max(2, window.devicePixelRatio || 1); // Bigger border space
             const totalWatermarkArea = localTopWatermarkSpace + borderSpace;
             
-            // Position network below the watermark area (convert to viewBox scale)
+            // Position network well below the watermark bar (convert to viewBox scale)
             const watermarkSpaceInViewBox = totalWatermarkArea / Math.max(2, window.devicePixelRatio || 1);
             const offsetY = y - (newHeight - height) / 2 + watermarkSpaceInViewBox;
             
@@ -251,7 +251,7 @@ export default function ShareButton() {
       // Define spacing constants for consistent use - detect mobile for different sizing
       const isMobileForSpacing = window.innerWidth <= 768;
       const sidePadding = (isMobileForSpacing ? 60 : 40) * highScale; // More side padding on mobile for node names
-      const topWatermarkSpace = (isMobileForSpacing ? 120 : 80) * highScale; // Bigger watermark space on mobile
+      const topWatermarkSpace = (isMobileForSpacing ? 160 : 80) * highScale; // Bigger dedicated watermark bar on mobile
       
       const canvas = await html2canvas(networkContainer, {
         useCORS: true,
