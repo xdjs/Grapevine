@@ -364,20 +364,34 @@ export default function ShareButton() {
       let cropX, cropY;
       
       if (isMobile) {
-        // Mobile: Square crop - center web horizontally with extra side space for node names
+        // Mobile: Square crop - center web content perfectly in the square
         
-        // Center the web horizontally in the square
+        // Calculate network center and dimensions
         const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
         const networkWidth = networkBounds.maxX - networkBounds.minX;
         
-        // Calculate extra side space needed
+        // Calculate how much extra space we have on each side
         const extraSideSpace = (finalWidth - networkWidth) / 2;
         
-        // Position crop to center the web horizontally
-        cropX = Math.max(0, networkCenterX - finalWidth / 2);
+        // To center the network in the square: crop from (networkCenter - squareSize/2)
+        // This ensures the network center appears at the square center
+        const idealCropX = networkCenterX - finalWidth / 2;
+        
+        // Handle edge cases where crop would go outside canvas bounds
+        if (idealCropX < 0) {
+          // Network is too close to left edge, keep some left margin but center as much as possible
+          cropX = 0;
+        } else if (idealCropX + finalWidth > canvas.width) {
+          // Network is too close to right edge, align to right edge
+          cropX = Math.max(0, canvas.width - finalWidth);
+        } else {
+          // Perfect centering is possible
+          cropX = idealCropX;
+        }
+        
         cropY = Math.max(0, networkBounds.minY - topWatermarkSpace); // Include watermark space above web
         
-        console.log(`📱 MOBILE SQUARE CROP: cropX=${cropX}, cropY=${cropY}, finalWidth=${finalWidth}, finalHeight=${finalHeight}, extraSideSpace=${extraSideSpace}`);
+        console.log(`📱 MOBILE SQUARE CROP: idealCropX=${idealCropX}, actualCropX=${cropX}, cropY=${cropY}, finalWidth=${finalWidth}, finalHeight=${finalHeight}, extraSideSpace=${extraSideSpace}, networkCenterX=${networkCenterX}, canvasWidth=${canvas.width}`);
       } else {
         // Desktop: Center the crop around network center
         const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
