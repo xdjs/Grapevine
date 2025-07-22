@@ -141,15 +141,17 @@ export default function ArtistNetwork() {
 
       {/* Network Visualization - Only show when network data exists */}
       {networkData && (
-        <NetworkVisualizer
-          key={`network-${Date.now()}`}
-          data={networkData}
-          visible={true}
-          filterState={filterState}
-          onZoomChange={handleZoomChange}
-          onArtistSearch={handleArtistSearch}
-          onArtistNodeClick={handleArtistNodeClick}
-        />
+        <div className="mobile-network-container network-visible">
+          <NetworkVisualizer
+            key={`network-${Date.now()}`}
+            data={networkData}
+            visible={true}
+            filterState={filterState}
+            onZoomChange={handleZoomChange}
+            onArtistSearch={handleArtistSearch}
+            onArtistNodeClick={handleArtistNodeClick}
+          />
+        </div>
       )}
 
       {/* Loading Screen */}
