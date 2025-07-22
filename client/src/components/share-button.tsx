@@ -208,39 +208,30 @@ export default function ShareButton() {
           // Parse current viewBox
           const [x, y, width, height] = originalViewBox.split(' ').map(Number);
           
-          // Check if user is at default zoom (viewBox starts at 0,0 and matches container size)
-          const containerWidth = networkContainer.offsetWidth;
-          const containerHeight = networkContainer.offsetHeight;
-          const isAtDefaultZoom = Math.abs(x) < 10 && Math.abs(y) < 10 && 
-                                 Math.abs(width - containerWidth) < 10 && 
-                                 Math.abs(height - containerHeight) < 10;
+          // Always apply 60% zoom out on mobile snapshots for better fit and centering
+          const zoomOutFactor = 0.4;
+          const newWidth = width / zoomOutFactor;
+          const newHeight = height / zoomOutFactor;
           
-                      if (isAtDefaultZoom) {
-              // Apply 60% zoom out on mobile to make web smaller and prevent overlap
-              const zoomOutFactor = 0.4;
-            const newWidth = width / zoomOutFactor;
-            const newHeight = height / zoomOutFactor;
-            const offsetX = x - (newWidth - width) / 2;
-            
-            // Move the network down to position it below the dedicated watermark bar
-            const isMobileForSpacing = window.innerWidth <= 768;
-            const localTopWatermarkSpace = (isMobileForSpacing ? 160 : 80) * Math.max(2, window.devicePixelRatio || 1);
-            const borderSpace = 30 * Math.max(2, window.devicePixelRatio || 1); // Bigger border space
-            const totalWatermarkArea = localTopWatermarkSpace + borderSpace;
-            
-            // Position network well below the watermark bar (convert to viewBox scale)
-            const watermarkSpaceInViewBox = totalWatermarkArea / Math.max(2, window.devicePixelRatio || 1);
-            const offsetY = y - (newHeight - height) / 2 + watermarkSpaceInViewBox;
-            
-            // Apply the adjusted viewBox
-            svgElement.setAttribute('viewBox', `${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
-            console.log(`📱 Mobile snapshot (default zoom): 60% zoom out and positioned below watermark: ${originalViewBox} → ${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
-            
-            // Wait for the changes to apply
-            await new Promise(resolve => setTimeout(resolve, 50));
-          } else {
-            console.log(`📱 Mobile snapshot (custom zoom): Using current zoom level for capture: ${originalViewBox}`);
-          }
+          // Move the network down to position it below the dedicated watermark bar
+          const isMobileForSpacing = window.innerWidth <= 768;
+          const localTopWatermarkSpace = (isMobileForSpacing ? 160 : 80) * Math.max(2, window.devicePixelRatio || 1);
+          const borderSpace = 30 * Math.max(2, window.devicePixelRatio || 1); // Bigger border space
+          const totalWatermarkArea = localTopWatermarkSpace + borderSpace;
+          
+          // Position network well below the watermark bar and center it in the zoomed view
+          const watermarkSpaceInViewBox = totalWatermarkArea / Math.max(2, window.devicePixelRatio || 1);
+          
+          // Center the zoomed out view
+          const offsetX = x - (newWidth - width) / 2;
+          const offsetY = y - (newHeight - height) / 2 + watermarkSpaceInViewBox;
+          
+          // Apply the adjusted viewBox
+          svgElement.setAttribute('viewBox', `${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
+          console.log(`📱 Mobile snapshot: ALWAYS 60% zoom out and centered below watermark: ${originalViewBox} → ${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
+          
+          // Wait for the changes to apply
+          await new Promise(resolve => setTimeout(resolve, 50));
         }
       }
 
