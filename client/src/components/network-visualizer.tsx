@@ -210,7 +210,7 @@ export default function NetworkVisualizer({
     let initialDistance = 0;
     let lastScale = 1;
     let isPinching = false;
-    let pinchThreshold = 0.2; // Increased from 0.1 to 0.2 for less sensitivity
+    const pinchThreshold = 0.2; // Increased from 0.1 to 0.2 for less sensitivity
     let pinchCenterX = 0;
     let pinchCenterY = 0;
 

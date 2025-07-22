@@ -177,7 +177,7 @@ class MusicNerdService {
           console.log(`🔍 [DEBUG] Artists table columns:`, schemaResult.rows.map(r => r.column_name));
           
           // First get all potential matches case-insensitively to see what's available
-          let query = 'SELECT * FROM artists WHERE LOWER(name) = LOWER($1)';
+          const query = 'SELECT * FROM artists WHERE LOWER(name) = LOWER($1)';
           console.log(`🔍 [DEBUG] Executing search query: ${query} with parameter: "${artistName}"`);
           let result = await client.query(query, [artistName]);
           console.log(`🔍 [DEBUG] Found ${result.rows.length} potential matches for "${artistName}"`);
