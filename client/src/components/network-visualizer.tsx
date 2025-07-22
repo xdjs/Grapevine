@@ -520,7 +520,7 @@ export default function NetworkVisualizer({
             .endAngle(endAngle);
           
           group.append("path")
-            .attr("d", arcPath)
+            .attr("d", arcPath as any)
             .attr("fill", () => {
               if (role === 'artist') return '#FF0ACF';       // Magenta Pink
               if (role === 'producer') return '#AE53FF';     // Bright Purple  
@@ -657,7 +657,7 @@ export default function NetworkVisualizer({
           // Call the callback to load the artist's network within the app
           if (onArtistNodeClick) {
             console.log(`🔗 Loading ${d.name}'s network within the app`);
-            onArtistNodeClick(d.name, artistId);
+            onArtistNodeClick(d.name, artistId || undefined);
           } else {
             console.warn(`🔗 No onArtistNodeClick callback provided for ${d.name}`);
             alert(`Sorry, ${d.name} is not available in the network yet. They may be added in future updates!`);
