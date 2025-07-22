@@ -599,24 +599,24 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         }}
       >
         <div className="text-center w-full max-w-md">
-          <div className="mb-2 sm:mb-4 md:mb-6 lg:mb-8 flex justify-center">
+          <div className="mb-0 sm:mb-1 md:mb-2 lg:mb-2 flex justify-center">
             <img 
               src={grapevineLogoLarge} 
               alt="Grapevine Logo" 
               className={`object-contain ${
-                (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 600 ? 'w-12 h-12' :
-                (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 650 ? 'w-16 h-16' :
-                (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 700 ? 'w-20 h-20' :
-                'w-20 h-20 sm:w-32 sm:h-32 md:w-40 md:h-40'
+                (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 600 ? 'w-14 h-14' :
+                (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 650 ? 'w-18 h-18' :
+                (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 700 ? 'w-24 h-24' :
+                'w-24 h-24 sm:w-36 sm:h-36 md:w-44 md:h-44'
               }`}
             />
           </div>
           
           <h1 className={`font-bold mb-2 sm:mb-3 md:mb-4 lg:mb-6 text-white ${
-            (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 600 ? 'text-lg' :
-            (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 650 ? 'text-xl' :
-            (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 700 ? 'text-2xl' :
-            'text-xl sm:text-2xl md:text-3xl lg:text-5xl xl:text-6xl'
+            (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 600 ? 'text-xl' :
+            (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 650 ? 'text-2xl' :
+            (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 700 ? 'text-3xl' :
+            'text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl'
           }`}>
             Grapevine
           </h1>
