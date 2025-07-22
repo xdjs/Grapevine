@@ -14,6 +14,96 @@ import { NetworkData, FilterState } from "@/types/network";
 import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
 import { useIsMobile } from "@/hooks/use-mobile.tsx";
 
+// Hook for dynamic spacing based on actual visible space
+const useDynamicSpacing = () => {
+  const [spacing, setSpacing] = useState({
+    topPadding: '24px',
+    bottomPadding: '24px',
+    buttonBottom: '20px',
+    searchBottomPadding: '120px'
+  });
+
+  useEffect(() => {
+    const updateSpacing = () => {
+      const height = window.innerHeight;
+      const width = window.innerWidth;
+      
+      // Use visualViewport if available for more accurate measurements
+      const viewportHeight = window.visualViewport ? window.visualViewport.height : height;
+      const viewportWidth = window.visualViewport ? window.visualViewport.width : width;
+      
+      // Calculate the actual visible area
+      const visibleHeight = Math.min(viewportHeight, height);
+      
+      // Very aggressive spacing to ensure footer is always visible
+      if (visibleHeight < 600) {
+        setSpacing({
+          topPadding: '0px',
+          bottomPadding: '0px',
+          buttonBottom: '0px',
+          searchBottomPadding: '30px'
+        });
+      } else if (visibleHeight < 650) {
+        setSpacing({
+          topPadding: '2px',
+          bottomPadding: '2px',
+          buttonBottom: '2px',
+          searchBottomPadding: '40px'
+        });
+      } else if (visibleHeight < 700) {
+        setSpacing({
+          topPadding: '4px',
+          bottomPadding: '4px',
+          buttonBottom: '4px',
+          searchBottomPadding: '50px'
+        });
+      } else if (visibleHeight < 750) {
+        setSpacing({
+          topPadding: '8px',
+          bottomPadding: '8px',
+          buttonBottom: '8px',
+          searchBottomPadding: '60px'
+        });
+      } else {
+        setSpacing({
+          topPadding: '12px',
+          bottomPadding: '12px',
+          buttonBottom: '12px',
+          searchBottomPadding: '80px'
+        });
+      }
+    };
+
+    updateSpacing();
+    window.addEventListener('resize', updateSpacing);
+    window.addEventListener('orientationchange', updateSpacing);
+    
+    // Also update on focus/blur to catch browser UI changes
+    window.addEventListener('focus', updateSpacing);
+    window.addEventListener('blur', updateSpacing);
+    
+    // Use visualViewport events if available
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateSpacing);
+      window.visualViewport.addEventListener('scroll', updateSpacing);
+    }
+    
+    return () => {
+      window.removeEventListener('resize', updateSpacing);
+      window.removeEventListener('orientationchange', updateSpacing);
+      window.removeEventListener('focus', updateSpacing);
+      window.removeEventListener('blur', updateSpacing);
+      
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', updateSpacing);
+        window.visualViewport.removeEventListener('scroll', updateSpacing);
+      }
+    };
+  }, []);
+
+  return spacing;
+};
+
 export default function Home() {
   const params = useParams<{ artistId?: string }>();
   const [, setLocation] = useLocation();
@@ -23,6 +113,7 @@ export default function Home() {
   const [currentArtistName, setCurrentArtistName] = useState<string>("");
   const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
   const [clearSearchField, setClearSearchField] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
   const [filterState, setFilterState] = useState<FilterState>({
     showProducers: true,
     showSongwriters: true,
@@ -30,6 +121,7 @@ export default function Home() {
   });
   const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
   const isMobile = useIsMobile();
+  const spacing = useDynamicSpacing();
 
   // Manage body overflow classes based on network view state
   useEffect(() => {
@@ -59,7 +151,7 @@ export default function Home() {
   // Load artist network if artistId is in URL
   useEffect(() => {
     const loadArtistFromUrl = async () => {
-      if (params.artistId && !networkData && !isLoading) {
+      if (params.artistId && !networkData && !isLoading && !isClearing) {
         try {
           setIsLoading(true);
           console.log(`🔗 Loading artist network from URL: ${params.artistId}`);
@@ -85,7 +177,7 @@ export default function Home() {
     };
 
     loadArtistFromUrl();
-  }, [params.artistId, networkData, isLoading, setLocation]);
+  }, [params.artistId, networkData, isLoading, isClearing, setLocation]);
 
   const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
     // Replace existing network with new data
@@ -125,12 +217,19 @@ export default function Home() {
   };
 
   const handleClearNetwork = () => {
+    setIsClearing(true);
     setNetworkData(null);
     setIsLoading(false);
+    setCurrentArtistName("");
     setClearSearchField(true);
-    // Keep showNetworkView as true to stay on the network page
+    // Clear the URL to remove artist ID
+    setLocation('/');
+    // Keep showNetworkView as true to stay on the map page
     // Reset the clear flag after a brief delay
-    setTimeout(() => setClearSearchField(false), 100);
+    setTimeout(() => {
+      setClearSearchField(false);
+      setIsClearing(false);
+    }, 100);
   };
 
   const handleZoomChange = (transform: { k: number; x: number; y: number }) => {
@@ -192,7 +291,7 @@ export default function Home() {
   };
 
   return (
-    <div className={`relative w-full min-h-screen bg-black text-white main-container ${!showNetworkView ? 'overflow-x-hidden' : ''}`} style={{ pointerEvents: 'auto' }}>
+    <div className={`relative w-full h-screen bg-black text-white main-container ${showNetworkView ? 'network-visible' : ''}`} style={{ pointerEvents: 'auto' }}>
       {/* Search Interface */}
       <SearchInterface
         onNetworkData={handleNetworkData}
@@ -207,37 +306,48 @@ export default function Home() {
 
       {/* Attribution Content - Only visible when not showing network */}
       {!showNetworkView && (
-        <div className="footer-content fixed bottom-0 left-0 right-0 text-center z-10 bg-gradient-to-t from-black/80 to-transparent" style={{ pointerEvents: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 200px)' }}>
-          <div className="w-full max-w-2xl mx-auto px-4 py-8 sm:py-10 space-y-3 sm:space-y-4">
+        <div 
+          className="footer-content absolute bottom-0 left-0 right-0 text-center z-10 bg-gradient-to-t from-black/80 to-transparent" 
+          style={{ 
+            pointerEvents: 'auto', 
+            paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + ${spacing.bottomPadding})`,
+            paddingTop: spacing.topPadding,
+            // Force footer to be above browser UI
+            bottom: 'env(safe-area-inset-bottom, 0px)',
+            maxHeight: 'calc(100vh - 200px)',
+            overflow: 'hidden',
+            zIndex: 60
+          }}
+        >
+          <div className="w-full max-w-2xl mx-auto px-4 py-1 sm:py-2 md:py-3 space-y-1 sm:space-y-2">
             <div className="text-gray-500 text-xs sm:text-sm">
-              <p className="mb-1 sm:mb-2">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
-              <p className="mb-1 sm:mb-2">Powered by Music Nerd</p>
+              <p className="mb-1">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
+              <p className="mb-1">Powered by Music Nerd</p>
               <p>Click on artist nodes to visit their Music Nerd profiles</p>
             </div>
-            
-            {/* Empty space for button to overlap */}
-            <div className="h-8"></div>
+
+            {/* Spacer to make room for overlay button */}
+            <div className="h-20"></div>
           </div>
         </div>
       )}
 
-      {/* Music Nerd Button - Overlapping footer empty space */}
+      {/* Visit Music Nerd Button - fixed overlay below footer text */}
       {!showNetworkView && (
-        <div className="fixed left-1/2 transform -translate-x-1/2 z-50" style={{ bottom: 'calc(env(safe-area-inset-bottom, 16px) + 40px)' }}>
+        <div
+          className="fixed left-1/2 transform -translate-x-1/2 z-70"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
+        >
           <button
             onClick={() => {
-              console.log('Music Nerd button clicked!');
               window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer');
             }}
-            className="font-medium py-2 px-4 rounded-lg transition-colors text-white text-sm cursor-pointer"
+            className="font-medium py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg transition-colors text-white text-xs sm:text-sm"
             style={{
               backgroundColor: '#b427b4',
               border: 'none',
               outline: 'none',
               boxShadow: '0 4px 12px rgba(180, 39, 180, 0.3)',
-              pointerEvents: 'auto',
-              position: 'relative',
-              zIndex: 100
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = '#8f1c8f';
@@ -253,20 +363,19 @@ export default function Home() {
         </div>
       )}
 
-      {/* Spacer to ensure scrollable content - adjusted for mobile */}
-      <div className="h-40 sm:h-96"></div>
-
-      {/* Network Visualization */}
-      {networkData && (
-        <NetworkVisualizer
-          key={`network-${networkData.nodes[0]?.id || 'empty'}-${Date.now()}`}
-          data={networkData}
-          visible={showNetworkView}
-          filterState={filterState}
-          onZoomChange={handleZoomChange}
-          onArtistSearch={handleArtistSearch}
-          onArtistNodeClick={handleArtistNodeClick}
-        />
+      {/* Network Visualization - Only show when network data exists */}
+      {networkData && showNetworkView && (
+        <div className="mobile-network-container network-visible">
+          <NetworkVisualizer
+            key={`network-${networkData.nodes[0]?.id || 'empty'}-${Date.now()}`}
+            data={networkData}
+            visible={true}
+            filterState={filterState}
+            onZoomChange={handleZoomChange}
+            onArtistSearch={handleArtistSearch}
+            onArtistNodeClick={handleArtistNodeClick}
+          />
+        </div>
       )}
 
       {/* Loading Screen */}
@@ -297,11 +406,16 @@ export default function Home() {
         </>
       )}
 
+
       {/* Share Button - Only visible when network is shown */}
       {showNetworkView && <ShareButton />}
+
+      {/* Share Button - Hide on mobile when network view is shown */}
+      {(!showNetworkView || !isMobile) && <ShareButton />}
+
       
-      {/* Help Button - Always visible */}
-      <HelpButton />
+      {/* Help Button - Hide on mobile when network view is shown */}
+      {(!showNetworkView || !isMobile) && <HelpButton />}
     </div>
   );
 }

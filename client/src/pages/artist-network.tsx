@@ -5,8 +5,6 @@ import NetworkVisualizer from "@/components/network-visualizer";
 import ZoomControls from "@/components/zoom-controls";
 import FilterControls from "@/components/filter-controls";
 import MobileControls from "@/components/mobile-controls";
-import HelpButton from "@/components/help-button";
-import ShareButton from "@/components/share-button";
 import LoadingScreen from "@/components/loading-screen";
 import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft } from "lucide-react";
@@ -93,7 +91,12 @@ export default function ArtistNetwork() {
   };
 
   const handleClearNetwork = () => {
+    setNetworkData(null);
+    setIsLoading(false);
+    setCurrentArtistName("");
     setClearSearchField(true);
+    // Clear the URL to remove artist ID
+    setLocation('/');
     setTimeout(() => setClearSearchField(false), 100);
   };
 
@@ -136,58 +139,52 @@ export default function ArtistNetwork() {
         onClearAll={handleClearNetwork}
       />
 
-      {/* Network Visualization */}
+      {/* Network Visualization - Only show when network data exists */}
       {networkData && (
-        <NetworkVisualizer
-          key={`network-${Date.now()}`}
-          data={networkData}
-          visible={true}
-          filterState={filterState}
-          onZoomChange={handleZoomChange}
-          onArtistSearch={handleArtistSearch}
-          onArtistNodeClick={handleArtistNodeClick}
-        />
+        <div className="mobile-network-container network-visible">
+          <NetworkVisualizer
+            key={`network-${Date.now()}`}
+            data={networkData}
+            visible={true}
+            filterState={filterState}
+            onZoomChange={handleZoomChange}
+            onArtistSearch={handleArtistSearch}
+            onArtistNodeClick={handleArtistNodeClick}
+          />
+        </div>
       )}
 
       {/* Loading Screen */}
       <LoadingScreen isVisible={isLoading} artistName={currentArtistName} />
 
-      {/* Controls - Only show when network is loaded */}
-      {networkData && (
-        <>
-          {/* Desktop Controls */}
-          {!isMobile && (
-            <>
-              <ZoomControls
-                onZoomIn={handleZoomIn}
-                onZoomOut={handleZoomOut}
-                onZoomReset={handleZoomReset}
-                onClearAll={handleClearNetwork}
-              />
-              <FilterControls
-                filterState={filterState}
-                onFilterChange={setFilterState}
-              />
-            </>
-          )}
-          
-          {/* Mobile Controls */}
-          <MobileControls
-            filterState={filterState}
-            onFilterChange={setFilterState}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onZoomReset={handleZoomReset}
-            onClearAll={handleClearNetwork}
-          />
-        </>
-      )}
-
-      {/* Share Button - Always visible */}
-      <ShareButton />
-      
-      {/* Help Button - Always visible */}
-      <HelpButton />
+      {/* Controls - Always show on artist network page */}
+      <>
+        {/* Desktop Controls */}
+        {!isMobile && (
+          <>
+            <ZoomControls
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+              onZoomReset={handleZoomReset}
+              onClearAll={handleClearNetwork}
+            />
+            <FilterControls
+              filterState={filterState}
+              onFilterChange={setFilterState}
+            />
+          </>
+        )}
+        
+        {/* Mobile Controls */}
+        <MobileControls
+          filterState={filterState}
+          onFilterChange={setFilterState}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onZoomReset={handleZoomReset}
+          onClearAll={handleClearNetwork}
+        />
+      </>
     </div>
   );
 }

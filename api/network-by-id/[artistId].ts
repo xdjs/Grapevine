@@ -242,6 +242,9 @@ Requirements:
       };
       nodeMap.set(artist.name, mainNode);
 
+      // Track whether hallucinations were used
+      let hallucinationsUsed = false;
+
       // If no collaborators found, check if user wants hallucinated data
       if (!collaborationData.artists || collaborationData.artists.length === 0) {
         const allowHallucinations = req.query.allowHallucinations === 'true';
@@ -264,6 +267,7 @@ Requirements:
         
         // User requested hallucinated data - generate creative network
         console.log(`🎭 [Vercel] No real collaborators found for "${artist.name}", generating hallucinated network as requested`);
+        hallucinationsUsed = true;
         
         const hallucinatedPrompt = `Create an imaginative collaboration network for ${artist.name}. Generate plausible but potentially fictional music industry collaborators who could work with this artist. Include both real and creative professionals.
 
@@ -299,7 +303,7 @@ Guidelines:
             max_tokens: 2000,
           });
 
-          let hallucinatedContent = hallucinatedCompletion.choices[0]?.message?.content;
+          const hallucinatedContent = hallucinatedCompletion.choices[0]?.message?.content;
           if (hallucinatedContent) {
             // Parse hallucinated content
             let jsonContent = hallucinatedContent.trim();
@@ -448,13 +452,17 @@ Guidelines:
 
       const networkData = { nodes, links };
 
-      // Cache the generated data by ID
-      try {
-        const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE id = $2';
-        await client.query(updateQuery, [JSON.stringify(networkData), artistId]);
-        console.log(`💾 [Vercel] Cached network data for artist ID ${artistId} (${artist.name})`);
-      } catch (cacheError) {
-        console.warn('⚠️ [Vercel] Failed to cache data:', cacheError);
+      // Only cache the generated data if hallucinations were NOT used
+      if (!hallucinationsUsed) {
+        try {
+          const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE id = $2';
+          await client.query(updateQuery, [JSON.stringify(networkData), artistId]);
+          console.log(`💾 [Vercel] Cached network data for artist ID ${artistId} (${artist.name})`);
+        } catch (cacheError) {
+          console.warn('⚠️ [Vercel] Failed to cache data:', cacheError);
+        }
+      } else {
+        console.log(`🎭 [Vercel] Skipping cache for artist ID ${artistId} (${artist.name}) due to hallucinated data`);
       }
 
       await client.end();

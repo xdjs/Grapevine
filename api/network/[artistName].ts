@@ -399,6 +399,9 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         }
       }
       
+      // Track whether hallucinations were used
+      let hallucinationsUsed = false;
+
       // If no collaborators found, check if user wants hallucinated data
       if (collaborators.length === 0) {
         const allowHallucinations = req.query.allowHallucinations === 'true';
@@ -421,6 +424,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         
         // User requested hallucinated data - generate creative network
         console.log(`🎭 [Vercel] No real collaborators found for "${correctArtistName}", generating hallucinated network as requested`);
+        hallucinationsUsed = true;
         
         const hallucinatedPrompt = `Create an imaginative collaboration network for ${correctArtistName}. Generate plausible but potentially fictional music industry collaborators who could work with this artist. Include both real and creative professionals.
 
@@ -451,7 +455,7 @@ Guidelines:
             max_tokens: 2000,
           });
 
-          let hallucinatedContent = hallucinatedCompletion.choices[0]?.message?.content;
+          const hallucinatedContent = hallucinatedCompletion.choices[0]?.message?.content;
           if (hallucinatedContent) {
             // Parse hallucinated content
             let jsonContent = hallucinatedContent.trim();
@@ -605,13 +609,17 @@ Guidelines:
 
       const networkData = { nodes, links };
 
-      // Cache the generated data
-      try {
-        const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE LOWER(name) = LOWER($2)';
-        await client.query(updateQuery, [JSON.stringify(networkData), correctArtistName]);
-        console.log(`💾 [Vercel] Cached network data for ${correctArtistName}`);
-      } catch (cacheError) {
-        console.warn('⚠️ [Vercel] Failed to cache data:', cacheError);
+      // Only cache the generated data if hallucinations were NOT used
+      if (!hallucinationsUsed) {
+        try {
+          const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE LOWER(name) = LOWER($2)';
+          await client.query(updateQuery, [JSON.stringify(networkData), correctArtistName]);
+          console.log(`💾 [Vercel] Cached network data for ${correctArtistName}`);
+        } catch (cacheError) {
+          console.warn('⚠️ [Vercel] Failed to cache data:', cacheError);
+        }
+      } else {
+        console.log(`🎭 [Vercel] Skipping cache for ${correctArtistName} due to hallucinated data`);
       }
 
       await client.end();
