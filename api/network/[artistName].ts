@@ -125,7 +125,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         apiKey: OPENAI_API_KEY,
       });
 
-      const prompt = `Generate a comprehensive list of music industry professionals who have collaborated with ${correctArtistName}. Include people who work as producers, songwriters, or both. For each person, specify all their roles and their top 3 collaborating artists.
+      const prompt = `If ${correctArtistName} is a real artist with known music industry collaborations, provide a comprehensive list of music industry professionals who have collaborated with them. Include people who work as producers, songwriters, or both.
+
+IMPORTANT: Search for collaborations regardless of ${correctArtistName}'s popularity level - include mainstream artists, independent artists, underground artists, regional artists, and emerging artists. Many smaller artists still have authentic collaborations that should be included.
+
+If ${correctArtistName} is not a real artist or you have absolutely no authentic collaboration data for them, return an empty collaborators array. Do NOT create fake or placeholder collaborators.
 
 Please respond with JSON in this exact format:
 {
@@ -134,29 +138,33 @@ Please respond with JSON in this exact format:
       "name": "Person Name",
       "roles": ["producer", "songwriter"], 
       "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
-    },
-    {
-      "name": "Another Person",
-      "roles": ["songwriter"],
-      "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
     }
   ]
 }
 
-Important guidelines:
-- Include music industry professionals who have actually worked with ${correctArtistName}
-- For each person, list ALL their roles from: ["producer", "songwriter", "artist"]
-- Many professionals have multiple roles (e.g., Jack Antonoff is both producer and songwriter)
-- Include their top 3 collaborating artists for each person
-- Focus on real, verified collaborations from the music industry
-- DO NOT generate fake or placeholder names like "Artist A", "Producer 1", "Songwriter X", etc.
-- If you cannot find real collaborators, return an empty collaborators array
-- Return ONLY the JSON object, no other text`;
+Guidelines:
+- Search thoroughly for ALL artists regardless of fame level: mainstream, independent, underground, regional, emerging
+- Only include real, verified music industry professionals who have actually worked with ${correctArtistName}
+- If you don't have authentic data, return: {"collaborators": []}
+- For each real person, list ALL their roles from: ["producer", "songwriter", "artist"]
+- Make sure if any of these people have multiple roles (artist, producer, songwriter), it is listed in the data. Search for multiple roles on every person that is queried, regardless of their popularity.
+- Include their top 3 real collaborating artists (can include both famous and lesser-known artists)
+- Never use generic names like "John Doe", "Producer X", or placeholder data
+- Maximum 10 real collaborators if they exist`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.3,
+        messages: [
+          {
+            role: "system",
+            content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.1,
         max_tokens: 2000,
       });
 

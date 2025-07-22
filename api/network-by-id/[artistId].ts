@@ -25,7 +25,8 @@ interface NetworkData {
 interface CollaborationData {
   artists: Array<{
     name: string;
-    type: string;
+    type?: string;
+    roles?: string[];
     topCollaborators: string[];
   }>;
 }
@@ -141,36 +142,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         apiKey: OPENAI_API_KEY,
       });
 
-      const prompt = `Generate a list of producers and songwriters who have collaborated with ${artist.name}. Return ONLY valid JSON with no additional text, markdown, or formatting.
+      const prompt = `If ${artist.name} is a real artist with known music industry collaborations, provide a comprehensive list of music industry professionals who have collaborated with them. Include people who work as producers, songwriters, or both.
+
+IMPORTANT: Search for collaborations regardless of ${artist.name}'s popularity level - include mainstream artists, independent artists, underground artists, regional artists, and emerging artists. Many smaller artists still have authentic collaborations that should be included.
+
+If ${artist.name} is not a real artist or you have absolutely no authentic collaboration data for them, return an empty artists array. Do NOT create fake or placeholder collaborators.
 
 Required format:
 {
   "artists": [
     {
       "name": "Producer Name",
-      "type": "producer", 
-      "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
-    },
-    {
-      "name": "Songwriter Name",
-      "type": "songwriter",
+      "roles": ["producer", "songwriter"], 
       "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
     }
   ]
 }
 
 Requirements:
-- Provide real producers and songwriters who have actually worked with ${artist.name}
-- Use only real music industry collaborations
-- DO NOT generate fake or placeholder names like "Artist A", "Producer 1", "Songwriter X", etc.
-- If you cannot find real collaborators, return an empty artists array
+- Search thoroughly for ALL artists regardless of fame level: mainstream, independent, underground, regional, emerging
+- Only include real, verified music industry professionals who have actually worked with ${artist.name}
+- If you don't have authentic data, return: {"artists": []}
+- For each real person, list ALL their roles from: ["producer", "songwriter", "artist"]
+- Make sure if any of these people have multiple roles (artist, producer, songwriter), it is listed in the data. Search for multiple roles on every person that is queried, regardless of their popularity.
+- Include their top 3 real collaborating artists (can include both famous and lesser-known artists)
+- Never use generic names like "John Doe", "Producer X", or placeholder data
 - Return ONLY the JSON object, no other text
 - Ensure all JSON is properly formatted and valid`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.3,
+        messages: [
+          {
+            role: "system",
+            content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.1,
         max_tokens: 2000,
       });
 
@@ -365,14 +377,21 @@ Guidelines:
           console.log(`🚫 [Vercel] Filtering out fake collaborator: "${collaborator.name}"`);
           continue;
         }
+
+        // Handle both new format (roles array) and old format (type field)
+        const roles = collaborator.roles || [collaborator.type || 'producer'];
+        console.log(`🎭 [Vercel] Processing "${collaborator.name}" with roles: [${roles.join(', ')}]`);
+        
         // Check if we already have a node for this person
         let collabNode = nodeMap.get(collaborator.name);
         
         if (collabNode) {
-          // Person already exists - add the new role to their types array
-          if (!collabNode.types.includes(collaborator.type)) {
-            collabNode.types.push(collaborator.type);
-            console.log(`🎭 [Vercel] Added ${collaborator.type} role to existing ${collaborator.name} node (now has ${collabNode.types.length} roles)`);
+          // Person already exists - merge all roles into their types array
+          for (const role of roles) {
+            if (!collabNode.types.includes(role)) {
+              collabNode.types.push(role);
+              console.log(`🎭 [Vercel] Added ${role} role to existing ${collaborator.name} node (now has ${collabNode.types.length} roles)`);
+            }
           }
           // Update collaborations list
           if (collaborator.topCollaborators && collaborator.topCollaborators.length > 0) {
@@ -387,13 +406,14 @@ Guidelines:
             collabNode.color = '#8A2BE2'; // Keep producer color for producer-songwriters
           }
         } else {
-          // Create new node
+          // Create new node with all roles
+          const primaryRole = roles[0];
           collabNode = {
             id: collaborator.name,
             name: collaborator.name,
-            type: collaborator.type,
-            types: [collaborator.type],
-            color: collaborator.type === 'producer' ? '#8A2BE2' : '#00CED1',
+            type: primaryRole,
+            types: [...roles], // Include all roles
+            color: primaryRole === 'producer' ? '#8A2BE2' : '#00CED1',
             size: 20,
             artistId: null,
             collaborations: collaborator.topCollaborators || []
@@ -407,6 +427,7 @@ Guidelines:
           }
 
           nodeMap.set(collaborator.name, collabNode);
+          console.log(`✅ [Vercel] Created new node for "${collaborator.name}" with ${roles.length} roles: [${roles.join(', ')}]`);
         }
 
         // Create link (only once per person, not per role)
