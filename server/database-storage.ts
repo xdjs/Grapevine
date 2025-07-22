@@ -197,7 +197,7 @@ export class DatabaseStorage implements IStorage {
         const peopleListStr = peopleList.map(name => `"${name}"`).join(', ');
         const batchRolePrompt = `For each of these music industry professionals: ${peopleListStr}
         
-CRITICAL: Search extensively for MULTIPLE ROLES for every single person. Many people have multiple roles (artist, producer, songwriter).
+CRITICAL: Search extensively for MULTIPLE ROLES for every single person, regardless of their popularity or fame level. Many people have multiple roles (artist, producer, songwriter). This includes mainstream artists, independent artists, underground artists, regional artists, and emerging artists.
 
 Return their roles as JSON in this exact format:
 {
@@ -206,7 +206,7 @@ Return their roles as JSON in this exact format:
   "Person Name 3": ["artist"]
 }
 
-Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has - investigate thoroughly for multiple roles on every person queried. Return ONLY the JSON object, no other text.`;
+Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has - investigate thoroughly for multiple roles on every person queried, whether they are famous or lesser-known. Return ONLY the JSON object, no other text.`;
 
         const OpenAI = await import('openai');
         const openai = new OpenAI.default({
@@ -248,11 +248,11 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
     }
     
       try {
-        const mainArtistRolePrompt = `What roles does ${artistName} have in the music industry? CRITICAL: Search extensively for ALL POSSIBLE ROLES - many artists also produce and write songs.
+        const mainArtistRolePrompt = `What roles does ${artistName} have in the music industry? CRITICAL: Search extensively for ALL POSSIBLE ROLES regardless of their popularity or fame level - many artists also produce and write songs. This includes mainstream artists, independent artists, underground artists, regional artists, and emerging artists.
 
 Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. 
 
-Investigate thoroughly for multiple roles on ${artistName} - check if they are also a producer or songwriter in addition to being an artist. Return ONLY the JSON array, no other text.`;
+Investigate thoroughly for multiple roles on ${artistName} - check if they are also a producer or songwriter in addition to being an artist, whether they are famous or lesser-known. Return ONLY the JSON array, no other text.`;
         
         const OpenAI = await import('openai');
         const openai = new OpenAI.default({
