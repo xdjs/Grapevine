@@ -582,10 +582,55 @@ Guidelines:
           });
         }
 
-        // Add branching artists
+        // Add branching artists with comprehensive multi-role detection
         for (const branchingArtist of collaborator.topCollaborators || []) {
           if (branchingArtist !== correctArtistName && !nodeMap.has(branchingArtist)) {
-            const branchingRoles = getOptimizedRoles(branchingArtist, 'artist');
+            
+            // Use OpenAI to detect all roles for this artist node
+            let branchingRoles = ['artist']; // Default fallback
+            try {
+              console.log(`🎭 [Vercel] Detecting roles for artist node: "${branchingArtist}"`);
+              
+              const rolePrompt = `What roles does ${branchingArtist} have in the music industry? CRITICAL: Search extensively for ALL POSSIBLE ROLES regardless of their popularity or fame level - many people have multiple roles (artist, producer, songwriter). This includes mainstream artists, independent artists, underground artists, regional artists, and emerging artists.
+
+Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. 
+
+Investigate thoroughly for multiple roles on ${branchingArtist}, whether they are famous or lesser-known. Return ONLY the JSON array, no other text.`;
+              
+              const roleCompletion = await openai.chat.completions.create({
+                model: "gpt-4o",
+                messages: [
+                  {
+                    role: "system",
+                    content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
+                  },
+                  {
+                    role: "user",
+                    content: rolePrompt
+                  }
+                ],
+                temperature: 0.1,
+                max_tokens: 100,
+              });
+
+              const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
+              if (roleContent) {
+                try {
+                  const detectedRoles = JSON.parse(roleContent);
+                  if (Array.isArray(detectedRoles) && detectedRoles.length > 0) {
+                    branchingRoles = detectedRoles.filter(role => 
+                      ['artist', 'producer', 'songwriter'].includes(role)
+                    );
+                    console.log(`✅ [Vercel] Detected roles for artist "${branchingArtist}":`, branchingRoles);
+                  }
+                } catch (parseError) {
+                  console.log(`⚠️ [Vercel] Could not parse role detection for "${branchingArtist}", using default`);
+                }
+              }
+            } catch (error) {
+              console.log(`⚠️ [Vercel] Role detection failed for "${branchingArtist}", using default`);
+            }
+
             const branchNode = {
               id: branchingArtist,
               name: branchingArtist,
@@ -604,6 +649,8 @@ Guidelines:
             }
 
             nodeMap.set(branchingArtist, branchNode);
+            console.log(`🎭 [Vercel] Created artist node "${branchingArtist}" with ${branchingRoles.length} roles: [${branchingRoles.join(', ')}]`);
+            
             links.push({
               source: collaborator.name,
               target: branchingArtist

@@ -524,23 +524,38 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
         }
       }
 
-      // Fallback to MusicBrainz
+      // Fallback to MusicBrainz with OpenAI multi-role enhancement
       console.log(`🎵 [DEBUG] Querying MusicBrainz API for "${artistName}"...`);
       const collaborationData = await musicBrainzService.getArtistCollaborations(artistName);
       
-      // Process MusicBrainz data with type safety
+      // Process MusicBrainz data with OpenAI role enhancement
       const limitedCollaborators = collaborationData.artists.slice(0, 10);
+      
+      // Collect all people for OpenAI role detection
+      const allPeopleFromMusicBrainz = new Set<string>();
+      for (const collaborator of limitedCollaborators) {
+        allPeopleFromMusicBrainz.add(collaborator.name);
+      }
+      
+      // Use OpenAI to detect multi-roles for MusicBrainz collaborators
+      const musicBrainzRoleMap = await this.batchDetectRoles(Array.from(allPeopleFromMusicBrainz));
+      console.log(`🎭 [DEBUG] Enhanced ${allPeopleFromMusicBrainz.size} MusicBrainz collaborators with OpenAI role detection`);
       
       for (const collaborator of limitedCollaborators) {
         const safeCollaboratorType = ensureRoleType(collaborator.type);
         
+        // Get enhanced roles from OpenAI, fallback to MusicBrainz type
+        const enhancedRoles = musicBrainzRoleMap.get(collaborator.name) || [safeCollaboratorType];
+        
         const collaboratorNode = createSafeNetworkNode({
             name: collaborator.name,
-          type: safeCollaboratorType,
+          type: enhancedRoles[0],
+          types: enhancedRoles,
             size: 20,
         });
         
-                nodeMap.set(collaborator.name, collaboratorNode);
+        nodeMap.set(collaborator.name, collaboratorNode);
+        console.log(`🎭 [DEBUG] Created MusicBrainz node "${collaborator.name}" with ${enhancedRoles.length} roles: [${enhancedRoles.join(', ')}]`);
 
               links.push({
                 source: artistName,
