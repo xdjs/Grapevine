@@ -39,7 +39,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       onLoadingChange?.(true);
       
       const data = await fetchNetworkData(searchQuery.trim());
-      onNetworkData(data);
+      onNetworkData(data as any);
       
       toast({
         title: "Network Generated",

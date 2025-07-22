@@ -9,7 +9,7 @@ import LoadingScreen from "@/components/loading-screen";
 import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft } from "lucide-react";
 
-import { NetworkData, FilterState } from "@/types/network";
+import { NetworkData, NetworkNode, FilterState } from "@/types/network";
 import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -28,10 +28,29 @@ export default function ArtistNetwork() {
   const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
   const isMobile = useIsMobile();
 
+  const handleNetworkData = useCallback((data: NetworkData) => {
+    setNetworkData(data);
+  }, []);
+
   // Navigate back to home
   const handleGoHome = () => {
-    window.location.href = "/";
+    setLocation("/");
   };
+
+  // Navigate back to search with different artist
+  const handleGoToSearch = () => {
+    setLocation("/");
+    setTimeout(() => setClearSearchField(false), 100);
+  };
+
+  const handleLoadingChange = useCallback((loading: boolean, artistName?: string) => {
+    setIsLoading(loading);
+    if (loading && artistName) {
+      setCurrentArtistName(artistName);
+    } else if (!loading) {
+      setCurrentArtistName("");
+    }
+  }, []);
 
   const handleZoomChange = (transform: { k: number; x: number; y: number }) => {
     setZoomTransform(transform);
@@ -43,6 +62,7 @@ export default function ArtistNetwork() {
     }
   };
 
+  // Handle node click to load new artist network
   const handleArtistNodeClick = useCallback(async (artistName: string, artistId?: string) => {
     console.log(`🔗 [Artist Network] Artist node clicked: ${artistName} (ID: ${artistId})`);
     
@@ -59,9 +79,9 @@ export default function ArtistNetwork() {
       // Handle the response (might be network data or no-collaborators response)
       if (data && 'nodes' in data) {
         // Normal network data - pass to parent
-        const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const mainArtist = data.nodes.find((node: NetworkNode) => node.size === 30 && node.type === 'artist');
         const finalArtistId = mainArtist?.artistId || mainArtist?.id || artistId;
-        handleNetworkData(data, finalArtistId);
+        handleNetworkData(data);
       } else {
         // Handle no collaborators response
         console.warn(`No network data found for ${artistName}`);
@@ -99,19 +119,6 @@ export default function ArtistNetwork() {
     setLocation('/');
     setTimeout(() => setClearSearchField(false), 100);
   };
-
-  const handleNetworkData = useCallback((data: NetworkData) => {
-    setNetworkData(data);
-  }, []);
-
-  const handleLoadingChange = useCallback((loading: boolean, artistName?: string) => {
-    setIsLoading(loading);
-    if (loading && artistName) {
-      setCurrentArtistName(artistName);
-    } else if (!loading) {
-      setCurrentArtistName("");
-    }
-  }, []);
 
   return (
     <div className="relative w-full min-h-screen bg-black text-white">
@@ -177,8 +184,6 @@ export default function ArtistNetwork() {
         
         {/* Mobile Controls */}
         <MobileControls
-          filterState={filterState}
-          onFilterChange={setFilterState}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onZoomReset={handleZoomReset}

@@ -209,10 +209,6 @@ Return their roles as JSON in this exact format:
 
 Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has - investigate thoroughly for multiple roles on every person queried, whether they are famous or lesser-known. Return ONLY the JSON object, no other text.`;
 
-IMPORTANT: Make sure if any of these people have multiple roles (artist, producer, songwriter), it is listed in the data. Search for multiple roles on every person that is queried.
-
-
-
         const OpenAI = await import('openai');
         const openai = new OpenAI.default({
           apiKey: process.env.OPENAI_API_KEY,
@@ -696,9 +692,9 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
       
       console.log(`✅ [DEBUG] Found artist: "${artist.name}" (ID: ${artistId})`);
       
-      if (artist.webmapdata) {
+      if (artist.webmapdata && typeof artist.webmapdata === 'object' && 'nodes' in artist.webmapdata && 'links' in artist.webmapdata) {
         console.log(`💾 [DEBUG] Found cached webmapdata for artist ID "${artistId}" (${artist.name})`);
-        return artist.webmapdata;
+        return artist.webmapdata as NetworkData;
       }
       
       console.log(`🔄 [DEBUG] No cached data found for artist ID "${artistId}" (${artist.name}), generating new network...`);
