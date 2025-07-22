@@ -242,17 +242,63 @@ Requirements:
       const nodeMap = new Map<string, NetworkNode>();
       const links: NetworkLink[] = [];
 
-      // Add main artist node
+      // Detect roles for main artist first
+      let mainArtistRoles = ['artist']; // Default fallback
+      try {
+        console.log(`🎭 [Vercel] Detecting roles for MAIN artist: "${artist.name}"`);
+        
+        const mainArtistRolePrompt = `What roles does ${artist.name} have in the music industry? CRITICAL: Search extensively for ALL POSSIBLE ROLES regardless of their popularity or fame level - many people have multiple roles (artist, producer, songwriter). This includes mainstream artists, independent artists, underground artists, regional artists, and emerging artists.
+
+Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. 
+
+Investigate thoroughly for multiple roles on ${artist.name}, whether they are famous or lesser-known. Return ONLY the JSON array, no other text.`;
+        
+        const mainRoleCompletion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system",
+              content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
+            },
+            {
+              role: "user",
+              content: mainArtistRolePrompt
+            }
+          ],
+          temperature: 0.1,
+          max_tokens: 100,
+        });
+
+        const mainRoleContent = mainRoleCompletion.choices[0]?.message?.content?.trim();
+        if (mainRoleContent) {
+          try {
+            const detectedMainRoles = JSON.parse(mainRoleContent);
+            if (Array.isArray(detectedMainRoles) && detectedMainRoles.length > 0) {
+              mainArtistRoles = detectedMainRoles.filter(role => 
+                ['artist', 'producer', 'songwriter'].includes(role)
+              );
+              console.log(`✅ [Vercel] Detected roles for MAIN artist "${artist.name}":`, mainArtistRoles);
+            }
+          } catch (parseError) {
+            console.log(`⚠️ [Vercel] Could not parse main artist role detection for "${artist.name}", using default`);
+          }
+        }
+      } catch (error) {
+        console.log(`⚠️ [Vercel] Main artist role detection failed for "${artist.name}", using default`);
+      }
+
+      // Add main artist node with detected roles
       const mainNode = {
         id: artist.name,
         name: artist.name,
-        type: 'artist',
-        types: ['artist'],
+        type: mainArtistRoles[0],
+        types: mainArtistRoles,
         color: '#FF69B4',
         size: 30,
         artistId: artist.id
       };
       nodeMap.set(artist.name, mainNode);
+      console.log(`🎭 [Vercel] Created MAIN artist node "${artist.name}" with ${mainArtistRoles.length} roles: [${mainArtistRoles.join(', ')}]`);
 
       // Track whether hallucinations were used
       let hallucinationsUsed = false;

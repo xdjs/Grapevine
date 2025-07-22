@@ -287,7 +287,11 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       let mainArtistTypes = ['artist']; // Default
       
       try {
-        const mainArtistRolePrompt = `What roles does ${correctArtistName} have in the music industry? Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. Return ONLY the JSON array, no other text.`;
+        const mainArtistRolePrompt = `What roles does ${correctArtistName} have in the music industry? CRITICAL: Search extensively for ALL POSSIBLE ROLES regardless of their popularity or fame level - many people have multiple roles (artist, producer, songwriter). This includes mainstream artists, independent artists, underground artists, regional artists, and emerging artists.
+
+Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. 
+
+Investigate thoroughly for multiple roles on ${correctArtistName}, whether they are famous or lesser-known. Return ONLY the JSON array, no other text.`;
         
         const openai = new OpenAI({
           apiKey: OPENAI_API_KEY,
@@ -295,7 +299,16 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
 
         const roleCompletion = await openai.chat.completions.create({
           model: "gpt-4o",
-          messages: [{ role: "user", content: mainArtistRolePrompt }],
+          messages: [
+            {
+              role: "system",
+              content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
+            },
+            {
+              role: "user",
+              content: mainArtistRolePrompt
+            }
+          ],
           temperature: 0.1,
           max_tokens: 100,
         });
@@ -358,11 +371,14 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
           'placeholder', 'example', 'sample'
         ];
         return fakePatterns.some(pattern => lowerName.includes(pattern)) ||
-               lowerName.match(/^(artist|producer|songwriter)\s+[a-z]$/i) ||
-               lowerName.match(/^[a-z]{1,2}$/i);
+               !!lowerName.match(/^(artist|producer|songwriter)\s+[a-z]$/i) ||
+               !!lowerName.match(/^[a-z]{1,2}$/i);
       };
       
       if (collaborationData.collaborators) {
+        // Add main artist to batch role detection
+        allPeople.add(correctArtistName);
+        
         for (const person of collaborationData.collaborators) {
           // Skip fake collaborators
           if (isFakeCollaborator(person.name)) {
