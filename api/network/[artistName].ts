@@ -455,7 +455,7 @@ Guidelines:
             max_tokens: 2000,
           });
 
-          let hallucinatedContent = hallucinatedCompletion.choices[0]?.message?.content;
+          const hallucinatedContent = hallucinatedCompletion.choices[0]?.message?.content;
           if (hallucinatedContent) {
             // Parse hallucinated content
             let jsonContent = hallucinatedContent.trim();

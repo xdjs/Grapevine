@@ -155,36 +155,34 @@ export default function ArtistNetwork() {
       {/* Loading Screen */}
       <LoadingScreen isVisible={isLoading} artistName={currentArtistName} />
 
-      {/* Controls - Only show when network is loaded */}
-      {networkData && (
-        <>
-          {/* Desktop Controls */}
-          {!isMobile && (
-            <>
-              <ZoomControls
-                onZoomIn={handleZoomIn}
-                onZoomOut={handleZoomOut}
-                onZoomReset={handleZoomReset}
-                onClearAll={handleClearNetwork}
-              />
-              <FilterControls
-                filterState={filterState}
-                onFilterChange={setFilterState}
-              />
-            </>
-          )}
-          
-          {/* Mobile Controls */}
-          <MobileControls
-            filterState={filterState}
-            onFilterChange={setFilterState}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onZoomReset={handleZoomReset}
-            onClearAll={handleClearNetwork}
-          />
-        </>
-      )}
+      {/* Controls - Always show on artist network page */}
+      <>
+        {/* Desktop Controls */}
+        {!isMobile && (
+          <>
+            <ZoomControls
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+              onZoomReset={handleZoomReset}
+              onClearAll={handleClearNetwork}
+            />
+            <FilterControls
+              filterState={filterState}
+              onFilterChange={setFilterState}
+            />
+          </>
+        )}
+        
+        {/* Mobile Controls */}
+        <MobileControls
+          filterState={filterState}
+          onFilterChange={setFilterState}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onZoomReset={handleZoomReset}
+          onClearAll={handleClearNetwork}
+        />
+      </>
     </div>
   );
 }

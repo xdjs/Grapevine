@@ -191,7 +191,7 @@ export default function MobileControls({
     
     // Declare variables at function scope for error handling
     let elementsToHide: HTMLElement[] = [];
-    let originalDisplays: string[] = [];
+    const originalDisplays: string[] = [];
     let currentDialog: HTMLElement | null = null;
     let dialogDisplay = '';
     
