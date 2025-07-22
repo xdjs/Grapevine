@@ -41,7 +41,9 @@ class OpenAIService {
     try {
       const prompt = `If ${artistName} is a real artist with known music industry collaborations, provide a comprehensive list of music industry professionals who have collaborated with them. Include people who work as producers, songwriters, or both.
 
-IMPORTANT: If ${artistName} is not a well-known artist or you have no authentic collaboration data for them, return an empty collaborators array. Do NOT create fake or placeholder collaborators.
+IMPORTANT: Search for collaborations regardless of ${artistName}'s popularity level - include mainstream artists, independent artists, underground artists, regional artists, and emerging artists. Many smaller artists still have authentic collaborations that should be included.
+
+If ${artistName} is not a real artist or you have absolutely no authentic collaboration data for them, return an empty collaborators array. Do NOT create fake or placeholder collaborators.
 
 Please respond with JSON in this exact format:
 {
@@ -55,10 +57,12 @@ Please respond with JSON in this exact format:
 }
 
 Guidelines:
+- Search thoroughly for ALL artists regardless of fame level: mainstream, independent, underground, regional, emerging
 - Only include real, verified music industry professionals who have actually worked with ${artistName}
 - If you don't have authentic data, return: {"collaborators": []}
 - For each real person, list ALL their roles from: ["producer", "songwriter", "artist"]
-- Include their top 3 real collaborating artists
+- Make sure if any of these people have multiple roles (artist, producer, songwriter), it is listed in the data. Search for multiple roles on every person that is queried, regardless of their popularity.
+- Include their top 3 real collaborating artists (can include both famous and lesser-known artists)
 - Never use generic names like "John Doe", "Producer X", or placeholder data
 - Maximum 10 real collaborators if they exist`;
 
@@ -67,7 +71,7 @@ Guidelines:
         messages: [
           {
             role: "system",
-            content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations. Only include verified, authentic collaborations from the music industry."
+            content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
           },
           {
             role: "user",

@@ -197,6 +197,8 @@ export class DatabaseStorage implements IStorage {
         const peopleListStr = peopleList.map(name => `"${name}"`).join(', ');
         const batchRolePrompt = `For each of these music industry professionals: ${peopleListStr}
         
+CRITICAL: Search extensively for MULTIPLE ROLES for every single person, regardless of their popularity or fame level. Many people have multiple roles (artist, producer, songwriter). This includes mainstream artists, independent artists, underground artists, regional artists, and emerging artists.
+
 Return their roles as JSON in this exact format:
 {
   "Person Name 1": ["artist", "songwriter"],
@@ -204,9 +206,12 @@ Return their roles as JSON in this exact format:
   "Person Name 3": ["artist"]
 }
 
+
+Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has - investigate thoroughly for multiple roles on every person queried, whether they are famous or lesser-known. Return ONLY the JSON object, no other text.`;
+
 IMPORTANT: Make sure if any of these people have multiple roles (artist, producer, songwriter), it is listed in the data. Search for multiple roles on every person that is queried.
 
-Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has - thoroughly investigate each person for ALL possible roles they may have in the music industry. Return ONLY the JSON object, no other text.`;
+
 
         const OpenAI = await import('openai');
         const openai = new OpenAI.default({
@@ -248,7 +253,11 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
     }
     
       try {
-        const mainArtistRolePrompt = `What roles does ${artistName} have in the music industry? Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. Return ONLY the JSON array, no other text.`;
+        const mainArtistRolePrompt = `What roles does ${artistName} have in the music industry? CRITICAL: Search extensively for ALL POSSIBLE ROLES regardless of their popularity or fame level - many artists also produce and write songs. This includes mainstream artists, independent artists, underground artists, regional artists, and emerging artists.
+
+Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. 
+
+Investigate thoroughly for multiple roles on ${artistName} - check if they are also a producer or songwriter in addition to being an artist, whether they are famous or lesser-known. Return ONLY the JSON array, no other text.`;
         
         const OpenAI = await import('openai');
         const openai = new OpenAI.default({
@@ -520,13 +529,23 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         }
       }
 
-      // Fallback to MusicBrainz
+      // Fallback to MusicBrainz with OpenAI multi-role enhancement
       console.log(`🎵 [DEBUG] Querying MusicBrainz API for "${artistName}"...`);
       const collaborationData = await musicBrainzService.getArtistCollaborations(artistName);
       
-      // Process MusicBrainz data with comprehensive role detection for EVERY collaborator
+      // Process MusicBrainz data with OpenAI role enhancement
       const limitedCollaborators = collaborationData.artists.slice(0, 10);
       
+      // Collect all people for OpenAI role detection
+      const allPeopleFromMusicBrainz = new Set<string>();
+      for (const collaborator of limitedCollaborators) {
+        allPeopleFromMusicBrainz.add(collaborator.name);
+      }
+      
+      // Use OpenAI to detect multi-roles for MusicBrainz collaborators
+      const musicBrainzRoleMap = await this.batchDetectRoles(Array.from(allPeopleFromMusicBrainz));
+      console.log(`🎭 [DEBUG] Enhanced ${allPeopleFromMusicBrainz.size} MusicBrainz collaborators with OpenAI role detection`);
+
       // Collect all collaborator names for batch role detection
       const collaboratorNames = limitedCollaborators.map(c => c.name);
       console.log(`🎭 [DEBUG] Performing comprehensive role detection for ${collaboratorNames.length} MusicBrainz collaborators`);
@@ -537,8 +556,9 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       for (const collaborator of limitedCollaborators) {
         const safeCollaboratorType = ensureRoleType(collaborator.type);
         
-        // Get enhanced roles from batch detection, fallback to MusicBrainz type
-        const enhancedRoles = globalRoleMap.get(collaborator.name) || [safeCollaboratorType];
+
+        // Get enhanced roles from OpenAI, fallback to MusicBrainz type
+        const enhancedRoles = musicBrainzRoleMap.get(collaborator.name) || [safeCollaboratorType];
         
         const collaboratorNode = createSafeNetworkNode({
             name: collaborator.name,
@@ -548,7 +568,9 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         });
         
         nodeMap.set(collaborator.name, collaboratorNode);
-        console.log(`🎭 [DEBUG] Enhanced MusicBrainz collaborator "${collaborator.name}" to roles:`, enhancedRoles);
+
+        console.log(`🎭 [DEBUG] Created MusicBrainz node "${collaborator.name}" with ${enhancedRoles.length} roles: [${enhancedRoles.join(', ')}]`);
+
 
               links.push({
                 source: artistName,

@@ -125,7 +125,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         apiKey: OPENAI_API_KEY,
       });
 
-      const prompt = `Generate a comprehensive list of music industry professionals who have collaborated with ${correctArtistName}. Include people who work as producers, songwriters, or both. For each person, specify all their roles and their top 3 collaborating artists.
+      const prompt = `If ${correctArtistName} is a real artist with known music industry collaborations, provide a comprehensive list of music industry professionals who have collaborated with them. Include people who work as producers, songwriters, or both.
+
+IMPORTANT: Search for collaborations regardless of ${correctArtistName}'s popularity level - include mainstream artists, independent artists, underground artists, regional artists, and emerging artists. Many smaller artists still have authentic collaborations that should be included.
+
+If ${correctArtistName} is not a real artist or you have absolutely no authentic collaboration data for them, return an empty collaborators array. Do NOT create fake or placeholder collaborators.
 
 Please respond with JSON in this exact format:
 {
@@ -134,29 +138,33 @@ Please respond with JSON in this exact format:
       "name": "Person Name",
       "roles": ["producer", "songwriter"], 
       "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
-    },
-    {
-      "name": "Another Person",
-      "roles": ["songwriter"],
-      "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
     }
   ]
 }
 
-Important guidelines:
-- Include music industry professionals who have actually worked with ${correctArtistName}
-- For each person, list ALL their roles from: ["producer", "songwriter", "artist"]
-- Many professionals have multiple roles (e.g., Jack Antonoff is both producer and songwriter)
-- Include their top 3 collaborating artists for each person
-- Focus on real, verified collaborations from the music industry
-- DO NOT generate fake or placeholder names like "Artist A", "Producer 1", "Songwriter X", etc.
-- If you cannot find real collaborators, return an empty collaborators array
-- Return ONLY the JSON object, no other text`;
+Guidelines:
+- Search thoroughly for ALL artists regardless of fame level: mainstream, independent, underground, regional, emerging
+- Only include real, verified music industry professionals who have actually worked with ${correctArtistName}
+- If you don't have authentic data, return: {"collaborators": []}
+- For each real person, list ALL their roles from: ["producer", "songwriter", "artist"]
+- Make sure if any of these people have multiple roles (artist, producer, songwriter), it is listed in the data. Search for multiple roles on every person that is queried, regardless of their popularity.
+- Include their top 3 real collaborating artists (can include both famous and lesser-known artists)
+- Never use generic names like "John Doe", "Producer X", or placeholder data
+- Maximum 10 real collaborators if they exist`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.3,
+        messages: [
+          {
+            role: "system",
+            content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.1,
         max_tokens: 2000,
       });
 
@@ -279,7 +287,11 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       let mainArtistTypes = ['artist']; // Default
       
       try {
-        const mainArtistRolePrompt = `What roles does ${correctArtistName} have in the music industry? Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. Return ONLY the JSON array, no other text.`;
+        const mainArtistRolePrompt = `What roles does ${correctArtistName} have in the music industry? CRITICAL: Search extensively for ALL POSSIBLE ROLES regardless of their popularity or fame level - many people have multiple roles (artist, producer, songwriter). This includes mainstream artists, independent artists, underground artists, regional artists, and emerging artists.
+
+Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. 
+
+Investigate thoroughly for multiple roles on ${correctArtistName}, whether they are famous or lesser-known. Return ONLY the JSON array, no other text.`;
         
         const openai = new OpenAI({
           apiKey: OPENAI_API_KEY,
@@ -287,7 +299,16 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
 
         const roleCompletion = await openai.chat.completions.create({
           model: "gpt-4o",
-          messages: [{ role: "user", content: mainArtistRolePrompt }],
+          messages: [
+            {
+              role: "system",
+              content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
+            },
+            {
+              role: "user",
+              content: mainArtistRolePrompt
+            }
+          ],
           temperature: 0.1,
           max_tokens: 100,
         });
@@ -350,11 +371,14 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
           'placeholder', 'example', 'sample'
         ];
         return fakePatterns.some(pattern => lowerName.includes(pattern)) ||
-               lowerName.match(/^(artist|producer|songwriter)\s+[a-z]$/i) ||
-               lowerName.match(/^[a-z]{1,2}$/i);
+               !!lowerName.match(/^(artist|producer|songwriter)\s+[a-z]$/i) ||
+               !!lowerName.match(/^[a-z]{1,2}$/i);
       };
       
       if (collaborationData.collaborators) {
+        // Add main artist to batch role detection
+        allPeople.add(correctArtistName);
+        
         for (const person of collaborationData.collaborators) {
           // Skip fake collaborators
           if (isFakeCollaborator(person.name)) {
@@ -574,10 +598,55 @@ Guidelines:
           });
         }
 
-        // Add branching artists
+        // Add branching artists with comprehensive multi-role detection
         for (const branchingArtist of collaborator.topCollaborators || []) {
           if (branchingArtist !== correctArtistName && !nodeMap.has(branchingArtist)) {
-            const branchingRoles = getOptimizedRoles(branchingArtist, 'artist');
+            
+            // Use OpenAI to detect all roles for this artist node
+            let branchingRoles = ['artist']; // Default fallback
+            try {
+              console.log(`🎭 [Vercel] Detecting roles for artist node: "${branchingArtist}"`);
+              
+              const rolePrompt = `What roles does ${branchingArtist} have in the music industry? CRITICAL: Search extensively for ALL POSSIBLE ROLES regardless of their popularity or fame level - many people have multiple roles (artist, producer, songwriter). This includes mainstream artists, independent artists, underground artists, regional artists, and emerging artists.
+
+Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. 
+
+Investigate thoroughly for multiple roles on ${branchingArtist}, whether they are famous or lesser-known. Return ONLY the JSON array, no other text.`;
+              
+              const roleCompletion = await openai.chat.completions.create({
+                model: "gpt-4o",
+                messages: [
+                  {
+                    role: "system",
+                    content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
+                  },
+                  {
+                    role: "user",
+                    content: rolePrompt
+                  }
+                ],
+                temperature: 0.1,
+                max_tokens: 100,
+              });
+
+              const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
+              if (roleContent) {
+                try {
+                  const detectedRoles = JSON.parse(roleContent);
+                  if (Array.isArray(detectedRoles) && detectedRoles.length > 0) {
+                    branchingRoles = detectedRoles.filter(role => 
+                      ['artist', 'producer', 'songwriter'].includes(role)
+                    );
+                    console.log(`✅ [Vercel] Detected roles for artist "${branchingArtist}":`, branchingRoles);
+                  }
+                } catch (parseError) {
+                  console.log(`⚠️ [Vercel] Could not parse role detection for "${branchingArtist}", using default`);
+                }
+              }
+            } catch (error) {
+              console.log(`⚠️ [Vercel] Role detection failed for "${branchingArtist}", using default`);
+            }
+
             const branchNode = {
               id: branchingArtist,
               name: branchingArtist,
@@ -596,6 +665,8 @@ Guidelines:
             }
 
             nodeMap.set(branchingArtist, branchNode);
+            console.log(`🎭 [Vercel] Created artist node "${branchingArtist}" with ${branchingRoles.length} roles: [${branchingRoles.join(', ')}]`);
+            
             links.push({
               source: collaborator.name,
               target: branchingArtist
