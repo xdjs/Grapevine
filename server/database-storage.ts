@@ -206,7 +206,12 @@ Return their roles as JSON in this exact format:
   "Person Name 3": ["artist"]
 }
 
+
 Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has - investigate thoroughly for multiple roles on every person queried, whether they are famous or lesser-known. Return ONLY the JSON object, no other text.`;
+
+IMPORTANT: Make sure if any of these people have multiple roles (artist, producer, songwriter), it is listed in the data. Search for multiple roles on every person that is queried.
+
+
 
         const OpenAI = await import('openai');
         const openai = new OpenAI.default({
@@ -540,10 +545,18 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
       // Use OpenAI to detect multi-roles for MusicBrainz collaborators
       const musicBrainzRoleMap = await this.batchDetectRoles(Array.from(allPeopleFromMusicBrainz));
       console.log(`🎭 [DEBUG] Enhanced ${allPeopleFromMusicBrainz.size} MusicBrainz collaborators with OpenAI role detection`);
+
+      // Collect all collaborator names for batch role detection
+      const collaboratorNames = limitedCollaborators.map(c => c.name);
+      console.log(`🎭 [DEBUG] Performing comprehensive role detection for ${collaboratorNames.length} MusicBrainz collaborators`);
+      
+      // Batch detect roles for ALL collaborators
+      const globalRoleMap = await this.batchDetectRoles(collaboratorNames);
       
       for (const collaborator of limitedCollaborators) {
         const safeCollaboratorType = ensureRoleType(collaborator.type);
         
+
         // Get enhanced roles from OpenAI, fallback to MusicBrainz type
         const enhancedRoles = musicBrainzRoleMap.get(collaborator.name) || [safeCollaboratorType];
         
@@ -555,7 +568,9 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
         });
         
         nodeMap.set(collaborator.name, collaboratorNode);
+
         console.log(`🎭 [DEBUG] Created MusicBrainz node "${collaborator.name}" with ${enhancedRoles.length} roles: [${enhancedRoles.join(', ')}]`);
+
 
               links.push({
                 source: artistName,
@@ -568,7 +583,14 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
       
     } catch (error) {
       console.error('Error generating real collaboration network:', error);
-      return { nodes: [mainArtistNode], links: [] };
+      // Return minimal network with just the main artist if it exists
+      const fallbackNode = createSafeNetworkNode({
+        name: artistName,
+        type: 'artist',
+        size: 30,
+        musicNerdUrl: musicNerdUrl || 'https://musicnerd.xyz',
+      });
+      return { nodes: [fallbackNode], links: [] };
     }
   }
 
