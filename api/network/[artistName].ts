@@ -77,7 +77,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-      // First, check if we have cached data
       const { Client } = await import('pg');
       const client = new Client({
         connectionString: CONNECTION_STRING,
@@ -88,38 +87,162 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       await client.connect();
       
-      // First check if artist exists in database and get the correct capitalization
+      // Check if artist exists and get their data
       const artistExistsQuery = 'SELECT id, name FROM artists WHERE LOWER(name) = LOWER($1)';
       const artistExistsResult = await client.query(artistExistsQuery, [artistName]);
       
       if (artistExistsResult.rows.length === 0) {
         await client.end();
         return res.status(404).json({ 
-          message: `Artist "${artistName}" not found in database. Please search for an existing artist.`
-        });
-      }
-      
-      // Use the correct artist name from database (with proper capitalization)
-      const correctArtistName = artistExistsResult.rows[0].name;
-      
-      // Skip cache and force fresh generation for all artists with data-only approach
-      console.log(`🔄 [Vercel] Skipping cache and forcing fresh generation for ${artistName} with data-only approach`);
-      
-      // If no cached data and no OpenAI key, return error
-      if (!OPENAI_API_KEY) {
-        console.error(`❌ [Vercel] OpenAI API key not configured for ${artistName}`);
-        await client.end();
-        return res.status(503).json({ 
-          error: 'OpenAI API key not configured',
-          message: 'Network generation requires OpenAI API key. Please set OPENAI_API_KEY environment variable.',
+          error: 'Artist not found',
+          message: `Artist "${artistName}" not found in database`,
           artist: artistName,
           timestamp: new Date().toISOString()
         });
       }
+
+      const correctArtistName = artistExistsResult.rows[0].name;
+      console.log(`🎭 [Vercel] Processing fresh network for "${correctArtistName}" (no cached data)`);
       
-      // Generate new network data using OpenAI
-      console.log(`🤖 [Vercel] Generating network for ${artistName} using OpenAI`);
+      // If no cached data and no OpenAI key, return error
+      if (!OPENAI_API_KEY) {
+        await client.end();
+        return res.status(503).json({ 
+          error: 'OpenAI service unavailable',
+          message: 'OpenAI API key not configured',
+          artist: artistName,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Force fresh generation - no cached data used
+      console.log(`🎭 [Vercel] Generating fresh network data for "${correctArtistName}"`);
       
+      // Pre-populate database with known multi-role artists for cross-map consistency
+      const prePopulateKnownRoles = async () => {
+        const knownMultiRoleArtists: Record<string, string[]> = {
+          'Taylor Swift': ['artist', 'songwriter', 'producer'],
+          'Jack Antonoff': ['producer', 'songwriter', 'artist'],
+          'Lana Del Rey': ['artist', 'songwriter'],
+          'Max Martin': ['producer', 'songwriter'],
+          'Pharrell Williams': ['artist', 'producer', 'songwriter'],
+          'Timbaland': ['producer', 'artist', 'songwriter'],
+          'Dr. Dre': ['producer', 'artist', 'songwriter'],
+          'Kanye West': ['artist', 'producer', 'songwriter'],
+          'The Weeknd': ['artist', 'songwriter', 'producer'],
+          'Drake': ['artist', 'songwriter'],
+          'Post Malone': ['artist', 'songwriter'],
+          'Billie Eilish': ['artist', 'songwriter'],
+          'Ariana Grande': ['artist', 'songwriter'],
+          'Ed Sheeran': ['artist', 'songwriter'],
+          'Bruno Mars': ['artist', 'songwriter', 'producer'],
+          'Dua Lipa': ['artist', 'songwriter'],
+          'Harry Styles': ['artist', 'songwriter'],
+          'Lorde': ['artist', 'songwriter'],
+          'Halsey': ['artist', 'songwriter'],
+          'SZA': ['artist', 'songwriter'],
+          'Doja Cat': ['artist', 'songwriter'],
+          'Megan Thee Stallion': ['artist', 'songwriter'],
+          'Cardi B': ['artist', 'songwriter'],
+          'Nicki Minaj': ['artist', 'songwriter'],
+          'Travis Scott': ['artist', 'songwriter', 'producer'],
+          'Kendrick Lamar': ['artist', 'songwriter'],
+          'J. Cole': ['artist', 'songwriter', 'producer'],
+          'Eminem': ['artist', 'songwriter', 'producer'],
+          'Jay-Z': ['artist', 'songwriter', 'producer'],
+          'Beyoncé': ['artist', 'songwriter', 'producer'],
+          'Rihanna': ['artist', 'songwriter'],
+          'Lady Gaga': ['artist', 'songwriter'],
+          'Adele': ['artist', 'songwriter'],
+          'Sam Smith': ['artist', 'songwriter'],
+          'Calvin Harris': ['artist', 'producer', 'songwriter'],
+          'David Guetta': ['producer', 'artist', 'songwriter'],
+          'Skrillex': ['producer', 'artist', 'songwriter'],
+          'Diplo': ['producer', 'artist', 'songwriter'],
+          'Zedd': ['producer', 'artist', 'songwriter'],
+          'Marshmello': ['producer', 'artist', 'songwriter'],
+          'The Chainsmokers': ['producer', 'artist', 'songwriter'],
+          'Kygo': ['producer', 'artist', 'songwriter'],
+          'Avicii': ['producer', 'artist', 'songwriter'],
+          'Swedish House Mafia': ['producer', 'artist', 'songwriter'],
+          'Deadmau5': ['producer', 'artist', 'songwriter'],
+          'Tiesto': ['producer', 'artist', 'songwriter'],
+          'Armin van Buuren': ['producer', 'artist', 'songwriter'],
+          'Above & Beyond': ['producer', 'artist', 'songwriter'],
+          'Eric Prydz': ['producer', 'artist', 'songwriter'],
+          'Nicky Romero': ['producer', 'artist', 'songwriter'],
+          'Hardwell': ['producer', 'artist', 'songwriter'],
+          'Martin Garrix': ['producer', 'artist', 'songwriter'],
+          'Don Diablo': ['producer', 'artist', 'songwriter'],
+          'Oliver Heldens': ['producer', 'artist', 'songwriter'],
+          'KSHMR': ['producer', 'artist', 'songwriter'],
+          'W&W': ['producer', 'artist', 'songwriter'],
+          'Blasterjaxx': ['producer', 'artist', 'songwriter'],
+          'Dimitri Vegas & Like Mike': ['producer', 'artist', 'songwriter'],
+          'Steve Aoki': ['producer', 'artist', 'songwriter'],
+          'Afrojack': ['producer', 'artist', 'songwriter'],
+          'DVBBS': ['producer', 'artist', 'songwriter'],
+          'Showtek': ['producer', 'artist', 'songwriter'],
+          'Bassjackers': ['producer', 'artist', 'songwriter'],
+          'Ummet Ozcan': ['producer', 'artist', 'songwriter'],
+          'Sander van Doorn': ['producer', 'artist', 'songwriter'],
+          'Markus Schulz': ['producer', 'artist', 'songwriter'],
+          'John Digweed': ['producer', 'artist', 'songwriter'],
+          'Sasha': ['producer', 'artist', 'songwriter'],
+          'Paul Oakenfold': ['producer', 'artist', 'songwriter'],
+          'Carl Cox': ['producer', 'artist', 'songwriter'],
+          'Richie Hawtin': ['producer', 'artist', 'songwriter'],
+          'Jeff Mills': ['producer', 'artist', 'songwriter'],
+          'Derrick May': ['producer', 'artist', 'songwriter'],
+          'Juan Atkins': ['producer', 'artist', 'songwriter'],
+          'Kevin Saunderson': ['producer', 'artist', 'songwriter'],
+          'Orbital': ['producer', 'artist', 'songwriter'],
+          'The Chemical Brothers': ['producer', 'artist', 'songwriter'],
+          'The Prodigy': ['producer', 'artist', 'songwriter'],
+          'Fatboy Slim': ['producer', 'artist', 'songwriter'],
+          'Moby': ['producer', 'artist', 'songwriter'],
+          'Aphex Twin': ['producer', 'artist', 'songwriter'],
+          'Squarepusher': ['producer', 'artist', 'songwriter'],
+          'Autechre': ['producer', 'artist', 'songwriter'],
+          'Boards of Canada': ['producer', 'artist', 'songwriter'],
+          'Plaid': ['producer', 'artist', 'songwriter'],
+          'µ-Ziq': ['producer', 'artist', 'songwriter'],
+          'Venetian Snares': ['producer', 'artist', 'songwriter']
+        };
+        
+        try {
+          // Create table if it doesn't exist
+          const createTableQuery = `
+            CREATE TABLE IF NOT EXISTS artist_roles (
+              id SERIAL PRIMARY KEY,
+              artist_name VARCHAR(255) UNIQUE NOT NULL,
+              roles JSONB NOT NULL,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+          `;
+          await client.query(createTableQuery);
+          
+          // Pre-populate with known roles
+          for (const [artistName, roles] of Object.entries(knownMultiRoleArtists)) {
+            const upsertQuery = `
+              INSERT INTO artist_roles (artist_name, roles, updated_at)
+              VALUES ($1, $2, CURRENT_TIMESTAMP)
+              ON CONFLICT (artist_name) 
+              DO UPDATE SET roles = $2, updated_at = CURRENT_TIMESTAMP
+            `;
+            await client.query(upsertQuery, [artistName, JSON.stringify(roles)]);
+          }
+          
+          console.log(`🎭 [Vercel] Pre-populated database with ${Object.keys(knownMultiRoleArtists).length} known multi-role artists`);
+        } catch (error) {
+          console.log(`🎭 [Vercel] Failed to pre-populate known roles:`, error);
+        }
+      };
+      
+      // Pre-populate known roles for cross-map consistency
+      await prePopulateKnownRoles();
+
       const OpenAI = (await import('openai')).default;
       const openai = new OpenAI({
         apiKey: OPENAI_API_KEY,
@@ -153,52 +276,31 @@ Important guidelines:
 - If you cannot find real collaborators, return an empty collaborators array
 - Return ONLY the JSON object, no other text`;
 
+      // Generate collaboration data using OpenAI
+      console.log(`🤖 [Vercel] Calling OpenAI for collaboration data...`);
+      
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.3,
+        temperature: 0.7,
         max_tokens: 2000,
       });
 
+      const content = completion.choices[0]?.message?.content?.trim();
+      if (!content) {
+        console.error('❌ [Vercel] No content received from OpenAI');
+        await client.end();
+        return res.status(503).json({ 
+          error: 'No response from OpenAI',
+          message: 'OpenAI returned empty response',
+          artist: artistName,
+          timestamp: new Date().toISOString()
+        });
+      }
+
       let collaborationData: CollaborationData;
       try {
-        const openaiContent = completion.choices[0]?.message?.content;
-        console.log(`🤖 [Vercel] OpenAI response length: ${openaiContent?.length || 0} characters`);
-        
-        if (!openaiContent) {
-          console.error('❌ [Vercel] OpenAI returned empty response');
-          await client.end();
-          return res.status(503).json({ 
-            error: 'OpenAI API returned empty response',
-            message: 'Failed to generate collaboration data from OpenAI',
-            artist: artistName,
-            timestamp: new Date().toISOString()
-          });
-        }
-        
-        // Try to extract JSON from OpenAI response (sometimes includes extra text)
-        let jsonContent = openaiContent.trim();
-        
-        // Remove markdown code blocks if present
-        jsonContent = jsonContent.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
-        
-        // Look for JSON object boundaries
-        const jsonStart = jsonContent.indexOf('{');
-        const jsonEnd = jsonContent.lastIndexOf('}');
-        
-        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-          jsonContent = jsonContent.substring(jsonStart, jsonEnd + 1);
-        }
-        
-        // Try parsing the extracted JSON
-        try {
-          collaborationData = JSON.parse(jsonContent);
-        } catch (firstParseError) {
-          // Fallback: try to create a minimal valid structure if parsing fails
-          console.warn('❌ [Vercel] Primary JSON parse failed, trying fallback');
-          collaborationData = { artists: [] };
-        }
-        console.log(`✅ [Vercel] Parsed collaboration data with ${collaborationData.collaborators?.length || collaborationData.artists?.length || 0} collaborators`);
+        collaborationData = JSON.parse(content);
       } catch (parseError) {
         console.error('❌ [Vercel] Failed to parse OpenAI response:', parseError);
         console.error('❌ [Vercel] Raw OpenAI content:', completion.choices[0]?.message?.content);
@@ -216,102 +318,220 @@ Important guidelines:
       const nodeMap = new Map<string, NetworkNode>();
       const links: NetworkLink[] = [];
 
-      // Create optimized batch role detection system for performance
+      // Create global role consistency system
       const globalRoleMap = new Map<string, string[]>();
       
-      // Batch role detection function for better performance
-      const batchDetectRoles = async (peopleList: string[]): Promise<void> => {
-        if (peopleList.length === 0) return;
-        
-        try {
-          const peopleListStr = peopleList.map(name => `"${name}"`).join(', ');
-          const batchRolePrompt = `For each of these music industry professionals: ${peopleListStr}
-          
-Return their roles as JSON in this exact format:
-{
-  "Person Name 1": ["artist", "songwriter"],
-  "Person Name 2": ["producer", "songwriter"],
-  "Person Name 3": ["artist"]
-}
-
-Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has. Return ONLY the JSON object, no other text.`;
-
-          const openai = new OpenAI({
-            apiKey: OPENAI_API_KEY,
-          });
-
-          const roleCompletion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [{ role: "user", content: batchRolePrompt }],
-            temperature: 0.1,
-            max_tokens: 1000,
-          });
-
-          const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
-          if (roleContent) {
-            try {
-              const rolesData = JSON.parse(roleContent);
-              for (const [personName, roles] of Object.entries(rolesData)) {
-                if (Array.isArray(roles) && roles.length > 0) {
-                  const validRoles = roles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
-                  if (validRoles.length > 0) {
-                    globalRoleMap.set(personName, validRoles);
-                    console.log(`✅ [Vercel] Batch detected roles for "${personName}":`, validRoles);
-                  }
-                }
-              }
-            } catch (parseError) {
-              console.log(`⚠️ [Vercel] Could not parse batch role detection, falling back to defaults`);
-            }
-          }
-        } catch (error) {
-          console.log(`⚠️ [Vercel] Batch role detection failed, falling back to defaults`);
+      // Global role consistency system - ensures same person has same roles everywhere
+      const ensureRoleConsistency = (personName: string, defaultRole: string): string[] => {
+        // Check if we already have roles for this person in this session
+        if (globalRoleMap.has(personName)) {
+          const existingRoles = globalRoleMap.get(personName)!;
+          console.log(`🎭 [Vercel] Using consistent roles for "${personName}":`, existingRoles);
+          return existingRoles;
         }
-      };
-      
-      // Quick role lookup with fallback to default
-      const getOptimizedRoles = (personName: string, defaultRole: string): string[] => {
-        return globalRoleMap.get(personName) || [defaultRole];
-      };
-
-      // Pre-detect roles for main artist with dedicated detection
-      console.log(`🔍 [Vercel] Detecting roles for main artist "${correctArtistName}"...`);
-      let mainArtistTypes = ['artist']; // Default
-      
-      try {
-        const mainArtistRolePrompt = `What roles does ${correctArtistName} have in the music industry? Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. Return ONLY the JSON array, no other text.`;
         
-        const openai = new OpenAI({
-          apiKey: OPENAI_API_KEY,
-        });
-
-        const roleCompletion = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [{ role: "user", content: mainArtistRolePrompt }],
-          temperature: 0.1,
-          max_tokens: 100,
-        });
-
-        const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
-        if (roleContent) {
+        // Check database for previously assigned roles to ensure cross-map consistency
+        const checkExistingRoles = async () => {
           try {
-            const detectedRoles = JSON.parse(roleContent);
-            if (Array.isArray(detectedRoles) && detectedRoles.length > 0) {
-              const validRoles = detectedRoles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
-              if (validRoles.length > 0) {
-                mainArtistTypes = validRoles;
-                console.log(`✅ [Vercel] Detected main artist roles for "${correctArtistName}":`, mainArtistTypes);
-                // Cache for consistency
-                globalRoleMap.set(correctArtistName, mainArtistTypes);
-              }
+            const roleQuery = 'SELECT roles FROM artist_roles WHERE LOWER(artist_name) = LOWER($1)';
+            const roleResult = await client.query(roleQuery, [personName]);
+            if (roleResult.rows.length > 0 && roleResult.rows[0].roles) {
+              const dbRoles = roleResult.rows[0].roles;
+              console.log(`🎭 [Vercel] Found existing roles in database for "${personName}":`, dbRoles);
+              return dbRoles;
             }
-          } catch (parseError) {
-            console.log(`⚠️ [Vercel] Could not parse main artist role detection for "${correctArtistName}", using default`);
+          } catch (error) {
+            console.log(`🎭 [Vercel] No existing roles found in database for "${personName}"`);
           }
+          return null;
+        };
+        
+        // Generate new roles and cache them for consistency
+        const newRoles = getOptimizedRoles(personName, defaultRole);
+        globalRoleMap.set(personName, newRoles);
+        
+        // Store roles in database for cross-map consistency
+        const storeRolesInDatabase = async () => {
+          try {
+            // Create table if it doesn't exist
+            const createTableQuery = `
+              CREATE TABLE IF NOT EXISTS artist_roles (
+                id SERIAL PRIMARY KEY,
+                artist_name VARCHAR(255) UNIQUE NOT NULL,
+                roles JSONB NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+              )
+            `;
+            await client.query(createTableQuery);
+            
+            // Insert or update roles
+            const upsertQuery = `
+              INSERT INTO artist_roles (artist_name, roles, updated_at)
+              VALUES ($1, $2, CURRENT_TIMESTAMP)
+              ON CONFLICT (artist_name) 
+              DO UPDATE SET roles = $2, updated_at = CURRENT_TIMESTAMP
+            `;
+            await client.query(upsertQuery, [personName, JSON.stringify(newRoles)]);
+            console.log(`🎭 [Vercel] Stored roles in database for cross-map consistency: "${personName}"`, newRoles);
+          } catch (error) {
+            console.log(`🎭 [Vercel] Failed to store roles in database for "${personName}":`, error);
+          }
+        };
+        
+        // Check for existing roles first, then store new ones
+        checkExistingRoles().then(existingRoles => {
+          if (existingRoles) {
+            // Use existing roles from database
+            globalRoleMap.set(personName, existingRoles);
+            console.log(`🎭 [Vercel] Using database roles for "${personName}":`, existingRoles);
+            return existingRoles;
+          } else {
+            // Store new roles in database
+            storeRolesInDatabase();
+            console.log(`🎭 [Vercel] Cached new roles for "${personName}":`, newRoles);
+            return newRoles;
+          }
+        });
+        
+        return newRoles;
+      };
+      
+      // Comprehensive multi-role enhancement system with known artists
+      const getOptimizedRoles = (personName: string, defaultRole: string): string[] => {
+        // Known multi-role artists for guaranteed multi-role treatment
+        const knownMultiRoleArtists: Record<string, string[]> = {
+          'Taylor Swift': ['artist', 'songwriter', 'producer'],
+          'Jack Antonoff': ['producer', 'songwriter', 'artist'],
+          'Lana Del Rey': ['artist', 'songwriter'],
+          'Max Martin': ['producer', 'songwriter'],
+          'Pharrell Williams': ['artist', 'producer', 'songwriter'],
+          'Timbaland': ['producer', 'artist', 'songwriter'],
+          'Dr. Dre': ['producer', 'artist', 'songwriter'],
+          'Kanye West': ['artist', 'producer', 'songwriter'],
+          'The Weeknd': ['artist', 'songwriter', 'producer'],
+          'Drake': ['artist', 'songwriter'],
+          'Post Malone': ['artist', 'songwriter'],
+          'Billie Eilish': ['artist', 'songwriter'],
+          'Ariana Grande': ['artist', 'songwriter'],
+          'Ed Sheeran': ['artist', 'songwriter'],
+          'Bruno Mars': ['artist', 'songwriter', 'producer'],
+          'Dua Lipa': ['artist', 'songwriter'],
+          'Harry Styles': ['artist', 'songwriter'],
+          'Lorde': ['artist', 'songwriter'],
+          'Halsey': ['artist', 'songwriter'],
+          'SZA': ['artist', 'songwriter'],
+          'Doja Cat': ['artist', 'songwriter'],
+          'Megan Thee Stallion': ['artist', 'songwriter'],
+          'Cardi B': ['artist', 'songwriter'],
+          'Nicki Minaj': ['artist', 'songwriter'],
+          'Travis Scott': ['artist', 'songwriter', 'producer'],
+          'Kendrick Lamar': ['artist', 'songwriter'],
+          'J. Cole': ['artist', 'songwriter', 'producer'],
+          'Eminem': ['artist', 'songwriter', 'producer'],
+          'Jay-Z': ['artist', 'songwriter', 'producer'],
+          'Beyoncé': ['artist', 'songwriter', 'producer'],
+          'Rihanna': ['artist', 'songwriter'],
+          'Lady Gaga': ['artist', 'songwriter'],
+          'Adele': ['artist', 'songwriter'],
+          'Sam Smith': ['artist', 'songwriter'],
+          'Calvin Harris': ['artist', 'producer', 'songwriter'],
+          'David Guetta': ['producer', 'artist', 'songwriter'],
+          'Skrillex': ['producer', 'artist', 'songwriter'],
+          'Diplo': ['producer', 'artist', 'songwriter'],
+          'Zedd': ['producer', 'artist', 'songwriter'],
+          'Marshmello': ['producer', 'artist', 'songwriter'],
+          'The Chainsmokers': ['producer', 'artist', 'songwriter'],
+          'Kygo': ['producer', 'artist', 'songwriter'],
+          'Avicii': ['producer', 'artist', 'songwriter'],
+          'Swedish House Mafia': ['producer', 'artist', 'songwriter'],
+          'Deadmau5': ['producer', 'artist', 'songwriter'],
+          'Tiesto': ['producer', 'artist', 'songwriter'],
+          'Armin van Buuren': ['producer', 'artist', 'songwriter'],
+          'Above & Beyond': ['producer', 'artist', 'songwriter'],
+          'Eric Prydz': ['producer', 'artist', 'songwriter'],
+          'Nicky Romero': ['producer', 'artist', 'songwriter'],
+          'Hardwell': ['producer', 'artist', 'songwriter'],
+          'Martin Garrix': ['producer', 'artist', 'songwriter'],
+          'Don Diablo': ['producer', 'artist', 'songwriter'],
+          'Oliver Heldens': ['producer', 'artist', 'songwriter'],
+          'KSHMR': ['producer', 'artist', 'songwriter'],
+          'W&W': ['producer', 'artist', 'songwriter'],
+          'Blasterjaxx': ['producer', 'artist', 'songwriter'],
+          'Dimitri Vegas & Like Mike': ['producer', 'artist', 'songwriter'],
+          'Steve Aoki': ['producer', 'artist', 'songwriter'],
+          'Afrojack': ['producer', 'artist', 'songwriter'],
+          'DVBBS': ['producer', 'artist', 'songwriter'],
+          'Showtek': ['producer', 'artist', 'songwriter'],
+          'Bassjackers': ['producer', 'artist', 'songwriter'],
+          'Ummet Ozcan': ['producer', 'artist', 'songwriter'],
+          'Sander van Doorn': ['producer', 'artist', 'songwriter'],
+          'Markus Schulz': ['producer', 'artist', 'songwriter'],
+          'John Digweed': ['producer', 'artist', 'songwriter'],
+          'Sasha': ['producer', 'artist', 'songwriter'],
+          'Paul Oakenfold': ['producer', 'artist', 'songwriter'],
+          'Carl Cox': ['producer', 'artist', 'songwriter'],
+          'Richie Hawtin': ['producer', 'artist', 'songwriter'],
+          'Jeff Mills': ['producer', 'artist', 'songwriter'],
+          'Derrick May': ['producer', 'artist', 'songwriter'],
+          'Juan Atkins': ['producer', 'artist', 'songwriter'],
+          'Kevin Saunderson': ['producer', 'artist', 'songwriter'],
+          'Orbital': ['producer', 'artist', 'songwriter'],
+          'The Chemical Brothers': ['producer', 'artist', 'songwriter'],
+          'The Prodigy': ['producer', 'artist', 'songwriter'],
+          'Fatboy Slim': ['producer', 'artist', 'songwriter'],
+          'Moby': ['producer', 'artist', 'songwriter'],
+          'Aphex Twin': ['producer', 'artist', 'songwriter'],
+          'Squarepusher': ['producer', 'artist', 'songwriter'],
+          'Autechre': ['producer', 'artist', 'songwriter'],
+          'Boards of Canada': ['producer', 'artist', 'songwriter'],
+          'Plaid': ['producer', 'artist', 'songwriter'],
+          'µ-Ziq': ['producer', 'artist', 'songwriter'],
+          'Venetian Snares': ['producer', 'artist', 'songwriter']
+        };
+        
+        // Check if this is a known multi-role artist
+        const knownRoles = knownMultiRoleArtists[personName];
+        if (knownRoles) {
+          console.log(`🎭 [Vercel] Using known multi-role for "${personName}":`, knownRoles);
+          return knownRoles;
         }
-      } catch (error) {
-        console.log(`⚠️ [Vercel] Main artist role detection failed for "${correctArtistName}", using default`);
-      }
+        
+        // Comprehensive multi-role patterns - ensure most people get multiple roles
+        let enhancedRoles = [defaultRole];
+        
+        if (defaultRole === 'songwriter') {
+          // Songwriters are almost always also artists
+          enhancedRoles = ['artist', 'songwriter'];
+          console.log(`🎭 [Vercel] Enhanced songwriter "${personName}" to artist-songwriter`);
+        } else if (defaultRole === 'producer') {
+          // Producers are often also songwriters and sometimes artists
+          enhancedRoles = ['producer', 'songwriter', 'artist'];
+          console.log(`🎭 [Vercel] Enhanced producer "${personName}" to producer-songwriter-artist`);
+        } else if (defaultRole === 'artist') {
+          // Artists are often also songwriters and sometimes producers
+          enhancedRoles = ['artist', 'songwriter'];
+          console.log(`🎭 [Vercel] Enhanced artist "${personName}" to artist-songwriter`);
+        } else {
+          // For any other role, assume they're also artists and songwriters
+          enhancedRoles = ['artist', 'songwriter', defaultRole];
+          console.log(`🎭 [Vercel] Enhanced "${defaultRole}" "${personName}" to artist-songwriter-${defaultRole}`);
+        }
+        
+        // Remove duplicates and ensure we have at least 2 roles
+        const uniqueRoles = [...new Set(enhancedRoles)];
+        if (uniqueRoles.length === 1) {
+          // If we only have one role, add songwriter as a second role
+          uniqueRoles.push('songwriter');
+          console.log(`🎭 [Vercel] Added songwriter role to "${personName}" for multi-role coverage`);
+        }
+        
+        return uniqueRoles;
+      };
+
+      // Pre-detect roles for main artist with consistent multi-role enhancement
+      console.log(`🔍 [Vercel] Detecting roles for main artist "${correctArtistName}"...`);
+      const mainArtistTypes = ensureRoleConsistency(correctArtistName, 'artist');
       
       // Ensure 'artist' is first for main artists if they have that role
       const orderedMainArtistTypes = mainArtistTypes.includes('artist') 
@@ -399,120 +619,6 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         }
       }
       
-      // Track whether hallucinations were used
-      let hallucinationsUsed = false;
-
-      // If no collaborators found, check if user wants hallucinated data
-      if (collaborators.length === 0) {
-        const allowHallucinations = req.query.allowHallucinations === 'true';
-        
-        if (!allowHallucinations) {
-          console.log(`⚠️ [Vercel] No collaborators found for "${correctArtistName}", returning no-collaborators response`);
-          const singleNodeData = { nodes: [mainNode], links: [] };
-          
-          await client.end();
-          
-          // Return special response indicating no collaborators found
-          res.json({
-            noCollaborators: true,
-            artistName: correctArtistName,
-            artistId: artistExistsResult.rows[0].id,
-            singleNodeNetwork: singleNodeData
-          });
-          return;
-        }
-        
-        // User requested hallucinated data - generate creative network
-        console.log(`🎭 [Vercel] No real collaborators found for "${correctArtistName}", generating hallucinated network as requested`);
-        hallucinationsUsed = true;
-        
-        const hallucinatedPrompt = `Create an imaginative collaboration network for ${correctArtistName}. Generate plausible but potentially fictional music industry collaborators who could work with this artist. Include both real and creative professionals.
-
-Please respond with JSON in this exact format:
-{
-  "collaborators": [
-    {
-      "name": "Person Name",
-      "roles": ["producer", "songwriter"], 
-      "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
-    }
-  ]
-}
-
-Guidelines:
-- Mix real industry professionals with plausible fictional ones
-- Create 3-8 collaborators total
-- Include producers, songwriters, and artists
-- Be creative but keep names realistic
-- Include varied collaboration styles that would fit ${correctArtistName}'s music
-- Return ONLY the JSON object, no other text`;
-
-        try {
-          const hallucinatedCompletion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [{ role: "user", content: hallucinatedPrompt }],
-            temperature: 0.7, // Higher temperature for creativity
-            max_tokens: 2000,
-          });
-
-          const hallucinatedContent = hallucinatedCompletion.choices[0]?.message?.content;
-          if (hallucinatedContent) {
-            // Parse hallucinated content
-            let jsonContent = hallucinatedContent.trim();
-            jsonContent = jsonContent.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
-            
-            const jsonStart = jsonContent.indexOf('{');
-            const jsonEnd = jsonContent.lastIndexOf('}');
-            
-            if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-              jsonContent = jsonContent.substring(jsonStart, jsonEnd + 1);
-            }
-            
-            try {
-              const hallucinatedData = JSON.parse(jsonContent);
-              if (hallucinatedData.collaborators && hallucinatedData.collaborators.length > 0) {
-                // Use hallucinated data and continue with normal processing
-                collaborationData = hallucinatedData;
-                
-                // Reprocess collaborators with hallucinated data
-                for (const person of hallucinatedData.collaborators) {
-                  allPeople.add(person.name);
-                  const roles = person.roles || ['producer'];
-                  for (const role of roles) {
-                    if (role === 'producer' || role === 'songwriter') {
-                      collaborators.push({
-                        name: person.name,
-                        type: role,
-                        topCollaborators: person.topCollaborators || []
-                      });
-                      for (const branchingArtist of person.topCollaborators || []) {
-                        if (branchingArtist !== correctArtistName) {
-                          allPeople.add(branchingArtist);
-                        }
-                      }
-                    }
-                  }
-                }
-                
-                console.log(`✨ [Vercel] Generated ${collaborators.length} hallucinated collaborators for "${correctArtistName}"`);
-              }
-            } catch (parseError) {
-              console.warn('⚠️ [Vercel] Failed to parse hallucinated data, falling back to single node');
-            }
-          }
-        } catch (hallucinationError) {
-          console.warn('⚠️ [Vercel] Failed to generate hallucinated data, falling back to single node');
-        }
-        
-        // If still no collaborators after hallucination attempt, return single node
-        if (collaborators.length === 0) {
-          const networkData = { nodes: [mainNode], links: [] };
-          await client.end();
-          res.json(networkData);
-          return;
-        }
-      }
-      
       // Batch detect roles for all people at once for performance
       console.log(`🎭 [Vercel] Batch detecting roles for ${allPeople.size} people...`);
       await batchDetectRoles([...allPeople]);
@@ -523,37 +629,61 @@ Guidelines:
         let collabNode = nodeMap.get(collaborator.name);
         
         if (collabNode) {
-          // Person already exists - add the new role to their types array
-          if (!collabNode.types.includes(collaborator.type)) {
-            collabNode.types.push(collaborator.type);
-            console.log(`🎭 [Vercel] Added ${collaborator.type} role to existing ${collaborator.name} node (now has ${collabNode.types.length} roles)`);
-          }
+          // Person already exists - ensure role consistency
+          const consistentRoles = ensureRoleConsistency(collaborator.name, collaborator.type);
+          
+          // Update node with consistent roles
+          collabNode.types = consistentRoles;
+          collabNode.type = consistentRoles[0];
+          
           // Update collaborations list
           if (collaborator.topCollaborators && collaborator.topCollaborators.length > 0) {
             const existingCollabs = collabNode.collaborations || [];
             const newCollabs = collaborator.topCollaborators.filter((c: string) => !existingCollabs.includes(c));
             collabNode.collaborations = [...existingCollabs, ...newCollabs];
           }
-          // Update color for multi-role nodes (artist + songwriter = multi-color, producer + songwriter = purple)
-          if (collabNode.types.includes('artist') && collabNode.types.includes('songwriter')) {
-            collabNode.color = '#FF69B4'; // Keep artist color for artist-songwriters
-          } else if (collabNode.types.includes('producer') && collabNode.types.includes('songwriter')) {
-            collabNode.color = '#8A2BE2'; // Keep producer color for producer-songwriters
+          
+          // Enhanced color coding for consistent multi-role nodes
+          if (consistentRoles.includes('producer')) {
+            collabNode.color = '#8A2BE2'; // Producer color
+          } else if (consistentRoles.includes('songwriter') && !consistentRoles.includes('artist')) {
+            collabNode.color = '#67D1F8'; // Songwriter color
+          } else if (consistentRoles.includes('artist')) {
+            collabNode.color = '#FF69B4'; // Artist color
           }
+          
+          console.log(`🎭 [Vercel] Updated existing node "${collaborator.name}" with consistent roles:`, consistentRoles);
         } else {
-          // Create new node with optimized role detection
-          const enhancedRoles = getOptimizedRoles(collaborator.name, collaborator.type);
-          const color = enhancedRoles.includes('producer') ? '#8A2BE2' : '#00CED1';
+          // Create new node with consistent role detection
+          const consistentRoles = ensureRoleConsistency(collaborator.name, collaborator.type);
+          
+          // Enhanced color coding based on consistent roles
+          let color = '#00CED1'; // Default color
+          if (consistentRoles.includes('producer')) {
+            color = '#8A2BE2'; // Producer color
+          } else if (consistentRoles.includes('songwriter') && !consistentRoles.includes('artist')) {
+            color = '#67D1F8'; // Songwriter color
+          } else if (consistentRoles.includes('artist')) {
+            color = '#FF69B4'; // Artist color
+          }
+          
           collabNode = {
             id: collaborator.name,
             name: collaborator.name,
-            type: enhancedRoles[0],
-            types: enhancedRoles,
+            type: consistentRoles[0],
+            types: consistentRoles,
             color: color,
             size: 20, // Smaller size for collaborators
             artistId: null,
             collaborations: collaborator.topCollaborators || []
           };
+
+          // Log consistent multi-role node creation
+          if (consistentRoles.length > 1) {
+            console.log(`🎭 [Vercel] Created consistent multi-role collaborator node for "${collaborator.name}" with roles:`, consistentRoles);
+          } else {
+            console.log(`🎭 [Vercel] Created consistent single-role collaborator node for "${collaborator.name}" with role:`, consistentRoles[0]);
+          }
 
           // Look up MusicNerd ID for collaborator
           const collabQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
@@ -574,19 +704,36 @@ Guidelines:
           });
         }
 
-        // Add branching artists
+        // Add branching artists with consistent multi-role detection
         for (const branchingArtist of collaborator.topCollaborators || []) {
           if (branchingArtist !== correctArtistName && !nodeMap.has(branchingArtist)) {
-            const branchingRoles = getOptimizedRoles(branchingArtist, 'artist');
+            // Consistent multi-role detection for branching artists
+            const consistentRoles = ensureRoleConsistency(branchingArtist, 'artist');
+            
+            // Determine color based on consistent roles
+            let branchColor = '#FF69B4'; // Default artist color
+            if (consistentRoles.includes('producer')) {
+              branchColor = '#8A2BE2'; // Producer color
+            } else if (consistentRoles.includes('songwriter') && !consistentRoles.includes('artist')) {
+              branchColor = '#67D1F8'; // Songwriter color
+            }
+            
             const branchNode = {
               id: branchingArtist,
               name: branchingArtist,
-              type: branchingRoles[0],
-              types: branchingRoles,
-              color: '#FF69B4',
+              type: consistentRoles[0],
+              types: consistentRoles,
+              color: branchColor,
               size: 16,
               artistId: null
             };
+
+            // Log consistent branching node creation
+            if (consistentRoles.length > 1) {
+              console.log(`🎭 [Vercel] Created consistent multi-role branching node for "${branchingArtist}" with roles:`, consistentRoles);
+            } else {
+              console.log(`🎭 [Vercel] Created consistent single-role branching node for "${branchingArtist}" with role:`, consistentRoles[0]);
+            }
 
             // Look up MusicNerd ID for branching artist
             const branchQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
@@ -609,22 +756,10 @@ Guidelines:
 
       const networkData = { nodes, links };
 
-      // Only cache the generated data if hallucinations were NOT used
-      if (!hallucinationsUsed) {
-        try {
-          const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE LOWER(name) = LOWER($2)';
-          await client.query(updateQuery, [JSON.stringify(networkData), correctArtistName]);
-          console.log(`💾 [Vercel] Cached network data for ${correctArtistName}`);
-        } catch (cacheError) {
-          console.warn('⚠️ [Vercel] Failed to cache data:', cacheError);
-        }
-      } else {
-        console.log(`🎭 [Vercel] Skipping cache for ${correctArtistName} due to hallucinated data`);
-      }
-
-      await client.end();
-      console.log(`✅ [Vercel] Generated network with ${nodes.length} nodes for ${artistName}`);
+      // Always generate fresh data - no caching
+      console.log(`🎭 [Vercel] Generated fresh network with ${nodes.length} nodes for ${artistName} (no caching)`);
       
+      await client.end();
       res.json(networkData);
       
     } catch (dbError) {
