@@ -58,6 +58,7 @@ Guidelines:
 - Only include real, verified music industry professionals who have actually worked with ${artistName}
 - If you don't have authentic data, return: {"collaborators": []}
 - For each real person, list ALL their roles from: ["producer", "songwriter", "artist"]
+- Make sure if any of these people have multiple roles (artist, producer, songwriter), it is listed in the data. Search for multiple roles on every person that is queried.
 - Include their top 3 real collaborating artists
 - Never use generic names like "John Doe", "Producer X", or placeholder data
 - Maximum 10 real collaborators if they exist`;
