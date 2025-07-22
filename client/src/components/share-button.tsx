@@ -234,7 +234,7 @@ export default function ShareButton() {
             
             // Apply the adjusted viewBox
             svgElement.setAttribute('viewBox', `${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
-            console.log(`📱 Mobile snapshot (default zoom): 50% zoom out and positioned below watermark: ${originalViewBox} → ${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
+            console.log(`📱 Mobile snapshot (default zoom): 60% zoom out and positioned below watermark: ${originalViewBox} → ${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
             
             // Wait for the changes to apply
             await new Promise(resolve => setTimeout(resolve, 50));
@@ -342,12 +342,14 @@ export default function ShareButton() {
       let finalWidth, finalHeight;
       
       if (isMobile) {
-        // Mobile: Dynamic sizing will be calculated during crop phase based on actual bounds
-        // This ensures proper padding and watermark space allocation
-        finalWidth = networkWidth; // Temporary, will be overridden in crop logic
-        finalHeight = networkHeight + topWatermarkSpace; // Temporary, will be overridden in crop logic
+        // Mobile: Square format that fits web vertically with extra side space for node names
+        const totalHeight = networkHeight + topWatermarkSpace; // Web height + watermark space
+        const squareSize = totalHeight; // Square based on total height
         
-        console.log(`📱 MOBILE SETUP: networkWidth=${networkWidth}, networkHeight=${networkHeight}, will calculate final dimensions during crop`);
+        finalWidth = squareSize;
+        finalHeight = squareSize;
+        
+        console.log(`📱 MOBILE SQUARE: networkHeight=${networkHeight}, topWatermarkSpace=${topWatermarkSpace}, squareSize=${squareSize}`);
       } else {
         // Desktop: Keep square format
         const minSize = 400 * highScale;
@@ -362,17 +364,20 @@ export default function ShareButton() {
       let cropX, cropY;
       
       if (isMobile) {
-        // Mobile: Dynamic crop - fit web content with padding and empty watermark space at top
+        // Mobile: Square crop - center web horizontally with extra side space for node names
         
-        // Crop to include network bounds with padding
-        cropX = Math.max(0, networkBounds.minX);
-        cropY = Math.max(0, networkBounds.minY - topWatermarkSpace); // Include empty watermark space above web
+        // Center the web horizontally in the square
+        const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
+        const networkWidth = networkBounds.maxX - networkBounds.minX;
         
-        // Final dimensions = network bounds + watermark space (already includes padding from bounds calculation)
-        finalWidth = networkBounds.maxX - networkBounds.minX;
-        finalHeight = (networkBounds.maxY - networkBounds.minY) + topWatermarkSpace;
+        // Calculate extra side space needed
+        const extraSideSpace = (finalWidth - networkWidth) / 2;
         
-        console.log(`📱 MOBILE DYNAMIC CROP: cropX=${cropX}, cropY=${cropY}, finalWidth=${finalWidth}, finalHeight=${finalHeight}, networkBounds=${JSON.stringify(networkBounds)}`);
+        // Position crop to center the web horizontally
+        cropX = Math.max(0, networkCenterX - finalWidth / 2);
+        cropY = Math.max(0, networkBounds.minY - topWatermarkSpace); // Include watermark space above web
+        
+        console.log(`📱 MOBILE SQUARE CROP: cropX=${cropX}, cropY=${cropY}, finalWidth=${finalWidth}, finalHeight=${finalHeight}, extraSideSpace=${extraSideSpace}`);
       } else {
         // Desktop: Center the crop around network center
         const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
