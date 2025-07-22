@@ -223,12 +223,12 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
         if (roleContent) {
           try {
-          const rolesData = JSON.parse(roleContent) as Record<string, unknown>;
+            const rolesData = JSON.parse(roleContent) as Record<string, unknown>;
             for (const [personName, roles] of Object.entries(rolesData)) {
-            const validRoles = safeParseRoles(roles);
-                if (validRoles.length > 0) {
-                  globalRoleMap.set(personName, validRoles);
-                  console.log(`✅ [DEBUG] Batch detected roles for "${personName}":`, validRoles);
+              const validRoles = safeParseRoles(roles);
+              if (validRoles.length > 0) {
+                globalRoleMap.set(personName, validRoles);
+                console.log(`✅ [DEBUG] Batch detected roles for "${personName}":`, validRoles);
               }
             }
           } catch (parseError) {
