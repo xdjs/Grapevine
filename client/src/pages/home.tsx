@@ -297,8 +297,8 @@ export default function Home() {
         </>
       )}
 
-      {/* Share Button - Always visible */}
-      <ShareButton />
+      {/* Share Button - Only visible when network is shown */}
+      {showNetworkView && <ShareButton />}
       
       {/* Help Button - Always visible */}
       <HelpButton />
