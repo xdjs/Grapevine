@@ -410,10 +410,6 @@ export default function Home() {
       {/* Share Button - Only visible when network is shown */}
       {showNetworkView && <ShareButton />}
 
-      {/* Share Button - Hide on mobile when network view is shown */}
-      {(!showNetworkView || !isMobile) && <ShareButton />}
-
-      
       {/* Help Button - Hide on mobile when network view is shown */}
       {(!showNetworkView || !isMobile) && <HelpButton />}
     </div>

@@ -204,7 +204,9 @@ Return their roles as JSON in this exact format:
   "Person Name 3": ["artist"]
 }
 
-Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has. Return ONLY the JSON object, no other text.`;
+IMPORTANT: Make sure if any of these people have multiple roles (artist, producer, songwriter), it is listed in the data. Search for multiple roles on every person that is queried.
+
+Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has - thoroughly investigate each person for ALL possible roles they may have in the music industry. Return ONLY the JSON object, no other text.`;
 
         const OpenAI = await import('openai');
         const openai = new OpenAI.default({
@@ -522,19 +524,31 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       console.log(`🎵 [DEBUG] Querying MusicBrainz API for "${artistName}"...`);
       const collaborationData = await musicBrainzService.getArtistCollaborations(artistName);
       
-      // Process MusicBrainz data with type safety
+      // Process MusicBrainz data with comprehensive role detection for EVERY collaborator
       const limitedCollaborators = collaborationData.artists.slice(0, 10);
+      
+      // Collect all collaborator names for batch role detection
+      const collaboratorNames = limitedCollaborators.map(c => c.name);
+      console.log(`🎭 [DEBUG] Performing comprehensive role detection for ${collaboratorNames.length} MusicBrainz collaborators`);
+      
+      // Batch detect roles for ALL collaborators
+      const globalRoleMap = await this.batchDetectRoles(collaboratorNames);
       
       for (const collaborator of limitedCollaborators) {
         const safeCollaboratorType = ensureRoleType(collaborator.type);
         
+        // Get enhanced roles from batch detection, fallback to MusicBrainz type
+        const enhancedRoles = globalRoleMap.get(collaborator.name) || [safeCollaboratorType];
+        
         const collaboratorNode = createSafeNetworkNode({
             name: collaborator.name,
-          type: safeCollaboratorType,
+          type: enhancedRoles[0],
+          types: enhancedRoles,
             size: 20,
         });
         
-                nodeMap.set(collaborator.name, collaboratorNode);
+        nodeMap.set(collaborator.name, collaboratorNode);
+        console.log(`🎭 [DEBUG] Enhanced MusicBrainz collaborator "${collaborator.name}" to roles:`, enhancedRoles);
 
               links.push({
                 source: artistName,
@@ -547,7 +561,14 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       
     } catch (error) {
       console.error('Error generating real collaboration network:', error);
-      return { nodes: [mainArtistNode], links: [] };
+      // Return minimal network with just the main artist if it exists
+      const fallbackNode = createSafeNetworkNode({
+        name: artistName,
+        type: 'artist',
+        size: 30,
+        musicNerdUrl: musicNerdUrl || 'https://musicnerd.xyz',
+      });
+      return { nodes: [fallbackNode], links: [] };
     }
   }
 
