@@ -365,15 +365,17 @@ export default function Home() {
 
       {/* Network Visualization - Only show when network data exists */}
       {networkData && showNetworkView && (
-        <NetworkVisualizer
-          key={`network-${networkData.nodes[0]?.id || 'empty'}-${Date.now()}`}
-          data={networkData}
-          visible={true}
-          filterState={filterState}
-          onZoomChange={handleZoomChange}
-          onArtistSearch={handleArtistSearch}
-          onArtistNodeClick={handleArtistNodeClick}
-        />
+        <div className="mobile-network-container network-visible">
+          <NetworkVisualizer
+            key={`network-${networkData.nodes[0]?.id || 'empty'}-${Date.now()}`}
+            data={networkData}
+            visible={true}
+            filterState={filterState}
+            onZoomChange={handleZoomChange}
+            onArtistSearch={handleArtistSearch}
+            onArtistNodeClick={handleArtistNodeClick}
+          />
+        </div>
       )}
 
       {/* Loading Screen */}
