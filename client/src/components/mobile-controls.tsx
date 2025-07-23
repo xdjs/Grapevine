@@ -301,47 +301,49 @@ export default function MobileControls({
         }
       }
 
-      // Calculate network dimensions
+      // Calculate network dimensions with extra padding to ensure nothing gets cut off
       const networkWidth = networkBounds.maxX - networkBounds.minX;
       const networkHeight = networkBounds.maxY - networkBounds.minY;
       
-      // FORCE a perfect square - use the larger dimension for BOTH width and height
-      // Ensure minimum size (scaled for high resolution)
-      const minSize = 400 * highScale;
-      const squareSize = Math.max(minSize, Math.max(networkWidth, networkHeight));
+      // Add extra padding to ensure the entire network is visible
+      const extraPadding = 120 * highScale; // Increased padding
+      const paddedWidth = networkWidth + extraPadding * 2;
+      const paddedHeight = networkHeight + extraPadding * 2;
       
-      console.log(`🔳 SQUARE DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}, squareSize=${squareSize}`);
+      // Use the larger dimension to ensure the network fits completely
+      const finalSize = Math.max(paddedWidth, paddedHeight);
+      
+      console.log(`🔳 NETWORK DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}`);
+      console.log(`🔳 PADDED DEBUG: paddedWidth=${paddedWidth}, paddedHeight=${paddedHeight}, finalSize=${finalSize}`);
       console.log(`🔳 CANVAS DEBUG: canvas.width=${canvas.width}, canvas.height=${canvas.height}`);
       
-      // Center the square crop around the network center
+      // Center the crop around the network center
       const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
       const networkCenterY = (networkBounds.minY + networkBounds.maxY) / 2;
       
       console.log(`🔳 NETWORK CENTER: networkCenterX=${networkCenterX}, networkCenterY=${networkCenterY}`);
       
-      // Calculate square crop coordinates - FORCE square dimensions
-      const halfSquare = squareSize / 2;
+      // Calculate crop coordinates to center the network
+      const halfSize = finalSize / 2;
+      let cropX = networkCenterX - halfSize;
+      let cropY = networkCenterY - halfSize;
       
-      // Ensure the crop is centered within the canvas bounds
-      let cropX = networkCenterX - halfSquare;
-      let cropY = networkCenterY - halfSquare;
-      
-      // Clamp to canvas bounds while maintaining center alignment
+      // Ensure the crop stays within canvas bounds
       if (cropX < 0) {
         cropX = 0;
-      } else if (cropX + squareSize > canvas.width) {
-        cropX = canvas.width - squareSize;
+      } else if (cropX + finalSize > canvas.width) {
+        cropX = canvas.width - finalSize;
       }
       
       if (cropY < 0) {
         cropY = 0;
-      } else if (cropY + squareSize > canvas.height) {
-        cropY = canvas.height - squareSize;
+      } else if (cropY + finalSize > canvas.height) {
+        cropY = canvas.height - finalSize;
       }
       
-      console.log(`🔳 CROP COORDINATES: cropX=${cropX}, cropY=${cropY}, squareSize=${squareSize}`);
+      console.log(`🔳 CROP COORDINATES: cropX=${cropX}, cropY=${cropY}, finalSize=${finalSize}`);
 
-      // Create a PERFECTLY SQUARE canvas
+      // Create a canvas with the calculated size (not forced square)
       const watermarkedCanvas = document.createElement('canvas');
       const ctx = watermarkedCanvas.getContext('2d');
       
@@ -349,21 +351,21 @@ export default function MobileControls({
         throw new Error('Failed to get canvas context');
       }
 
-      // FORCE the canvas to be perfectly square - width MUST equal height
-      watermarkedCanvas.width = squareSize;
-      watermarkedCanvas.height = squareSize;
+      // Use the calculated size (allows for rectangular crops if needed)
+      watermarkedCanvas.width = finalSize;
+      watermarkedCanvas.height = finalSize;
       
       console.log(`🔳 CANVAS DEBUG: width=${watermarkedCanvas.width}, height=${watermarkedCanvas.height}, isSquare=${watermarkedCanvas.width === watermarkedCanvas.height}`);
 
       // Fill with black background
       ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, squareSize, squareSize);
+      ctx.fillRect(0, 0, finalSize, finalSize);
 
-      // Draw EXACTLY a square crop - source and destination are both perfect squares
+      // Draw the cropped network onto the new canvas
       ctx.drawImage(
         canvas,
-        cropX, cropY, squareSize, squareSize, // Source: SQUARE crop from original
-        0, 0, squareSize, squareSize // Destination: SQUARE on new canvas
+        cropX, cropY, finalSize, finalSize, // Source: crop from original
+        0, 0, finalSize, finalSize // Destination: new canvas
       );
 
       // Load the Grapevine logo
@@ -374,7 +376,7 @@ export default function MobileControls({
         logo.onload = () => {
           try {
             // Calculate watermark size and position (top-left corner) - scaled for high res
-            const logoSize = Math.min(60 * highScale, squareSize * 0.08);
+            const logoSize = Math.min(60 * highScale, finalSize * 0.08);
             const padding = 12 * highScale;
             
             // Calculate dynamic text size based on logoSize
