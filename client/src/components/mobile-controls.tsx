@@ -738,7 +738,7 @@ export default function MobileControls({
 
       {/* Share Dialog - Outside options menu */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="w-[95vw] max-w-4xl h-[90vh] max-h-[600px] bg-gray-900 border-gray-700 p-4 sm:p-6">
+        <DialogContent className="w-[95vw] max-w-3xl h-[85vh] max-h-[500px] bg-gray-900 border-gray-700 p-4 sm:p-6">
           <DialogHeader className="mb-4">
             <DialogTitle className="text-white text-lg sm:text-xl">
               Share Artist Network
