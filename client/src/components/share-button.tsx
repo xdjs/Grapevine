@@ -231,62 +231,31 @@ export default function ShareButton() {
           const nodes = svg.querySelectorAll('.node-group');
           if (nodes.length > 0) {
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            let totalX = 0, totalY = 0, nodeCount = 0;
             
-            nodes.forEach((node) => {
-              const transform = node.getAttribute('transform');
-              if (transform) {
-                const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
-                if (match) {
-                  // Scale the node positions to match the high-resolution canvas
-                  const x = parseFloat(match[1]) * highScale;
-                  const y = parseFloat(match[2]) * highScale;
-                  minX = Math.min(minX, x);
-                  minY = Math.min(minY, y);
-                  maxX = Math.max(maxX, x);
-                  maxY = Math.max(maxY, y);
-                  
-                  // Calculate center of mass for better centering
-                  totalX += x;
-                  totalY += y;
-                  nodeCount++;
+                          nodes.forEach((node) => {
+                const transform = node.getAttribute('transform');
+                if (transform) {
+                  const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+                  if (match) {
+                    // Scale the node positions to match the high-resolution canvas
+                    const x = parseFloat(match[1]) * highScale;
+                    const y = parseFloat(match[2]) * highScale;
+                    minX = Math.min(minX, x);
+                    minY = Math.min(minY, y);
+                    maxX = Math.max(maxX, x);
+                    maxY = Math.max(maxY, y);
+                  }
                 }
-              }
-            });
+              });
             
-            if (nodeCount > 0) {
-              // Calculate the center of mass of all nodes
-              const centerX = totalX / nodeCount;
-              const centerY = totalY / nodeCount;
-              
-              // Add padding around the network (scaled for high resolution)
-              const padding = 80 * highScale;
-              minX = Math.max(0, minX - padding);
-              minY = Math.max(0, minY - padding);
-              maxX = Math.min(canvas.width, maxX + padding);
-              maxY = Math.min(canvas.height, maxY + padding);
-              
-              // Ensure we have a minimum size for the network bounds
-              const minNetworkSize = 200 * highScale;
-              const networkWidth = maxX - minX;
-              const networkHeight = maxY - minY;
-              
-              if (networkWidth < minNetworkSize) {
-                const center = (minX + maxX) / 2;
-                const halfSize = minNetworkSize / 2;
-                minX = Math.max(0, center - halfSize);
-                maxX = Math.min(canvas.width, center + halfSize);
-              }
-              
-              if (networkHeight < minNetworkSize) {
-                const center = (minY + maxY) / 2;
-                const halfSize = minNetworkSize / 2;
-                minY = Math.max(0, center - halfSize);
-                maxY = Math.min(canvas.height, center + halfSize);
-              }
-              
-              networkBounds = { minX, minY, maxX, maxY };
-            }
+            // Add padding around the network (scaled for high resolution)
+            const padding = 80 * highScale;
+            minX = Math.max(0, minX - padding);
+            minY = Math.max(0, minY - padding);
+            maxX = Math.min(canvas.width, maxX + padding);
+            maxY = Math.min(canvas.height, maxY + padding);
+            
+            networkBounds = { minX, minY, maxX, maxY };
           }
         } catch (error) {
           console.warn('Could not calculate network bounds:', error);
@@ -304,29 +273,14 @@ export default function ShareButton() {
       
       console.log(`🔳 SQUARE DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}, squareSize=${squareSize}`);
       
-      // Center the square crop around the network center of mass
+      // Center the square crop around the network center
       const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
       const networkCenterY = (networkBounds.minY + networkBounds.maxY) / 2;
       
       // Calculate square crop coordinates - FORCE square dimensions
-      let cropX = Math.max(0, Math.min(canvas.width - squareSize, networkCenterX - halfSquare));
-      let cropY = Math.max(0, Math.min(canvas.height - squareSize, networkCenterY - halfSquare));
-      
-      // If the crop would go outside the canvas bounds, adjust to center within available space
-      if (cropX + squareSize > canvas.width) {
-        cropX = Math.max(0, canvas.width - squareSize);
-      }
-      if (cropY + squareSize > canvas.height) {
-        cropY = Math.max(0, canvas.height - squareSize);
-      }
-      
-      // If the network is smaller than the square, center it within the square
-      if (networkWidth < squareSize) {
-        cropX = Math.max(0, Math.min(canvas.width - squareSize, networkCenterX - squareSize / 2));
-      }
-      if (networkHeight < squareSize) {
-        cropY = Math.max(0, Math.min(canvas.height - squareSize, networkCenterY - squareSize / 2));
-      }
+      const halfSquare = squareSize / 2;
+      const cropX = Math.max(0, Math.min(canvas.width - squareSize, networkCenterX - halfSquare));
+      const cropY = Math.max(0, Math.min(canvas.height - squareSize, networkCenterY - halfSquare));
 
       // Create a PERFECTLY SQUARE canvas
       const watermarkedCanvas = document.createElement('canvas');
@@ -552,42 +506,42 @@ export default function ShareButton() {
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium text-white">Share on Social Media</h4>
                       <div className="flex items-center justify-center gap-3">
-                        <Button
-                          size="icon"
-                          variant="secondary"
-                          className="w-10 h-10 bg-blue-600 hover:bg-blue-700 border-blue-600 text-white"
-                          title="Share on Facebook"
-                          onClick={shareToFacebook}
-                        >
-                          <Facebook className="h-5 w-5" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="secondary"
-                          className="w-10 h-10 bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 hover:from-purple-700 hover:via-pink-700 hover:to-orange-600 border-transparent text-white"
-                          title="Share on Instagram"
-                          onClick={shareToInstagram}
-                        >
-                          <Instagram className="h-5 w-5" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="secondary"
-                          className="w-10 h-10 bg-black hover:bg-gray-900 border-gray-600 text-white"
-                          title="Share on X"
-                          onClick={shareToX}
-                        >
-                          <XIcon className="h-5 w-5" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="secondary"
-                          className="w-10 h-10 bg-red-600 hover:bg-red-700 border-red-600 text-white"
-                          title="Share on Pinterest"
-                          onClick={shareToPinterest}
-                        >
-                          <PinterestIcon className="h-5 w-5" />
-                        </Button>
+                                                 <Button
+                           size="icon"
+                           variant="secondary"
+                           className="w-10 h-10 bg-blue-600 hover:bg-blue-700 border-blue-600 text-white"
+                           title="Share on Facebook"
+                           onClick={shareToFacebook}
+                         >
+                           <Facebook className="h-5 w-5" />
+                         </Button>
+                         <Button
+                           size="icon"
+                           variant="secondary"
+                           className="w-10 h-10 bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 hover:from-purple-700 hover:via-pink-700 hover:to-orange-600 border-transparent text-white"
+                           title="Share on Instagram"
+                           onClick={shareToInstagram}
+                         >
+                           <Instagram className="h-5 w-5" />
+                         </Button>
+                         <Button
+                           size="icon"
+                           variant="secondary"
+                           className="w-10 h-10 bg-black hover:bg-gray-900 border-gray-600 text-white"
+                           title="Share on X"
+                           onClick={shareToX}
+                         >
+                           <XIcon className="h-5 w-5" />
+                         </Button>
+                         <Button
+                           size="icon"
+                           variant="secondary"
+                           className="w-10 h-10 bg-red-600 hover:bg-red-700 border-red-600 text-white"
+                           title="Share on Pinterest"
+                           onClick={shareToPinterest}
+                         >
+                           <PinterestIcon className="h-5 w-5" />
+                         </Button>
                       </div>
                     </div>
                   )}
