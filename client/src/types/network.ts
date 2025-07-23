@@ -9,6 +9,9 @@ export interface NetworkNode {
   imageUrl?: string | null;
   spotifyId?: string | null;
   musicNerdUrl?: string;
+  xUsername?: string | null;
+  instagramUsername?: string | null;
+  facebookUsername?: string | null;
   x?: number;
   y?: number;
   fx?: number | null;

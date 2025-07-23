@@ -402,13 +402,14 @@ export default function Home() {
             onZoomOut={handleZoomOut}
             onZoomReset={handleZoomReset}
             onClearAll={handleClearNetwork}
+            networkData={networkData}
           />
         </>
       )}
 
 
       {/* Share Button - Only visible when network is shown and not on mobile */}
-      {showNetworkView && !isMobile && <ShareButton />}
+      {showNetworkView && !isMobile && <ShareButton networkData={networkData} />}
 
       {/* Help Button - Hide on mobile when network view is shown */}
       {(!showNetworkView || !isMobile) && <HelpButton />}
