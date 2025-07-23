@@ -11,7 +11,7 @@ import html2canvas from "html2canvas";
 interface ArtistSocialData {
   artistId: string;
   name: string;
-  twitterUsername?: string | null;
+  xUsername?: string | null;
   instagramUsername?: string | null;
   facebookUsername?: string | null;
 }
@@ -173,9 +173,9 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
   const shareToX = () => {
     let text = `Check out this artist's collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
     
-    // Use Twitter username if available
-    if (artistSocialData && artistSocialData.twitterUsername) {
-      text = `Check out @${artistSocialData.twitterUsername}'s artist collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
+    // Use X username if available
+    if (artistSocialData && artistSocialData.xUsername) {
+      text = `Check out @${artistSocialData.xUsername}'s artist collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
     } else if (artistSocialData) {
       text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
     }

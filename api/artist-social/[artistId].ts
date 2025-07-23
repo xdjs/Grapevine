@@ -4,7 +4,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 interface ArtistSocialData {
   artistId: string;
   name: string;
-  twitterUsername?: string | null;
+  xUsername?: string | null;
   instagramUsername?: string | null;
   facebookUsername?: string | null;
 }
@@ -44,7 +44,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await client.connect();
     
     const query = `
-      SELECT id, name, twitter_username, instagram_username, facebook_username 
+      SELECT id, name, x, instagram_username, facebook_username 
       FROM artists 
       WHERE id = $1
     `;
@@ -65,7 +65,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const socialData: ArtistSocialData = {
       artistId: artist.id,
       name: artist.name,
-      twitterUsername: artist.twitter_username,
+      xUsername: artist.x,
       instagramUsername: artist.instagram_username,
       facebookUsername: artist.facebook_username
     };
