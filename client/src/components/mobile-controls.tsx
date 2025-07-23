@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { NetworkData, NetworkNode } from "@/types/network";
 import {
   Plus,
   Minus,
@@ -22,6 +23,15 @@ import html2canvas from "html2canvas";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+// Interface for artist social media data
+interface ArtistSocialData {
+  artistId: string;
+  name: string;
+  twitterUsername?: string | null;
+  instagramUsername?: string | null;
+  facebookUsername?: string | null;
+}
+
 // Custom SVG icons for social media platforms
 const XIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -40,6 +50,7 @@ interface MobileControlsProps {
   onZoomOut: () => void;
   onZoomReset: () => void;
   onClearAll: () => void;
+  networkData?: NetworkData | null;
 }
 
 export default function MobileControls({
@@ -47,6 +58,7 @@ export default function MobileControls({
   onZoomOut,
   onZoomReset,
   onClearAll,
+  networkData,
 }: MobileControlsProps) {
   const [showControls, setShowControls] = useState(false); // existing zoom / clear panel
   const [showMenu, setShowMenu] = useState(false); // new three-dot options menu
@@ -55,22 +67,78 @@ export default function MobileControls({
   const [currentUrl, setCurrentUrl] = useState("");
   const [isCapturing, setIsCapturing] = useState(false);
   const [snapshotDataUrl, setSnapshotDataUrl] = useState<string | null>(null);
+  const [artistSocialData, setArtistSocialData] = useState<ArtistSocialData | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  // Fetch artist social media data when network data changes
+  useEffect(() => {
+    const fetchArtistSocialData = async () => {
+      if (!networkData || !networkData.nodes) {
+        setArtistSocialData(null);
+        return;
+      }
+
+      // Find the main artist (the one with size 30)
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+
+      if (!mainArtist || !mainArtist.artistId) {
+        setArtistSocialData(null);
+        return;
+      }
+
+      try {
+        console.log(`🔍 [MobileControls] Fetching social media data for artist ID: ${mainArtist.artistId}`);
+        const response = await fetch(`/api/artist-social/${mainArtist.artistId}`);
+        
+        if (response.ok) {
+          const socialData = await response.json();
+          setArtistSocialData(socialData);
+          console.log(`✅ [MobileControls] Found social media data for ${socialData.name}:`, socialData);
+        } else {
+          console.log(`❌ [MobileControls] No social media data found for artist ID: ${mainArtist.artistId}`);
+          setArtistSocialData(null);
+        }
+      } catch (error) {
+        console.error('Error fetching artist social media data:', error);
+        setArtistSocialData(null);
+      }
+    };
+
+    fetchArtistSocialData();
+  }, [networkData]);
 
   if (!isMobile) return null;
 
   // Platform-specific share functions - direct URL sharing
   const shareToFacebook = () => {
     const url = encodeURIComponent(window.location.href);
-    const text = encodeURIComponent("Check out this artist collaboration network! Discover how your favorite artists are connected.");
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${text}`;
+    let text = "Check out this artist collaboration network! Discover how your favorite artists are connected.";
+    
+    // Add artist tag if available
+    if (artistSocialData && artistSocialData.facebookUsername) {
+      text = `Check out ${artistSocialData.name}'s collaboration network! Tag: @${artistSocialData.facebookUsername} Discover how your favorite artists are connected.`;
+    } else if (artistSocialData) {
+      text = `Check out ${artistSocialData.name}'s collaboration network! Discover how your favorite artists are connected.`;
+    }
+    
+    const encodedText = encodeURIComponent(text);
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${encodedText}`;
     window.open(facebookUrl, '_blank', 'width=600,height=400');
   };
   
   const shareToInstagram = () => {
     // Instagram doesn't support direct URL sharing, so we'll copy to clipboard and open Instagram's posting interface
-    const text = `🎵 Artist collaboration network 🎵\n\nDiscover music connections at ${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    let text = `🎵 Artist collaboration network 🎵\n\nDiscover music connections at ${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    
+    // Add artist tag if available
+    if (artistSocialData && artistSocialData.instagramUsername) {
+      text = `🎵 ${artistSocialData.name}'s collaboration network 🎵\n\nTag: @${artistSocialData.instagramUsername}\n\nDiscover music connections at ${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    } else if (artistSocialData) {
+      text = `🎵 ${artistSocialData.name}'s collaboration network 🎵\n\nDiscover music connections at ${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    }
     
     navigator.clipboard.writeText(text).then(() => {
       toast({
@@ -134,17 +202,33 @@ export default function MobileControls({
   };
   
   const shareToX = () => {
-    const text = encodeURIComponent(`Check out this artist collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+    let text = `Check out this artist collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`;
+    
+    // Add artist tag if available
+    if (artistSocialData && artistSocialData.twitterUsername) {
+      text = `Check out ${artistSocialData.name}'s collaboration network! 🎵\n\n@${artistSocialData.twitterUsername}\n\nExplore music connections 👇\n\n#music #artists #collaboration`;
+    } else if (artistSocialData) {
+      text = `Check out ${artistSocialData.name}'s collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`;
+    }
+    
+    const encodedText = encodeURIComponent(text);
     const url = encodeURIComponent(window.location.href);
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodedText}&url=${url}`;
     window.open(twitterUrl, '_blank', 'width=600,height=400');
   };
   
   const shareToPinterest = () => {
     const url = encodeURIComponent(window.location.href);
-    const description = encodeURIComponent("Artist Collaboration Network - Discover how your favorite artists are connected! Explore music connections and collaborations.");
+    let description = "Artist Collaboration Network - Discover how your favorite artists are connected! Explore music connections and collaborations.";
+    
+    // Add artist information if available
+    if (artistSocialData) {
+      description = `${artistSocialData.name}'s Collaboration Network - Discover how your favorite artists are connected! Explore music connections and collaborations.`;
+    }
+    
+    const encodedDescription = encodeURIComponent(description);
     // Pinterest doesn't support data URLs, so we'll share without the image
-    const pinterestUrl = `https://pinterest.com/pin/create/button/?url=${url}&description=${description}`;
+    const pinterestUrl = `https://pinterest.com/pin/create/button/?url=${url}&description=${encodedDescription}`;
     window.open(pinterestUrl, '_blank', 'width=600,height=400');
   };
 
