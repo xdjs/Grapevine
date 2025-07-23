@@ -352,8 +352,6 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
       const minSize = 400 * highScale;
       const squareSize = Math.max(minSize, Math.max(networkWidth, networkHeight));
       
-      console.log(`🔳 SQUARE DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}, squareSize=${squareSize}`);
-      
       // Center the square crop around the network center
       const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
       const networkCenterY = (networkBounds.minY + networkBounds.maxY) / 2;
@@ -375,8 +373,6 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
       watermarkedCanvas.width = squareSize;
       watermarkedCanvas.height = squareSize;
       
-      console.log(`🔳 CANVAS DEBUG: width=${watermarkedCanvas.width}, height=${watermarkedCanvas.height}, isSquare=${watermarkedCanvas.width === watermarkedCanvas.height}`);
-
       // Fill with black background
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, squareSize, squareSize);
@@ -430,8 +426,6 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
             
             // Convert to high-quality PNG (1.0 = maximum quality)
             const dataUrl = watermarkedCanvas.toDataURL('image/png', 1.0);
-            
-            console.log(`🔳 HIGH-RES DEBUG: Canvas ${watermarkedCanvas.width}x${watermarkedCanvas.height}, Scale: ${highScale}x, DataURL length: ${dataUrl.length}`);
             
             setIsCapturing(false);
             resolve(dataUrl);
