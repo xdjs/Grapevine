@@ -548,47 +548,49 @@ export default function ShareButton() {
                   )}
                   
                   {/* Social Media Buttons */}
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium text-white">Share on Social Media</h4>
-                    <div className="flex items-center justify-center gap-3">
-                      <Button
-                        size="icon"
-                        variant="secondary"
-                        className="w-10 h-10 bg-blue-600 hover:bg-blue-700 border-blue-600 text-white"
-                        title="Share on Facebook"
-                        onClick={shareToFacebook}
-                      >
-                        <Facebook className="h-5 w-5" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="secondary"
-                        className="w-10 h-10 bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 hover:from-purple-700 hover:via-pink-700 hover:to-orange-600 border-transparent text-white"
-                        title="Share on Instagram"
-                        onClick={shareToInstagram}
-                      >
-                        <Instagram className="h-5 w-5" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="secondary"
-                        className="w-10 h-10 bg-black hover:bg-gray-900 border-gray-600 text-white"
-                        title="Share on X"
-                        onClick={shareToX}
-                      >
-                        <XIcon className="h-5 w-5" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="secondary"
-                        className="w-10 h-10 bg-red-600 hover:bg-red-700 border-red-600 text-white"
-                        title="Share on Pinterest"
-                        onClick={shareToPinterest}
-                      >
-                        <PinterestIcon className="h-5 w-5" />
-                      </Button>
+                  {snapshotDataUrl && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-white">Share on Social Media</h4>
+                      <div className="flex items-center justify-center gap-3">
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          className="w-10 h-10 bg-blue-600 hover:bg-blue-700 border-blue-600 text-white"
+                          title="Share on Facebook"
+                          onClick={shareToFacebook}
+                        >
+                          <Facebook className="h-5 w-5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          className="w-10 h-10 bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 hover:from-purple-700 hover:via-pink-700 hover:to-orange-600 border-transparent text-white"
+                          title="Share on Instagram"
+                          onClick={shareToInstagram}
+                        >
+                          <Instagram className="h-5 w-5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          className="w-10 h-10 bg-black hover:bg-gray-900 border-gray-600 text-white"
+                          title="Share on X"
+                          onClick={shareToX}
+                        >
+                          <XIcon className="h-5 w-5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          className="w-10 h-10 bg-red-600 hover:bg-red-700 border-red-600 text-white"
+                          title="Share on Pinterest"
+                          onClick={shareToPinterest}
+                        >
+                          <PinterestIcon className="h-5 w-5" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                   
                   {isCapturing && (
                     <div className="flex items-center justify-center py-8">
