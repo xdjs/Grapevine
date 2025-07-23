@@ -78,13 +78,6 @@ export default function ArtistSelectionModal({
     onClose();
   };
 
-  const handleOpenMainPage = () => {
-
-    window.open('https://musicnerd.xyz/', '_blank');
-
-    onClose();
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh]">
@@ -138,10 +131,7 @@ export default function ArtistSelectionModal({
           </ScrollArea>
         )}
 
-        <div className="flex justify-between pt-4">
-          <Button variant="outline" onClick={handleOpenMainPage}>
-            Open Main MusicNerd Page
-          </Button>
+        <div className="flex justify-end pt-4">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>

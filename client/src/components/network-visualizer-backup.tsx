@@ -159,7 +159,7 @@ export default function NetworkVisualizer({
     let initialDistance = 0;
     let lastScale = 1;
     let isPinching = false;
-    let pinchThreshold = 0.2; // Increased from 0.1 to 0.2 for less sensitivity
+    const pinchThreshold = 0.2; // Increased from 0.1 to 0.2 for less sensitivity
 
     // Custom touch event handlers using existing zoom functions
     const handleTouchStart = (event: TouchEvent) => {
@@ -419,7 +419,7 @@ export default function NetworkVisualizer({
             .endAngle(endAngle);
           
           group.append("path")
-            .attr("d", arcPath)
+            .attr("d", arcPath as any)
             .attr("fill", () => {
               if (role === 'artist') return '#FF0ACF';       // Magenta Pink
               if (role === 'producer') return '#AE53FF';     // Bright Purple  

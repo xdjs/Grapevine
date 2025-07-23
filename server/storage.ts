@@ -170,11 +170,53 @@ export class MemStorage implements IStorage {
         console.log(`❌ [DEBUG] Could not fetch MusicNerd ID for ${artistName}:`, error);
       }
 
-      // Create main artist node
+      // Detect roles for main artist using OpenAI
+      let mainArtistTypes: ('artist' | 'producer' | 'songwriter')[] = ['artist'];
+      if (process.env.OPENAI_API_KEY) {
+        try {
+          const mainArtistRolePrompt = `What roles does ${artistName} have in the music industry? CRITICAL: Search extensively for ALL POSSIBLE ROLES regardless of their popularity or fame level - many artists also produce and write songs. This includes mainstream artists, independent artists, underground artists, regional artists, and emerging artists.
+
+Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. 
+
+Investigate thoroughly for multiple roles on ${artistName} - check if they are also a producer or songwriter in addition to being an artist, whether they are famous or lesser-known. Return ONLY the JSON array, no other text.`;
+          
+          const OpenAI = await import('openai');
+          const openai = new OpenAI.default({
+            apiKey: process.env.OPENAI_API_KEY,
+          });
+
+          const roleCompletion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: mainArtistRolePrompt }],
+            temperature: 0.1,
+            max_tokens: 100,
+          });
+
+          const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
+          if (roleContent) {
+            try {
+              const detectedRoles = JSON.parse(roleContent);
+              if (Array.isArray(detectedRoles) && detectedRoles.length > 0) {
+                mainArtistTypes = detectedRoles.filter(role => 
+                  ['artist', 'producer', 'songwriter'].includes(role)
+                );
+                console.log(`✅ [MemStorage] Detected main artist roles for "${artistName}":`, mainArtistTypes);
+              }
+            } catch (parseError) {
+              console.log(`⚠️ [MemStorage] Could not parse main artist role detection for "${artistName}", using default`);
+            }
+          }
+        } catch (error) {
+          console.log(`⚠️ [MemStorage] Main artist role detection failed for "${artistName}", using default`);
+        }
+      }
+
+      // Create main artist node with detected roles
       const mainArtistNode: NetworkNode = {
         id: artistName,
         name: artistName,
-        type: 'artist',
+        type: mainArtistTypes[0],
+        types: mainArtistTypes,
         size: 30, // Larger size for main artist
         imageUrl: mainArtistImage,
         spotifyId: mainArtistSpotifyId,
@@ -184,6 +226,87 @@ export class MemStorage implements IStorage {
 
       // Add collaborating artists from MusicBrainz
       console.log(`🎨 [DEBUG] Processing ${collaborationData.artists.length} MusicBrainz collaborators...`);
+      
+      // Batch detect roles for ALL people in the network (collaborators AND their branching artists)
+      const collaboratorRoleMap = new Map<string, ('artist' | 'producer' | 'songwriter')[]>();
+      if (process.env.OPENAI_API_KEY && collaborationData.artists.length > 0) {
+        try {
+          // Collect ALL people who will be in the network
+          const allPeopleInNetwork = new Set<string>();
+          for (const collaborator of collaborationData.artists) {
+            allPeopleInNetwork.add(collaborator.name);
+          }
+          
+          // Also collect branching artists from topCollaborators
+          for (const collaborator of collaborationData.artists) {
+            if (collaborator.type === 'producer' || collaborator.type === 'songwriter') {
+              try {
+                const producerCollaborations = await musicBrainzService.getArtistCollaborations(collaborator.name);
+                if (producerCollaborations && producerCollaborations.artists.length > 0) {
+                  const branchingArtists = producerCollaborations.artists
+                    .filter(c => c.name !== collaborator.name && c.name !== artistName)
+                    .slice(0, 3)
+                    .map(c => c.name);
+                  branchingArtists.forEach(name => allPeopleInNetwork.add(name));
+                }
+              } catch (error) {
+                // Continue without branching artists for this collaborator
+              }
+            }
+          }
+          
+          const allPeopleArray = Array.from(allPeopleInNetwork);
+          const peopleListStr = allPeopleArray.map(name => `"${name}"`).join(', ');
+          console.log(`🎭 [MemStorage] Batch detecting roles for ${allPeopleArray.length} people in network:`, allPeopleArray);
+          
+          const batchRolePrompt = `For each of these music industry professionals: ${peopleListStr}
+        
+CRITICAL: Search extensively for MULTIPLE ROLES for every single person, regardless of their popularity or fame level. Many people have multiple roles (artist, producer, songwriter). This includes mainstream artists, independent artists, underground artists, regional artists, and emerging artists.
+
+Return their roles as JSON in this exact format:
+{
+  "Person Name 1": ["artist", "songwriter"],
+  "Person Name 2": ["producer", "songwriter"],
+  "Person Name 3": ["artist"]
+}
+
+Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has - investigate thoroughly for multiple roles on every person queried, whether they are famous or lesser-known. Return ONLY the JSON object, no other text.`;
+
+          const OpenAI = await import('openai');
+          const openai = new OpenAI.default({
+            apiKey: process.env.OPENAI_API_KEY,
+          });
+
+          const roleCompletion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: batchRolePrompt }],
+            temperature: 0.1,
+            max_tokens: 1000,
+          });
+
+          const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
+          if (roleContent) {
+            try {
+              const rolesData = JSON.parse(roleContent) as Record<string, unknown>;
+              for (const [personName, roles] of Object.entries(rolesData)) {
+                if (Array.isArray(roles)) {
+                  const validRoles = roles.filter(role => 
+                    ['artist', 'producer', 'songwriter'].includes(role)
+                  ) as ('artist' | 'producer' | 'songwriter')[];
+                  if (validRoles.length > 0) {
+                    collaboratorRoleMap.set(personName, validRoles);
+                    console.log(`✅ [MemStorage] Batch detected roles for "${personName}":`, validRoles);
+                  }
+                }
+              }
+            } catch (parseError) {
+              console.log(`⚠️ [MemStorage] Could not parse batch role detection, falling back to defaults`);
+            }
+          }
+        } catch (error) {
+          console.log(`⚠️ [MemStorage] Batch role detection failed, falling back to defaults`);
+        }
+      }
       
       // Use only the role data from external sources - no hardcoded role classifications
       const enhancedCollaborators = collaborationData.artists;
@@ -248,16 +371,21 @@ export class MemStorage implements IStorage {
           }
         }
 
+        // Get enhanced roles from batch detection, fallback to original type
+        const enhancedRoles = collaboratorRoleMap.get(collaborator.name) || [collaborator.type as 'artist' | 'producer' | 'songwriter'];
+        
         const collaboratorNode: NetworkNode = {
           id: collaborator.name,
           name: collaborator.name,
-          type: collaborator.type as 'artist' | 'producer' | 'songwriter',
+          type: enhancedRoles[0],
+          types: enhancedRoles,
           size: 20,
           imageUrl: collaboratorImage,
           spotifyId: collaboratorSpotifyId,
           artistId: collaboratorMusicNerdId,
           collaborations: topCollaborators.length > 0 ? topCollaborators : undefined,
         };
+        console.log(`🎭 [MemStorage] Enhanced "${collaborator.name}" to roles:`, enhancedRoles);
         console.log(`🎯 [DEBUG] Created node for "${collaborator.name}" with collaborations:`, collaboratorNode.collaborations);
         nodes.push(collaboratorNode);
 
@@ -265,6 +393,51 @@ export class MemStorage implements IStorage {
           source: artistName,
           target: collaborator.name,
         });
+
+        // CREATE BRANCHING NODES for topCollaborators to ensure EVERY node gets multi-role detection
+        if (topCollaborators && topCollaborators.length > 0) {
+          const maxBranching = 3;
+          const branchingCount = Math.min(topCollaborators.length, maxBranching);
+          
+          for (let i = 0; i < branchingCount; i++) {
+            const branchingArtistName = topCollaborators[i];
+            
+            // Skip if it's the main artist or already exists
+            if (branchingArtistName === artistName || nodes.some(n => n.name === branchingArtistName)) {
+              continue;
+            }
+            
+            // Get enhanced roles from batch detection, fallback to default
+            const branchingArtistRoles = collaboratorRoleMap.get(branchingArtistName) || ['artist'];
+
+            // Get MusicNerd artist ID for branching artist
+            let branchingArtistMusicNerdId = null;
+            try {
+              branchingArtistMusicNerdId = await musicNerdService.getArtistId(branchingArtistName);
+            } catch (error) {
+              console.log(`Could not fetch MusicNerd ID for branching artist ${branchingArtistName}`);
+            }
+
+            // Create branching artist node with full multi-role detection
+            const branchingArtistNode: NetworkNode = {
+              id: branchingArtistName,
+              name: branchingArtistName,
+              type: branchingArtistRoles[0],
+              types: branchingArtistRoles,
+              size: 16, // Smaller size for branching artists
+              artistId: branchingArtistMusicNerdId,
+            };
+            
+            console.log(`🎭 [MemStorage] Enhanced branching artist "${branchingArtistName}" to roles:`, branchingArtistRoles);
+            nodes.push(branchingArtistNode);
+
+            // Create link from collaborator to branching artist
+            links.push({
+              source: collaborator.name,
+              target: branchingArtistName,
+            });
+          }
+        }
       }
 
       // If no real collaborations found, try Wikipedia
@@ -303,15 +476,58 @@ export class MemStorage implements IStorage {
                 }
               }
 
+              // Detect roles for Wikipedia collaborators too
+              let wikipediaCollaboratorRoles: ('artist' | 'producer' | 'songwriter')[] = [collaborator.type];
+              if (process.env.OPENAI_API_KEY) {
+                try {
+                  const singleRolePrompt = `What roles does ${collaborator.name} have in the music industry? CRITICAL: Search extensively for ALL POSSIBLE ROLES regardless of their popularity or fame level - many people have multiple roles (artist, producer, songwriter). This includes mainstream artists, independent artists, underground artists, regional artists, and emerging artists.
+
+Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. 
+
+Investigate thoroughly for multiple roles on ${collaborator.name}, whether they are famous or lesser-known. Return ONLY the JSON array, no other text.`;
+                  
+                  const OpenAI = await import('openai');
+                  const openai = new OpenAI.default({
+                    apiKey: process.env.OPENAI_API_KEY,
+                  });
+
+                  const roleCompletion = await openai.chat.completions.create({
+                    model: "gpt-4o",
+                    messages: [{ role: "user", content: singleRolePrompt }],
+                    temperature: 0.1,
+                    max_tokens: 100,
+                  });
+
+                  const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
+                  if (roleContent) {
+                    try {
+                      const detectedRoles = JSON.parse(roleContent);
+                      if (Array.isArray(detectedRoles) && detectedRoles.length > 0) {
+                        wikipediaCollaboratorRoles = detectedRoles.filter(role => 
+                          ['artist', 'producer', 'songwriter'].includes(role)
+                        );
+                        console.log(`✅ [MemStorage] Detected Wikipedia collaborator roles for "${collaborator.name}":`, wikipediaCollaboratorRoles);
+                      }
+                    } catch (parseError) {
+                      console.log(`⚠️ [MemStorage] Could not parse Wikipedia collaborator role detection for "${collaborator.name}", using default`);
+                    }
+                  }
+                } catch (error) {
+                  console.log(`⚠️ [MemStorage] Wikipedia collaborator role detection failed for "${collaborator.name}", using default`);
+                }
+              }
+
               const collaboratorNode: NetworkNode = {
                 id: collaborator.name,
                 name: collaborator.name,
-                type: collaborator.type,
+                type: wikipediaCollaboratorRoles[0],
+                types: wikipediaCollaboratorRoles,
                 size: 20,
                 imageUrl: collaboratorImage,
                 spotifyId: collaboratorSpotifyId,
                 artistId: collaboratorMusicNerdId,
               };
+              console.log(`🎭 [MemStorage] Enhanced Wikipedia "${collaborator.name}" to roles:`, wikipediaCollaboratorRoles);
               nodes.push(collaboratorNode);
 
               links.push({

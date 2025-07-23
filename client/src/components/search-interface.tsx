@@ -9,12 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Search, X, Clock } from "lucide-react";
 import grapevineLogoLarge from "@assets/Grapevine Logo_1752103516040.png";
 import grapevineLogoSmall from "@assets/Grapevine Logo_1752103516040.png";
+import { useLocation } from "wouter";
 
 interface SearchInterfaceProps {
   onNetworkData: (data: NetworkData, artistId?: string) => void;
   showNetworkView: boolean;
   clearSearch?: boolean;
-  onLoadingChange?: (loading: boolean) => void;
+  onLoadingChange?: (loading: boolean, artistName?: string) => void;
   onSearchFunction?: (searchFn: (artistName: string) => void) => void;
   onClearAll?: () => void;
 }
@@ -51,6 +52,80 @@ const useViewportHeight = () => {
   return viewportHeight;
 };
 
+// Hook for dynamic spacing based on actual visible space
+const useDynamicSpacing = () => {
+  const [spacing, setSpacing] = useState({
+    topPadding: '24px',
+    bottomPadding: '120px'
+  });
+
+  useEffect(() => {
+    const updateSpacing = () => {
+      const height = window.innerHeight;
+      
+      // Use visualViewport if available for more accurate measurements
+      const viewportHeight = window.visualViewport ? window.visualViewport.height : height;
+      const visibleHeight = Math.min(viewportHeight, height);
+      
+      // Very aggressive spacing to ensure content fits above browser UI
+      if (visibleHeight < 600) {
+        setSpacing({
+          topPadding: '0px',
+          bottomPadding: '30px'
+        });
+      } else if (visibleHeight < 650) {
+        setSpacing({
+          topPadding: '2px',
+          bottomPadding: '40px'
+        });
+      } else if (visibleHeight < 700) {
+        setSpacing({
+          topPadding: '4px',
+          bottomPadding: '50px'
+        });
+      } else if (visibleHeight < 750) {
+        setSpacing({
+          topPadding: '8px',
+          bottomPadding: '60px'
+        });
+      } else {
+        setSpacing({
+          topPadding: '12px',
+          bottomPadding: '80px'
+        });
+      }
+    };
+
+    updateSpacing();
+    window.addEventListener('resize', updateSpacing);
+    window.addEventListener('orientationchange', updateSpacing);
+    
+    // Also update on focus/blur to catch browser UI changes
+    window.addEventListener('focus', updateSpacing);
+    window.addEventListener('blur', updateSpacing);
+    
+    // Use visualViewport events if available
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateSpacing);
+      window.visualViewport.addEventListener('scroll', updateSpacing);
+    }
+    
+    return () => {
+      window.removeEventListener('resize', updateSpacing);
+      window.removeEventListener('orientationchange', updateSpacing);
+      window.removeEventListener('focus', updateSpacing);
+      window.removeEventListener('blur', updateSpacing);
+      
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', updateSpacing);
+        window.visualViewport.removeEventListener('scroll', updateSpacing);
+      }
+    };
+  }, []);
+
+  return spacing;
+};
+
 function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction, onClearAll }: SearchInterfaceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentSearch, setCurrentSearch] = useState("");
@@ -63,10 +138,12 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
   const [showNoCollaboratorsPopup, setShowNoCollaboratorsPopup] = useState(false);
   const [pendingArtistInfo, setPendingArtistInfo] = useState<{ name: string; id: string; singleNodeNetwork: NetworkData } | null>(null);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const networkSearchInputRef = useRef<HTMLInputElement>(null);
   const viewportHeight = useViewportHeight();
+  const spacing = useDynamicSpacing();
   
   // Calculate dynamic dropdown height based on available space
   const calculateDropdownHeight = useCallback((baseHeight: number, isNetworkView: boolean = false) => {
@@ -146,29 +223,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     return 'noCollaborators' in response && response.noCollaborators === true;
   };
 
-  // Helper function to handle network response
-  const handleNetworkResponse = useCallback((response: NetworkResponse, artistName: string) => {
-    if (isNoCollaboratorsResponse(response)) {
-      // Show popup for no collaborators
-      setPendingArtistInfo({
-        name: response.artistName,
-        id: response.artistId,
-        singleNodeNetwork: response.singleNodeNetwork
-      });
-      setShowNoCollaboratorsPopup(true);
-    } else {
-      // Normal network data - pass to parent
-      const mainArtist = response.nodes.find(node => node.size === 30 && node.type === 'artist');
-      const artistId = mainArtist?.artistId || mainArtist?.id;
-      onNetworkData(response, artistId);
-      
-      toast({
-        title: "Network Generated",
-        description: `Found collaboration network for ${artistName}`,
-        duration: 1000,
-      });
-    }
-  }, [onNetworkData, toast]);
+
 
   // Handle user choice from popup
   const handleShowHallucinations = useCallback(async () => {
@@ -176,7 +231,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     
     try {
       setIsLoading(true);
-      onLoadingChange?.(true);
+      onLoadingChange?.(true, pendingArtistInfo.name);
       
       const data = await fetchNetworkData(pendingArtistInfo.name, true); // Request hallucinated data
       
@@ -216,19 +271,24 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
   const handleClosePopup = useCallback(() => {
     if (!pendingArtistInfo) return;
     
-    // Default to single node when popup is closed/cancelled
-    onNetworkData(pendingArtistInfo.singleNodeNetwork, pendingArtistInfo.id);
-    saveToSearchHistory(pendingArtistInfo.name, pendingArtistInfo.id);
-    
+    // Reset everything and navigate back to homepage when popup is closed/cancelled
     setShowNoCollaboratorsPopup(false);
     setPendingArtistInfo(null);
     
+    // Call onClearAll to properly reset parent component state and navigate home
+    if (onClearAll) {
+      onClearAll();
+    } else {
+      // Fallback if onClearAll is not provided
+      setLocation('/');
+    }
+    
     toast({
-      title: "Network Generated",
-      description: `Showing ${pendingArtistInfo.name} as single node`,
+      title: "Search Cancelled",
+      description: `Returned to homepage`,
       duration: 1000,
     });
-  }, [pendingArtistInfo, onNetworkData, toast, saveToSearchHistory]);
+  }, [pendingArtistInfo, onClearAll, setLocation, toast]);
 
   // Fetch artist options for instant search
   const fetchArtistOptions = useCallback(async (query: string) => {
@@ -294,19 +354,38 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     // Use artist ID if available, otherwise fall back to name
     try {
       setIsLoading(true);
-      onLoadingChange?.(true);
+      onLoadingChange?.(true, artist.name);
       
       // Use artist ID if available, otherwise fall back to name
       const data = artist.artistId 
         ? await fetchNetworkDataById(artist.artistId)
         : await fetchNetworkData(artist.name.trim());
       
+      // Get the artist ID for URL updating
+      const finalArtistId = artist.artistId || artist.id;
+      
       // Handle the response (might be network data or no-collaborators response)
-      handleNetworkResponse(data, artist.name);
+      if (isNoCollaboratorsResponse(data)) {
+        // Show popup for no collaborators
+        setPendingArtistInfo({
+          name: data.artistName,
+          id: data.artistId || finalArtistId,
+          singleNodeNetwork: data.singleNodeNetwork
+        });
+        setShowNoCollaboratorsPopup(true);
+      } else {
+        // Normal network data - pass to parent with explicit artist ID
+        onNetworkData(data, finalArtistId);
+        
+        toast({
+          title: "Network Generated",
+          description: `Found collaboration network for ${artist.name}`,
+          duration: 1000,
+        });
+      }
       
       // Save to search history if it's not a popup case (will be handled in popup callbacks)
       if (!isNoCollaboratorsResponse(data)) {
-        const finalArtistId = artist.artistId || artist.id;
         saveToSearchHistory(artist.name, finalArtistId);
       }
     } catch (error) {
@@ -326,12 +405,31 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     
     try {
       setIsLoading(true);
-      onLoadingChange?.(true);
+      onLoadingChange?.(true, searchQuery.trim());
       
       const data = await fetchNetworkData(searchQuery.trim());
       
       // Handle the response (might be network data or no-collaborators response)
-      handleNetworkResponse(data, searchQuery.trim());
+      if (isNoCollaboratorsResponse(data)) {
+        // Show popup for no collaborators
+        setPendingArtistInfo({
+          name: data.artistName,
+          id: data.artistId,
+          singleNodeNetwork: data.singleNodeNetwork
+        });
+        setShowNoCollaboratorsPopup(true);
+      } else {
+        // Normal network data - pass to parent with artist ID from network data
+        const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const artistId = mainArtist?.artistId || mainArtist?.id;
+        onNetworkData(data, artistId);
+        
+        toast({
+          title: "Network Generated",
+          description: `Found collaboration network for ${searchQuery.trim()}`,
+          duration: 1000,
+        });
+      }
       
       // Save to search history if it's not a popup case (will be handled in popup callbacks)
       if (!isNoCollaboratorsResponse(data)) {
@@ -366,7 +464,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     
     try {
       setIsLoading(true);
-      onLoadingChange?.(true);
+      onLoadingChange?.(true, historyEntry.artistName);
       
       // Use artist ID if available, otherwise fall back to name
       const data = historyEntry.artistId 
@@ -374,7 +472,34 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         : await fetchNetworkData(historyEntry.artistName);
       
       // Handle the response (might be network data or no-collaborators response)
-      handleNetworkResponse(data, historyEntry.artistName);
+      if (isNoCollaboratorsResponse(data)) {
+        // Show popup for no collaborators
+        const artistId = data.artistId || historyEntry.artistId;
+        if (artistId) {
+          setPendingArtistInfo({
+            name: data.artistName,
+            id: artistId,
+            singleNodeNetwork: data.singleNodeNetwork
+          });
+          setShowNoCollaboratorsPopup(true);
+        } else {
+          // No artist ID available, handle as regular network data
+          const mainArtist = data.singleNodeNetwork.nodes.find(node => node.size === 30 && node.type === 'artist');
+          const fallbackArtistId = mainArtist?.artistId || mainArtist?.id;
+          onNetworkData(data.singleNodeNetwork, fallbackArtistId);
+        }
+      } else {
+        // Normal network data - pass to parent with explicit artist ID
+        const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const artistId = historyEntry.artistId || mainArtist?.artistId || mainArtist?.id;
+        onNetworkData(data, artistId);
+        
+        toast({
+          title: "Network Generated",
+          description: `Found collaboration network for ${historyEntry.artistName}`,
+          duration: 1000,
+        });
+      }
       
       // Update timestamp for this history entry if it's not a popup case
       if (!isNoCollaboratorsResponse(data)) {
@@ -412,12 +537,31 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         // Trigger search immediately with the new artist name
         try {
           setIsLoading(true);
-          onLoadingChange?.(true);
+          onLoadingChange?.(true, artistName.trim());
           
           const data = await fetchNetworkData(artistName.trim());
           
           // Handle the response (might be network data or no-collaborators response)
-          handleNetworkResponse(data, artistName.trim());
+          if (isNoCollaboratorsResponse(data)) {
+            // Show popup for no collaborators
+            setPendingArtistInfo({
+              name: data.artistName,
+              id: data.artistId,
+              singleNodeNetwork: data.singleNodeNetwork
+            });
+            setShowNoCollaboratorsPopup(true);
+          } else {
+            // Normal network data - pass to parent with artist ID from network data
+            const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+            const artistId = mainArtist?.artistId || mainArtist?.id;
+            onNetworkData(data, artistId);
+            
+            toast({
+              title: "Network Generated",
+              description: `Found collaboration network for ${artistName.trim()}`,
+              duration: 1000,
+            });
+          }
           
           // Save to search history if it's not a popup case (will be handled in popup callbacks)
           if (!isNoCollaboratorsResponse(data)) {
@@ -444,28 +588,46 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     <>
       {/* Centered Search - Initial View */}
       <div
-        className={`absolute inset-0 flex items-start justify-center z-20 transition-all duration-700 px-4 pt-8 sm:pt-16 ${
+        className={`absolute inset-0 flex items-start justify-center z-20 transition-all duration-700 px-4 ${
           showNetworkView
             ? "opacity-0 pointer-events-none -translate-y-12"
             : "opacity-100"
         }`}
+        style={{
+          paddingTop: `calc(env(safe-area-inset-top, 0px) + ${spacing.topPadding})`,
+          paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + ${spacing.bottomPadding})`
+        }}
       >
         <div className="text-center w-full max-w-md">
-          <div className="mb-6 sm:mb-8 flex justify-center">
+          <div className="mb-0 sm:mb-1 md:mb-2 lg:mb-2 flex justify-center">
             <img 
               src={grapevineLogoLarge} 
               alt="Grapevine Logo" 
-              className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 object-contain"
+              className={`object-contain ${
+                (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 600 ? 'w-14 h-14' :
+                (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 650 ? 'w-18 h-18' :
+                (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 700 ? 'w-24 h-24' :
+                'w-24 h-24 sm:w-36 sm:h-36 md:w-44 md:h-44'
+              }`}
             />
           </div>
           
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-4 sm:mb-6 text-white">
+          <h1 className={`font-bold mb-2 sm:mb-3 md:mb-4 lg:mb-6 text-white ${
+            (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 600 ? 'text-xl' :
+            (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 650 ? 'text-2xl' :
+            (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 700 ? 'text-3xl' :
+            'text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl'
+          }`}>
             Grapevine
           </h1>
 
           {/* Tip Section */}
-          <div className="mb-4 text-center">
-            <p className="text-sm text-gray-300">
+          <div className="mb-2 sm:mb-3 md:mb-4 text-center">
+            <p className={`text-gray-300 ${
+              (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 600 ? 'text-xs' :
+              (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 650 ? 'text-sm' :
+              'text-xs sm:text-sm md:text-base'
+            }`}>
               <span className="font-medium">Tip:</span> Try searching for Taylor Swift, Drake, or Ariana Grande.
             </p>
           </div>
@@ -641,7 +803,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
 
       {/* Top Bar Search - Network View */}
       <div
-        className={`absolute top-0 left-0 right-0 z-30 transition-all duration-700 ${
+        className={`absolute top-0 left-0 right-0 z-30 transition-all duration-700 mobile-fixed-header ${
           showNetworkView
             ? "opacity-100 pointer-events-auto translate-y-0"
             : "opacity-0 pointer-events-none -translate-y-12"
@@ -661,10 +823,14 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                   className="w-6 h-6 sm:w-8 sm:h-8 object-contain"
                 />
               </button>
-              <h2 className="text-sm sm:text-xl font-semibold text-white truncate">
+              <button
+                onClick={onClearAll}
+                className="text-sm sm:text-xl font-semibold text-white truncate hover:opacity-80 transition-opacity"
+                title="Go Home"
+              >
                 <span className="hidden sm:inline">Grapevine</span>
                 <span className="sm:hidden">Grapevine</span>
-              </h2>
+              </button>
             </div>
             
             <div className="flex-1 relative search-dropdown-container">
@@ -833,30 +999,6 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
           </div>
         </div>
       </div>
-
-      
-      {/* Music Nerd Button - Fixed at bottom of screen */}
-      {!showNetworkView && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
-          <Button
-            onClick={() => window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer')}
-            className="font-medium py-0.5 px-2 rounded transition-colors text-white"
-            style={{
-              backgroundColor: '#b427b4',
-              fontSize: '10px',
-              height: '24px',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#8f1c8f';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#b427b4';
-            }}
-          >
-            Visit Music Nerd
-          </Button>
-        </div>
-      )}
 
       {/* No Collaborators Popup */}
       <NoCollaboratorsPopup

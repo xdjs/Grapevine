@@ -28,7 +28,11 @@ export default function NoCollaboratorsPopup({
   };
 
   return (
-    <Dialog open={isOpen}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        onClose();
+      }
+    }}>
       <DialogContent className="sm:max-w-md bg-gray-900 border-gray-700 text-white" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
@@ -50,7 +54,7 @@ export default function NoCollaboratorsPopup({
           <Button
             onClick={handleShowHallucinations}
             disabled={isLoading}
-            className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-6"
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm px-6"
           >
             <Users className="h-4 w-4 mr-2 flex-shrink-0" />
             <span className="whitespace-nowrap">
