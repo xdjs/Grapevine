@@ -8,7 +8,6 @@ import MobileControls from "@/components/mobile-controls";
 import HelpButton from "@/components/help-button";
 import ShareButton from "@/components/share-button";
 import LoadingScreen from "@/components/loading-screen";
-import DebugShare from "@/components/debug-share";
 import { Button } from "@/components/ui/button";
 
 import { NetworkData, FilterState } from "@/types/network";
@@ -124,20 +123,6 @@ export default function Home() {
   const isMobile = useIsMobile();
   const spacing = useDynamicSpacing();
 
-  // Debug: Log when networkData changes
-  useEffect(() => {
-    console.log(`🏠 [Home] networkData state changed:`, networkData);
-    if (networkData) {
-      console.log(`🏠 [Home] Current networkData has ${networkData.nodes.length} nodes`);
-      const mainArtist = networkData.nodes.find(node => node.size === 30 && node.type === 'artist');
-      console.log(`🏠 [Home] Current main artist:`, {
-        name: mainArtist?.name,
-        artistId: mainArtist?.artistId,
-        hasArtistId: !!mainArtist?.artistId
-      });
-    }
-  }, [networkData]);
-
   // Manage body overflow classes based on network view state
   useEffect(() => {
     const body = document.body;
@@ -195,13 +180,6 @@ export default function Home() {
   }, [params.artistId, networkData, isLoading, isClearing, setLocation]);
 
   const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
-    console.log(`🏠 [Home] handleNetworkData called with:`, { data, artistId });
-    console.log(`🏠 [Home] Network has ${data?.nodes?.length || 0} nodes`);
-    
-    // Log main artist node details
-    const mainArtist = data?.nodes?.find(node => node.size === 30 && node.type === 'artist');
-    console.log(`🏠 [Home] Main artist node:`, mainArtist);
-    
     // Replace existing network with new data
     setNetworkData(data);
     setShowNetworkView(true);
@@ -435,9 +413,6 @@ export default function Home() {
 
       {/* Help Button - Hide on mobile when network view is shown */}
       {(!showNetworkView || !isMobile) && <HelpButton />}
-      
-      {/* Debug Component - Remove in production */}
-      <DebugShare />
     </div>
   );
 }
