@@ -227,6 +227,13 @@ export default function MobileControls({
       // Wait a brief moment for elements to hide
       await new Promise(resolve => setTimeout(resolve, 100));
 
+      // Reset zoom to fit entire network before taking screenshot
+      const zoomResetEvent = new CustomEvent('network-zoom', { detail: { action: 'reset' } });
+      window.dispatchEvent(zoomResetEvent);
+      
+      // Wait for zoom reset to complete
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       // Capture only the network visualization at high quality
       const devicePixelRatio = window.devicePixelRatio || 1;
       const highScale = Math.max(2, devicePixelRatio); // At least 2x, or device pixel ratio
