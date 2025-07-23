@@ -85,8 +85,16 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
     // Use Facebook username if available from Supabase
     if (artistSocialData && artistSocialData.facebookUsername) {
       text = `Check out @${artistSocialData.facebookUsername}'s artist collaboration network! Explore music connections 👇`;
-    } else if (artistSocialData) {
+    } else if (artistSocialData && artistSocialData.name) {
       text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇`;
+    } else if (networkData) {
+      // Find main artist from network data as fallback
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+      if (mainArtist) {
+        text = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇`;
+      }
     }
     
     const encodedText = encodeURIComponent(text);
@@ -101,8 +109,16 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
     // Use Instagram username if available from Supabase
     if (artistSocialData && artistSocialData.instagramUsername) {
       text = `Check out @${artistSocialData.instagramUsername}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
-    } else if (artistSocialData) {
+    } else if (artistSocialData && artistSocialData.name) {
       text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    } else if (networkData) {
+      // Find main artist from network data as fallback
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+      if (mainArtist) {
+        text = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+      }
     }
     
     navigator.clipboard.writeText(text).then(() => {
@@ -113,7 +129,7 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
         duration: 1000,
       });
       
-      // Try to open Instagram's posting interface directly
+      // Try to open Instagram app's camera/posting interface
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       if (isMobile) {
@@ -172,8 +188,16 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
     // Use X username if available from Supabase
     if (artistSocialData && artistSocialData.xUsername) {
       text = `Check out @${artistSocialData.xUsername}'s artist collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
-    } else if (artistSocialData) {
+    } else if (artistSocialData && artistSocialData.name) {
       text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
+    } else if (networkData) {
+      // Find main artist from network data as fallback
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+      if (mainArtist) {
+        text = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
+      }
     }
     
     const encodedText = encodeURIComponent(text);
@@ -187,8 +211,16 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
     let description = "Check out this artist's collaboration network! Explore music connections 👇";
     
     // Add artist information if available (Pinterest doesn't have specific usernames)
-    if (artistSocialData) {
+    if (artistSocialData && artistSocialData.name) {
       description = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇`;
+    } else if (networkData) {
+      // Find main artist from network data as fallback
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+      if (mainArtist) {
+        description = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇`;
+      }
     }
     
     const encodedDescription = encodeURIComponent(description);
@@ -548,6 +580,26 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Debug info for network and artist detection */}
+                  <div className="space-y-2 p-3 bg-gray-800 border border-gray-600 rounded">
+                    <h4 className="text-sm font-medium text-white">Debug Info:</h4>
+                    <div className="text-xs text-gray-300">
+                      <div>Network Data Exists: {networkData ? 'Yes' : 'No'}</div>
+                      <div>Nodes Count: {networkData?.nodes?.length || 0}</div>
+                      {networkData?.nodes && (
+                        <div>
+                          <div>Main Artist Detection:</div>
+                          {networkData.nodes.map((node, index) => (
+                            <div key={index} className="ml-2">
+                              • {node.name} (size: {node.size}, type: {node.type}, artistId: {node.artistId || 'None'})
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div>Artist Social Data: {artistSocialData ? 'Loaded' : 'None'}</div>
                     </div>
                   </div>
                   

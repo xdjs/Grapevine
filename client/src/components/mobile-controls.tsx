@@ -116,8 +116,16 @@ export default function MobileControls({
     // Use Facebook username if available from Supabase
     if (artistSocialData && artistSocialData.facebookUsername) {
       text = `Check out @${artistSocialData.facebookUsername}'s artist collaboration network! Explore music connections 👇`;
-    } else if (artistSocialData) {
+    } else if (artistSocialData && artistSocialData.name) {
       text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇`;
+    } else if (networkData) {
+      // Find main artist from network data as fallback
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+      if (mainArtist) {
+        text = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇`;
+      }
     }
     
     const encodedText = encodeURIComponent(text);
@@ -132,8 +140,16 @@ export default function MobileControls({
     // Use Instagram username if available from Supabase
     if (artistSocialData && artistSocialData.instagramUsername) {
       text = `Check out @${artistSocialData.instagramUsername}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
-    } else if (artistSocialData) {
+    } else if (artistSocialData && artistSocialData.name) {
       text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    } else if (networkData) {
+      // Find main artist from network data as fallback
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+      if (mainArtist) {
+        text = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+      }
     }
     
     navigator.clipboard.writeText(text).then(() => {
@@ -203,8 +219,16 @@ export default function MobileControls({
     // Use X username if available from Supabase
     if (artistSocialData && artistSocialData.xUsername) {
       text = `Check out @${artistSocialData.xUsername}'s artist collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
-    } else if (artistSocialData) {
+    } else if (artistSocialData && artistSocialData.name) {
       text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
+    } else if (networkData) {
+      // Find main artist from network data as fallback
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+      if (mainArtist) {
+        text = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
+      }
     }
     
     const encodedText = encodeURIComponent(text);
@@ -218,8 +242,16 @@ export default function MobileControls({
     let description = "Check out this artist's collaboration network! Explore music connections 👇";
     
     // Add artist information if available (Pinterest doesn't have specific usernames)
-    if (artistSocialData) {
+    if (artistSocialData && artistSocialData.name) {
       description = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇`;
+    } else if (networkData) {
+      // Find main artist from network data as fallback
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+      if (mainArtist) {
+        description = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇`;
+      }
     }
     
     const encodedDescription = encodeURIComponent(description);
