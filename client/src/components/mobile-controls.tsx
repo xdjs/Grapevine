@@ -738,14 +738,15 @@ export default function MobileControls({
 
       {/* Share Dialog - Outside options menu */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-2xl bg-gray-900 border-gray-700">
-          <DialogHeader>
-            <DialogTitle className="text-white">
+        <DialogContent className="w-[95vw] max-w-4xl h-[90vh] max-h-[600px] bg-gray-900 border-gray-700 p-4 sm:p-6">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-white text-lg sm:text-xl">
               Share Artist Network
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
+          <div className="space-y-4 h-full flex flex-col">
+            {/* URL Section - Compact on mobile */}
+            <div className="space-y-2 flex-shrink-0">
               <div className="flex items-center gap-2">
                 <div className="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm text-white break-all">
                   {currentUrl}
@@ -754,7 +755,7 @@ export default function MobileControls({
                   size="icon"
                   variant="secondary"
                   onClick={() => copyFromDialog(currentUrl)}
-                  className="bg-gray-700 hover:bg-gray-600 border-gray-600"
+                  className="bg-gray-700 hover:bg-gray-600 border-gray-600 flex-shrink-0"
                   title="Copy link"
                 >
                   <Copy className="h-4 w-4" />
@@ -762,10 +763,10 @@ export default function MobileControls({
               </div>
             </div>
             
-            {/* Snapshot Section */}
+            {/* Snapshot Section - Takes up most of the space */}
             {snapshotDataUrl && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
+              <div className="space-y-2 flex-1 flex flex-col min-h-0">
+                <div className="flex items-center justify-between flex-shrink-0">
                   <h4 className="text-sm font-medium text-white">Network Snapshot</h4>
                   <Button
                     size="sm"
@@ -777,19 +778,19 @@ export default function MobileControls({
                     Download
                   </Button>
                 </div>
-                <div className="border border-gray-600 rounded overflow-hidden">
+                <div className="border border-gray-600 rounded overflow-hidden flex-1 min-h-0 bg-black">
                   <img 
                     src={snapshotDataUrl} 
                     alt="Network snapshot" 
-                    className="w-full max-h-96 object-contain bg-black"
+                    className="w-full h-full object-contain"
                   />
                 </div>
               </div>
             )}
             
-            {/* Social Media Buttons */}
+            {/* Social Media Buttons - Compact at bottom */}
             {snapshotDataUrl && (
-              <div className="space-y-2">
+              <div className="space-y-2 flex-shrink-0">
                 <h4 className="text-sm font-medium text-white">Share on Social Media</h4>
                 <div className="flex items-center justify-center gap-3">
                   <Button
@@ -833,7 +834,7 @@ export default function MobileControls({
             )}
             
             {isCapturing && (
-              <div className="flex items-center justify-center py-8">
+              <div className="flex items-center justify-center py-8 flex-shrink-0">
                 <div className="flex items-center space-x-2">
                   <Camera className="w-5 h-5 animate-pulse text-blue-400" />
                   <span className="text-sm text-gray-300">Creating snapshot...</span>
