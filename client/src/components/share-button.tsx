@@ -67,13 +67,25 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
         if (response.ok) {
           const socialData = await response.json();
           setArtistSocialData(socialData);
-          console.log(`✅ [ShareButton] Found social media data for ${socialData.name}:`, socialData);
+          
+          // Verify usernames were found in Supabase
+          const foundUsernames = [];
+          if (socialData.xUsername) foundUsernames.push(`X: @${socialData.xUsername}`);
+          if (socialData.instagramUsername) foundUsernames.push(`Instagram: @${socialData.instagramUsername}`);
+          if (socialData.facebookUsername) foundUsernames.push(`Facebook: @${socialData.facebookUsername}`);
+          
+          if (foundUsernames.length > 0) {
+            console.log(`✅ [ShareButton] Successfully retrieved usernames from Supabase for ${socialData.name}: ${foundUsernames.join(', ')}`);
+          } else {
+            console.log(`⚠️ [ShareButton] Artist ${socialData.name} found in Supabase but no social media usernames available`);
+          }
         } else {
-          console.log(`❌ [ShareButton] No social media data found for artist ID: ${mainArtist.artistId}`);
+          const errorData = await response.json().catch(() => ({}));
+          console.log(`❌ [ShareButton] Failed to fetch social media data for artist ID: ${mainArtist.artistId}`, errorData);
           setArtistSocialData(null);
         }
       } catch (error) {
-        console.error('Error fetching artist social media data:', error);
+        console.error('❌ [ShareButton] Error fetching artist social media data from Supabase:', error);
         setArtistSocialData(null);
       }
     };
@@ -86,11 +98,15 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
     const url = encodeURIComponent(window.location.href);
     let text = "Check out this artist's collaboration network! Explore music connections 👇";
     
-    // Use Facebook username if available
+    // Use Facebook username if available from Supabase
     if (artistSocialData && artistSocialData.facebookUsername) {
       text = `Check out @${artistSocialData.facebookUsername}'s artist collaboration network! Explore music connections 👇`;
+      console.log(`📱 [ShareButton] Sharing to Facebook with username from Supabase: @${artistSocialData.facebookUsername}`);
     } else if (artistSocialData) {
       text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇`;
+      console.log(`📱 [ShareButton] Sharing to Facebook with artist name (no Facebook username in Supabase): ${artistSocialData.name}`);
+    } else {
+      console.log(`📱 [ShareButton] Sharing to Facebook with fallback text (no artist data from Supabase)`);
     }
     
     const encodedText = encodeURIComponent(text);
@@ -102,11 +118,15 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
     // Instagram doesn't support direct URL sharing, so we'll copy to clipboard and open Instagram's posting interface
     let text = `Check out this artist's collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
     
-    // Use Instagram username if available
+    // Use Instagram username if available from Supabase
     if (artistSocialData && artistSocialData.instagramUsername) {
       text = `Check out @${artistSocialData.instagramUsername}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+      console.log(`📱 [ShareButton] Sharing to Instagram with username from Supabase: @${artistSocialData.instagramUsername}`);
     } else if (artistSocialData) {
       text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+      console.log(`📱 [ShareButton] Sharing to Instagram with artist name (no Instagram username in Supabase): ${artistSocialData.name}`);
+    } else {
+      console.log(`📱 [ShareButton] Sharing to Instagram with fallback text (no artist data from Supabase)`);
     }
     
     navigator.clipboard.writeText(text).then(() => {
@@ -173,11 +193,15 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
   const shareToX = () => {
     let text = `Check out this artist's collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
     
-    // Use X username if available
+    // Use X username if available from Supabase
     if (artistSocialData && artistSocialData.xUsername) {
       text = `Check out @${artistSocialData.xUsername}'s artist collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
+      console.log(`📱 [ShareButton] Sharing to X with username from Supabase: @${artistSocialData.xUsername}`);
     } else if (artistSocialData) {
       text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
+      console.log(`📱 [ShareButton] Sharing to X with artist name (no X username in Supabase): ${artistSocialData.name}`);
+    } else {
+      console.log(`📱 [ShareButton] Sharing to X with fallback text (no artist data from Supabase)`);
     }
     
     const encodedText = encodeURIComponent(text);
