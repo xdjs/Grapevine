@@ -266,38 +266,57 @@ export default function MobileControls({
             }
           });
           
-          // Add padding around the network
-          const padding = 80;
-          minX = Math.max(0, minX - padding);
-          minY = Math.max(0, minY - padding);
-          maxX = Math.min(networkContainer.clientWidth, maxX + padding);
-          maxY = Math.min(networkContainer.clientHeight, maxY + padding);
-          
-          // Calculate the zoom level needed to fit the entire network
-          const networkWidth = maxX - minX;
-          const networkHeight = maxY - minY;
-          const containerWidth = networkContainer.clientWidth;
-          const containerHeight = networkContainer.clientHeight;
-          
-          // Calculate zoom to fit the network with some margin
-          const zoomX = containerWidth / networkWidth;
-          const zoomY = containerHeight / networkHeight;
-          const fitZoom = Math.min(zoomX, zoomY, 1); // Don't zoom in, only out
-          
-          // Apply the zoom to fit the entire network
-          const newWidth = containerWidth / fitZoom;
-          const newHeight = containerHeight / fitZoom;
-          const offsetX = (containerWidth - newWidth) / 2;
-          const offsetY = (containerHeight - newHeight) / 2;
-          
-          // Apply the zoom transition
-          const d3Svg = d3.select(svg);
-          d3Svg.transition()
-            .duration(300)
-            .attr('viewBox', `${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
-          
-          // Wait for the zoom transition to complete
-          await new Promise(resolve => setTimeout(resolve, 350));
+          // Check if we have valid bounds
+          if (minX === Infinity || minY === Infinity || maxX === -Infinity || maxY === -Infinity) {
+            console.warn('Invalid network bounds, skipping zoom adjustment');
+          } else {
+            // Add padding around the network
+            const padding = 80;
+            minX = Math.max(0, minX - padding);
+            minY = Math.max(0, minY - padding);
+            maxX = Math.min(networkContainer.clientWidth, maxX + padding);
+            maxY = Math.min(networkContainer.clientHeight, maxY + padding);
+            
+            // Calculate the network dimensions
+            const networkWidth = maxX - minX;
+            const networkHeight = maxY - minY;
+            const containerWidth = networkContainer.clientWidth;
+            const containerHeight = networkContainer.clientHeight;
+            
+            // Only proceed if we have valid dimensions
+            if (networkWidth > 0 && networkHeight > 0 && containerWidth > 0 && containerHeight > 0) {
+              // Calculate zoom to fit the network with some margin
+              const zoomX = containerWidth / networkWidth;
+              const zoomY = containerHeight / networkHeight;
+              
+              // Use the smaller zoom to ensure everything fits
+              // If zoom < 1, we need to zoom out (show more content)
+              // If zoom > 1, we need to zoom in (show less content)
+              const fitZoom = Math.min(zoomX, zoomY);
+              
+              // Ensure we don't zoom in beyond 1x (only zoom out)
+              const finalZoom = Math.min(fitZoom, 1);
+              
+              // Apply the zoom to fit the entire network
+              const newWidth = containerWidth / finalZoom;
+              const newHeight = containerHeight / finalZoom;
+              
+              // Center the network in the viewport
+              const networkCenterX = (minX + maxX) / 2;
+              const networkCenterY = (minY + maxY) / 2;
+              const offsetX = networkCenterX - (newWidth / 2);
+              const offsetY = networkCenterY - (newHeight / 2);
+              
+              // Apply the zoom transition
+              const d3Svg = d3.select(svg);
+              d3Svg.transition()
+                .duration(300)
+                .attr('viewBox', `${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
+              
+              // Wait for the zoom transition to complete
+              await new Promise(resolve => setTimeout(resolve, 350));
+            }
+          }
         }
       }
 
