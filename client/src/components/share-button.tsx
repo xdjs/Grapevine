@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Share2, Copy, Camera, Download, Facebook, Instagram } from "lucide-react";
 import { useState } from "react";
 import html2canvas from "html2canvas";
+import * as d3 from "d3";
 
 // Custom SVG icons for social media platforms
 const XIcon = ({ className }: { className?: string }) => (
@@ -162,12 +163,28 @@ export default function ShareButton() {
     const originalDisplays: string[] = [];
     let currentDialog: HTMLElement | null = null;
     let dialogDisplay = '';
+    let originalViewBox = '';
+    let originalZoom = 1;
+    let svg: SVGSVGElement | null = null;
     
     try {
       // Find the network container element
       const networkContainer = document.querySelector('.network-container') as HTMLElement;
       if (!networkContainer) {
         throw new Error('Network visualization not found');
+      }
+
+      // Save current zoom state
+      svg = networkContainer.querySelector('svg') as SVGSVGElement;
+      if (svg) {
+        originalViewBox = svg.getAttribute('viewBox') || '';
+        // Get current zoom level from the SVG transform or viewBox
+        const currentViewBox = svg.getAttribute('viewBox');
+        if (currentViewBox) {
+          const [, , width, height] = currentViewBox.split(' ').map(Number);
+          const containerWidth = networkContainer.clientWidth;
+          originalZoom = containerWidth / width;
+        }
       }
 
       // Temporarily hide UI controls but keep the current share dialog
@@ -195,6 +212,63 @@ export default function ShareButton() {
       // Wait a brief moment for elements to hide
       await new Promise(resolve => setTimeout(resolve, 100));
 
+      // Zoom out to fit entire network before capturing
+      if (svg) {
+        // Get all network nodes to calculate bounds
+        const nodes = svg.querySelectorAll('.node-group');
+        if (nodes.length > 0) {
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          
+          nodes.forEach((node) => {
+            const transform = node.getAttribute('transform');
+            if (transform) {
+              const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+              if (match) {
+                const x = parseFloat(match[1]);
+                const y = parseFloat(match[2]);
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                maxX = Math.max(maxX, x);
+                maxY = Math.max(maxY, y);
+              }
+            }
+          });
+          
+          // Add padding around the network
+          const padding = 80;
+          minX = Math.max(0, minX - padding);
+          minY = Math.max(0, minY - padding);
+          maxX = Math.min(networkContainer.clientWidth, maxX + padding);
+          maxY = Math.min(networkContainer.clientHeight, maxY + padding);
+          
+          // Calculate the zoom level needed to fit the entire network
+          const networkWidth = maxX - minX;
+          const networkHeight = maxY - minY;
+          const containerWidth = networkContainer.clientWidth;
+          const containerHeight = networkContainer.clientHeight;
+          
+          // Calculate zoom to fit the network with some margin
+          const zoomX = containerWidth / networkWidth;
+          const zoomY = containerHeight / networkHeight;
+          const fitZoom = Math.min(zoomX, zoomY, 1); // Don't zoom in, only out
+          
+          // Apply the zoom to fit the entire network
+          const newWidth = containerWidth / fitZoom;
+          const newHeight = containerHeight / fitZoom;
+          const offsetX = (containerWidth - newWidth) / 2;
+          const offsetY = (containerHeight - newHeight) / 2;
+          
+          // Apply the zoom transition
+          const d3Svg = d3.select(svg);
+          d3Svg.transition()
+            .duration(300)
+            .attr('viewBox', `${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
+          
+          // Wait for the zoom transition to complete
+          await new Promise(resolve => setTimeout(resolve, 350));
+        }
+      }
+
       // Capture only the network visualization at high quality
       const devicePixelRatio = window.devicePixelRatio || 1;
       const highScale = Math.max(2, devicePixelRatio); // At least 2x, or device pixel ratio
@@ -209,6 +283,14 @@ export default function ShareButton() {
         height: networkContainer.offsetHeight,
       });
 
+      // Restore original zoom state
+      if (svg && originalViewBox) {
+        const d3Svg = d3.select(svg);
+        d3Svg.transition()
+          .duration(300)
+          .attr('viewBox', originalViewBox);
+      }
+
       // Restore original display values
       elementsToHide.forEach((element, index) => {
         if (element) {
@@ -222,7 +304,6 @@ export default function ShareButton() {
       }
 
       // Find the bounds of the network content by analyzing the SVG
-      const svg = networkContainer.querySelector('svg');
       let networkBounds = { minX: 0, minY: 0, maxX: canvas.width, maxY: canvas.height };
       
       if (svg) {
@@ -232,21 +313,21 @@ export default function ShareButton() {
           if (nodes.length > 0) {
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
             
-                          nodes.forEach((node) => {
-                const transform = node.getAttribute('transform');
-                if (transform) {
-                  const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
-                  if (match) {
-                    // Scale the node positions to match the high-resolution canvas
-                    const x = parseFloat(match[1]) * highScale;
-                    const y = parseFloat(match[2]) * highScale;
-                    minX = Math.min(minX, x);
-                    minY = Math.min(minY, y);
-                    maxX = Math.max(maxX, x);
-                    maxY = Math.max(maxY, y);
-                  }
+            nodes.forEach((node) => {
+              const transform = node.getAttribute('transform');
+              if (transform) {
+                const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+                if (match) {
+                  // Scale the node positions to match the high-resolution canvas
+                  const x = parseFloat(match[1]) * highScale;
+                  const y = parseFloat(match[2]) * highScale;
+                  minX = Math.min(minX, x);
+                  minY = Math.min(minY, y);
+                  maxX = Math.max(maxX, x);
+                  maxY = Math.max(maxY, y);
                 }
-              });
+              }
+            });
             
             // Add padding around the network (scaled for high resolution)
             const padding = 80 * highScale;
@@ -380,6 +461,14 @@ export default function ShareButton() {
       
       if (currentDialog) {
         currentDialog.style.display = dialogDisplay;
+      }
+      
+      // Restore original zoom state even if there's an error
+      if (svg && originalViewBox) {
+        const d3Svg = d3.select(svg);
+        d3Svg.transition()
+          .duration(300)
+          .attr('viewBox', originalViewBox);
       }
       
       setIsCapturing(false);
