@@ -685,10 +685,10 @@ export default function MobileControls({
             </div>
             
             {/* Snapshot Section */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium text-white">Network Snapshot</h4>
-                {snapshotDataUrl ? (
+            {snapshotDataUrl && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-white">Network Snapshot</h4>
                   <Button
                     size="sm"
                     variant="secondary"
@@ -698,42 +698,7 @@ export default function MobileControls({
                     <Download className="h-4 w-4 mr-2" />
                     Download
                   </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={async () => {
-                      try {
-                        const snapshot = await createWatermarkedSnapshot();
-                        setSnapshotDataUrl(snapshot);
-                      } catch (error) {
-                        console.error('Failed to create snapshot:', error);
-                        toast({
-                          title: "Snapshot failed",
-                          description: "Unable to create page snapshot.",
-                          variant: "destructive",
-                          duration: 1000,
-                        });
-                      }
-                    }}
-                    disabled={isCapturing}
-                    className="bg-gray-700 hover:bg-gray-600 border-gray-600"
-                  >
-                    {isCapturing ? (
-                      <>
-                        <Camera className="h-4 w-4 mr-2 animate-pulse" />
-                        Creating...
-                      </>
-                    ) : (
-                      <>
-                        <Camera className="h-4 w-4 mr-2" />
-                        Create Screenshot
-                      </>
-                    )}
-                  </Button>
-                )}
-              </div>
-              {snapshotDataUrl && (
+                </div>
                 <div className="border border-gray-600 rounded overflow-hidden">
                   <img 
                     src={snapshotDataUrl} 
@@ -741,8 +706,8 @@ export default function MobileControls({
                     className="w-full max-h-96 object-contain bg-black"
                   />
                 </div>
-              )}
-            </div>
+              </div>
+            )}
             
             {/* Social Media Buttons */}
             <div className="space-y-2">
