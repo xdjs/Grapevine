@@ -317,12 +317,11 @@ export default function MobileControls({
       const paddedWidth = networkWidth + extraPadding * 2;
       const paddedHeight = networkHeight + extraPadding * 2;
       
-      // Use the actual network dimensions with minimal padding for a tighter crop
-      const finalWidth = paddedWidth;
-      const finalHeight = paddedHeight;
+      // Use the larger dimension to ensure the network fits completely
+      const finalSize = Math.max(paddedWidth, paddedHeight);
       
       console.log(`🔳 NETWORK DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}`);
-      console.log(`🔳 PADDED DEBUG: paddedWidth=${paddedWidth}, paddedHeight=${paddedHeight}`);
+      console.log(`🔳 PADDED DEBUG: paddedWidth=${paddedWidth}, paddedHeight=${paddedHeight}, finalSize=${finalSize}`);
       console.log(`🔳 CANVAS DEBUG: canvas.width=${canvas.width}, canvas.height=${canvas.height}`);
       
       // Center the crop around the network center
@@ -332,27 +331,26 @@ export default function MobileControls({
       console.log(`🔳 NETWORK CENTER: networkCenterX=${networkCenterX}, networkCenterY=${networkCenterY}`);
       
       // Calculate crop coordinates to center the network
-      const halfWidth = finalWidth / 2;
-      const halfHeight = finalHeight / 2;
-      let cropX = networkCenterX - halfWidth;
-      let cropY = networkCenterY - halfHeight;
+      const halfSize = finalSize / 2;
+      let cropX = networkCenterX - halfSize;
+      let cropY = networkCenterY - halfSize;
       
       // Ensure the crop stays within canvas bounds while maintaining center alignment
       if (cropX < 0) {
         cropX = 0;
-      } else if (cropX + finalWidth > canvas.width) {
-        cropX = canvas.width - finalWidth;
+      } else if (cropX + finalSize > canvas.width) {
+        cropX = canvas.width - finalSize;
       }
       
       if (cropY < 0) {
         cropY = 0;
-      } else if (cropY + finalHeight > canvas.height) {
-        cropY = canvas.height - finalHeight;
+      } else if (cropY + finalSize > canvas.height) {
+        cropY = canvas.height - finalSize;
       }
       
       // Additional centering adjustment to ensure the network is truly centered
-      const availableWidth = canvas.width - finalWidth;
-      const availableHeight = canvas.height - finalHeight;
+      const availableWidth = canvas.width - finalSize;
+      const availableHeight = canvas.height - finalSize;
       
       if (availableWidth > 0) {
         cropX = availableWidth / 2;
@@ -362,7 +360,7 @@ export default function MobileControls({
         cropY = availableHeight / 2;
       }
       
-      console.log(`🔳 CROP COORDINATES: cropX=${cropX}, cropY=${cropY}, finalWidth=${finalWidth}, finalHeight=${finalHeight}`);
+      console.log(`🔳 CROP COORDINATES: cropX=${cropX}, cropY=${cropY}, finalSize=${finalSize}`);
 
       // Create a canvas with the calculated size (not forced square)
       const watermarkedCanvas = document.createElement('canvas');
@@ -372,21 +370,21 @@ export default function MobileControls({
         throw new Error('Failed to get canvas context');
       }
 
-      // Use the calculated dimensions (rectangular crop based on actual network size)
-      watermarkedCanvas.width = finalWidth;
-      watermarkedCanvas.height = finalHeight;
+      // Use the calculated size (allows for rectangular crops if needed)
+      watermarkedCanvas.width = finalSize;
+      watermarkedCanvas.height = finalSize;
       
       console.log(`🔳 CANVAS DEBUG: width=${watermarkedCanvas.width}, height=${watermarkedCanvas.height}, isSquare=${watermarkedCanvas.width === watermarkedCanvas.height}`);
 
       // Fill with black background
       ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, finalWidth, finalHeight);
+      ctx.fillRect(0, 0, finalSize, finalSize);
 
       // Draw the cropped network onto the new canvas
       ctx.drawImage(
         canvas,
-        cropX, cropY, finalWidth, finalHeight, // Source: crop from original
-        0, 0, finalWidth, finalHeight // Destination: new canvas
+        cropX, cropY, finalSize, finalSize, // Source: crop from original
+        0, 0, finalSize, finalSize // Destination: new canvas
       );
 
       // Load the Grapevine logo
@@ -397,7 +395,7 @@ export default function MobileControls({
         logo.onload = () => {
           try {
             // Calculate watermark size and position (top-left corner) - scaled for high res
-            const logoSize = Math.min(60 * highScale, Math.min(finalWidth, finalHeight) * 0.08);
+            const logoSize = Math.min(60 * highScale, finalSize * 0.08);
             const padding = 12 * highScale;
             
             // Calculate dynamic text size based on logoSize
