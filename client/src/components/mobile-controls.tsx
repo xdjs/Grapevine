@@ -234,12 +234,12 @@ export default function MobileControls({
       // Wait for zoom reset to complete
       await new Promise(resolve => setTimeout(resolve, 300));
       
-      // Multiple zoom out steps to ensure all nodes are visible with the tighter crop
-      for (let i = 0; i < 3; i++) {
-        const zoomOutEvent = new CustomEvent('network-zoom', { detail: { action: 'out' } });
-        window.dispatchEvent(zoomOutEvent);
-        await new Promise(resolve => setTimeout(resolve, 150));
-      }
+      // Additional zoom out to ensure all nodes are visible
+      const zoomOutEvent = new CustomEvent('network-zoom', { detail: { action: 'out' } });
+      window.dispatchEvent(zoomOutEvent);
+      
+      // Wait for additional zoom out to complete
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       // Capture only the network visualization at high quality
       const devicePixelRatio = window.devicePixelRatio || 1;
