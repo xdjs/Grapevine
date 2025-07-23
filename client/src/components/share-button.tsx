@@ -84,13 +84,13 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
   // Platform-specific share functions - direct URL sharing
   const shareToFacebook = () => {
     const url = encodeURIComponent(window.location.href);
-    let text = "Check out this artist collaboration network! Discover how your favorite artists are connected.";
+    let text = "Check out this artist's collaboration network! Explore music connections 👇";
     
-    // Add artist tag if available
+    // Use Facebook username if available
     if (artistSocialData && artistSocialData.facebookUsername) {
-      text = `Check out ${artistSocialData.name}'s collaboration network! Tag: @${artistSocialData.facebookUsername} Discover how your favorite artists are connected.`;
+      text = `Check out @${artistSocialData.facebookUsername}'s artist collaboration network! Explore music connections 👇`;
     } else if (artistSocialData) {
-      text = `Check out ${artistSocialData.name}'s collaboration network! Discover how your favorite artists are connected.`;
+      text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇`;
     }
     
     const encodedText = encodeURIComponent(text);
@@ -100,13 +100,13 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
   
   const shareToInstagram = () => {
     // Instagram doesn't support direct URL sharing, so we'll copy to clipboard and open Instagram's posting interface
-    let text = `🎵 Artist collaboration network 🎵\n\nDiscover music connections at ${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    let text = `Check out this artist's collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
     
-    // Add artist tag if available
+    // Use Instagram username if available
     if (artistSocialData && artistSocialData.instagramUsername) {
-      text = `🎵 ${artistSocialData.name}'s collaboration network 🎵\n\nTag: @${artistSocialData.instagramUsername}\n\nDiscover music connections at ${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+      text = `Check out @${artistSocialData.instagramUsername}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
     } else if (artistSocialData) {
-      text = `🎵 ${artistSocialData.name}'s collaboration network 🎵\n\nDiscover music connections at ${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+      text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
     }
     
     navigator.clipboard.writeText(text).then(() => {
@@ -171,13 +171,13 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
   };
   
   const shareToX = () => {
-    let text = `Check out this artist collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`;
+    let text = `Check out this artist's collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
     
-    // Add artist tag if available
+    // Use Twitter username if available
     if (artistSocialData && artistSocialData.twitterUsername) {
-      text = `Check out ${artistSocialData.name}'s collaboration network! 🎵\n\n@${artistSocialData.twitterUsername}\n\nExplore music connections 👇\n\n#music #artists #collaboration`;
+      text = `Check out @${artistSocialData.twitterUsername}'s artist collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
     } else if (artistSocialData) {
-      text = `Check out ${artistSocialData.name}'s collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`;
+      text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
     }
     
     const encodedText = encodeURIComponent(text);
@@ -188,11 +188,11 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
   
   const shareToPinterest = () => {
     const url = encodeURIComponent(window.location.href);
-    let description = "Artist Collaboration Network - Discover how your favorite artists are connected! Explore music connections and collaborations.";
+    let description = "Check out this artist's collaboration network! Explore music connections 👇";
     
-    // Add artist information if available
+    // Add artist information if available (Pinterest doesn't have specific usernames)
     if (artistSocialData) {
-      description = `${artistSocialData.name}'s Collaboration Network - Discover how your favorite artists are connected! Explore music connections and collaborations.`;
+      description = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇`;
     }
     
     const encodedDescription = encodeURIComponent(description);
