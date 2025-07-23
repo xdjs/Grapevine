@@ -407,8 +407,8 @@ export default function Home() {
       )}
 
 
-      {/* Share Button - Only visible when network is shown */}
-      {showNetworkView && <ShareButton />}
+      {/* Share Button - Only visible when network is shown and not on mobile */}
+      {showNetworkView && !isMobile && <ShareButton />}
 
       {/* Help Button - Hide on mobile when network view is shown */}
       {(!showNetworkView || !isMobile) && <HelpButton />}
