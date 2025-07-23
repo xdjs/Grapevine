@@ -238,8 +238,8 @@ export default function ShareButton() {
           if (minX === Infinity || minY === Infinity || maxX === -Infinity || maxY === -Infinity) {
             console.warn('Invalid network bounds, skipping zoom adjustment');
           } else {
-            // Add padding around the network
-            const padding = 80;
+            // Add generous padding around the network to ensure nothing is cut off
+            const padding = 120; // Increased padding to account for text labels
             minX = Math.max(0, minX - padding);
             minY = Math.max(0, minY - padding);
             maxX = Math.min(networkContainer.clientWidth, maxX + padding);
@@ -253,17 +253,31 @@ export default function ShareButton() {
             
             // Only proceed if we have valid dimensions
             if (networkWidth > 0 && networkHeight > 0 && containerWidth > 0 && containerHeight > 0) {
-              // Calculate zoom to fit the network with some margin
+              // Calculate zoom to fit the network with margin
               const zoomX = containerWidth / networkWidth;
               const zoomY = containerHeight / networkHeight;
               
               // Use the smaller zoom to ensure everything fits
-              // If zoom < 1, we need to zoom out (show more content)
-              // If zoom > 1, we need to zoom in (show less content)
               const fitZoom = Math.min(zoomX, zoomY);
               
-              // Ensure we don't zoom in beyond 1x (only zoom out)
-              const finalZoom = Math.min(fitZoom, 1);
+              // Smart zoom logic:
+              // - If fitZoom < 0.9: Network is too large, zoom out
+              // - If fitZoom > 1.1: Network is too small, zoom in
+              // - Otherwise: Network fits well, use current or slight adjustment
+              let finalZoom;
+              if (fitZoom < 0.9) {
+                // Network is too large - zoom out to show everything
+                finalZoom = fitZoom;
+                console.log(`🔍 ZOOM OUT: Network too large, zooming out to ${finalZoom.toFixed(2)}x`);
+              } else if (fitZoom > 1.1) {
+                // Network is too small - zoom in to fill space better
+                finalZoom = Math.min(fitZoom, 1.3); // Cap zoom in at 1.3x
+                console.log(`🔍 ZOOM IN: Network too small, zooming in to ${finalZoom.toFixed(2)}x`);
+              } else {
+                // Network fits well - slight adjustment if needed
+                finalZoom = Math.min(fitZoom, 1);
+                console.log(`🔍 ZOOM FIT: Network fits well at ${finalZoom.toFixed(2)}x`);
+              }
               
               // Apply the zoom to fit the entire network
               const newWidth = containerWidth / finalZoom;
@@ -275,14 +289,16 @@ export default function ShareButton() {
               const offsetX = networkCenterX - (newWidth / 2);
               const offsetY = networkCenterY - (newHeight / 2);
               
+              console.log(`🔍 ZOOM DEBUG: network=${networkWidth}x${networkHeight}, container=${containerWidth}x${containerHeight}, fitZoom=${fitZoom.toFixed(2)}, finalZoom=${finalZoom.toFixed(2)}`);
+              
               // Apply the zoom transition
               const d3Svg = d3.select(svg);
               d3Svg.transition()
-                .duration(300)
+                .duration(400) // Slightly longer for smoother effect
                 .attr('viewBox', `${offsetX} ${offsetY} ${newWidth} ${newHeight}`);
               
               // Wait for the zoom transition to complete
-              await new Promise(resolve => setTimeout(resolve, 350));
+              await new Promise(resolve => setTimeout(resolve, 450));
             }
           }
         }
