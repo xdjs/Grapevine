@@ -201,6 +201,13 @@ export default function ShareButton() {
       
       // Wait for zoom reset to complete
       await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Additional zoom out to ensure all nodes are visible
+      const zoomOutEvent = new CustomEvent('network-zoom', { detail: { action: 'out' } });
+      window.dispatchEvent(zoomOutEvent);
+      
+      // Wait for additional zoom out to complete
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       // Capture only the network visualization at high quality
       const devicePixelRatio = window.devicePixelRatio || 1;
@@ -255,8 +262,8 @@ export default function ShareButton() {
                 }
               });
             
-            // Add padding around the network (scaled for high resolution)
-            const padding = 80 * highScale;
+            // Add generous padding around the network to ensure nothing gets cut off
+            const padding = 150 * highScale; // Increased padding significantly
             minX = Math.max(0, minX - padding);
             minY = Math.max(0, minY - padding);
             maxX = Math.min(canvas.width, maxX + padding);
@@ -274,7 +281,7 @@ export default function ShareButton() {
       const networkHeight = networkBounds.maxY - networkBounds.minY;
       
       // Add extra padding to ensure the entire network is visible
-      const extraPadding = 120 * highScale; // Increased padding
+      const extraPadding = 200 * highScale; // Significantly increased padding
       const paddedWidth = networkWidth + extraPadding * 2;
       const paddedHeight = networkHeight + extraPadding * 2;
       
@@ -296,7 +303,7 @@ export default function ShareButton() {
       let cropX = networkCenterX - halfSize;
       let cropY = networkCenterY - halfSize;
       
-      // Ensure the crop stays within canvas bounds
+      // Ensure the crop stays within canvas bounds while maintaining center alignment
       if (cropX < 0) {
         cropX = 0;
       } else if (cropX + finalSize > canvas.width) {
@@ -307,6 +314,18 @@ export default function ShareButton() {
         cropY = 0;
       } else if (cropY + finalSize > canvas.height) {
         cropY = canvas.height - finalSize;
+      }
+      
+      // Additional centering adjustment to ensure the network is truly centered
+      const availableWidth = canvas.width - finalSize;
+      const availableHeight = canvas.height - finalSize;
+      
+      if (availableWidth > 0) {
+        cropX = availableWidth / 2;
+      }
+      
+      if (availableHeight > 0) {
+        cropY = availableHeight / 2;
       }
       
       console.log(`🔳 CROP COORDINATES: cropX=${cropX}, cropY=${cropY}, finalSize=${finalSize}`);
