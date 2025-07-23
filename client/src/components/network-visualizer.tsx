@@ -1118,7 +1118,7 @@ export default function NetworkVisualizer({
   // Handle zoom controls with direct function calls
   useEffect(() => {
     const handleZoomEvent = (event: CustomEvent) => {
-      const { action } = event.detail;
+      const { action, scale } = event.detail;
 
       switch (action) {
         case "in":
@@ -1129,6 +1129,13 @@ export default function NetworkVisualizer({
           break;
         case "reset":
           handleZoomReset();
+          break;
+        case "set":
+          if (scale !== undefined) {
+            setCurrentZoom(scale);
+            applyZoom(scale);
+            console.log(`Setting zoom to fixed value: ${scale}`);
+          }
           break;
       }
     };
