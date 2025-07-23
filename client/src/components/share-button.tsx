@@ -262,8 +262,8 @@ export default function ShareButton() {
                 }
               });
             
-            // Add generous padding around the network to ensure nothing gets cut off
-            const padding = 150 * highScale; // Increased padding significantly
+            // Add moderate padding around the network - enough to prevent cut-off but not excessive
+            const padding = 80 * highScale; // Reduced from 150 to 80 for tighter crop
             minX = Math.max(0, minX - padding);
             minY = Math.max(0, minY - padding);
             maxX = Math.min(canvas.width, maxX + padding);
@@ -280,8 +280,8 @@ export default function ShareButton() {
       const networkWidth = networkBounds.maxX - networkBounds.minX;
       const networkHeight = networkBounds.maxY - networkBounds.minY;
       
-      // Add extra padding to ensure the entire network is visible
-      const extraPadding = 200 * highScale; // Significantly increased padding
+      // Add minimal extra padding to ensure the entire network is visible
+      const extraPadding = 60 * highScale; // Reduced from 200 to 60 for tighter crop
       const paddedWidth = networkWidth + extraPadding * 2;
       const paddedHeight = networkHeight + extraPadding * 2;
       
