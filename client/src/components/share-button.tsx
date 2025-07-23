@@ -272,15 +272,35 @@ export default function ShareButton() {
       const squareSize = Math.max(minSize, Math.max(networkWidth, networkHeight));
       
       console.log(`🔳 SQUARE DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}, squareSize=${squareSize}`);
+      console.log(`🔳 CANVAS DEBUG: canvas.width=${canvas.width}, canvas.height=${canvas.height}`);
       
       // Center the square crop around the network center
       const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
       const networkCenterY = (networkBounds.minY + networkBounds.maxY) / 2;
       
+      console.log(`🔳 NETWORK CENTER: networkCenterX=${networkCenterX}, networkCenterY=${networkCenterY}`);
+      
       // Calculate square crop coordinates - FORCE square dimensions
       const halfSquare = squareSize / 2;
-      const cropX = Math.max(0, Math.min(canvas.width - squareSize, networkCenterX - halfSquare));
-      const cropY = Math.max(0, Math.min(canvas.height - squareSize, networkCenterY - halfSquare));
+      
+      // Ensure the crop is centered within the canvas bounds
+      let cropX = networkCenterX - halfSquare;
+      let cropY = networkCenterY - halfSquare;
+      
+      // Clamp to canvas bounds while maintaining center alignment
+      if (cropX < 0) {
+        cropX = 0;
+      } else if (cropX + squareSize > canvas.width) {
+        cropX = canvas.width - squareSize;
+      }
+      
+      if (cropY < 0) {
+        cropY = 0;
+      } else if (cropY + squareSize > canvas.height) {
+        cropY = canvas.height - squareSize;
+      }
+      
+      console.log(`🔳 CROP COORDINATES: cropX=${cropX}, cropY=${cropY}, squareSize=${squareSize}`);
 
       // Create a PERFECTLY SQUARE canvas
       const watermarkedCanvas = document.createElement('canvas');
