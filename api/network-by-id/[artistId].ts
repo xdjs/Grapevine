@@ -229,18 +229,103 @@ Requirements:
       // Build network data structure with multi-role consolidation
       const nodeMap = new Map<string, NetworkNode>();
       const links: NetworkLink[] = [];
+      const globalRoleMap = new Map<string, string[]>();
 
-      // Add main artist node
+      // Batch role detection function for better performance
+      const batchDetectRoles = async (peopleList: string[]): Promise<void> => {
+        if (peopleList.length === 0) return;
+        
+        try {
+          const peopleListStr = peopleList.map(name => `"${name}"`).join(', ');
+          const batchRolePrompt = `For each of these music industry professionals: ${peopleListStr}
+          
+Return their roles as JSON in this exact format:
+{
+  "Person Name 1": ["artist", "songwriter"],
+  "Person Name 2": ["producer", "songwriter"],
+  "Person Name 3": ["artist"]
+}
+
+CRITICAL: Thoroughly research each person and identify ALL roles they have in the music industry. Many musicians have multiple roles:
+- Artists who also write their own songs = ["artist", "songwriter"]
+- Producers who also write songs = ["producer", "songwriter"] 
+- Artists who also produce = ["artist", "producer"]
+- Some people do all three = ["artist", "producer", "songwriter"]
+
+Research each person carefully and include ALL their roles. Don't assume someone only has one role.
+
+Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has. Return ONLY the JSON object, no other text.`;
+
+          const openai = new OpenAI({
+            apiKey: OPENAI_API_KEY,
+          });
+
+          const roleCompletion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: batchRolePrompt }],
+            temperature: 0.1,
+            max_tokens: 1000,
+          });
+
+          const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
+          if (roleContent) {
+            try {
+              const rolesData = JSON.parse(roleContent);
+              for (const [personName, roles] of Object.entries(rolesData)) {
+                if (Array.isArray(roles) && roles.length > 0) {
+                  const validRoles = roles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
+                  if (validRoles.length > 0) {
+                    globalRoleMap.set(personName, validRoles);
+                    console.log(`✅ [Vercel] Batch detected roles for "${personName}":`, validRoles);
+                  }
+                }
+              }
+            } catch (parseError) {
+              console.log(`⚠️ [Vercel] Could not parse batch role detection, falling back to defaults`);
+            }
+          }
+        } catch (error) {
+          console.log(`⚠️ [Vercel] Batch role detection failed, falling back to defaults`);
+        }
+      };
+
+      // Helper function to get roles with fallback
+      const getOptimizedRoles = (personName: string, defaultRole: string): string[] => {
+        return globalRoleMap.get(personName) || [defaultRole];
+      };
+
+      // Collect all people for batch role detection
+      const allPeople = new Set<string>();
+      allPeople.add(artist.name);
+      for (const collaborator of collaborationData.artists || []) {
+        if (!isFakeCollaborator(collaborator.name)) {
+          allPeople.add(collaborator.name);
+          for (const branchingArtist of collaborator.topCollaborators || []) {
+            if (branchingArtist !== artist.name && !isFakeCollaborator(branchingArtist)) {
+              allPeople.add(branchingArtist);
+            }
+          }
+        }
+      }
+
+      // Batch detect roles for all people
+      console.log(`🎭 [Vercel] Batch detecting roles for ${allPeople.size} people...`);
+      await batchDetectRoles([...allPeople]);
+
+      // Add main artist node with detected roles
+      const mainArtistRoles = getOptimizedRoles(artist.name, 'artist');
       const mainNode = {
         id: artist.name,
         name: artist.name,
-        type: 'artist',
-        types: ['artist'],
+        type: mainArtistRoles[0],
+        types: mainArtistRoles,
         color: '#FF69B4',
         size: 30,
         artistId: artist.id
       };
       nodeMap.set(artist.name, mainNode);
+      
+      console.log(`🎭 [Vercel] Main artist "${artist.name}" initialized with ${mainArtistRoles.length} roles:`, mainArtistRoles);
 
       // Track whether hallucinations were used
       let hallucinationsUsed = false;
@@ -387,17 +472,21 @@ Guidelines:
             collabNode.color = '#8A2BE2'; // Keep producer color for producer-songwriters
           }
         } else {
-          // Create new node
+          // Create new node with enhanced role detection
+          const enhancedRoles = getOptimizedRoles(collaborator.name, collaborator.type);
           collabNode = {
             id: collaborator.name,
             name: collaborator.name,
-            type: collaborator.type,
-            types: [collaborator.type],
-            color: collaborator.type === 'producer' ? '#8A2BE2' : '#00CED1',
+            type: enhancedRoles[0],
+            types: enhancedRoles,
+            color: enhancedRoles.includes('artist') ? '#FF69B4' : 
+                   enhancedRoles.includes('producer') ? '#8A2BE2' : '#00CED1',
             size: 20,
             artistId: null,
             collaborations: collaborator.topCollaborators || []
           };
+          
+          console.log(`🎭 [Vercel] Enhanced "${collaborator.name}" to roles:`, enhancedRoles);
 
           // Look up MusicNerd ID for collaborator
           const collabQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
@@ -421,15 +510,19 @@ Guidelines:
         // Add branching artists
         for (const branchingArtist of collaborator.topCollaborators || []) {
           if (branchingArtist !== artist.name && !nodeMap.has(branchingArtist) && !isFakeCollaborator(branchingArtist)) {
+            const enhancedBranchingRoles = getOptimizedRoles(branchingArtist, 'artist');
             const branchNode = {
               id: branchingArtist,
               name: branchingArtist,
-              type: 'artist',
-              types: ['artist'],
-              color: '#FF69B4',
+              type: enhancedBranchingRoles[0],
+              types: enhancedBranchingRoles,
+              color: enhancedBranchingRoles.includes('artist') ? '#FF69B4' : 
+                     enhancedBranchingRoles.includes('producer') ? '#8A2BE2' : '#00CED1',
               size: 15,
               artistId: null
             };
+            
+            console.log(`🎭 [Vercel] Enhanced branching "${branchingArtist}" to roles:`, enhancedBranchingRoles);
 
             // Look up MusicNerd ID for branching artist
             const branchQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';

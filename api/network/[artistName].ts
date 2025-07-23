@@ -234,6 +234,14 @@ Return their roles as JSON in this exact format:
   "Person Name 3": ["artist"]
 }
 
+CRITICAL: Thoroughly research each person and identify ALL roles they have in the music industry. Many musicians have multiple roles:
+- Artists who also write their own songs = ["artist", "songwriter"]
+- Producers who also write songs = ["producer", "songwriter"] 
+- Artists who also produce = ["artist", "producer"]
+- Some people do all three = ["artist", "producer", "songwriter"]
+
+Research each person carefully and include ALL their roles. Don't assume someone only has one role.
+
 Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has. Return ONLY the JSON object, no other text.`;
 
           const openai = new OpenAI({
