@@ -583,40 +583,6 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
                     </div>
                   </div>
                   
-                  {/* Debug info for network and artist detection */}
-                  <div className="space-y-2 p-3 bg-gray-800 border border-gray-600 rounded">
-                    <h4 className="text-sm font-medium text-white">Debug Info:</h4>
-                    <div className="text-xs text-gray-300">
-                      <div>Network Data Exists: {networkData ? 'Yes' : 'No'}</div>
-                      <div>Nodes Count: {networkData?.nodes?.length || 0}</div>
-                      {networkData?.nodes && (
-                        <div>
-                          <div>Main Artist Detection:</div>
-                          {networkData.nodes.map((node, index) => (
-                            <div key={index} className="ml-2">
-                              • {node.name} (size: {node.size}, type: {node.type}, artistId: {node.artistId || 'None'})
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <div>Artist Social Data: {artistSocialData ? 'Loaded' : 'None'}</div>
-                    </div>
-                  </div>
-                  
-                  {/* Debug info for artist social data */}
-                  {artistSocialData && (
-                    <div className="space-y-2 p-3 bg-gray-800 border border-gray-600 rounded">
-                      <h4 className="text-sm font-medium text-white">Artist Data Debug:</h4>
-                      <div className="text-xs text-gray-300">
-                        <div>Name: {artistSocialData.name}</div>
-                        <div>Artist ID: {artistSocialData.artistId}</div>
-                        <div>X Username: {artistSocialData.xUsername || 'None'}</div>
-                        <div>Instagram: {artistSocialData.instagramUsername || 'None'}</div>
-                        <div>Facebook: {artistSocialData.facebookUsername || 'None'}</div>
-                      </div>
-                    </div>
-                  )}
-                  
                   {/* Snapshot Section */}
                   {snapshotDataUrl && (
                     <div className="space-y-2">
