@@ -19,9 +19,10 @@ The Collaboration Details feature allows users to view detailed information abou
 1. User clicks on a collaborator node
 2. System determines the relationship (direct to main artist or through intermediate collaborator)
 3. API call is made to fetch collaboration details
-4. OpenAI generates a description and project list
-5. Spotify API enhances projects with links (if configured)
-6. Popup displays the information
+4. **MusicBrainz** provides structured collaboration data and project information
+5. **OpenAI** supplements with additional details and descriptions (if MusicBrainz data is limited)
+6. **Spotify API** enhances projects with direct links (if configured)
+7. Popup displays the combined information
 
 ## Features
 
@@ -46,7 +47,8 @@ The Collaboration Details feature allows users to view detailed information abou
 - `NetworkVisualizer`: Modified to handle collaborator clicks
 
 ### API Integration
-- **OpenAI**: Generates collaboration descriptions and project lists
+- **MusicBrainz**: Primary source for structured collaboration data and project information
+- **OpenAI**: Fallback for generating collaboration descriptions and additional project details
 - **Spotify**: Enhances projects with direct links
 - **Error Handling**: Graceful fallbacks when services are unavailable
 
