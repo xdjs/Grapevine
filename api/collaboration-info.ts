@@ -58,16 +58,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       apiKey: OPENAI_API_KEY,
     });
 
-    // Optimized prompt that still captures role information
+    // Optimized prompt that captures multiple roles when applicable
     const prompt = `Describe how ${artistName} and ${collaboratorName} worked together. Include:
 1. Brief collaboration summary
 2. Specific projects (songs/albums) with years and roles
 3. Any relevant background
 
+IMPORTANT: For each project, list ALL roles each person had (e.g., "producer, songwriter" or "artist, producer"). Many music professionals have multiple roles on the same project.
+
 Format as JSON:
 {
   "collaborationInfo": "Brief description",
-  "projects": [{"name": "Project", "year": "Year", "role": "Role"}],
+  "projects": [
+    {
+      "name": "Project Name", 
+      "year": "Year", 
+      "roles": {
+        "${artistName}": "role1, role2",
+        "${collaboratorName}": "role1, role2"
+      }
+    }
+  ],
   "personalHistory": "Background info if relevant"
 }`;
 
@@ -90,6 +101,24 @@ Format as JSON:
       const jsonContent = jsonMatch ? jsonMatch[0] : content;
       
       collaborationData = JSON.parse(jsonContent);
+      
+      // Handle backward compatibility: convert old single-role format to new multiple-roles format
+      if (collaborationData.projects && Array.isArray(collaborationData.projects)) {
+        collaborationData.projects = collaborationData.projects.map((project: any) => {
+          // If project has old 'role' field, convert to new 'roles' format
+          if (project.role && !project.roles) {
+            return {
+              ...project,
+              roles: {
+                [artistName]: project.role,
+                [collaboratorName]: project.role
+              },
+              role: undefined // Remove old field
+            };
+          }
+          return project;
+        });
+      }
       
       // Ensure required fields exist
       if (!collaborationData.collaborationInfo) {

@@ -94,8 +94,25 @@ export default function CollaborationPopup({
                             <div className="flex items-center text-sm text-gray-400 mt-1">
                               <Calendar className="h-4 w-4 mr-1" />
                               {project.year}
-                              <span className="mx-2">•</span>
-                              {project.role}
+                            </div>
+                            {/* Display roles for each artist */}
+                            <div className="mt-2 space-y-1">
+                              {project.roles ? (
+                                Object.entries(project.roles).map(([artistName, roles]) => (
+                                  <div key={artistName} className="text-sm">
+                                    <span className="text-purple-400 font-medium">{artistName}:</span>
+                                    <span className="text-gray-300 ml-1">{roles}</span>
+                                  </div>
+                                ))
+                              ) : project.role ? (
+                                // Fallback for old format
+                                <div className="text-sm text-gray-300">
+                                  <span className="text-purple-400 font-medium">Role:</span>
+                                  <span className="ml-1">{project.role}</span>
+                                </div>
+                              ) : (
+                                <div className="text-sm text-gray-500">No role information available</div>
+                              )}
                             </div>
                           </div>
                           {project.spotifyUrl && (

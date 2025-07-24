@@ -56,7 +56,9 @@ export interface SearchHistory {
 export interface CollaborationProject {
   name: string;
   year: string;
-  role: string;
+  roles: {
+    [artistName: string]: string; // e.g., "producer, songwriter"
+  };
   spotifyUrl?: string;
 }
 
