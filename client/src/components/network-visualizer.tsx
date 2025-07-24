@@ -211,6 +211,23 @@ export default function NetworkVisualizer({
 
     // Log basic info for debugging
     console.log(`🎯 [NetworkVisualizer] Rendering ${data.nodes.length} nodes and ${data.links.length} links`);
+    
+    // Check for multi-role nodes in the data
+    const multiRoleNodes = data.nodes.filter(n => n.types && n.types.length > 1);
+    console.log(`🎭 [NetworkVisualizer] Found ${multiRoleNodes.length} multi-role nodes:`, 
+      multiRoleNodes.map(n => ({ name: n.name, types: n.types }))
+    );
+    
+    // Log first few nodes to see data structure
+    console.log(`🎭 [NetworkVisualizer] Sample nodes:`, 
+      data.nodes.slice(0, 3).map(n => ({ 
+        name: n.name, 
+        type: n.type, 
+        types: n.types,
+        hasTypes: !!n.types,
+        typesLength: n.types?.length || 0
+      }))
+    );
 
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
@@ -663,6 +680,7 @@ export default function NetworkVisualizer({
           .attr("stroke-width", 4);
       } else {
         // Multiple roles - create segmented circle
+        console.log(`🎭 [Frontend] Creating multi-role segments for "${d.name}" with ${roles.length} roles:`, roles);
         const angleStep = (2 * Math.PI) / roles.length;
         
         roles.forEach((role, index) => {
@@ -676,7 +694,7 @@ export default function NetworkVisualizer({
             .startAngle(startAngle)
             .endAngle(endAngle);
           
-          group.append("path")
+          const pathElement = group.append("path")
             .attr("d", arcPath)
             .attr("fill", () => {
               if (role === 'artist') return '#FF0ACF';       // Magenta Pink
@@ -686,6 +704,8 @@ export default function NetworkVisualizer({
             })
             .attr("stroke", "white")
             .attr("stroke-width", 1);
+          
+          console.log(`🎭 [Frontend] Created arc segment ${index + 1}/${roles.length} for role "${role}"`);
         });
         
         // Add inner circle for better visibility
