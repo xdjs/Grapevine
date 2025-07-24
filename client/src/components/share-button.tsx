@@ -164,10 +164,32 @@ export default function ShareButton() {
     let dialogDisplay = '';
     
     try {
+      console.log('🔍 [Snapshot] Starting snapshot creation...');
+      
       // Find the network container element
       const networkContainer = document.querySelector('.network-container') as HTMLElement;
       if (!networkContainer) {
+        console.error('❌ [Snapshot] Network container not found');
         throw new Error('Network visualization not found');
+      }
+      console.log('✅ [Snapshot] Found network container:', networkContainer);
+
+      // Check if SVG and nodes exist
+      const svg = networkContainer.querySelector('svg');
+      if (!svg) {
+        console.error('❌ [Snapshot] No SVG found in network container');
+        throw new Error('No SVG visualization found');
+      }
+      
+      const nodes = svg.querySelectorAll('.node-group');
+      console.log(`✅ [Snapshot] Found ${nodes.length} nodes in SVG`);
+      
+      if (nodes.length === 0) {
+        console.warn('⚠️ [Snapshot] No nodes found - network might still be loading');
+        // Wait longer for network to render
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const retryNodes = svg.querySelectorAll('.node-group');
+        console.log(`🔄 [Snapshot] After wait, found ${retryNodes.length} nodes`);
       }
 
       // Temporarily hide UI controls but keep the current share dialog
@@ -178,6 +200,7 @@ export default function ShareButton() {
       
       // Store original display values
       elementsToHide = [...Array.from(controls), ...Array.from(tooltips), searchBar].filter(Boolean) as HTMLElement[];
+      console.log(`🔧 [Snapshot] Hiding ${elementsToHide.length} UI elements`);
       
       // Hide current dialog temporarily during capture
       if (currentDialog) {
@@ -192,22 +215,29 @@ export default function ShareButton() {
         }
       });
 
-      // Wait a brief moment for elements to hide
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait longer for elements to hide and network to settle
+      console.log('⏳ [Snapshot] Waiting for UI to settle...');
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       // Capture only the network visualization at high quality
       const devicePixelRatio = window.devicePixelRatio || 1;
-      const highScale = Math.max(2, devicePixelRatio); // At least 2x, or device pixel ratio
+      const highScale = Math.max(2, devicePixelRatio);
+      console.log(`📸 [Snapshot] Starting html2canvas capture with scale: ${highScale}`);
       
       const canvas = await html2canvas(networkContainer, {
         useCORS: true,
         allowTaint: true,
-        scale: highScale, // High resolution for crisp quality
-        logging: false,
-        backgroundColor: '#000000', // Ensure black background
+        scale: highScale,
+        logging: true, // Enable logging for debugging
+        backgroundColor: '#000000',
         width: networkContainer.offsetWidth,
         height: networkContainer.offsetHeight,
+        foreignObjectRendering: false, // Better SVG compatibility
+        removeContainer: false,
+        imageTimeout: 5000, // 5 second timeout
       });
+
+      console.log(`✅ [Snapshot] html2canvas completed. Canvas size: ${canvas.width}x${canvas.height}`);
 
       // Restore original display values
       elementsToHide.forEach((element, index) => {
@@ -221,32 +251,39 @@ export default function ShareButton() {
         currentDialog.style.display = dialogDisplay;
       }
 
+      // Validate canvas has content
+      if (canvas.width === 0 || canvas.height === 0) {
+        console.error('❌ [Snapshot] Canvas has zero dimensions');
+        throw new Error('Generated canvas has invalid dimensions');
+      }
+
       // Find the bounds of the network content by analyzing the SVG
-      const svg = networkContainer.querySelector('svg');
       let networkBounds = { minX: 0, minY: 0, maxX: canvas.width, maxY: canvas.height };
       
       if (svg) {
         try {
           // Get all network nodes and their positions
           const nodes = svg.querySelectorAll('.node-group');
+          console.log(`🔍 [Snapshot] Analyzing ${nodes.length} nodes for bounds`);
+          
           if (nodes.length > 0) {
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
             
-                          nodes.forEach((node) => {
-                const transform = node.getAttribute('transform');
-                if (transform) {
-                  const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
-                  if (match) {
-                    // Scale the node positions to match the high-resolution canvas
-                    const x = parseFloat(match[1]) * highScale;
-                    const y = parseFloat(match[2]) * highScale;
-                    minX = Math.min(minX, x);
-                    minY = Math.min(minY, y);
-                    maxX = Math.max(maxX, x);
-                    maxY = Math.max(maxY, y);
-                  }
+            nodes.forEach((node) => {
+              const transform = node.getAttribute('transform');
+              if (transform) {
+                const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+                if (match) {
+                  // Scale the node positions to match the high-resolution canvas
+                  const x = parseFloat(match[1]) * highScale;
+                  const y = parseFloat(match[2]) * highScale;
+                  minX = Math.min(minX, x);
+                  minY = Math.min(minY, y);
+                  maxX = Math.max(maxX, x);
+                  maxY = Math.max(maxY, y);
                 }
-              });
+              }
+            });
             
             // Add padding around the network (scaled for high resolution)
             const padding = 80 * highScale;
@@ -256,9 +293,10 @@ export default function ShareButton() {
             maxY = Math.min(canvas.height, maxY + padding);
             
             networkBounds = { minX, minY, maxX, maxY };
+            console.log(`📐 [Snapshot] Network bounds:`, networkBounds);
           }
         } catch (error) {
-          console.warn('Could not calculate network bounds:', error);
+          console.warn('⚠️ [Snapshot] Could not calculate network bounds:', error);
         }
       }
 
@@ -271,7 +309,7 @@ export default function ShareButton() {
       const minSize = 400 * highScale;
       const squareSize = Math.max(minSize, Math.max(networkWidth, networkHeight));
       
-      console.log(`🔳 SQUARE DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}, squareSize=${squareSize}`);
+      console.log(`🔳 [Snapshot] Network dimensions: ${networkWidth}x${networkHeight}, Square size: ${squareSize}`);
       
       // Center the square crop around the network center
       const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
@@ -282,11 +320,14 @@ export default function ShareButton() {
       const cropX = Math.max(0, Math.min(canvas.width - squareSize, networkCenterX - halfSquare));
       const cropY = Math.max(0, Math.min(canvas.height - squareSize, networkCenterY - halfSquare));
 
+      console.log(`✂️ [Snapshot] Cropping at: (${cropX}, ${cropY}) with size: ${squareSize}`);
+
       // Create a PERFECTLY SQUARE canvas
       const watermarkedCanvas = document.createElement('canvas');
       const ctx = watermarkedCanvas.getContext('2d');
       
       if (!ctx) {
+        console.error('❌ [Snapshot] Failed to get canvas context');
         throw new Error('Failed to get canvas context');
       }
 
@@ -294,7 +335,7 @@ export default function ShareButton() {
       watermarkedCanvas.width = squareSize;
       watermarkedCanvas.height = squareSize;
       
-      console.log(`🔳 CANVAS DEBUG: width=${watermarkedCanvas.width}, height=${watermarkedCanvas.height}, isSquare=${watermarkedCanvas.width === watermarkedCanvas.height}`);
+      console.log(`🎨 [Snapshot] Created watermarked canvas: ${watermarkedCanvas.width}x${watermarkedCanvas.height}`);
 
       // Fill with black background
       ctx.fillStyle = '#000000';
@@ -307,6 +348,8 @@ export default function ShareButton() {
         0, 0, squareSize, squareSize // Destination: SQUARE on new canvas
       );
 
+      console.log('🖼️ [Snapshot] Applied base image to canvas');
+
       // Load the Grapevine logo
       const logo = new Image();
       logo.crossOrigin = "anonymous";
@@ -314,6 +357,8 @@ export default function ShareButton() {
       return new Promise((resolve, reject) => {
         logo.onload = () => {
           try {
+            console.log('🎯 [Snapshot] Logo loaded successfully, adding watermark...');
+            
             // Calculate watermark size and position (top-left corner) - scaled for high res
             const logoSize = Math.min(60 * highScale, squareSize * 0.08);
             const padding = 12 * highScale;
@@ -350,27 +395,30 @@ export default function ShareButton() {
             // Convert to high-quality PNG (1.0 = maximum quality)
             const dataUrl = watermarkedCanvas.toDataURL('image/png', 1.0);
             
-            console.log(`🔳 HIGH-RES DEBUG: Canvas ${watermarkedCanvas.width}x${watermarkedCanvas.height}, Scale: ${highScale}x, DataURL length: ${dataUrl.length}`);
+            console.log(`✅ [Snapshot] Successfully created snapshot! Size: ${dataUrl.length} characters`);
             
             setIsCapturing(false);
             resolve(dataUrl);
           } catch (error) {
+            console.error('❌ [Snapshot] Error adding watermark:', error);
             setIsCapturing(false);
             reject(error);
           }
         };
         
-        logo.onerror = () => {
-          // Fallback: just return the high-res cropped screenshot without watermark
-          console.warn('Failed to load logo, returning high-res screenshot without watermark');
+        logo.onerror = (error) => {
+          console.warn('⚠️ [Snapshot] Failed to load logo, returning screenshot without watermark:', error);
           const dataUrl = watermarkedCanvas.toDataURL('image/png', 1.0);
           setIsCapturing(false);
           resolve(dataUrl);
         };
         
+        console.log('📸 [Snapshot] Loading logo...');
         logo.src = '/grapevine-logo.png';
       });
     } catch (error) {
+      console.error('❌ [Snapshot] Snapshot creation failed:', error);
+      
       // Ensure we restore elements even if there's an error
       elementsToHide.forEach((element, index) => {
         if (element) {
@@ -383,7 +431,6 @@ export default function ShareButton() {
       }
       
       setIsCapturing(false);
-      console.error('Failed to create snapshot:', error);
       throw error;
     }
   };
@@ -476,11 +523,11 @@ export default function ShareButton() {
                     </div>
                   </div>
                   
-                  {/* Snapshot Section */}
-                  {snapshotDataUrl && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-medium text-white">Network Snapshot</h4>
+                  {/* Snapshot Section - Always show, handle loading/error states */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-white">Network Snapshot</h4>
+                      {snapshotDataUrl && (
                         <Button
                           size="sm"
                           variant="secondary"
@@ -490,7 +537,17 @@ export default function ShareButton() {
                           <Download className="h-4 w-4 mr-2" />
                           Download
                         </Button>
+                      )}
+                    </div>
+                    
+                    {isCapturing ? (
+                      <div className="flex items-center justify-center py-8 border border-gray-600 rounded bg-gray-800/50">
+                        <div className="flex items-center space-x-2">
+                          <Camera className="w-5 h-5 animate-pulse text-blue-400" />
+                          <span className="text-sm text-gray-300">Creating snapshot...</span>
+                        </div>
                       </div>
+                    ) : snapshotDataUrl ? (
                       <div className="border border-gray-600 rounded overflow-hidden">
                         <img 
                           src={snapshotDataUrl} 
@@ -498,62 +555,59 @@ export default function ShareButton() {
                           className="w-full max-h-96 object-contain bg-black"
                         />
                       </div>
-                    </div>
-                  )}
-                  
-                  {/* Social Media Buttons */}
-                  {snapshotDataUrl && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-white">Share on Social Media</h4>
-                      <div className="flex items-center justify-center gap-3">
-                                                 <Button
-                           size="icon"
-                           variant="secondary"
-                           className="w-10 h-10 bg-blue-600 hover:bg-blue-700 border-blue-600 text-white"
-                           title="Share on Facebook"
-                           onClick={shareToFacebook}
-                         >
-                           <Facebook className="h-5 w-5" />
-                         </Button>
-                         <Button
-                           size="icon"
-                           variant="secondary"
-                           className="w-10 h-10 bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 hover:from-purple-700 hover:via-pink-700 hover:to-orange-600 border-transparent text-white"
-                           title="Share on Instagram"
-                           onClick={shareToInstagram}
-                         >
-                           <Instagram className="h-5 w-5" />
-                         </Button>
-                         <Button
-                           size="icon"
-                           variant="secondary"
-                           className="w-10 h-10 bg-black hover:bg-gray-900 border-gray-600 text-white"
-                           title="Share on X"
-                           onClick={shareToX}
-                         >
-                           <XIcon className="h-5 w-5" />
-                         </Button>
-                         <Button
-                           size="icon"
-                           variant="secondary"
-                           className="w-10 h-10 bg-red-600 hover:bg-red-700 border-red-600 text-white"
-                           title="Share on Pinterest"
-                           onClick={shareToPinterest}
-                         >
-                           <PinterestIcon className="h-5 w-5" />
-                         </Button>
+                    ) : (
+                      <div className="flex items-center justify-center py-8 border border-gray-600 rounded bg-gray-800/50">
+                        <div className="text-center">
+                          <Camera className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                          <span className="text-sm text-gray-400">Snapshot creation failed</span>
+                          <p className="text-xs text-gray-500 mt-1">You can still share the link below</p>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                   
-                  {isCapturing && (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="flex items-center space-x-2">
-                        <Camera className="w-5 h-5 animate-pulse text-blue-400" />
-                        <span className="text-sm text-gray-300">Creating snapshot...</span>
-                      </div>
+                  {/* Social Media Buttons - Always show */}
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-white">Share on Social Media</h4>
+                    <div className="flex items-center justify-center gap-3">
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="w-10 h-10 bg-blue-600 hover:bg-blue-700 border-blue-600 text-white"
+                        title="Share on Facebook"
+                        onClick={shareToFacebook}
+                      >
+                        <Facebook className="h-5 w-5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="w-10 h-10 bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 hover:from-purple-700 hover:via-pink-700 hover:to-orange-600 border-transparent text-white"
+                        title="Share on Instagram"
+                        onClick={shareToInstagram}
+                      >
+                        <Instagram className="h-5 w-5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="w-10 h-10 bg-black hover:bg-gray-900 border-gray-600 text-white"
+                        title="Share on X"
+                        onClick={shareToX}
+                      >
+                        <XIcon className="h-5 w-5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="w-10 h-10 bg-red-600 hover:bg-red-700 border-red-600 text-white"
+                        title="Share on Pinterest"
+                        onClick={shareToPinterest}
+                      >
+                        <PinterestIcon className="h-5 w-5" />
+                      </Button>
                     </div>
-                  )}
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>
