@@ -69,27 +69,45 @@ Guidelines:
 - Include Spotify URLs when possible for the projects
 - Return ONLY the JSON object, no other text`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.3,
-      max_tokens: 1000,
-    });
-
-    let collaborationData;
-    try {
-      const content = completion.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('No response from OpenAI');
-      }
-      collaborationData = JSON.parse(content);
-    } catch (parseError) {
-      console.error('❌ [Vercel] Failed to parse OpenAI response:', parseError);
-      return res.status(500).json({ 
-        message: 'Failed to generate collaboration information',
-        error: 'Invalid response format'
+          const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.1, // Lower temperature for faster, more consistent responses
+        max_tokens: 500, // Reduced token limit for faster response
       });
-    }
+
+          let collaborationData;
+      try {
+        const content = completion.choices[0]?.message?.content;
+        if (!content) {
+          throw new Error('No response from OpenAI');
+        }
+        
+        // Try to extract JSON from the response (in case there's extra text)
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        const jsonContent = jsonMatch ? jsonMatch[0] : content;
+        
+        collaborationData = JSON.parse(jsonContent);
+        
+        // Ensure required fields exist
+        if (!collaborationData.collaborationInfo) {
+          collaborationData.collaborationInfo = "No collaboration information available.";
+        }
+        if (!collaborationData.projects) {
+          collaborationData.projects = [];
+        }
+        
+      } catch (parseError) {
+        console.error('❌ [Vercel] Failed to parse OpenAI response:', parseError);
+        console.error('Raw response:', completion.choices[0]?.message?.content);
+        
+        // Return a fallback response instead of error
+        collaborationData = {
+          collaborationInfo: "Unable to generate collaboration information at this time.",
+          projects: [],
+          personalHistory: "Information temporarily unavailable."
+        };
+      }
 
     // If Spotify credentials are available, try to enhance with Spotify data
     if (SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET) {

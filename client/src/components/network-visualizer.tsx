@@ -35,6 +35,9 @@ export default function NetworkVisualizer({
   const [collaborationLoading, setCollaborationLoading] = useState(false);
   const [clickedNode, setClickedNode] = useState<NetworkNode | null>(null);
   const [mainArtistNode, setMainArtistNode] = useState<NetworkNode | null>(null);
+  
+  // Simple cache for collaboration info to avoid repeated API calls
+  const collaborationCache = useRef<Map<string, CollaborationInfo>>(new Map());
 
   // Fetch configuration on component mount
   useEffect(() => {
@@ -76,15 +79,36 @@ export default function NetworkVisualizer({
 
   // Function to fetch collaboration information
   const fetchCollaborationInfo = async (artistName: string, collaboratorName: string) => {
+    const cacheKey = `${artistName}-${collaboratorName}`;
+    
+    // Check cache first
+    if (collaborationCache.current.has(cacheKey)) {
+      console.log(`🤝 [Frontend] Using cached collaboration info for ${artistName} and ${collaboratorName}`);
+      setCollaborationInfo(collaborationCache.current.get(cacheKey)!);
+      setCollaborationLoading(false);
+      return;
+    }
+    
     try {
       setCollaborationLoading(true);
       console.log(`🤝 [Frontend] Fetching collaboration info for ${artistName} and ${collaboratorName}`);
       
-      const response = await fetch(`/api/collaboration-info?artistName=${encodeURIComponent(artistName)}&collaboratorName=${encodeURIComponent(collaboratorName)}`);
+      // Add timeout to prevent infinite loading
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      const response = await fetch(`/api/collaboration-info?artistName=${encodeURIComponent(artistName)}&collaboratorName=${encodeURIComponent(collaboratorName)}`, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
       
       if (response.ok) {
         const data = await response.json();
         console.log(`✅ [Frontend] Collaboration info received:`, data);
+        
+        // Cache the result
+        collaborationCache.current.set(cacheKey, data);
         setCollaborationInfo(data);
       } else {
         console.error(`❌ [Frontend] Failed to fetch collaboration info: ${response.status}`);
@@ -92,6 +116,9 @@ export default function NetworkVisualizer({
       }
     } catch (error) {
       console.error(`❌ [Frontend] Error fetching collaboration info:`, error);
+      if (error.name === 'AbortError') {
+        console.log('🤝 [Frontend] Request timed out');
+      }
       setCollaborationInfo(null);
     } finally {
       setCollaborationLoading(false);

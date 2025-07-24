@@ -49,9 +49,13 @@ export default function CollaborationPopup({
         {/* Content */}
         <div className="p-6">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
-              <span className="ml-3 text-gray-300">Loading collaboration info...</span>
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-4"></div>
+              <span className="text-gray-300 text-center">
+                Loading collaboration info...
+                <br />
+                <span className="text-sm text-gray-500">This may take 10-30 seconds</span>
+              </span>
             </div>
           ) : collaborationInfo ? (
             <div className="space-y-6">
@@ -164,6 +168,9 @@ export default function CollaborationPopup({
             <div className="text-center py-8">
               <p className="text-gray-400">
                 Unable to load collaboration information.
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                The request may have timed out or the API is unavailable.
               </p>
             </div>
           )}
