@@ -560,7 +560,7 @@ export default function ShareButton() {
                         <div className="text-center">
                           <Camera className="w-8 h-8 mx-auto mb-2 text-gray-400" />
                           <span className="text-sm text-gray-400">Snapshot creation failed</span>
-                          <p className="text-xs text-gray-500 mt-1">You can still share the link below</p>
+                          <p className="text-xs text-gray-500 mt-1">You can still copy the link above</p>
                         </div>
                       </div>
                     )}
