@@ -8,9 +8,11 @@ import MobileControls from "@/components/mobile-controls";
 import HelpButton from "@/components/help-button";
 import ShareButton from "@/components/share-button";
 import LoadingScreen from "@/components/loading-screen";
+import NoCollaboratorsPopup from "@/components/no-collaborators-popup";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
-import { NetworkData, FilterState } from "@/types/network";
+import { NetworkData, FilterState, NetworkResponse, NoCollaboratorsResponse } from "@/types/network";
 import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
 import { useIsMobile } from "@/hooks/use-mobile.tsx";
 
@@ -119,9 +121,18 @@ export default function Home() {
     showSongwriters: true,
     showArtists: true,
   });
+  // Add state for no-collaborators popup
+  const [showNoCollaboratorsPopup, setShowNoCollaboratorsPopup] = useState(false);
+  const [pendingArtistInfo, setPendingArtistInfo] = useState<{ name: string; id: string; singleNodeNetwork: NetworkData } | null>(null);
   const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
   const isMobile = useIsMobile();
   const spacing = useDynamicSpacing();
+  const { toast } = useToast();
+
+  // Helper function to check if response indicates no collaborators
+  const isNoCollaboratorsResponse = (response: NetworkResponse): response is NoCollaboratorsResponse => {
+    return 'noCollaborators' in response && response.noCollaborators === true;
+  };
 
   // Manage body overflow classes based on network view state
   useEffect(() => {
@@ -156,16 +167,23 @@ export default function Home() {
           setIsLoading(true);
           console.log(`🔗 Loading artist network from URL: ${params.artistId}`);
           
-          // Try to fetch network data by ID
-          const response = await fetch(`/api/network-by-id/${params.artistId}`);
-          if (response.ok) {
-            const data = await response.json();
+          // Use the same network loading logic as SearchInterface
+          const data = await fetchNetworkDataById(params.artistId);
+          
+          // Handle the response (might be network data or no-collaborators response)
+          if (isNoCollaboratorsResponse(data)) {
+            // Show popup for no collaborators
+            setPendingArtistInfo({
+              name: data.artistName,
+              id: data.artistId,
+              singleNodeNetwork: data.singleNodeNetwork
+            });
+            setShowNoCollaboratorsPopup(true);
+            setShowNetworkView(true); // Show network view for popup
+          } else {
+            // Normal network data
             setNetworkData(data);
             setShowNetworkView(true);
-          } else {
-            console.error(`Failed to load artist ${params.artistId}:`, response.status);
-            // Redirect to home if artist not found
-            setLocation('/');
           }
         } catch (error) {
           console.error(`Error loading artist ${params.artistId}:`, error);
@@ -178,6 +196,74 @@ export default function Home() {
 
     loadArtistFromUrl();
   }, [params.artistId, networkData, isLoading, isClearing, setLocation]);
+
+  const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
+    // Replace existing network with new data
+    setNetworkData(data);
+    setShowNetworkView(true);
+    setIsLoading(false);
+    
+    // Update URL to reflect the artist being displayed
+    if (artistId) {
+      setLocation(`/${artistId}`);
+    }
+  }, [setLocation]);
+
+  // Handle showing hallucinations when popup is confirmed
+  const handleShowHallucinations = useCallback(async () => {
+    if (!pendingArtistInfo) return;
+    
+    try {
+      setIsLoading(true);
+      
+      const data = await fetchNetworkDataById(pendingArtistInfo.id + '?allowHallucinations=true');
+      
+      if (isNoCollaboratorsResponse(data)) {
+        // Even with hallucinations, no data found - show single node
+        handleNetworkData(data.singleNodeNetwork, pendingArtistInfo.id);
+      } else {
+        // Got hallucinated network
+        const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const artistId = mainArtist?.artistId || pendingArtistInfo.id;
+        handleNetworkData(data, artistId);
+      }
+      
+      setShowNoCollaboratorsPopup(false);
+      setPendingArtistInfo(null);
+      
+      toast({
+        title: "Network Generated",
+        description: `Generated creative network for ${pendingArtistInfo.name}`,
+        duration: 1000,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate hallucinated network",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [pendingArtistInfo, handleNetworkData, toast]);
+
+  const handleClosePopup = useCallback(() => {
+    if (!pendingArtistInfo) return;
+    
+    // Reset everything and navigate back to homepage when popup is closed/cancelled
+    setShowNoCollaboratorsPopup(false);
+    setPendingArtistInfo(null);
+    setShowNetworkView(false);
+    
+    // Navigate back to homepage
+    setLocation('/');
+    
+    toast({
+      title: "Search Cancelled",
+      description: `Returned to homepage`,
+      duration: 1000,
+    });
+  }, [pendingArtistInfo, setLocation, toast]);
 
   const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
     // Replace existing network with new data
@@ -257,15 +343,24 @@ export default function Home() {
         : await fetchNetworkData(artistName.trim());
       
       // Handle the response (might be network data or no-collaborators response)
-      if (data && 'nodes' in data) {
+      if (isNoCollaboratorsResponse(data)) {
+        // Show popup for no collaborators
+        setPendingArtistInfo({
+          name: data.artistName,
+          id: data.artistId,
+          singleNodeNetwork: data.singleNodeNetwork
+        });
+        setShowNoCollaboratorsPopup(true);
+      } else if (data && 'nodes' in data) {
         // Normal network data - pass to parent
         const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
         const finalArtistId = mainArtist?.artistId || mainArtist?.id || artistId;
         handleNetworkData(data, finalArtistId);
       } else {
-        // Handle no collaborators response
+        // Handle no network data found
         console.warn(`No network data found for ${artistName}`);
-        // You might want to show a message or handle this case differently
+        setIsLoading(false);
+        setCurrentArtistName("");
       }
     } catch (error) {
       console.error(`Error loading network for ${artistName}:`, error);
@@ -406,12 +501,19 @@ export default function Home() {
         </>
       )}
 
-
       {/* Share Button - Only visible when network is shown and not on mobile */}
       {showNetworkView && !isMobile && <ShareButton />}
 
       {/* Help Button - Hide on mobile when network view is shown */}
       {(!showNetworkView || !isMobile) && <HelpButton />}
+
+      {/* No Collaborators Popup */}
+      <NoCollaboratorsPopup
+        isOpen={showNoCollaboratorsPopup}
+        artistName={pendingArtistInfo?.name || ""}
+        onClose={handleClosePopup}
+        onShowHallucinations={handleShowHallucinations}
+      />
     </div>
   );
 }
