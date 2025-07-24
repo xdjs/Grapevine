@@ -47,39 +47,69 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ message: 'OpenAI API key not configured' });
     }
 
-    // Generate collaboration information using OpenAI with simplified prompt
+    // Generate collaboration information using OpenAI with optimized prompt
     const OpenAI = (await import('openai')).default;
     const openai = new OpenAI({
       apiKey: OPENAI_API_KEY,
     });
 
-    // Much simpler and faster prompt
-    const prompt = `Briefly describe how ${artistName} and ${collaboratorName} worked together. Include specific songs/albums they collaborated on. Keep it under 100 words.`;
+    // Optimized prompt that still captures role information
+    const prompt = `Describe how ${artistName} and ${collaboratorName} worked together. Include:
+1. Brief collaboration summary
+2. Specific projects (songs/albums) with years and roles
+3. Any relevant background
+
+Format as JSON:
+{
+  "collaborationInfo": "Brief description",
+  "projects": [{"name": "Project", "year": "Year", "role": "Role"}],
+  "personalHistory": "Background info if relevant"
+}`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo", // Faster model
       messages: [{ role: "user", content: prompt }],
-      temperature: 0.3,
-      max_tokens: 150, // Much smaller response
+      temperature: 0.2,
+      max_tokens: 300, // Increased for role information
     });
 
-    let collaborationInfo = "No collaboration information available.";
+    let collaborationData;
     try {
       const content = completion.choices[0]?.message?.content;
-      if (content) {
-        collaborationInfo = content.trim();
+      if (!content) {
+        throw new Error('No response from OpenAI');
       }
-    } catch (error) {
-      console.error('❌ [Vercel] Failed to get OpenAI response:', error);
+      
+      // Try to extract JSON from the response
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      const jsonContent = jsonMatch ? jsonMatch[0] : content;
+      
+      collaborationData = JSON.parse(jsonContent);
+      
+      // Ensure required fields exist
+      if (!collaborationData.collaborationInfo) {
+        collaborationData.collaborationInfo = "No collaboration information available.";
+      }
+      if (!collaborationData.projects) {
+        collaborationData.projects = [];
+      }
+      if (!collaborationData.personalHistory) {
+        collaborationData.personalHistory = null;
+      }
+      
+    } catch (parseError) {
+      console.error('❌ [Vercel] Failed to parse OpenAI response:', parseError);
+      
+      // Return a fallback response
+      collaborationData = {
+        collaborationInfo: "Unable to generate detailed collaboration information at this time.",
+        projects: [],
+        personalHistory: null
+      };
     }
 
-    // Create simplified response structure
-    const collaborationData = {
-      collaborationInfo: collaborationInfo,
-      projects: [], // Simplified - no complex project parsing
-      personalHistory: null,
-      spotifyTracks: [] // Simplified - no Spotify API calls
-    };
+    // Add empty spotifyTracks array for compatibility
+    collaborationData.spotifyTracks = [];
 
     // Cache the result
     collaborationCache.set(cacheKey, collaborationData);
