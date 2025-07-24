@@ -54,11 +54,11 @@ export default function CollaborationPopup({
               <span className="text-gray-300 text-center text-lg font-medium">
                 Loading collaboration info...
               </span>
-              <span className="text-sm text-gray-500 mt-2 text-center">
-                This may take 10-30 seconds
-                <br />
-                <span className="text-xs text-gray-600">Using AI to analyze collaboration history</span>
-              </span>
+                                   <span className="text-sm text-gray-500 mt-2 text-center">
+                       This may take 5-15 seconds
+                       <br />
+                       <span className="text-xs text-gray-600">Using AI to analyze collaboration history</span>
+                     </span>
               <div className="mt-4 flex space-x-2">
                 <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
                 <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>

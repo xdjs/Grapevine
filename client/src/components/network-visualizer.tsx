@@ -98,7 +98,7 @@ export default function NetworkVisualizer({
       
       // Add timeout to prevent infinite loading
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
       
       const response = await fetch(`/api/collaboration-info?artistName=${encodeURIComponent(artistName)}&collaboratorName=${encodeURIComponent(collaboratorName)}`, {
         signal: controller.signal
