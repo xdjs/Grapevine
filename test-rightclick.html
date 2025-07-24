@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Right-click Test</title>
+</head>
+<body>
+    <div id="test" style="width: 100px; height: 100px; background: red; margin: 50px;">
+        Right-click me
+    </div>
+    
+    <script>
+        document.getElementById('test').addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            console.log('Right-click detected!');
+            alert('Right-click works!');
+        });
+    </script>
+</body>
+</html> 

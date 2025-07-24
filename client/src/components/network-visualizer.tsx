@@ -127,10 +127,16 @@ export default function NetworkVisualizer({
 
   // Function to handle node click for collaboration info
   const handleNodeClick = (node: NetworkNode) => {
-    if (!mainArtistNode) return;
+    console.log(`🤝 [Frontend] handleNodeClick called for node: ${node.name}`);
+    
+    if (!mainArtistNode) {
+      console.log(`🤝 [Frontend] No main artist node found`);
+      return;
+    }
 
     // Don't show collaboration info for the main artist
     if (node.id === mainArtistNode.id) {
+      console.log(`🤝 [Frontend] Skipping main artist node`);
       return;
     }
 
@@ -184,6 +190,7 @@ export default function NetworkVisualizer({
     }
 
     console.log(`🤝 [Frontend] Showing collaboration info for ${artistName} and ${collaboratorName}`);
+    console.log(`🤝 [Frontend] Setting popup state: clickedNode=${node.name}, showPopup=true`);
     setClickedNode(node);
     setShowCollaborationPopup(true);
     fetchCollaborationInfo(artistName, collaboratorName);
@@ -672,6 +679,16 @@ export default function NetworkVisualizer({
           .attr("fill", "transparent")
           .attr("stroke", "white")
           .attr("stroke-width", 2);
+        
+        // Add small indicator for right-click functionality on non-main artist nodes
+        if (mainArtistNode && d.id !== mainArtistNode.id) {
+          group.append("circle")
+            .attr("r", 3)
+            .attr("fill", "#FFD700") // Gold color
+            .attr("stroke", "white")
+            .attr("stroke-width", 1)
+            .attr("transform", `translate(${d.size - 8}, -${d.size - 8})`);
+        }
       }
     })
       .on("click", function(event, d) {
@@ -697,9 +714,31 @@ export default function NetworkVisualizer({
         event.preventDefault();
         event.stopPropagation();
 
+        console.log(`🖱️ [Frontend] Right-click detected on node: ${d.name}`);
+        console.log(`🖱️ [Frontend] Main artist: ${mainArtistNode?.name}`);
+        console.log(`🖱️ [Frontend] Is main artist: ${mainArtistNode && d.id === mainArtistNode.id}`);
+
         // Show collaboration info on right-click for non-main artist nodes
         if (mainArtistNode && d.id !== mainArtistNode.id) {
+          console.log(`🤝 [Frontend] Triggering collaboration popup for ${d.name}`);
           handleNodeClick(d);
+        } else {
+          console.log(`🖱️ [Frontend] Skipping collaboration popup (main artist or no main artist)`);
+        }
+      })
+      .on("mousedown", function(event, d) {
+        // Handle right-click via mousedown with button check
+        if (event.button === 2) { // Right mouse button
+          event.preventDefault();
+          event.stopPropagation();
+          
+          console.log(`🖱️ [Frontend] Right-click via mousedown detected on node: ${d.name}`);
+          
+          // Show collaboration info on right-click for non-main artist nodes
+          if (mainArtistNode && d.id !== mainArtistNode.id) {
+            console.log(`🤝 [Frontend] Triggering collaboration popup for ${d.name} via mousedown`);
+            handleNodeClick(d);
+          }
         }
       })
       .call(
@@ -1307,6 +1346,34 @@ export default function NetworkVisualizer({
       }`}
     >
       <svg ref={svgRef} className="w-full h-full" />
+      
+      {/* Debug button for testing collaboration popup */}
+      {process.env.NODE_ENV === 'development' && data && data.nodes.length > 0 && (
+        <button
+          onClick={() => {
+            const testNode = data.nodes.find(n => n.type === 'artist' && n.size < 30);
+            if (testNode && mainArtistNode) {
+              console.log('🧪 [Debug] Manually triggering collaboration popup');
+              handleNodeClick(testNode);
+            }
+          }}
+          style={{
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            zIndex: 1000,
+            padding: '8px 12px',
+            backgroundColor: '#FFD700',
+            color: 'black',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '12px'
+          }}
+        >
+          Test Collaboration
+        </button>
+      )}
       
       <ArtistSelectionModal
         isOpen={showArtistModal}
