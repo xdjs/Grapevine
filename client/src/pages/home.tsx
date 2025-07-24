@@ -121,77 +121,18 @@ export default function Home() {
     showSongwriters: true,
     showArtists: true,
   });
+  // Popup state for shared links with hallucinations
   const [showNoCollaboratorsPopup, setShowNoCollaboratorsPopup] = useState(false);
-  const [pendingArtistInfo, setPendingArtistInfo] = useState<{
-    name: string;
-    id: string;
-    singleNodeNetwork: NetworkData;
-  } | null>(null);
+  const [pendingArtistInfo, setPendingArtistInfo] = useState<{ name: string; id: string; singleNodeNetwork: NetworkData } | null>(null);
+  const { toast } = useToast();
   const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
   const isMobile = useIsMobile();
   const spacing = useDynamicSpacing();
-  const { toast } = useToast();
 
   // Helper function to check if response indicates no collaborators
   const isNoCollaboratorsResponse = (response: NetworkResponse): response is NoCollaboratorsResponse => {
     return 'noCollaborators' in response && response.noCollaborators === true;
   };
-
-  // Handle user choice from popup
-  const handleShowHallucinations = useCallback(async () => {
-    if (!pendingArtistInfo) return;
-    
-    try {
-      setIsLoading(true);
-      setCurrentArtistName(pendingArtistInfo.name);
-      
-      const data = await fetchNetworkDataById(pendingArtistInfo.id, true); // Request hallucinated data
-      
-      if (isNoCollaboratorsResponse(data)) {
-        // Even with hallucinations, no data found - show single node
-        handleNetworkData(data.singleNodeNetwork, pendingArtistInfo.id);
-      } else {
-        // Got hallucinated network
-        const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
-        const artistId = mainArtist?.artistId || pendingArtistInfo.id;
-        handleNetworkData(data, artistId);
-      }
-      
-      setShowNoCollaboratorsPopup(false);
-      setPendingArtistInfo(null);
-      
-      toast({
-        title: "Network Generated",
-        description: `Generated creative network for ${pendingArtistInfo.name}`,
-        duration: 1000,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate hallucinated network",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [pendingArtistInfo, toast]);
-
-  const handleClosePopup = useCallback(() => {
-    if (!pendingArtistInfo) return;
-    
-    // Reset everything and navigate back to homepage when popup is closed/cancelled
-    setShowNoCollaboratorsPopup(false);
-    setPendingArtistInfo(null);
-    
-    // Clear the URL and go back to home
-    setLocation('/');
-    
-    toast({
-      title: "Search Cancelled",
-      description: `Returned to homepage`,
-      duration: 1000,
-    });
-  }, [pendingArtistInfo, setLocation, toast]);
 
   // Manage body overflow classes based on network view state
   useEffect(() => {
@@ -218,6 +159,58 @@ export default function Home() {
     };
   }, [showNetworkView]);
 
+  // Handle user choice from popup for shared links
+  const handleShowHallucinations = useCallback(async () => {
+    if (!pendingArtistInfo) return;
+    
+    try {
+      setIsLoading(true);
+      
+      const data = await fetchNetworkDataById(pendingArtistInfo.id, true); // Request hallucinated data by ID
+      
+      if (isNoCollaboratorsResponse(data)) {
+        // Even with hallucinations, no data found - show single node
+        setNetworkData(data.singleNodeNetwork);
+      } else {
+        // Got hallucinated network
+        setNetworkData(data);
+      }
+      
+      setShowNetworkView(true);
+      setShowNoCollaboratorsPopup(false);
+      setPendingArtistInfo(null);
+      
+      toast({
+        title: "Network Generated",
+        description: `Generated creative network for ${pendingArtistInfo.name}`,
+        duration: 1000,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate hallucinated network",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [pendingArtistInfo, toast]);
+
+  const handleClosePopup = useCallback(() => {
+    if (!pendingArtistInfo) return;
+    
+    // Reset everything and navigate back to homepage when popup is closed/cancelled
+    setShowNoCollaboratorsPopup(false);
+    setPendingArtistInfo(null);
+    setLocation('/');
+    
+    toast({
+      title: "Search Cancelled",
+      description: `Returned to homepage`,
+      duration: 1000,
+    });
+  }, [pendingArtistInfo, setLocation, toast]);
+
   // Load artist network if artistId is in URL
   useEffect(() => {
     const loadArtistFromUrl = async () => {
@@ -226,12 +219,12 @@ export default function Home() {
           setIsLoading(true);
           console.log(`🔗 Loading artist network from URL: ${params.artistId}`);
           
-          // Try to fetch network data by ID using the typed function
+          // Try to fetch network data by ID without allowHallucinations first
           const data = await fetchNetworkDataById(params.artistId);
           
-          // Handle the response (might be network data or no-collaborators response)
+          // Check if it's a no-collaborators response
           if (isNoCollaboratorsResponse(data)) {
-            // Show popup for no collaborators
+            // Show popup for hallucinations choice
             setPendingArtistInfo({
               name: data.artistName,
               id: data.artistId,
@@ -239,7 +232,7 @@ export default function Home() {
             });
             setShowNoCollaboratorsPopup(true);
           } else {
-            // Normal network data - set directly
+            // Normal network data - display it
             setNetworkData(data);
             setShowNetworkView(true);
           }
@@ -253,7 +246,7 @@ export default function Home() {
     };
 
     loadArtistFromUrl();
-  }, [params.artistId, networkData, isLoading, isClearing, setLocation]);
+  }, [params.artistId, networkData, isLoading, isClearing, setLocation, isNoCollaboratorsResponse]);
 
   const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
     // Replace existing network with new data
