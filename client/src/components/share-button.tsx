@@ -219,6 +219,7 @@ export default function ShareButton() {
         if (nodes.length > 0) {
           let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
           
+          // First pass: Get node positions
           nodes.forEach((node) => {
             const transform = node.getAttribute('transform');
             if (transform) {
@@ -234,12 +235,47 @@ export default function ShareButton() {
             }
           });
           
+          // Second pass: Get text label bounds (they might extend beyond node positions)
+          const textLabels = svg.querySelectorAll('text');
+          textLabels.forEach((text) => {
+            const bbox = text.getBBox();
+            if (bbox && bbox.width > 0 && bbox.height > 0) {
+              const transform = text.getAttribute('transform');
+              if (transform) {
+                const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+                if (match) {
+                  const x = parseFloat(match[1]);
+                  const y = parseFloat(match[2]);
+                  // Account for text width and height
+                  minX = Math.min(minX, x);
+                  minY = Math.min(minY, y - bbox.height); // Text baseline adjustment
+                  maxX = Math.max(maxX, x + bbox.width);
+                  maxY = Math.max(maxY, y);
+                }
+              }
+            }
+          });
+          
+          // Third pass: Get link/connection bounds
+          const links = svg.querySelectorAll('.link');
+          links.forEach((link) => {
+            const x1 = parseFloat(link.getAttribute('x1') || '0');
+            const y1 = parseFloat(link.getAttribute('y1') || '0');
+            const x2 = parseFloat(link.getAttribute('x2') || '0');
+            const y2 = parseFloat(link.getAttribute('y2') || '0');
+            
+            minX = Math.min(minX, x1, x2);
+            minY = Math.min(minY, y1, y2);
+            maxX = Math.max(maxX, x1, x2);
+            maxY = Math.max(maxY, y1, y2);
+          });
+          
           // Check if we have valid bounds
           if (minX === Infinity || minY === Infinity || maxX === -Infinity || maxY === -Infinity) {
             console.warn('Invalid network bounds, skipping zoom adjustment');
           } else {
             // Add generous padding around the network to ensure nothing is cut off
-            const padding = 150; // Increased padding to account for text labels and node sizes
+            const padding = 200; // Increased padding to account for all elements
             minX = Math.max(0, minX - padding);
             minY = Math.max(0, minY - padding);
             maxX = Math.min(networkContainer.clientWidth, maxX + padding);
@@ -250,6 +286,9 @@ export default function ShareButton() {
             const networkHeight = maxY - minY;
             const containerWidth = networkContainer.clientWidth;
             const containerHeight = networkContainer.clientHeight;
+            
+            console.log(`🔍 NETWORK BOUNDS: minX=${minX}, minY=${minY}, maxX=${maxX}, maxY=${maxY}`);
+            console.log(`🔍 NETWORK SIZE: ${networkWidth}x${networkHeight}, CONTAINER: ${containerWidth}x${containerHeight}`);
             
             // Only proceed if we have valid dimensions
             if (networkWidth > 0 && networkHeight > 0 && containerWidth > 0 && containerHeight > 0) {
@@ -285,6 +324,7 @@ export default function ShareButton() {
               const offsetY = networkCenterY - (newHeight / 2);
               
               console.log(`🔍 ZOOM DEBUG: network=${networkWidth}x${networkHeight}, container=${containerWidth}x${containerHeight}, fitZoom=${fitZoom.toFixed(2)}, finalZoom=${finalZoom.toFixed(2)}`);
+              console.log(`🔍 VIEWBOX: offsetX=${offsetX}, offsetY=${offsetY}, width=${newWidth}, height=${newHeight}`);
               
               // Apply the zoom transition
               const d3Svg = d3.select(svg);
