@@ -575,7 +575,7 @@ export default function NetworkVisualizer({
       }
     };
 
-    // Create simulation with optimized settings for faster loading
+    // Create simulation with balanced performance and movement
     const simulation = d3
       .forceSimulation<NetworkNode>(data.nodes)
       .force(
@@ -583,15 +583,15 @@ export default function NetworkVisualizer({
         d3
           .forceLink<NetworkNode, NetworkLink>(validLinks)
           .id((d) => d.id)
-          .distance(70)
+          .distance(75)
       )
-      .force("charge", d3.forceManyBody().strength(-120))
-      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 8))
+      .force("charge", d3.forceManyBody().strength(-180))
+      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
       .force("boundary", boundaryForce)
       .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
       .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
-      .alphaDecay(0.15) // Faster convergence
-      .velocityDecay(0.5); // Less oscillation
+      .alphaDecay(0.08) // Slower decay for more movement
+      .velocityDecay(0.3); // More oscillation for natural movement
 
     simulationRef.current = simulation;
 
@@ -1203,10 +1203,21 @@ export default function NetworkVisualizer({
       labelElements.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
     });
 
+    // Add subtle continuous movement to keep network alive
+    const addSubtleMovement = () => {
+      if (simulation.alpha() < 0.01) {
+        simulation.alpha(0.1).restart();
+      }
+    };
+
+    // Restart simulation every 10 seconds to add subtle movement
+    const movementInterval = setInterval(addSubtleMovement, 10000);
+
     // Cleanup function
     return () => {
       tooltip.remove();
       simulation.stop();
+      clearInterval(movementInterval);
       cleanup();
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
