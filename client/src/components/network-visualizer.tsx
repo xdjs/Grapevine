@@ -611,7 +611,11 @@ export default function NetworkVisualizer({
       .enter()
       .append("g")
       .attr("class", (d) => `node-group network-node node-${d.type}`)
-      .style("cursor", "pointer");
+      .style("cursor", "pointer")
+      .attr("title", (d) => {
+        const isMainArtist = mainArtistNode && d.id === mainArtistNode.id;
+        return isMainArtist ? "Click for options" : "Click for options, Right-click for collaboration details";
+      });
 
     // Add circles for each node - single color for single role, multi-colored for multiple roles
     nodeElements.each(function(d) {
@@ -685,13 +689,17 @@ export default function NetworkVisualizer({
         // Track this node as highlighted
         currentlyHighlightedNode = currentNode;
 
-        // Handle collaboration popup for non-main artist nodes
+        // Show the tooltip (original functionality)
+        showTooltip(event, d);
+        moveTooltip(event as unknown as MouseEvent);
+      })
+      .on("contextmenu", function(event, d) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        // Show collaboration info on right-click for non-main artist nodes
         if (mainArtistNode && d.id !== mainArtistNode.id) {
           handleNodeClick(d);
-        } else {
-          // Show the tooltip for main artist or when no main artist
-          showTooltip(event, d);
-          moveTooltip(event as unknown as MouseEvent);
         }
       })
       .call(
@@ -748,6 +756,13 @@ export default function NetworkVisualizer({
         const paddingRight = isMobile ? "25px" : "30px";
         const gap = isMobile ? "8px" : "10px";
 
+        // Add collaboration hint for non-main artist nodes
+        const isMainArtist = mainArtistNode && d.id === mainArtistNode.id;
+        const collaborationHint = !isMainArtist && mainArtistNode ? 
+          `<div style="margin-top:${gap}; padding:4px 8px; background:rgba(255,255,255,0.1); border-radius:4px; font-size:11px; color:#ccc; text-align:center;">
+            💡 Right-click for collaboration details
+          </div>` : '';
+
         const content = `
           <div style="position:relative; max-width:${maxWidth}; padding-right:${paddingRight};">
             <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:${closeButtonSize}; color:white;">&times;</span>
@@ -761,8 +776,8 @@ export default function NetworkVisualizer({
               <div style="display:flex; align-items:center; gap:${gap}; cursor:pointer;" class="artist-action">
                 <img src="${artistIconPath}" alt="Artist Page" class="artist-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
                 <a href="#" class="popup-action artist-page-link" style="font-size:${linkFontSize}; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s Music Nerd profile</a>
-      
               </div>
+              ${collaborationHint}
             </div>
           </div>`;
 
