@@ -446,12 +446,12 @@ export default function Home() {
         </div>
       )}
 
-      {/* Network Visualization - Only show when network data exists */}
-      {networkData && showNetworkView && (
+      {/* Network Visualization - Show when network data exists OR when popup is showing single node */}
+      {((networkData && showNetworkView) || (showNoCollaboratorsPopup && pendingArtistInfo)) && (
         <div className="mobile-network-container network-visible">
           <NetworkVisualizer
-            key={`network-${networkData.nodes[0]?.id || 'empty'}-${Date.now()}`}
-            data={networkData}
+            key={`network-${(networkData?.nodes[0]?.id || pendingArtistInfo?.name || 'empty')}-${Date.now()}`}
+            data={networkData || pendingArtistInfo?.singleNodeNetwork || { nodes: [], links: [] }}
             visible={true}
             filterState={filterState}
             onZoomChange={handleZoomChange}
