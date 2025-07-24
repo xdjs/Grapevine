@@ -575,7 +575,7 @@ export default function NetworkVisualizer({
       }
     };
 
-    // Create simulation with balanced performance and movement
+    // Create simulation with optimized performance
     const simulation = d3
       .forceSimulation<NetworkNode>(data.nodes)
       .force(
@@ -583,15 +583,15 @@ export default function NetworkVisualizer({
         d3
           .forceLink<NetworkNode, NetworkLink>(validLinks)
           .id((d) => d.id)
-          .distance(75)
+          .distance(60)
       )
-      .force("charge", d3.forceManyBody().strength(-180))
-      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
+      .force("charge", d3.forceManyBody().strength(-100))
+      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 5))
       .force("boundary", boundaryForce)
-      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
-      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
-      .alphaDecay(0.08) // Slower decay for more movement
-      .velocityDecay(0.3); // More oscillation for natural movement
+      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.05 : 0))
+      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.05 : 0))
+      .alphaDecay(0.12) // Faster convergence
+      .velocityDecay(0.4); // Less oscillation
 
     simulationRef.current = simulation;
 
@@ -753,7 +753,6 @@ export default function NetworkVisualizer({
                 .on("click", function(e) {
                   e.preventDefault();
                   e.stopPropagation();
-                  console.log(`🤝 [Frontend] Collaboration button clicked for ${d.name}`);
                   
                   // Show loading state immediately
                   setCollaborationLoading(true);
@@ -770,17 +769,19 @@ export default function NetworkVisualizer({
                   d3.select(this).style("transform", "scale(1)");
                 });
               
-              console.log(`🤝 [Frontend] Collaboration button added to tooltip for ${d.name}`);
+              // Collaboration button added to tooltip
               
-              // Debug: Check if button is actually in DOM
-              setTimeout(() => {
-                const button = document.querySelector('.collaboration-button');
-                if (button) {
-                  console.log(`✅ [Frontend] Collaboration button found in DOM`);
-                } else {
-                  console.log(`❌ [Frontend] Collaboration button NOT found in DOM`);
-                }
-              }, 200);
+              // Debug: Check if button is actually in DOM (only in development)
+              if (process.env.NODE_ENV === 'development') {
+                setTimeout(() => {
+                  const button = document.querySelector('.collaboration-button');
+                  if (button) {
+                    console.log(`✅ [Frontend] Collaboration button found in DOM`);
+                  } else {
+                    console.log(`❌ [Frontend] Collaboration button NOT found in DOM`);
+                  }
+                }, 200);
+              }
             }
           }, 100);
         }
@@ -811,13 +812,15 @@ export default function NetworkVisualizer({
       .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.8)")
       .text((d) => d.name);
 
-    // Create tooltip
+    // Create tooltip with optimized styling
     const tooltip = d3
       .select("body")
       .append("div")
       .attr("class", "network-tooltip")
       .style("position", "absolute")
-      .style("opacity", 0);
+      .style("opacity", 0)
+      .style("pointer-events", "none")
+      .style("z-index", "1000");
 
     function showTooltip(event: MouseEvent, d: NetworkNode) {
       const roles = d.types || [d.type];
@@ -1190,28 +1193,34 @@ export default function NetworkVisualizer({
       d.fy = null;
     }
 
-    // Update positions on tick
+    // Update positions on tick with throttling for better performance
+    let tickCount = 0;
     simulation.on("tick", () => {
-      linkElements
-        .attr("x1", (d) => (d.source as NetworkNode).x!)
-        .attr("y1", (d) => (d.source as NetworkNode).y!)
-        .attr("x2", (d) => (d.target as NetworkNode).x!)
-        .attr("y2", (d) => (d.target as NetworkNode).y!);
+      tickCount++;
+      
+      // Only update every 3rd tick to reduce DOM manipulation
+      if (tickCount % 3 === 0) {
+        linkElements
+          .attr("x1", (d) => (d.source as NetworkNode).x!)
+          .attr("y1", (d) => (d.source as NetworkNode).y!)
+          .attr("x2", (d) => (d.target as NetworkNode).x!)
+          .attr("y2", (d) => (d.target as NetworkNode).y!);
 
-      nodeElements.attr("transform", (d) => `translate(${d.x!}, ${d.y!})`);
+        nodeElements.attr("transform", (d) => `translate(${d.x!}, ${d.y!})`);
 
-      labelElements.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
+        labelElements.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
+      }
     });
 
-    // Add subtle continuous movement to keep network alive
+    // Add subtle continuous movement to keep network alive (less frequent)
     const addSubtleMovement = () => {
       if (simulation.alpha() < 0.01) {
-        simulation.alpha(0.1).restart();
+        simulation.alpha(0.05).restart();
       }
     };
 
-    // Restart simulation every 10 seconds to add subtle movement
-    const movementInterval = setInterval(addSubtleMovement, 10000);
+    // Restart simulation every 30 seconds to add subtle movement (less frequent)
+    const movementInterval = setInterval(addSubtleMovement, 30000);
 
     // Cleanup function
     return () => {
