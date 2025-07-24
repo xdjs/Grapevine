@@ -271,7 +271,7 @@ export default function MobileControls({
             console.warn('Invalid network bounds, skipping zoom adjustment');
           } else {
             // Add generous padding around the network to ensure nothing is cut off
-            const padding = 120; // Increased padding to account for text labels
+            const padding = 150; // Increased padding to account for text labels and node sizes
             minX = Math.max(0, minX - padding);
             minY = Math.max(0, minY - padding);
             maxX = Math.min(networkContainer.clientWidth, maxX + padding);
@@ -292,23 +292,18 @@ export default function MobileControls({
               // Use the smaller zoom to ensure everything fits
               const fitZoom = Math.min(zoomX, zoomY);
               
-              // Smart zoom logic:
-              // - If fitZoom < 0.9: Network is too large, zoom out
-              // - If fitZoom > 1.1: Network is too small, zoom in
-              // - Otherwise: Network fits well, use current or slight adjustment
+              // Always prioritize showing the entire network
+              // If fitZoom < 1: Network is too large, zoom out to show everything
+              // If fitZoom >= 1: Network fits or is small, use current zoom (don't zoom in)
               let finalZoom;
-              if (fitZoom < 0.9) {
+              if (fitZoom < 1) {
                 // Network is too large - zoom out to show everything
                 finalZoom = fitZoom;
                 console.log(`🔍 ZOOM OUT: Network too large, zooming out to ${finalZoom.toFixed(2)}x`);
-              } else if (fitZoom > 1.1) {
-                // Network is too small - zoom in to fill space better
-                finalZoom = Math.min(fitZoom, 1.3); // Cap zoom in at 1.3x
-                console.log(`🔍 ZOOM IN: Network too small, zooming in to ${finalZoom.toFixed(2)}x`);
               } else {
-                // Network fits well - slight adjustment if needed
-                finalZoom = Math.min(fitZoom, 1);
-                console.log(`🔍 ZOOM FIT: Network fits well at ${finalZoom.toFixed(2)}x`);
+                // Network fits well or is small - don't zoom in to avoid cutoff
+                finalZoom = 1; // Use 1x zoom to ensure nothing is cut off
+                console.log(`🔍 ZOOM FIT: Network fits well, using 1x zoom`);
               }
               
               // Apply the zoom to fit the entire network
