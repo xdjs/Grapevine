@@ -209,12 +209,8 @@ export default function NetworkVisualizer({
       return;
     }
 
-    // Debug: Log the data structure to see what we're working with
-    console.log(`🎯 [NetworkVisualizer] Rendering network with:`, {
-      nodesCount: data.nodes.length,
-      linksCount: data.links.length,
-      sampleNodes: data.nodes.slice(0, 3).map(n => ({ name: n.name, type: n.type, types: n.types }))
-    });
+    // Log basic info for debugging
+    console.log(`🎯 [NetworkVisualizer] Rendering ${data.nodes.length} nodes and ${data.links.length} links`);
 
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
@@ -582,7 +578,7 @@ export default function NetworkVisualizer({
       }
     };
 
-    // Create simulation with balanced settings
+    // Create stable simulation with smooth movement
     const simulation = d3
       .forceSimulation<NetworkNode>(data.nodes)
       .force(
@@ -590,15 +586,13 @@ export default function NetworkVisualizer({
         d3
           .forceLink<NetworkNode, NetworkLink>(validLinks)
           .id((d) => d.id)
-          .distance(80)
+          .distance(100)
       )
-      .force("charge", d3.forceManyBody().strength(-150))
-      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
-      .force("boundary", boundaryForce)
-      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
-      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
-      .alphaDecay(0.1) // Balanced convergence
-      .velocityDecay(0.3); // Natural movement
+      .force("charge", d3.forceManyBody().strength(-200))
+      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 15))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .alphaDecay(0.05) // Slower decay for smoother movement
+      .velocityDecay(0.2); // Less damping for more natural movement
 
     simulationRef.current = simulation;
 
@@ -650,11 +644,9 @@ export default function NetworkVisualizer({
       const group = d3.select(this);
       const roles = d.types || [d.type];
       
-      // Debug multi-role nodes (always show for debugging)
+      // Debug multi-role nodes (only show multi-role ones)
       if (roles.length > 1) {
         console.log(`🎭 [Frontend] Multi-role node "${d.name}": roles = [${roles.join(', ')}]`);
-      } else {
-        console.log(`🎭 [Frontend] Single-role node "${d.name}": role = ${roles[0]}`);
       }
       
       if (roles.length === 1) {
@@ -671,7 +663,6 @@ export default function NetworkVisualizer({
           .attr("stroke-width", 4);
       } else {
         // Multiple roles - create segmented circle
-        console.log(`🎭 [Frontend] Creating multi-role segments for "${d.name}" with ${roles.length} roles`);
         const angleStep = (2 * Math.PI) / roles.length;
         
         roles.forEach((role, index) => {
@@ -685,7 +676,7 @@ export default function NetworkVisualizer({
             .startAngle(startAngle)
             .endAngle(endAngle);
           
-          const pathElement = group.append("path")
+          group.append("path")
             .attr("d", arcPath)
             .attr("fill", () => {
               if (role === 'artist') return '#FF0ACF';       // Magenta Pink
@@ -695,8 +686,6 @@ export default function NetworkVisualizer({
             })
             .attr("stroke", "white")
             .attr("stroke-width", 1);
-          
-          console.log(`🎭 [Frontend] Created arc segment ${index + 1}/${roles.length} for role "${role}"`);
         });
         
         // Add inner circle for better visibility
@@ -838,15 +827,8 @@ export default function NetworkVisualizer({
       const roles = d.types || [d.type];
       
       // Debug: Log node data to see what's available (only in development)
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`🔍 [Tooltip] Node data for ${d.name}:`, {
-          name: d.name,
-          type: d.type,
-          types: d.types,
-          collaborations: d.collaborations,
-          size: d.size,
-          artistId: d.artistId
-        });
+      if (process.env.NODE_ENV === 'development' && d.types && d.types.length > 1) {
+        console.log(`🔍 [Tooltip] Multi-role node "${d.name}":`, d.types);
       }
 
       // Use enhanced layout only for artist nodes
@@ -1218,21 +1200,14 @@ export default function NetworkVisualizer({
       labelElements.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
     });
 
-    // Add subtle continuous movement to keep network alive
-    const addSubtleMovement = () => {
-      if (simulation.alpha() < 0.01) {
-        simulation.alpha(0.1).restart();
-      }
-    };
-
-    // Restart simulation every 15 seconds to add subtle movement
-    const movementInterval = setInterval(addSubtleMovement, 15000);
+    // Remove the continuous movement - it causes glitches
+    // const movementInterval = null;
 
     // Cleanup function
     return () => {
       tooltip.remove();
       simulation.stop();
-      clearInterval(movementInterval);
+      // clearInterval(movementInterval);
       cleanup();
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
