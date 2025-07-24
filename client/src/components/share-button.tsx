@@ -156,6 +156,7 @@ export default function ShareButton() {
 
   const createWatermarkedSnapshot = async (): Promise<string> => {
     setIsCapturing(true);
+    console.log('🔳 [DEBUG] Starting snapshot creation...');
     
     // Declare variables at function scope for error handling
     let elementsToHide: HTMLElement[] = [];
@@ -165,7 +166,9 @@ export default function ShareButton() {
     
     try {
       // Find the network container element
+      console.log('🔳 [DEBUG] Looking for network container...');
       const networkContainer = document.querySelector('.network-container') as HTMLElement;
+      console.log('🔳 [DEBUG] Network container found:', !!networkContainer);
       if (!networkContainer) {
         throw new Error('Network visualization not found');
       }
@@ -196,18 +199,25 @@ export default function ShareButton() {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       // Capture only the network visualization at high quality
+      console.log('🔳 [DEBUG] Preparing html2canvas...');
       const devicePixelRatio = window.devicePixelRatio || 1;
       const highScale = Math.max(2, devicePixelRatio); // At least 2x, or device pixel ratio
+      console.log('🔳 [DEBUG] Network container dimensions:', {
+        width: networkContainer.offsetWidth,
+        height: networkContainer.offsetHeight,
+        scale: highScale
+      });
       
       const canvas = await html2canvas(networkContainer, {
         useCORS: true,
         allowTaint: true,
         scale: highScale, // High resolution for crisp quality
-        logging: false,
+        logging: true, // Enable logging for debugging
         backgroundColor: '#000000', // Ensure black background
         width: networkContainer.offsetWidth,
         height: networkContainer.offsetHeight,
       });
+      console.log('🔳 [DEBUG] html2canvas completed, canvas size:', canvas.width, 'x', canvas.height);
 
       // Restore original display values
       elementsToHide.forEach((element, index) => {
@@ -308,11 +318,13 @@ export default function ShareButton() {
       );
 
       // Load the Grapevine logo
+      console.log('🔳 [DEBUG] Loading logo image...');
       const logo = new Image();
       logo.crossOrigin = "anonymous";
       
       return new Promise((resolve, reject) => {
         logo.onload = () => {
+          console.log('🔳 [DEBUG] Logo loaded successfully');
           try {
             // Calculate watermark size and position (top-left corner) - scaled for high res
             const logoSize = Math.min(60 * highScale, squareSize * 0.08);
@@ -360,14 +372,16 @@ export default function ShareButton() {
           }
         };
         
-        logo.onerror = () => {
+        logo.onerror = (error) => {
           // Fallback: just return the high-res cropped screenshot without watermark
-          console.warn('Failed to load logo, returning high-res screenshot without watermark');
+          console.error('🔳 [DEBUG] Failed to load logo:', error);
+          console.warn('🔳 [DEBUG] Returning high-res screenshot without watermark');
           const dataUrl = watermarkedCanvas.toDataURL('image/png', 1.0);
           setIsCapturing(false);
           resolve(dataUrl);
         };
         
+        console.log('🔳 [DEBUG] Setting logo src to /grapevine-logo.png');
         logo.src = '/grapevine-logo.png';
       });
     } catch (error) {
@@ -422,11 +436,13 @@ export default function ShareButton() {
       setSnapshotDataUrl(snapshot);
     } catch (error) {
       console.error('Failed to create snapshot:', error);
+      console.error('Error details:', error instanceof Error ? error.message : error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       toast({
         title: "Snapshot failed",
-        description: "Unable to create page snapshot, but link was copied.",
+        description: `Unable to create page snapshot: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
-        duration: 1000,
+        duration: 3000,
       });
     }
   };

@@ -459,11 +459,13 @@ export default function MobileControls({
       setSnapshotDataUrl(snapshot);
     } catch (error) {
       console.error('Failed to create snapshot:', error);
+      console.error('Error details:', error instanceof Error ? error.message : error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       toast({
         title: "Snapshot failed",
-        description: "Unable to create page snapshot, but link was copied.",
+        description: `Unable to create page snapshot: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
-        duration: 1000,
+        duration: 3000,
       });
     }
   };
