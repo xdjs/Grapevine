@@ -741,6 +741,21 @@ export default function NetworkVisualizer({
           }
         }
       })
+      .on("mouseup", function(event, d) {
+        // Alternative right-click detection via mouseup
+        if (event.button === 2) { // Right mouse button
+          event.preventDefault();
+          event.stopPropagation();
+          
+          console.log(`🖱️ [Frontend] Right-click via mouseup detected on node: ${d.name}`);
+          
+          // Show collaboration info on right-click for non-main artist nodes
+          if (mainArtistNode && d.id !== mainArtistNode.id) {
+            console.log(`🤝 [Frontend] Triggering collaboration popup for ${d.name} via mouseup`);
+            handleNodeClick(d);
+          }
+        }
+      })
       .call(
         d3
           .drag<SVGGElement, NetworkNode>()
@@ -799,7 +814,7 @@ export default function NetworkVisualizer({
         const isMainArtist = mainArtistNode && d.id === mainArtistNode.id;
         const collaborationHint = !isMainArtist && mainArtistNode ? 
           `<div style="margin-top:${gap}; padding:4px 8px; background:rgba(255,255,255,0.1); border-radius:4px; font-size:11px; color:#ccc; text-align:center;">
-            💡 Right-click for collaboration details
+            💡 Right-click or press 'C' for collaboration details
           </div>` : '';
 
         const content = `
@@ -1332,6 +1347,30 @@ export default function NetworkVisualizer({
     };
   }, [visible, currentZoom]);
 
+  // Handle keyboard shortcuts for collaboration info
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Press 'C' key to show collaboration info for highlighted node
+      if (event.key === 'c' || event.key === 'C') {
+        if (currentlyHighlightedNode && mainArtistNode) {
+          const nodeData = currentlyHighlightedNode.datum() as NetworkNode;
+          if (nodeData.id !== mainArtistNode.id) {
+            console.log(`⌨️ [Frontend] Keyboard shortcut 'C' pressed for ${nodeData.name}`);
+            handleNodeClick(nodeData);
+          }
+        }
+      }
+    };
+
+    if (visible) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [visible, mainArtistNode]);
+
   function getNodeVisibility(node: NetworkNode, filterState: FilterState): boolean {
     if (node.type === "producer") return filterState.showProducers;
     if (node.type === "songwriter") return filterState.showSongwriters;
@@ -1349,30 +1388,46 @@ export default function NetworkVisualizer({
       
       {/* Debug button for testing collaboration popup */}
       {process.env.NODE_ENV === 'development' && data && data.nodes.length > 0 && (
-        <button
-          onClick={() => {
-            const testNode = data.nodes.find(n => n.type === 'artist' && n.size < 30);
-            if (testNode && mainArtistNode) {
-              console.log('🧪 [Debug] Manually triggering collaboration popup');
-              handleNodeClick(testNode);
-            }
-          }}
-          style={{
-            position: 'absolute',
-            top: '10px',
-            right: '10px',
-            zIndex: 1000,
-            padding: '8px 12px',
-            backgroundColor: '#FFD700',
-            color: 'black',
-            border: 'none',
+        <div style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          zIndex: 1000,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px'
+        }}>
+          <button
+            onClick={() => {
+              const testNode = data.nodes.find(n => n.type === 'artist' && n.size < 30);
+              if (testNode && mainArtistNode) {
+                console.log('🧪 [Debug] Manually triggering collaboration popup');
+                handleNodeClick(testNode);
+              }
+            }}
+            style={{
+              padding: '8px 12px',
+              backgroundColor: '#FFD700',
+              color: 'black',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            Test Collaboration
+          </button>
+          <div style={{
+            padding: '4px 8px',
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            color: 'white',
             borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '12px'
-          }}
-        >
-          Test Collaboration
-        </button>
+            fontSize: '10px',
+            textAlign: 'center'
+          }}>
+            💡 Click node + press 'C'
+          </div>
+        </div>
       )}
       
       <ArtistSelectionModal
