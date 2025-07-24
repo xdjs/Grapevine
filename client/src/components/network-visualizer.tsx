@@ -653,6 +653,8 @@ export default function NetworkVisualizer({
       // Debug multi-role nodes (always show for debugging)
       if (roles.length > 1) {
         console.log(`🎭 [Frontend] Multi-role node "${d.name}": roles = [${roles.join(', ')}]`);
+      } else {
+        console.log(`🎭 [Frontend] Single-role node "${d.name}": role = ${roles[0]}`);
       }
       
       if (roles.length === 1) {
@@ -669,6 +671,7 @@ export default function NetworkVisualizer({
           .attr("stroke-width", 4);
       } else {
         // Multiple roles - create segmented circle
+        console.log(`🎭 [Frontend] Creating multi-role segments for "${d.name}" with ${roles.length} roles`);
         const angleStep = (2 * Math.PI) / roles.length;
         
         roles.forEach((role, index) => {
@@ -682,7 +685,7 @@ export default function NetworkVisualizer({
             .startAngle(startAngle)
             .endAngle(endAngle);
           
-          group.append("path")
+          const pathElement = group.append("path")
             .attr("d", arcPath)
             .attr("fill", () => {
               if (role === 'artist') return '#FF0ACF';       // Magenta Pink
@@ -692,6 +695,8 @@ export default function NetworkVisualizer({
             })
             .attr("stroke", "white")
             .attr("stroke-width", 1);
+          
+          console.log(`🎭 [Frontend] Created arc segment ${index + 1}/${roles.length} for role "${role}"`);
         });
         
         // Add inner circle for better visibility
