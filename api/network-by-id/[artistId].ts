@@ -134,19 +134,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
       
-      // First, try to generate data to check if artist has real collaborators
-      console.log(`🤖 [Vercel] Checking for real collaborators for artist ID ${artistId} (${artist.name})`);
+      // Generate new network data using OpenAI
+      console.log(`🤖 [Vercel] Generating network for artist ID ${artistId} (${artist.name}) using OpenAI`);
       
       const OpenAI = (await import('openai')).default;
       const openai = new OpenAI({
         apiKey: OPENAI_API_KEY,
       });
 
-      // Declare collaboration data variable at function scope
-      let collaborationData: CollaborationData;
-
-      // First, check if this artist has any real collaborators
-      const collaboratorCheckPrompt = `If ${artist.name} is a real artist with known music industry collaborations, provide a comprehensive list of music industry professionals who have collaborated with them. Include people who work as producers, songwriters, or both.
+      const prompt = `If ${artist.name} is a real artist with known music industry collaborations, provide a comprehensive list of music industry professionals who have collaborated with them. Include people who work as producers, songwriters, or both.
 
 IMPORTANT: Search for collaborations regardless of ${artist.name}'s popularity level - include mainstream artists, independent artists, underground artists, regional artists, and emerging artists. Many smaller artists still have authentic collaborations that should be included.
 
@@ -174,144 +170,6 @@ Requirements:
 - Return ONLY the JSON object, no other text
 - Ensure all JSON is properly formatted and valid`;
 
-      const collaboratorCheckCompletion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
-          },
-          {
-            role: "user",
-            content: collaboratorCheckPrompt
-          }
-        ],
-        temperature: 0.1,
-        max_tokens: 2000,
-      });
-
-      let hasRealCollaborators = false;
-      collaborationData = { artists: [] };
-      
-      try {
-        const openaiContent = collaboratorCheckCompletion.choices[0]?.message?.content;
-        console.log(`🤖 [Vercel] OpenAI response length: ${openaiContent?.length || 0} characters`);
-        
-        if (openaiContent) {
-          // Try to extract JSON from OpenAI response (sometimes includes extra text)
-          let jsonContent = openaiContent.trim();
-          
-          // Remove markdown code blocks if present
-          jsonContent = jsonContent.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
-          
-          // Look for JSON object boundaries
-          const jsonStart = jsonContent.indexOf('{');
-          const jsonEnd = jsonContent.lastIndexOf('}');
-          
-          if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-            jsonContent = jsonContent.substring(jsonStart, jsonEnd + 1);
-          }
-          
-          // Try parsing the extracted JSON
-          try {
-            collaborationData = JSON.parse(jsonContent);
-            hasRealCollaborators = collaborationData.artists && collaborationData.artists.length > 0;
-            console.log(`✅ [Vercel] Parsed collaboration data with ${collaborationData.artists?.length || 0} artists`);
-          } catch (parseError) {
-            console.warn('❌ [Vercel] Failed to parse collaboration check response');
-            hasRealCollaborators = false;
-          }
-        }
-      } catch (error) {
-        console.error('❌ [Vercel] Error checking for real collaborators:', error);
-        hasRealCollaborators = false;
-      }
-
-      // If no real collaborators found, check if user wants hallucinated data
-      if (!hasRealCollaborators) {
-        const allowHallucinations = req.query.allowHallucinations === 'true';
-        
-        if (!allowHallucinations) {
-          console.log(`⚠️ [Vercel] No real collaborators found for "${artist.name}" (ID: ${artistId}), returning no-collaborators response`);
-          
-          // Build main artist node for single-node network
-          // Detect roles for main artist first
-          let mainArtistRoles = ['artist']; // Default fallback
-          try {
-            console.log(`🎭 [Vercel] Detecting roles for MAIN artist: "${artist.name}"`);
-            
-            const mainArtistRolePrompt = `What roles does ${artist.name} have in the music industry? CRITICAL: Search extensively for ALL POSSIBLE ROLES regardless of their popularity or fame level - many people have multiple roles (artist, producer, songwriter). This includes mainstream artists, independent artists, underground artists, regional artists, and emerging artists.
-
-Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. 
-
-Investigate thoroughly for multiple roles on ${artist.name}, whether they are famous or lesser-known. Return ONLY the JSON array, no other text.`;
-            
-            const mainRoleCompletion = await openai.chat.completions.create({
-              model: "gpt-4o",
-              messages: [
-                {
-                  role: "system",
-                  content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
-                },
-                {
-                  role: "user",
-                  content: mainArtistRolePrompt
-                }
-              ],
-              temperature: 0.1,
-              max_tokens: 100,
-            });
-
-            const mainRoleContent = mainRoleCompletion.choices[0]?.message?.content?.trim();
-            if (mainRoleContent) {
-              try {
-                const detectedMainRoles = JSON.parse(mainRoleContent);
-                if (Array.isArray(detectedMainRoles) && detectedMainRoles.length > 0) {
-                  mainArtistRoles = detectedMainRoles.filter(role => 
-                    ['artist', 'producer', 'songwriter'].includes(role)
-                  );
-                  console.log(`✅ [Vercel] Detected roles for MAIN artist "${artist.name}":`, mainArtistRoles);
-                }
-              } catch (parseError) {
-                console.log(`⚠️ [Vercel] Could not parse main artist role detection for "${artist.name}", using default`);
-              }
-            }
-          } catch (error) {
-            console.log(`⚠️ [Vercel] Main artist role detection failed for "${artist.name}", using default`);
-          }
-
-          const mainNode = {
-            id: artist.name,
-            name: artist.name,
-            type: mainArtistRoles[0],
-            types: mainArtistRoles,
-            color: '#FF69B4',
-            size: 30,
-            artistId: artist.id
-          };
-          
-          const singleNodeData = { nodes: [mainNode], links: [] };
-          
-          await client.end();
-          
-          // Return special response indicating no collaborators found
-          return res.json({
-            noCollaborators: true,
-            artistName: artist.name,
-            artistId: artist.id,
-            singleNodeNetwork: singleNodeData
-          });
-        }
-        
-        // User requested hallucinated data - continue with generation below
-        console.log(`🎭 [Vercel] No real collaborators found for "${artist.name}" (ID: ${artistId}), but user wants hallucinations - generating creative network`);
-      }
-
-      // Generate new network data using OpenAI (either with real data or proceeding to hallucinations)
-      console.log(`🤖 [Vercel] Generating network for artist ID ${artistId} (${artist.name}) using OpenAI`);
-
-      const prompt = collaboratorCheckPrompt; // Use the same prompt we already used
-
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
@@ -328,6 +186,7 @@ Investigate thoroughly for multiple roles on ${artist.name}, whether they are fa
         max_tokens: 2000,
       });
 
+      let collaborationData: CollaborationData;
       try {
         const openaiContent = completion.choices[0]?.message?.content;
         console.log(`🤖 [Vercel] OpenAI response length: ${openaiContent?.length || 0} characters`);
