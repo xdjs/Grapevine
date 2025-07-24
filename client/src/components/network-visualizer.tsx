@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import ArtistSelectionModal from "./artist-selection-modal";
+import CollaborationDetailsPopup from "./collaboration-details-popup";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -27,6 +28,12 @@ export default function NetworkVisualizer({
   const [showArtistModal, setShowArtistModal] = useState(false);
   const [selectedArtistName, setSelectedArtistName] = useState("");
   const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("");
+  
+  // Collaboration details popup state
+  const [showCollaborationPopup, setShowCollaborationPopup] = useState(false);
+  const [collaborationArtist, setCollaborationArtist] = useState("");
+  const [collaborationCollaborator, setCollaborationCollaborator] = useState("");
+  const [mainArtistName, setMainArtistName] = useState("");
 
   // Fetch configuration on component mount
   useEffect(() => {
@@ -520,7 +527,7 @@ export default function NetworkVisualizer({
             .endAngle(endAngle);
           
           group.append("path")
-            .attr("d", arcPath as any)
+            .attr("d", arcPath)
             .attr("fill", () => {
               if (role === 'artist') return '#FF0ACF';       // Magenta Pink
               if (role === 'producer') return '#AE53FF';     // Bright Purple  
@@ -554,9 +561,57 @@ export default function NetworkVisualizer({
         // Track this node as highlighted
         currentlyHighlightedNode = currentNode;
 
-        // Show the tooltip and use cursor coordinates for placement
-        showTooltip(event, d);
-        moveTooltip(event as unknown as MouseEvent);
+        // Check if this is the main artist or a collaborator
+        const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const isMainArtist = d === mainArtistNode;
+        
+        if (isMainArtist) {
+          // For main artist, show the regular tooltip
+          showTooltip(event, d);
+          moveTooltip(event as unknown as MouseEvent);
+        } else {
+          // For collaborators, show collaboration details popup
+          // Find the connection to determine the relationship
+          const mainArtistName = mainArtistNode?.name || "";
+          setMainArtistName(mainArtistName);
+          
+          // Find the direct connection to the main artist
+          const directLink = data.links.find(link => {
+            const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+            const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+            return (sourceId === mainArtistName && targetId === d.name) || 
+                   (sourceId === d.name && targetId === mainArtistName);
+          });
+          
+          if (directLink) {
+            // Direct connection to main artist
+            setCollaborationArtist(mainArtistName);
+            setCollaborationCollaborator(d.name);
+          } else {
+            // Find the intermediate collaborator that connects to main artist
+            const intermediateLink = data.links.find(link => {
+              const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+              const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+              return sourceId === d.name || targetId === d.name;
+            });
+            
+            if (intermediateLink) {
+              const intermediateId = intermediateLink.source === d.name ? 
+                (typeof intermediateLink.target === 'string' ? intermediateLink.target : intermediateLink.target.id) :
+                (typeof intermediateLink.source === 'string' ? intermediateLink.source : intermediateLink.source.id);
+              
+              setCollaborationArtist(intermediateId);
+              setCollaborationCollaborator(d.name);
+            } else {
+              // Fallback to main artist
+              setCollaborationArtist(mainArtistName);
+              setCollaborationCollaborator(d.name);
+            }
+          }
+          
+          setShowCollaborationPopup(true);
+          hideTooltip(); // Hide any existing tooltip
+        }
       })
       .call(
         d3
@@ -657,7 +712,7 @@ export default function NetworkVisualizer({
           // Call the callback to load the artist's network within the app
           if (onArtistNodeClick) {
             console.log(`🔗 Loading ${d.name}'s network within the app`);
-            onArtistNodeClick(d.name, artistId || undefined);
+            onArtistNodeClick(d.name, artistId);
           } else {
             console.warn(`🔗 No onArtistNodeClick callback provided for ${d.name}`);
             alert(`Sorry, ${d.name} is not available in the network yet. They may be added in future updates!`);
@@ -1162,6 +1217,14 @@ export default function NetworkVisualizer({
         onClose={() => setShowArtistModal(false)}
         artistName={selectedArtistName}
         onSelectArtist={handleArtistSelection}
+      />
+      
+      <CollaborationDetailsPopup
+        isOpen={showCollaborationPopup}
+        onClose={() => setShowCollaborationPopup(false)}
+        artistName={collaborationArtist}
+        collaboratorName={collaborationCollaborator}
+        mainArtistName={mainArtistName}
       />
     </div>
   );
