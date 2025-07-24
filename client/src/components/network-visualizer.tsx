@@ -202,7 +202,18 @@ export default function NetworkVisualizer({
   };
 
   useEffect(() => {
-    if (!svgRef.current || !data || !visible) return;
+    console.log(`🎯 [NetworkVisualizer] useEffect triggered:`, {
+      svgRef: !!svgRef.current,
+      data: !!data,
+      visible,
+      nodesCount: data?.nodes?.length || 0,
+      linksCount: data?.links?.length || 0
+    });
+    
+    if (!svgRef.current || !data || !visible) {
+      console.log(`🎯 [NetworkVisualizer] Early return - missing required props`);
+      return;
+    }
 
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
@@ -616,6 +627,8 @@ export default function NetworkVisualizer({
       .attr("class", "link network-link")
       .attr("stroke-width", 2);
 
+    console.log(`🎯 [NetworkVisualizer] Creating ${data.nodes.length} nodes and ${validLinks.length} links`);
+    
     // Create nodes with multi-role support
     const nodeElements = networkGroup
       .selectAll(".node")
@@ -1178,8 +1191,11 @@ export default function NetworkVisualizer({
       labelElements.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
     });
 
+    console.log(`🎯 [NetworkVisualizer] Network rendering completed successfully`);
+    
     // Cleanup function
     return () => {
+      console.log(`🎯 [NetworkVisualizer] Cleaning up network visualization`);
       tooltip.remove();
       simulation.stop();
       cleanup();
