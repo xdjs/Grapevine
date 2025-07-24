@@ -407,6 +407,20 @@ export default function ShareButton() {
   };
 
   const handleShareClick = async () => {
+    // Check if the NoCollaboratorsPopup is currently open
+    const noCollaboratorsPopup = document.querySelector('[data-state="open"][role="dialog"]');
+    const isNoCollaboratorsPopup = noCollaboratorsPopup?.textContent?.includes('Warning: Potential Inaccuracies');
+    
+    if (isNoCollaboratorsPopup) {
+      toast({
+        title: "Cannot share yet",
+        description: "Please make a decision about the hallucination warning first.",
+        variant: "destructive",
+        duration: 2000,
+      });
+      return;
+    }
+    
     const url = window.location.href;
     setCurrentUrl(url);
     
