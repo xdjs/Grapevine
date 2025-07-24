@@ -51,3 +51,26 @@ export interface SearchHistoryEntry {
 export interface SearchHistory {
   entries: SearchHistoryEntry[];
 }
+
+// Collaboration Information Types
+export interface CollaborationProject {
+  name: string;
+  year: string;
+  role: string;
+  spotifyUrl?: string;
+}
+
+export interface SpotifyTrack {
+  name: string;
+  artists: string[];
+  album: string;
+  spotifyUrl: string;
+  releaseDate: string;
+}
+
+export interface CollaborationInfo {
+  collaborationInfo: string;
+  projects: CollaborationProject[];
+  personalHistory?: string;
+  spotifyTracks?: SpotifyTrack[];
+}

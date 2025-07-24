@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
-import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
+import { NetworkData, NetworkNode, NetworkLink, FilterState, CollaborationInfo } from "@/types/network";
 import ArtistSelectionModal from "./artist-selection-modal";
+import CollaborationPopup from "./collaboration-popup";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -27,6 +28,13 @@ export default function NetworkVisualizer({
   const [showArtistModal, setShowArtistModal] = useState(false);
   const [selectedArtistName, setSelectedArtistName] = useState("");
   const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("");
+  
+  // Collaboration popup state
+  const [showCollaborationPopup, setShowCollaborationPopup] = useState(false);
+  const [collaborationInfo, setCollaborationInfo] = useState<CollaborationInfo | null>(null);
+  const [collaborationLoading, setCollaborationLoading] = useState(false);
+  const [clickedNode, setClickedNode] = useState<NetworkNode | null>(null);
+  const [mainArtistNode, setMainArtistNode] = useState<NetworkNode | null>(null);
 
   // Fetch configuration on component mount
   useEffect(() => {
@@ -57,6 +65,102 @@ export default function NetworkVisualizer({
     
     fetchConfig();
   }, []);
+
+  // Find main artist node (largest artist node)
+  useEffect(() => {
+    if (data && data.nodes.length > 0) {
+      const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+      setMainArtistNode(mainArtist || null);
+    }
+  }, [data]);
+
+  // Function to fetch collaboration information
+  const fetchCollaborationInfo = async (artistName: string, collaboratorName: string) => {
+    try {
+      setCollaborationLoading(true);
+      console.log(`🤝 [Frontend] Fetching collaboration info for ${artistName} and ${collaboratorName}`);
+      
+      const response = await fetch(`/api/collaboration-info?artistName=${encodeURIComponent(artistName)}&collaboratorName=${encodeURIComponent(collaboratorName)}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`✅ [Frontend] Collaboration info received:`, data);
+        setCollaborationInfo(data);
+      } else {
+        console.error(`❌ [Frontend] Failed to fetch collaboration info: ${response.status}`);
+        setCollaborationInfo(null);
+      }
+    } catch (error) {
+      console.error(`❌ [Frontend] Error fetching collaboration info:`, error);
+      setCollaborationInfo(null);
+    } finally {
+      setCollaborationLoading(false);
+    }
+  };
+
+  // Function to handle node click for collaboration info
+  const handleNodeClick = (node: NetworkNode) => {
+    if (!mainArtistNode) return;
+
+    // Don't show collaboration info for the main artist
+    if (node.id === mainArtistNode.id) {
+      return;
+    }
+
+    // Determine the relationship based on network structure
+    let artistName: string;
+    let collaboratorName: string;
+
+    // Find the connection between clicked node and main artist
+    const directLink = data.links.find(link => {
+      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+      return (sourceId === node.id && targetId === mainArtistNode.id) ||
+             (sourceId === mainArtistNode.id && targetId === node.id);
+    });
+
+    if (directLink) {
+      // Direct connection to main artist
+      artistName = mainArtistNode.name;
+      collaboratorName = node.name;
+    } else {
+      // Find the node that connects to main artist (intermediate node)
+      const intermediateNode = data.nodes.find(n => {
+        if (n.id === node.id || n.id === mainArtistNode.id) return false;
+        
+        const hasLinkToMain = data.links.some(link => {
+          const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+          const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+          return (sourceId === n.id && targetId === mainArtistNode.id) ||
+                 (sourceId === mainArtistNode.id && targetId === n.id);
+        });
+        
+        const hasLinkToClicked = data.links.some(link => {
+          const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+          const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+          return (sourceId === n.id && targetId === node.id) ||
+                 (sourceId === node.id && targetId === n.id);
+        });
+        
+        return hasLinkToMain && hasLinkToClicked;
+      });
+
+      if (intermediateNode) {
+        // Connection through intermediate node
+        artistName = intermediateNode.name;
+        collaboratorName = node.name;
+      } else {
+        // Fallback to main artist
+        artistName = mainArtistNode.name;
+        collaboratorName = node.name;
+      }
+    }
+
+    console.log(`🤝 [Frontend] Showing collaboration info for ${artistName} and ${collaboratorName}`);
+    setClickedNode(node);
+    setShowCollaborationPopup(true);
+    fetchCollaborationInfo(artistName, collaboratorName);
+  };
 
   useEffect(() => {
     if (!svgRef.current || !data || !visible) return;
@@ -554,9 +658,14 @@ export default function NetworkVisualizer({
         // Track this node as highlighted
         currentlyHighlightedNode = currentNode;
 
-        // Show the tooltip and use cursor coordinates for placement
-        showTooltip(event, d);
-        moveTooltip(event as unknown as MouseEvent);
+        // Handle collaboration popup for non-main artist nodes
+        if (mainArtistNode && d.id !== mainArtistNode.id) {
+          handleNodeClick(d);
+        } else {
+          // Show the tooltip for main artist or when no main artist
+          showTooltip(event, d);
+          moveTooltip(event as unknown as MouseEvent);
+        }
       })
       .call(
         d3
@@ -1162,6 +1271,41 @@ export default function NetworkVisualizer({
         onClose={() => setShowArtistModal(false)}
         artistName={selectedArtistName}
         onSelectArtist={handleArtistSelection}
+      />
+
+      <CollaborationPopup
+        isOpen={showCollaborationPopup}
+        onClose={() => {
+          setShowCollaborationPopup(false);
+          setCollaborationInfo(null);
+          setClickedNode(null);
+        }}
+        collaborationInfo={collaborationInfo}
+        artistName={clickedNode && mainArtistNode ? 
+          (data.links.some(link => {
+            const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+            const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+            return (sourceId === clickedNode.id && targetId === mainArtistNode.id) ||
+                   (sourceId === mainArtistNode.id && targetId === clickedNode.id);
+          }) ? mainArtistNode.name : 
+          data.nodes.find(n => {
+            if (n.id === clickedNode.id || n.id === mainArtistNode.id) return false;
+            const hasLinkToMain = data.links.some(link => {
+              const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+              const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+              return (sourceId === n.id && targetId === mainArtistNode.id) ||
+                     (sourceId === mainArtistNode.id && targetId === n.id);
+            });
+            const hasLinkToClicked = data.links.some(link => {
+              const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+              const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+              return (sourceId === n.id && targetId === clickedNode.id) ||
+                     (sourceId === clickedNode.id && targetId === n.id);
+            });
+            return hasLinkToMain && hasLinkToClicked;
+          })?.name || mainArtistNode.name) : ''}
+        collaboratorName={clickedNode?.name || ''}
+        isLoading={collaborationLoading}
       />
     </div>
   );
