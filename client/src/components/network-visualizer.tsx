@@ -205,16 +205,7 @@ export default function NetworkVisualizer({
   };
 
   useEffect(() => {
-    console.log(`🎯 [NetworkVisualizer] useEffect triggered:`, {
-      svgRef: !!svgRef.current,
-      data: !!data,
-      visible,
-      nodesCount: data?.nodes?.length || 0,
-      linksCount: data?.links?.length || 0
-    });
-    
     if (!svgRef.current || !data || !visible) {
-      console.log(`🎯 [NetworkVisualizer] Early return - missing required props`);
       return;
     }
 
@@ -584,7 +575,7 @@ export default function NetworkVisualizer({
       }
     };
 
-    // Create simulation with centering force for main artist
+    // Create simulation with optimized settings for faster loading
     const simulation = d3
       .forceSimulation<NetworkNode>(data.nodes)
       .force(
@@ -592,13 +583,15 @@ export default function NetworkVisualizer({
         d3
           .forceLink<NetworkNode, NetworkLink>(validLinks)
           .id((d) => d.id)
-          .distance(80)
+          .distance(70)
       )
-      .force("charge", d3.forceManyBody().strength(-150))
-      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
+      .force("charge", d3.forceManyBody().strength(-120))
+      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 8))
       .force("boundary", boundaryForce)
       .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
-      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.1 : 0));
+      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
+      .alphaDecay(0.15) // Faster convergence
+      .velocityDecay(0.5); // Less oscillation
 
     simulationRef.current = simulation;
 
@@ -630,7 +623,7 @@ export default function NetworkVisualizer({
       .attr("class", "link network-link")
       .attr("stroke-width", 2);
 
-    console.log(`🎯 [NetworkVisualizer] Creating ${data.nodes.length} nodes and ${validLinks.length} links`);
+    // Create nodes and links efficiently
     
     // Create nodes with multi-role support
     const nodeElements = networkGroup
@@ -650,8 +643,8 @@ export default function NetworkVisualizer({
       const group = d3.select(this);
       const roles = d.types || [d.type];
       
-      // Debug multi-role nodes
-      if (roles.length > 1) {
+      // Debug multi-role nodes (only in development)
+      if (process.env.NODE_ENV === 'development' && roles.length > 1) {
         console.log(`🎭 [Frontend] Multi-role node "${d.name}": roles = [${roles.join(', ')}]`);
       }
       
@@ -828,6 +821,18 @@ export default function NetworkVisualizer({
 
     function showTooltip(event: MouseEvent, d: NetworkNode) {
       const roles = d.types || [d.type];
+      
+      // Debug: Log node data to see what's available (only in development)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🔍 [Tooltip] Node data for ${d.name}:`, {
+          name: d.name,
+          type: d.type,
+          types: d.types,
+          collaborations: d.collaborations,
+          size: d.size,
+          artistId: d.artistId
+        });
+      }
 
       // Use enhanced layout only for artist nodes
       if (roles.includes("artist")) {
@@ -939,18 +944,22 @@ export default function NetworkVisualizer({
                         <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:${closeButtonSize}; color:white;">&times;</span>
                          <strong style="font-size:${titleFontSize};">${d.name}</strong><br/>Role${roles.length > 1 ? "s" : ""}: ${roleDisplay}`;
 
-        // Show collaboration information for producers and songwriters
-        const hasProducerRole = roles.includes("producer") || roles.includes("songwriter");
-        const collaborationData = d.collaborations || (d as any).topCollaborators;
-        if (hasProducerRole && collaborationData && collaborationData.length > 0) {
-          content += `<br/><br/><strong>Top Collaborations:</strong><br/>`;
-          content += collaborationData.join("<br/>");
-        }
-
-        // Show general collaboration info for artists if available
-        if (roles.includes("artist") && d.collaborations && d.collaborations.length > 0) {
-          content += `<br/><br/><strong>Recent Collaborations:</strong><br/>`;
-          content += d.collaborations.slice(0, 3).join("<br/>");
+        // Show collaboration information for all node types
+        const collaborationData = d.collaborations;
+        if (collaborationData && collaborationData.length > 0) {
+          content += `<br/><br/><strong>Collaborations:</strong><br/>`;
+          // Show up to 3 collaborations to keep tooltip manageable
+          const displayCollaborations = collaborationData.slice(0, 3);
+          content += displayCollaborations.join("<br/>");
+          if (collaborationData.length > 3) {
+            content += `<br/><em>... and ${collaborationData.length - 3} more</em>`;
+          }
+        } else {
+          // Show a hint about collaboration feature for non-main artist nodes
+          const isMainArtist = mainArtistNode && d.id === mainArtistNode.id;
+          if (!isMainArtist && mainArtistNode) {
+            content += `<br/><br/><em style="font-size:11px; color:#ccc;">💡 Click for collaboration details</em>`;
+          }
         }
 
         // Close container div
@@ -1194,11 +1203,8 @@ export default function NetworkVisualizer({
       labelElements.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
     });
 
-    console.log(`🎯 [NetworkVisualizer] Network rendering completed successfully`);
-    
     // Cleanup function
     return () => {
-      console.log(`🎯 [NetworkVisualizer] Cleaning up network visualization`);
       tooltip.remove();
       simulation.stop();
       cleanup();
