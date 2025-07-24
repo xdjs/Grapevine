@@ -481,13 +481,14 @@ export default function Home() {
             onZoomOut={handleZoomOut}
             onZoomReset={handleZoomReset}
             onClearAll={handleClearNetwork}
+            disableShare={!networkData || showNoCollaboratorsPopup}
           />
         </>
       )}
 
 
       {/* Share Button - Only visible when network is shown and not on mobile */}
-      {showNetworkView && !isMobile && <ShareButton />}
+      {showNetworkView && !isMobile && networkData && !showNoCollaboratorsPopup && <ShareButton />}
 
       {/* Help Button - Hide on mobile when network view is shown */}
       {(!showNetworkView || !isMobile) && <HelpButton />}

@@ -40,6 +40,7 @@ interface MobileControlsProps {
   onZoomOut: () => void;
   onZoomReset: () => void;
   onClearAll: () => void;
+  disableShare?: boolean;
 }
 
 export default function MobileControls({
@@ -47,6 +48,7 @@ export default function MobileControls({
   onZoomOut,
   onZoomReset,
   onClearAll,
+  disableShare = false,
 }: MobileControlsProps) {
   const [showControls, setShowControls] = useState(false); // existing zoom / clear panel
   const [showMenu, setShowMenu] = useState(false); // new three-dot options menu
@@ -439,20 +441,6 @@ export default function MobileControls({
   };
 
   const handleShareClick = async () => {
-    // Check if the NoCollaboratorsPopup is currently open
-    const noCollaboratorsPopup = document.querySelector('[data-state="open"][role="dialog"]');
-    const isNoCollaboratorsPopup = noCollaboratorsPopup?.textContent?.includes('Warning: Potential Inaccuracies');
-    
-    if (isNoCollaboratorsPopup) {
-      toast({
-        title: "Cannot share yet",
-        description: "Please make a decision about the hallucination warning first.",
-        variant: "destructive",
-        duration: 2000,
-      });
-      return;
-    }
-    
     const url = window.location.href;
     setCurrentUrl(url);
     
@@ -502,9 +490,9 @@ export default function MobileControls({
             size="icon"
             variant="secondary"
             className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
-            title="Share"
+            title={disableShare ? "Please make a decision about the warning first" : "Share"}
             onClick={handleShareClick}
-            disabled={isCapturing}
+            disabled={isCapturing || disableShare}
           >
             {isCapturing ? (
               <Camera className="w-6 h-6 animate-pulse" />
