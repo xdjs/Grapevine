@@ -209,6 +209,13 @@ export default function NetworkVisualizer({
       return;
     }
 
+    // Debug: Log the data structure to see what we're working with
+    console.log(`🎯 [NetworkVisualizer] Rendering network with:`, {
+      nodesCount: data.nodes.length,
+      linksCount: data.links.length,
+      sampleNodes: data.nodes.slice(0, 3).map(n => ({ name: n.name, type: n.type, types: n.types }))
+    });
+
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
     
@@ -575,7 +582,7 @@ export default function NetworkVisualizer({
       }
     };
 
-    // Create simulation with optimized performance
+    // Create simulation with balanced settings
     const simulation = d3
       .forceSimulation<NetworkNode>(data.nodes)
       .force(
@@ -583,15 +590,15 @@ export default function NetworkVisualizer({
         d3
           .forceLink<NetworkNode, NetworkLink>(validLinks)
           .id((d) => d.id)
-          .distance(60)
+          .distance(80)
       )
-      .force("charge", d3.forceManyBody().strength(-100))
-      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 5))
+      .force("charge", d3.forceManyBody().strength(-150))
+      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
       .force("boundary", boundaryForce)
-      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.05 : 0))
-      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.05 : 0))
-      .alphaDecay(0.12) // Faster convergence
-      .velocityDecay(0.4); // Less oscillation
+      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
+      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
+      .alphaDecay(0.1) // Balanced convergence
+      .velocityDecay(0.3); // Natural movement
 
     simulationRef.current = simulation;
 
@@ -643,8 +650,8 @@ export default function NetworkVisualizer({
       const group = d3.select(this);
       const roles = d.types || [d.type];
       
-      // Debug multi-role nodes (only in development)
-      if (process.env.NODE_ENV === 'development' && roles.length > 1) {
+      // Debug multi-role nodes (always show for debugging)
+      if (roles.length > 1) {
         console.log(`🎭 [Frontend] Multi-role node "${d.name}": roles = [${roles.join(', ')}]`);
       }
       
@@ -1193,34 +1200,28 @@ export default function NetworkVisualizer({
       d.fy = null;
     }
 
-    // Update positions on tick with throttling for better performance
-    let tickCount = 0;
+    // Update positions on tick
     simulation.on("tick", () => {
-      tickCount++;
-      
-      // Only update every 3rd tick to reduce DOM manipulation
-      if (tickCount % 3 === 0) {
-        linkElements
-          .attr("x1", (d) => (d.source as NetworkNode).x!)
-          .attr("y1", (d) => (d.source as NetworkNode).y!)
-          .attr("x2", (d) => (d.target as NetworkNode).x!)
-          .attr("y2", (d) => (d.target as NetworkNode).y!);
+      linkElements
+        .attr("x1", (d) => (d.source as NetworkNode).x!)
+        .attr("y1", (d) => (d.source as NetworkNode).y!)
+        .attr("x2", (d) => (d.target as NetworkNode).x!)
+        .attr("y2", (d) => (d.target as NetworkNode).y!);
 
-        nodeElements.attr("transform", (d) => `translate(${d.x!}, ${d.y!})`);
+      nodeElements.attr("transform", (d) => `translate(${d.x!}, ${d.y!})`);
 
-        labelElements.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
-      }
+      labelElements.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
     });
 
-    // Add subtle continuous movement to keep network alive (less frequent)
+    // Add subtle continuous movement to keep network alive
     const addSubtleMovement = () => {
       if (simulation.alpha() < 0.01) {
-        simulation.alpha(0.05).restart();
+        simulation.alpha(0.1).restart();
       }
     };
 
-    // Restart simulation every 30 seconds to add subtle movement (less frequent)
-    const movementInterval = setInterval(addSubtleMovement, 30000);
+    // Restart simulation every 15 seconds to add subtle movement
+    const movementInterval = setInterval(addSubtleMovement, 15000);
 
     // Cleanup function
     return () => {
