@@ -23,7 +23,17 @@ export default function CollaborationDetailsPopup({
 
   useEffect(() => {
     if (isOpen && artistName && collaboratorName) {
-      fetchCollaborationDetails();
+      // Don't fetch if it's the same artist (main artist clicked on themselves)
+      if (artistName === collaboratorName) {
+        setDetails({
+          description: "This would show collaboration details between this artist and their collaborators. Click on a collaborator node to see specific collaboration details.",
+          projects: [],
+          personalHistory: "Select a collaborator to view detailed collaboration information."
+        });
+        setLoading(false);
+      } else {
+        fetchCollaborationDetails();
+      }
     }
   }, [isOpen, artistName, collaboratorName]);
 
