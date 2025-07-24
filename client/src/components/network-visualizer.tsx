@@ -709,53 +709,46 @@ export default function NetworkVisualizer({
         // Show the tooltip (original functionality)
         showTooltip(event, d);
         moveTooltip(event as unknown as MouseEvent);
-      })
-      .on("contextmenu", function(event, d) {
-        event.preventDefault();
-        event.stopPropagation();
 
-        console.log(`🖱️ [Frontend] Right-click detected on node: ${d.name}`);
-        console.log(`🖱️ [Frontend] Main artist: ${mainArtistNode?.name}`);
-        console.log(`🖱️ [Frontend] Is main artist: ${mainArtistNode && d.id === mainArtistNode.id}`);
-
-        // Show collaboration info on right-click for non-main artist nodes
+        // For non-main artist nodes, show a small collaboration button in the tooltip
         if (mainArtistNode && d.id !== mainArtistNode.id) {
-          console.log(`🤝 [Frontend] Triggering collaboration popup for ${d.name}`);
-          handleNodeClick(d);
-        } else {
-          console.log(`🖱️ [Frontend] Skipping collaboration popup (main artist or no main artist)`);
+          // Add a small delay to allow tooltip to render first
+          setTimeout(() => {
+            const tooltip = d3.select(".network-tooltip");
+            if (!tooltip.empty()) {
+              // Add collaboration button to existing tooltip
+              const collaborationButton = tooltip.append("div")
+                .style("margin-top", "8px")
+                .style("padding", "6px 12px")
+                .style("background", "linear-gradient(45deg, #FFD700, #FFA500)")
+                .style("color", "black")
+                .style("border", "none")
+                .style("border-radius", "4px")
+                .style("cursor", "pointer")
+                .style("font-size", "11px")
+                .style("font-weight", "bold")
+                .style("text-align", "center")
+                .style("transition", "all 0.2s")
+                .style("box-shadow", "0 2px 4px rgba(0,0,0,0.2)")
+                .text("🤝 Show Collaboration Details")
+                .on("click", function() {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  console.log(`🤝 [Frontend] Collaboration button clicked for ${d.name}`);
+                  handleNodeClick(d);
+                })
+                .on("mouseenter", function() {
+                  d3.select(this).style("transform", "scale(1.05)");
+                })
+                .on("mouseleave", function() {
+                  d3.select(this).style("transform", "scale(1)");
+                });
+            }
+          }, 100);
         }
       })
-      .on("mousedown", function(event, d) {
-        // Handle right-click via mousedown with button check
-        if (event.button === 2) { // Right mouse button
-          event.preventDefault();
-          event.stopPropagation();
-          
-          console.log(`🖱️ [Frontend] Right-click via mousedown detected on node: ${d.name}`);
-          
-          // Show collaboration info on right-click for non-main artist nodes
-          if (mainArtistNode && d.id !== mainArtistNode.id) {
-            console.log(`🤝 [Frontend] Triggering collaboration popup for ${d.name} via mousedown`);
-            handleNodeClick(d);
-          }
-        }
-      })
-      .on("mouseup", function(event, d) {
-        // Alternative right-click detection via mouseup
-        if (event.button === 2) { // Right mouse button
-          event.preventDefault();
-          event.stopPropagation();
-          
-          console.log(`🖱️ [Frontend] Right-click via mouseup detected on node: ${d.name}`);
-          
-          // Show collaboration info on right-click for non-main artist nodes
-          if (mainArtistNode && d.id !== mainArtistNode.id) {
-            console.log(`🤝 [Frontend] Triggering collaboration popup for ${d.name} via mouseup`);
-            handleNodeClick(d);
-          }
-        }
-      })
+      // Right-click events removed for production compatibility
+      // Using button in tooltip and keyboard shortcuts instead
       .call(
         d3
           .drag<SVGGElement, NetworkNode>()
@@ -814,7 +807,7 @@ export default function NetworkVisualizer({
         const isMainArtist = mainArtistNode && d.id === mainArtistNode.id;
         const collaborationHint = !isMainArtist && mainArtistNode ? 
           `<div style="margin-top:${gap}; padding:4px 8px; background:rgba(255,255,255,0.1); border-radius:4px; font-size:11px; color:#ccc; text-align:center;">
-            💡 Right-click or press 'C' for collaboration details
+            💡 Press 'C' or click button below for collaboration details
           </div>` : '';
 
         const content = `
@@ -1425,7 +1418,7 @@ export default function NetworkVisualizer({
             fontSize: '10px',
             textAlign: 'center'
           }}>
-            💡 Click node + press 'C'
+            💡 Click node + press 'C' or use button
           </div>
         </div>
       )}
