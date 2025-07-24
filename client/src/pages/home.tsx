@@ -216,7 +216,7 @@ export default function Home() {
     try {
       setIsLoading(true);
       
-      const data = await fetchNetworkDataById(pendingArtistInfo.id + '?allowHallucinations=true');
+      const data = await fetchNetworkDataById(pendingArtistInfo.id, true);
       
       if (isNoCollaboratorsResponse(data)) {
         // Even with hallucinations, no data found - show single node
@@ -264,18 +264,6 @@ export default function Home() {
       duration: 1000,
     });
   }, [pendingArtistInfo, setLocation, toast]);
-
-  const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
-    // Replace existing network with new data
-    setNetworkData(data);
-    setShowNetworkView(true);
-    setIsLoading(false);
-    
-    // Update URL to reflect the artist being displayed
-    if (artistId) {
-      setLocation(`/${artistId}`);
-    }
-  }, [setLocation]);
 
   const handleLoadingChange = useCallback((loading: boolean, artistName?: string) => {
     setIsLoading(loading);
