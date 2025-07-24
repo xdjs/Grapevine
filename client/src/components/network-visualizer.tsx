@@ -535,7 +535,8 @@ export default function NetworkVisualizer({
               return '#355367';  // Police Blue
             })
             .attr("stroke", "white")
-            .attr("stroke-width", 1);
+            .attr("stroke-width", 1)
+            .style("pointer-events", "all"); // Ensure click events work on arcs
         });
         
         // Add inner circle for better visibility
@@ -556,7 +557,8 @@ export default function NetworkVisualizer({
         const currentNode = d3.select(this);
         currentNode.selectAll("circle, path")
           .attr("stroke", "white")
-          .attr("stroke-width", 3);
+          .attr("stroke-width", 3)
+          .style("stroke-opacity", 1);
         
         // Track this node as highlighted
         currentlyHighlightedNode = currentNode;
