@@ -4,6 +4,13 @@ import { NetworkData, NetworkResponse, NoCollaboratorsResponse } from "../types/
 export async function fetchNetworkData(artistName: string, allowHallucinations?: boolean): Promise<NetworkResponse> {
   try {
     console.log(`🔍 [Frontend] Fetching network data for: "${artistName}"`);
+    console.log(`🔍 [Frontend] Current environment:`, {
+      hostname: window.location.hostname,
+      protocol: window.location.protocol,
+      port: window.location.port,
+      userAgent: navigator.userAgent
+    });
+    
     const url = allowHallucinations 
       ? `/api/network/${encodeURIComponent(artistName)}?allowHallucinations=true`
       : `/api/network/${encodeURIComponent(artistName)}`;

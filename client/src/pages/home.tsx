@@ -377,6 +377,31 @@ export default function Home() {
           />
         </div>
       )}
+      
+      {/* Debug info for Vercel troubleshooting */}
+      {process.env.NODE_ENV === 'development' && (
+        <div style={{
+          position: 'fixed',
+          top: '10px',
+          left: '10px',
+          background: 'rgba(0,0,0,0.8)',
+          color: 'white',
+          padding: '10px',
+          borderRadius: '5px',
+          fontSize: '12px',
+          zIndex: 9999,
+          maxWidth: '300px'
+        }}>
+          <div><strong>Debug Info:</strong></div>
+          <div>Network Data: {networkData ? 'Yes' : 'No'}</div>
+          <div>Show Network: {showNetworkView ? 'Yes' : 'No'}</div>
+          <div>Loading: {isLoading ? 'Yes' : 'No'}</div>
+          <div>Nodes: {networkData?.nodes?.length || 0}</div>
+          <div>Links: {networkData?.links?.length || 0}</div>
+          <div>Environment: {process.env.NODE_ENV}</div>
+          <div>Host: {window.location.hostname}</div>
+        </div>
+      )}
 
       {/* Loading Screen */}
       <LoadingScreen isVisible={isLoading && showNetworkView} artistName={currentArtistName} />
