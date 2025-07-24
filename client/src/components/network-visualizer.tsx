@@ -38,6 +38,9 @@ export default function NetworkVisualizer({
   
   // Simple cache for collaboration info to avoid repeated API calls
   const collaborationCache = useRef<Map<string, CollaborationInfo>>(new Map());
+  
+  // Reference to currently highlighted node for collaboration feature
+  const currentlyHighlightedNodeRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
 
   // Fetch configuration on component mount
   useEffect(() => {
@@ -483,7 +486,7 @@ export default function NetworkVisualizer({
     };
 
     // Variable to track currently highlighted node
-    let currentlyHighlightedNode: d3.Selection<SVGGElement, unknown, null, undefined> | null = null;
+    // Use the ref instead of local variable
 
     // Find connected components for cluster positioning
     const findConnectedComponents = () => {
@@ -722,7 +725,7 @@ export default function NetworkVisualizer({
           .attr("stroke-width", 3);
         
         // Track this node as highlighted
-        currentlyHighlightedNode = currentNode;
+        currentlyHighlightedNodeRef.current = currentNode;
 
         // Show the tooltip (original functionality)
         showTooltip(event, d);
@@ -1021,14 +1024,14 @@ export default function NetworkVisualizer({
     }
 
     function resetNodeHighlight() {
-      if (currentlyHighlightedNode) {
-        const nodeData = currentlyHighlightedNode.datum() as NetworkNode;
+      if (currentlyHighlightedNodeRef.current) {
+        const nodeData = currentlyHighlightedNodeRef.current.datum() as NetworkNode;
         const roles = nodeData.types || [nodeData.type];
         
         // Reset to original styling
         if (roles.length === 1) {
           // Single role - reset to original stroke color and width
-          currentlyHighlightedNode.selectAll("circle")
+          currentlyHighlightedNodeRef.current.selectAll("circle")
             .attr("stroke", () => {
               if (roles[0] === 'artist') return '#FF0ACF';       // Magenta Pink
               if (roles[0] === 'producer') return '#AE53FF';     // Bright Purple  
@@ -1038,16 +1041,16 @@ export default function NetworkVisualizer({
             .attr("stroke-width", 4);
         } else {
           // Multiple roles - reset path strokes and inner circle
-          currentlyHighlightedNode.selectAll("path")
+          currentlyHighlightedNodeRef.current.selectAll("path")
             .attr("stroke", "white")
             .attr("stroke-width", 1);
           
-          currentlyHighlightedNode.selectAll("circle")
+          currentlyHighlightedNodeRef.current.selectAll("circle")
             .attr("stroke", "white")
             .attr("stroke-width", 2);
         }
         
-        currentlyHighlightedNode = null;
+        currentlyHighlightedNodeRef.current = null;
       }
     }
 
@@ -1390,8 +1393,8 @@ export default function NetworkVisualizer({
     const handleKeyDown = (event: KeyboardEvent) => {
       // Press 'C' key to show collaboration info for highlighted node
       if (event.key === 'c' || event.key === 'C') {
-        if (currentlyHighlightedNode && mainArtistNode) {
-          const nodeData = currentlyHighlightedNode.datum() as NetworkNode;
+              if (currentlyHighlightedNodeRef.current && mainArtistNode) {
+        const nodeData = currentlyHighlightedNodeRef.current.datum() as NetworkNode;
           if (nodeData.id !== mainArtistNode.id) {
             console.log(`⌨️ [Frontend] Keyboard shortcut 'C' pressed for ${nodeData.name}`);
             handleNodeClick(nodeData);
@@ -1469,7 +1472,7 @@ export default function NetworkVisualizer({
       )}
 
       {/* Fallback collaboration button - always visible when a node is highlighted */}
-      {currentlyHighlightedNode && mainArtistNode && data && (
+      {currentlyHighlightedNodeRef.current && mainArtistNode && data && (
         <div style={{
           position: 'absolute',
           bottom: '20px',
@@ -1479,7 +1482,7 @@ export default function NetworkVisualizer({
         }}>
           <button
             onClick={() => {
-              const nodeData = currentlyHighlightedNode.datum() as NetworkNode;
+              const nodeData = currentlyHighlightedNodeRef.current!.datum() as NetworkNode;
               if (nodeData.id !== mainArtistNode.id) {
                 console.log('🤝 [Frontend] Fallback button clicked for', nodeData.name);
                 setCollaborationLoading(true);
