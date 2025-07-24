@@ -50,12 +50,20 @@ export default function CollaborationPopup({
         <div className="p-6">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-4"></div>
-              <span className="text-gray-300 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mb-6"></div>
+              <span className="text-gray-300 text-center text-lg font-medium">
                 Loading collaboration info...
-                <br />
-                <span className="text-sm text-gray-500">This may take 10-30 seconds</span>
               </span>
+              <span className="text-sm text-gray-500 mt-2 text-center">
+                This may take 10-30 seconds
+                <br />
+                <span className="text-xs text-gray-600">Using AI to analyze collaboration history</span>
+              </span>
+              <div className="mt-4 flex space-x-2">
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+              </div>
             </div>
           ) : collaborationInfo ? (
             <div className="space-y-6">

@@ -191,8 +191,13 @@ export default function NetworkVisualizer({
 
     console.log(`🤝 [Frontend] Showing collaboration info for ${artistName} and ${collaboratorName}`);
     console.log(`🤝 [Frontend] Setting popup state: clickedNode=${node.name}, showPopup=true`);
-    setClickedNode(node);
-    setShowCollaborationPopup(true);
+    
+    // Only set popup state if not already set by button click
+    if (!showCollaborationPopup) {
+      setClickedNode(node);
+      setShowCollaborationPopup(true);
+    }
+    
     fetchCollaborationInfo(artistName, collaboratorName);
   };
 
@@ -716,8 +721,12 @@ export default function NetworkVisualizer({
           setTimeout(() => {
             const tooltip = d3.select(".network-tooltip");
             if (!tooltip.empty()) {
+              // Remove any existing collaboration button first
+              tooltip.selectAll(".collaboration-button").remove();
+              
               // Add collaboration button to existing tooltip
               const collaborationButton = tooltip.append("div")
+                .attr("class", "collaboration-button")
                 .style("margin-top", "8px")
                 .style("padding", "6px 12px")
                 .style("background", "linear-gradient(45deg, #FFD700, #FFA500)")
@@ -730,11 +739,19 @@ export default function NetworkVisualizer({
                 .style("text-align", "center")
                 .style("transition", "all 0.2s")
                 .style("box-shadow", "0 2px 4px rgba(0,0,0,0.2)")
+                .style("pointer-events", "auto")
                 .text("🤝 Show Collaboration Details")
-                .on("click", function() {
-                  event.preventDefault();
-                  event.stopPropagation();
+                .on("click", function(e) {
+                  e.preventDefault();
+                  e.stopPropagation();
                   console.log(`🤝 [Frontend] Collaboration button clicked for ${d.name}`);
+                  
+                  // Show loading state immediately
+                  setCollaborationLoading(true);
+                  setShowCollaborationPopup(true);
+                  setClickedNode(d);
+                  
+                  // Fetch collaboration info
                   handleNodeClick(d);
                 })
                 .on("mouseenter", function() {
@@ -743,6 +760,18 @@ export default function NetworkVisualizer({
                 .on("mouseleave", function() {
                   d3.select(this).style("transform", "scale(1)");
                 });
+              
+              console.log(`🤝 [Frontend] Collaboration button added to tooltip for ${d.name}`);
+              
+              // Debug: Check if button is actually in DOM
+              setTimeout(() => {
+                const button = document.querySelector('.collaboration-button');
+                if (button) {
+                  console.log(`✅ [Frontend] Collaboration button found in DOM`);
+                } else {
+                  console.log(`❌ [Frontend] Collaboration button NOT found in DOM`);
+                }
+              }, 200);
             }
           }, 100);
         }
@@ -1420,6 +1449,52 @@ export default function NetworkVisualizer({
           }}>
             💡 Click node + press 'C' or use button
           </div>
+        </div>
+      )}
+
+      {/* Fallback collaboration button - always visible when a node is highlighted */}
+      {currentlyHighlightedNode && mainArtistNode && data && (
+        <div style={{
+          position: 'absolute',
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000
+        }}>
+          <button
+            onClick={() => {
+              const nodeData = currentlyHighlightedNode.datum() as NetworkNode;
+              if (nodeData.id !== mainArtistNode.id) {
+                console.log('🤝 [Frontend] Fallback button clicked for', nodeData.name);
+                setCollaborationLoading(true);
+                setShowCollaborationPopup(true);
+                setClickedNode(nodeData);
+                handleNodeClick(nodeData);
+              }
+            }}
+            style={{
+              padding: '12px 20px',
+              background: 'linear-gradient(45deg, #FFD700, #FFA500)',
+              color: 'black',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              boxShadow: '0 4px 12px rgba(255, 215, 0, 0.3)',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateX(-50%) scale(1.05)';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(255, 215, 0, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 215, 0, 0.3)';
+            }}
+          >
+            🤝 Show Collaboration Details
+          </button>
         </div>
       )}
       
