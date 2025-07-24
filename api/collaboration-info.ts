@@ -20,7 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { artistName, collaboratorName } = req.query;
+    const { artistName, collaboratorName, clearCache } = req.query;
     
     if (!artistName || typeof artistName !== 'string') {
       return res.status(400).json({ message: 'Artist name is required' });
@@ -32,11 +32,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log(`🤝 [Vercel] Collaboration info request for: ${artistName} and ${collaboratorName}`);
     
-    // Check cache first
+    // Check cache first (unless clearCache is requested)
     const cacheKey = `${artistName.toLowerCase()}-${collaboratorName.toLowerCase()}`;
-    if (collaborationCache.has(cacheKey)) {
+    if (clearCache === 'true') {
+      collaborationCache.delete(cacheKey);
+      console.log(`🗑️ [Vercel] Cleared cache for ${artistName} and ${collaboratorName}`);
+    } else if (collaborationCache.has(cacheKey)) {
       console.log(`⚡ [Vercel] Using cached collaboration info for ${artistName} and ${collaboratorName}`);
-      return res.json(collaborationCache.get(cacheKey));
+      const cachedData = collaborationCache.get(cacheKey);
+      console.log(`📊 [Vercel] Cached data has ${cachedData.projects?.length || 0} projects`);
+      return res.json(cachedData);
     }
     
     // Get environment variables
@@ -96,6 +101,8 @@ Format as JSON:
       if (!collaborationData.personalHistory) {
         collaborationData.personalHistory = null;
       }
+      
+      console.log(`📊 [Vercel] Generated data has ${collaborationData.projects?.length || 0} projects`);
       
     } catch (parseError) {
       console.error('❌ [Vercel] Failed to parse OpenAI response:', parseError);
