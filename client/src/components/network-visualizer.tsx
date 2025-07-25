@@ -590,20 +590,22 @@ export default function NetworkVisualizer({
               (typeof directLink.target === 'string' ? directLink.target : directLink.target.id) :
               (typeof directLink.source === 'string' ? directLink.source : directLink.source.id);
             
-            // Determine which is the "parent" and which is the "child" in the relationship
-            const isSecondLayer = data.links.some(link => {
+            // Check if the clicked node is directly connected to main artist (first layer)
+            const isFirstLayer = data.links.some(link => {
               const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
               const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-              return (sourceId === mainArtistName && targetId === connectedNodeId) || 
-                     (sourceId === connectedNodeId && targetId === mainArtistName);
+              return (sourceId === mainArtistName && targetId === d.name) || 
+                     (sourceId === d.name && targetId === mainArtistName);
             });
             
-            if (isSecondLayer) {
-              // Second layer: clicked node is connected to main artist through connectedNodeId
-              setCollaborationArtist(connectedNodeId);
+            if (isFirstLayer) {
+              // First layer: clicked node is directly connected to main artist
+              // Show collaboration between clicked node and main artist
+              setCollaborationArtist(mainArtistName);
               setCollaborationCollaborator(d.name);
             } else {
-              // Third layer: clicked node is connected to connectedNodeId
+              // Second layer: clicked node is connected to a first-layer node
+              // Show collaboration between clicked node and their direct connection
               setCollaborationArtist(connectedNodeId);
               setCollaborationCollaborator(d.name);
             }
@@ -765,20 +767,22 @@ export default function NetworkVisualizer({
               (typeof directLink.target === 'string' ? directLink.target : directLink.target.id) :
               (typeof directLink.source === 'string' ? directLink.source : directLink.source.id);
             
-            // Determine which is the "parent" and which is the "child" in the relationship
-            const isSecondLayer = data.links.some(link => {
+            // Check if the clicked node is directly connected to main artist (first layer)
+            const isFirstLayer = data.links.some(link => {
               const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
               const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-              return (sourceId === mainArtistName && targetId === connectedNodeId) || 
-                     (sourceId === connectedNodeId && targetId === mainArtistName);
+              return (sourceId === mainArtistName && targetId === d.name) || 
+                     (sourceId === d.name && targetId === mainArtistName);
             });
             
-            if (isSecondLayer) {
-              // Second layer: clicked node is connected to main artist through connectedNodeId
-              setCollaborationArtist(connectedNodeId);
+            if (isFirstLayer) {
+              // First layer: clicked node is directly connected to main artist
+              // Show collaboration between clicked node and main artist
+              setCollaborationArtist(mainArtistName);
               setCollaborationCollaborator(d.name);
             } else {
-              // Third layer: clicked node is connected to connectedNodeId
+              // Second layer: clicked node is connected to a first-layer node
+              // Show collaboration between clicked node and their direct connection
               setCollaborationArtist(connectedNodeId);
               setCollaborationCollaborator(d.name);
             }

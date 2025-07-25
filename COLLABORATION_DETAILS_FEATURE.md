@@ -11,10 +11,9 @@ The Collaboration Details feature allows users to view detailed information abou
    - **Expand Network**: Load the artist's network within the app
    - **Music Nerd Profile**: Open the artist's profile on MusicNerd
    - **Collaboration Details**: Show detailed collaboration information
-2. **Collaboration Details**: Shows specific collaboration information between directly connected nodes:
-   - **First Layer**: Main artist ↔ Direct collaborators
-   - **Second Layer**: Direct collaborators ↔ Their collaborators  
-   - **Third Layer**: Collaborators of collaborators ↔ Their connections
+2. **Collaboration Details**: Shows specific collaboration information based on network layers:
+   - **First Layer**: Main artist ↔ Direct collaborators (shows collaboration with main artist)
+   - **Second Layer**: Direct collaborators ↔ Their collaborators (shows collaboration with their direct connection - the first layer node they're connected to)
 
 ### API Endpoint
 - **URL**: `/api/collaboration-details/[artistName]/[collaboratorName]`
