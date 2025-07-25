@@ -104,8 +104,8 @@ export default function CollaborationDetailsPopup({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-700">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-500/20 border border-purple-500/30">
-              <Users className="h-5 w-5 text-purple-400" />
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-500/20 border border-purple-500/30">
+              <Users className="h-4 w-4 text-purple-400" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-white">
@@ -229,7 +229,7 @@ export default function CollaborationDetailsPopup({
               {/* No projects found */}
               {(!details.projects || details.projects.length === 0) && (
                 <div className="text-center py-12 text-gray-400">
-                  <Music className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+                  <Music className="w-8 h-8 mx-auto mb-4 text-gray-600" />
                   <p className="text-lg">No specific collaboration projects found between these artists.</p>
                   <p className="text-sm text-gray-500 mt-2">This could mean they haven't officially collaborated yet, or the data isn't available.</p>
                 </div>
