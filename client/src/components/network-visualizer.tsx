@@ -667,26 +667,26 @@ export default function NetworkVisualizer({
       const paddingRight = isMobile ? "25px" : "30px";
       const gap = isMobile ? "6px" : "8px";
 
-      const content = `
-        <div style="position:relative; max-width:${maxWidth}; padding-right:${paddingRight};">
-          <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:${closeButtonSize}; color:white;">&times;</span>
-          <div style="font-weight:bold; font-size:${titleFontSize}; line-height:1.2; text-align:left;">${d.name}</div>
-          <div style="margin-top:2px; font-size:${roleFontSize}; text-align:left;">Roles: ${roleDisplay}</div>
-          <div style="display:flex; flex-direction:column; gap:${gap}; margin-top:${gap};">
-            <div style="display:flex; align-items:center; gap:${gap}; cursor:pointer;" class="network-action">
-              <img src="${networkIconPath}" alt="Network" class="network-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
-              <a href="#" class="popup-action network-link" style="font-size:${linkFontSize}; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s network</a>
-            </div>
-            <div style="display:flex; align-items:center; gap:${gap}; cursor:pointer;" class="artist-action">
-              <img src="${artistIconPath}" alt="Artist Page" class="artist-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
-              <a href="#" class="popup-action artist-page-link" style="font-size:${linkFontSize}; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s Music Nerd profile</a>
-            </div>
-            <div style="display:flex; align-items:center; gap:${gap}; cursor:pointer;" class="collaboration-action">
-              <img src="${collaborationIconPath}" alt="Collaboration Details" class="collaboration-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
-              <a href="#" class="popup-action collaboration-link" style="font-size:${linkFontSize}; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">Collaboration details</a>
-            </div>
-          </div>
-        </div>`;
+      const content = 
+        '<div style="position:relative; max-width:' + maxWidth + '; padding-right:' + paddingRight + ';">' +
+          '<span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:' + closeButtonSize + '; color:white;">&times;</span>' +
+          '<div style="font-weight:bold; font-size:' + titleFontSize + '; line-height:1.2; text-align:left;">' + d.name + '</div>' +
+          '<div style="margin-top:2px; font-size:' + roleFontSize + '; text-align:left;">Roles: ' + roleDisplay + '</div>' +
+          '<div style="display:flex; flex-direction:column; gap:' + gap + '; margin-top:' + gap + ';">' +
+            '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="network-action">' +
+              '<img src="' + networkIconPath + '" alt="Network" class="network-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer;" />' +
+              '<a href="#" class="popup-action network-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">' + d.name + '\'s network</a>' +
+            '</div>' +
+            '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="artist-action">' +
+              '<img src="' + artistIconPath + '" alt="Artist Page" class="artist-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer;" />' +
+              '<a href="#" class="popup-action artist-page-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">' + d.name + '\'s Music Nerd profile</a>' +
+            '</div>' +
+            '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="collaboration-action">' +
+              '<img src="' + collaborationIconPath + '" alt="Collaboration Details" class="collaboration-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer;" />' +
+              '<a href="#" class="popup-action collaboration-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">Collaboration details</a>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
 
       tooltip.html(content).style("opacity", 1).style("pointer-events", "auto");
       
