@@ -591,9 +591,27 @@ export default function NetworkVisualizer({
             setCollaborationCollaborator(d.name);
           } else {
             // Second layer: clicked node is not directly connected to main artist
-            // Show collaboration between clicked node and main artist
-            setCollaborationArtist(mainArtistName);
-            setCollaborationCollaborator(d.name);
+            // Find the first layer node that this second layer node is connected to
+            const directLink = data.links.find(link => {
+              const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+              const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+              return (sourceId === d.name && targetId !== mainArtistName) || 
+                     (targetId === d.name && sourceId !== mainArtistName);
+            });
+            
+            if (directLink) {
+              const connectedNodeId = directLink.source === d.name ? 
+                (typeof directLink.target === 'string' ? directLink.target : directLink.target.id) :
+                (typeof directLink.source === 'string' ? directLink.source : directLink.source.id);
+              
+              // Show collaboration between clicked node and their direct connection
+              setCollaborationArtist(connectedNodeId);
+              setCollaborationCollaborator(d.name);
+            } else {
+              // Fallback: direct connection to main artist
+              setCollaborationArtist(mainArtistName);
+              setCollaborationCollaborator(d.name);
+            }
           }
         }
       })
@@ -749,9 +767,27 @@ export default function NetworkVisualizer({
             setCollaborationCollaborator(d.name);
           } else {
             // Second layer: clicked node is not directly connected to main artist
-            // Show collaboration between clicked node and main artist
-            setCollaborationArtist(mainArtistName);
-            setCollaborationCollaborator(d.name);
+            // Find the first layer node that this second layer node is connected to
+            const directLink = data.links.find(link => {
+              const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+              const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+              return (sourceId === d.name && targetId !== mainArtistName) || 
+                     (targetId === d.name && sourceId !== mainArtistName);
+            });
+            
+            if (directLink) {
+              const connectedNodeId = directLink.source === d.name ? 
+                (typeof directLink.target === 'string' ? directLink.target : directLink.target.id) :
+                (typeof directLink.source === 'string' ? directLink.source : directLink.source.id);
+              
+              // Show collaboration between clicked node and their direct connection
+              setCollaborationArtist(connectedNodeId);
+              setCollaborationCollaborator(d.name);
+            } else {
+              // Fallback: direct connection to main artist
+              setCollaborationArtist(mainArtistName);
+              setCollaborationCollaborator(d.name);
+            }
           }
         }
         
