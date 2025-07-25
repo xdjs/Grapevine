@@ -584,7 +584,8 @@ export default function MobileControls({
       {!showMenu && (
         <Button
           onClick={() => setShowMenu(true)}
-          className="fixed bottom-6 sm:bottom-4 right-4 z-40 w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg"
+          className="fixed bottom-6 sm:bottom-4 right-4 z-40 w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg border-2"
+          style={{ borderColor: '#b427b4' }}
           size="icon"
           title="Options"
         >
@@ -599,7 +600,8 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+            style={{ borderColor: '#b427b4' }}
             title="Share"
             onClick={handleShareClick}
             disabled={isCapturing}
@@ -615,7 +617,8 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+            style={{ borderColor: '#b427b4' }}
             title="Settings"
             onClick={() => {
               setShowControls(true);
@@ -629,7 +632,8 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+            style={{ borderColor: '#b427b4' }}
             title="Help"
             onClick={() => {
               setShowHelp(true);
@@ -643,7 +647,8 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="destructive"
-            className="w-12 h-12 bg-red-900/90 backdrop-blur hover:bg-red-800 border border-red-700 rounded-full shadow-lg"
+            className="w-12 h-12 bg-red-900/90 backdrop-blur hover:bg-red-800 border-2 rounded-full shadow-lg"
+            style={{ borderColor: '#b427b4' }}
             title="Close Menu"
             onClick={() => setShowMenu(false)}
           >
