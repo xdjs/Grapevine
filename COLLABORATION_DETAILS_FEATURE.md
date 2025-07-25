@@ -7,8 +7,11 @@ The Collaboration Details feature allows users to view detailed information abou
 ## How It Works
 
 ### User Interaction
-1. **Main Artist Node**: Clicking on the main artist (center node) shows the regular tooltip with network and profile options
-2. **Collaborator Nodes**: Clicking on any collaborator node opens a collaboration details popup
+1. **All Nodes**: Clicking on any node (main artist or collaborators) shows a comprehensive tooltip with three options:
+   - **Expand Network**: Load the artist's network within the app
+   - **Music Nerd Profile**: Open the artist's profile on MusicNerd
+   - **Collaboration Details**: Show detailed collaboration information
+2. **Collaboration Details**: Shows specific collaboration information between the clicked artist and their relationship to the main artist
 
 ### API Endpoint
 - **URL**: `/api/collaboration-details/[artistName]/[collaboratorName]`
