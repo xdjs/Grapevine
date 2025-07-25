@@ -597,6 +597,17 @@ export default function NetworkVisualizer({
       if (roles.includes("artist")) {
         const roleDisplay = roles.length > 1 ? roles.join(", ") : roles[0];
 
+        // Find the main artist node - it's the largest artist node
+        const mainArtistNode = data.nodes
+          .filter(node => node.type === 'artist' || (node.types && node.types.includes('artist')))
+          .reduce((largest, current) => 
+            !largest || current.size > largest.size ? current : largest, 
+            null as NetworkNode | null
+          );
+
+        // Check if this is the main artist
+        const isMainArtist = d === mainArtistNode;
+
         // Update these paths if the assets live elsewhere
         const networkIconPath = "/grapevine-logo.png"; // grape + clef icon
         const artistIconPath = "/music_nerd_logo.png";   // Music Nerd logo PNG served from public
@@ -612,62 +623,77 @@ export default function NetworkVisualizer({
         const paddingRight = isMobile ? "25px" : "30px";
         const gap = isMobile ? "8px" : "10px";
 
+        // Build content - only include network action for non-main artists
+        let actionsHtml = '';
+        
+        // Only show "generate artist network" button for non-main artists
+        if (!isMainArtist) {
+          actionsHtml += `
+            <div style="display:flex; align-items:center; gap:${gap}; cursor:pointer;" class="network-action">
+              <img src="${networkIconPath}" alt="Network" class="network-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
+              <a href="#" class="popup-action network-link" style="font-size:${linkFontSize}; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s network</a>
+            </div>`;
+        }
+        
+        // Always show Music Nerd profile button
+        actionsHtml += `
+          <div style="display:flex; align-items:center; gap:${gap}; cursor:pointer;" class="artist-action">
+            <img src="${artistIconPath}" alt="Artist Page" class="artist-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
+            <a href="#" class="popup-action artist-page-link" style="font-size:${linkFontSize}; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s Music Nerd profile</a>
+          </div>`;
+
         const content = `
           <div style="position:relative; max-width:${maxWidth}; padding-right:${paddingRight};">
             <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:${closeButtonSize}; color:white;">&times;</span>
             <div style="font-weight:bold; font-size:${titleFontSize}; line-height:1.2; text-align:left;">${d.name}</div>
             <div style="margin-top:2px; font-size:${roleFontSize}; text-align:left;">Roles: ${roleDisplay}</div>
             <div style="display:flex; flex-direction:column; gap:${gap}; margin-top:${gap};">
-              <div style="display:flex; align-items:center; gap:${gap}; cursor:pointer;" class="network-action">
-                <img src="${networkIconPath}" alt="Network" class="network-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
-                <a href="#" class="popup-action network-link" style="font-size:${linkFontSize}; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s network</a>
-              </div>
-              <div style="display:flex; align-items:center; gap:${gap}; cursor:pointer;" class="artist-action">
-                <img src="${artistIconPath}" alt="Artist Page" class="artist-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
-                <a href="#" class="popup-action artist-page-link" style="font-size:${linkFontSize}; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s Music Nerd profile</a>
-      
-              </div>
+              ${actionsHtml}
             </div>
           </div>`;
 
         tooltip.html(content).style("opacity", 1).style("pointer-events", "auto");
-        const networkHandler = async (e: any) => {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          let artistId = d.artistId;
-          
-          // If no artist ID, try to look it up via the artist options API
-          if (!artistId) {
-            console.log(`🔗 No artistId for ${d.name}, attempting lookup...`);
-            try {
-              const response = await fetch(`/api/artist-options/${encodeURIComponent(d.name)}`);
-              const data = await response.json();
-              
-              if (data.options && data.options.length > 0) {
-                // Use the first matching artist's ID
-                artistId = data.options[0].artistId || data.options[0].id;
-                console.log(`🔗 Found artistId for ${d.name}: ${artistId}`);
+        
+        // Network handler - only attach if not main artist
+        if (!isMainArtist) {
+          const networkHandler = async (e: any) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            let artistId = d.artistId;
+            
+            // If no artist ID, try to look it up via the artist options API
+            if (!artistId) {
+              console.log(`🔗 No artistId for ${d.name}, attempting lookup...`);
+              try {
+                const response = await fetch(`/api/artist-options/${encodeURIComponent(d.name)}`);
+                const data = await response.json();
+                
+                if (data.options && data.options.length > 0) {
+                  // Use the first matching artist's ID
+                  artistId = data.options[0].artistId || data.options[0].id;
+                  console.log(`🔗 Found artistId for ${d.name}: ${artistId}`);
+                }
+              } catch (error) {
+                console.error(`🔗 Error looking up artist ID for ${d.name}:`, error);
               }
-            } catch (error) {
-              console.error(`🔗 Error looking up artist ID for ${d.name}:`, error);
             }
-          }
-          
-          // Call the callback to load the artist's network within the app
-          if (onArtistNodeClick) {
-            console.log(`🔗 Loading ${d.name}'s network within the app`);
-            onArtistNodeClick(d.name, artistId || undefined);
-          } else {
-            console.warn(`🔗 No onArtistNodeClick callback provided for ${d.name}`);
-            alert(`Sorry, ${d.name} is not available in the network yet. They may be added in future updates!`);
-          }
-          
-          // Hide the tooltip after clicking
-          hideTooltip();
-        };
+            
+            // Call the callback to load the artist's network within the app
+            if (onArtistNodeClick) {
+              console.log(`🔗 Loading ${d.name}'s network within the app`);
+              onArtistNodeClick(d.name, artistId || undefined);
+            } else {
+              console.warn(`🔗 No onArtistNodeClick callback provided for ${d.name}`);
+              alert(`Sorry, ${d.name} is not available in the network yet. They may be added in future updates!`);
+            }
+            
+            // Hide the tooltip after clicking
+            hideTooltip();
+          };
 
-        tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
+          tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
+        }
 
         const profileHandler = (e: any) => {
           e.preventDefault();

@@ -17,11 +17,6 @@ interface NetworkLink {
   target: string;
 }
 
-interface NetworkData {
-  nodes: NetworkNode[];
-  links: NetworkLink[];
-}
-
 interface Collaborator {
   name: string;
   type: string;
@@ -203,7 +198,7 @@ Guidelines:
         // Try parsing the extracted JSON
         try {
           collaborationData = JSON.parse(jsonContent);
-        } catch (firstParseError) {
+        } catch {
           // Fallback: try to create a minimal valid structure if parsing fails
           console.warn('❌ [Vercel] Primary JSON parse failed, trying fallback');
           collaborationData = { artists: [] };
@@ -270,11 +265,11 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
                   }
                 }
               }
-            } catch (parseError) {
+            } catch {
               console.log(`⚠️ [Vercel] Could not parse batch role detection, falling back to defaults`);
             }
           }
-        } catch (error) {
+        } catch {
           console.log(`⚠️ [Vercel] Batch role detection failed, falling back to defaults`);
         }
       };
@@ -328,11 +323,11 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
                 globalRoleMap.set(correctArtistName, mainArtistTypes);
               }
             }
-          } catch (parseError) {
+          } catch {
             console.log(`⚠️ [Vercel] Could not parse main artist role detection for "${correctArtistName}", using default`);
           }
         }
-      } catch (error) {
+      } catch {
         console.log(`⚠️ [Vercel] Main artist role detection failed for "${correctArtistName}", using default`);
       }
       
@@ -525,11 +520,11 @@ Guidelines:
                 
                 console.log(`✨ [Vercel] Generated ${collaborators.length} hallucinated collaborators for "${correctArtistName}"`);
               }
-            } catch (parseError) {
+            } catch {
               console.warn('⚠️ [Vercel] Failed to parse hallucinated data, falling back to single node');
             }
           }
-        } catch (hallucinationError) {
+        } catch {
           console.warn('⚠️ [Vercel] Failed to generate hallucinated data, falling back to single node');
         }
         
@@ -644,11 +639,11 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
                     );
                     console.log(`✅ [Vercel] Detected roles for artist "${branchingArtist}":`, branchingRoles);
                   }
-                } catch (parseError) {
+                } catch {
                   console.log(`⚠️ [Vercel] Could not parse role detection for "${branchingArtist}", using default`);
                 }
               }
-            } catch (error) {
+            } catch {
               console.log(`⚠️ [Vercel] Role detection failed for "${branchingArtist}", using default`);
             }
 
