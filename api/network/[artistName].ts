@@ -341,7 +341,7 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
         id: correctArtistName,
         name: correctArtistName,
         type: orderedMainArtistTypes[0],
-        types: orderedMainArtistTypes,
+        types: orderedMainArtistTypes, // Always an array of all roles
         color: '#FF69B4',
         size: 30,
         artistId: artistExistsResult.rows[0].id
@@ -550,7 +550,9 @@ Guidelines:
           // Person already exists - add the new role to their types array
           if (!collabNode.types.includes(collaborator.type)) {
             collabNode.types.push(collaborator.type);
-            console.log(`🎭 [Vercel] Added ${collaborator.type} role to existing ${collaborator.name} node (now has ${collabNode.types.length} roles)`);
+            // Ensure types is always unique and sorted
+            collabNode.types = Array.from(new Set(collabNode.types)).sort();
+            collabNode.type = collabNode.types[0];
           }
           // Update collaborations list
           if (collaborator.topCollaborators && collaborator.topCollaborators.length > 0) {
@@ -572,7 +574,7 @@ Guidelines:
             id: collaborator.name,
             name: collaborator.name,
             type: enhancedRoles[0],
-            types: enhancedRoles,
+            types: enhancedRoles, // Always an array of all roles
             color: color,
             size: 20, // Smaller size for collaborators
             artistId: null,
@@ -651,7 +653,7 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
               id: branchingArtist,
               name: branchingArtist,
               type: branchingRoles[0],
-              types: branchingRoles,
+              types: branchingRoles, // Always an array of all roles
               color: '#FF69B4',
               size: 16,
               artistId: null
