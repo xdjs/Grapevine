@@ -628,7 +628,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 650 ? 'text-sm' :
               'text-xs sm:text-sm md:text-base'
             }`}>
-              <span className="font-medium">Tip:</span> Try searching for Taylor Swift, Drake, or Ariana Grande.
+              <span className="font-medium">Tip:</span> Try searching for Taylor Swift, The Weeknd, or Bruno Mars.
             </p>
           </div>
           

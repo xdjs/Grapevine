@@ -17,11 +17,6 @@ interface NetworkLink {
   target: string;
 }
 
-interface NetworkData {
-  nodes: NetworkNode[];
-  links: NetworkLink[];
-}
-
 interface CollaborationData {
   artists: Array<{
     name: string;
@@ -142,11 +137,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         apiKey: OPENAI_API_KEY,
       });
 
-      const prompt = `If ${artist.name} is a real artist with known music industry collaborations, provide a comprehensive list of music industry professionals who have collaborated with them. Include people who work as producers, songwriters, or both.
+      const prompt = `Provide a comprehensive list of music industry professionals who have collaborated with ${artist.name}. Focus on producers, songwriters, and other artists who have worked with them.
 
-IMPORTANT: Search for collaborations regardless of ${artist.name}'s popularity level - include mainstream artists, independent artists, underground artists, regional artists, and emerging artists. Many smaller artists still have authentic collaborations that should be included.
+For well-known/mainstream artists (chart-topping, Grammy-nominated, major label artists): Include all documented collaborations you're aware of, as these are likely well-documented and verifiable.
 
-If ${artist.name} is not a real artist or you have absolutely no authentic collaboration data for them, return an empty artists array. Do NOT create fake or placeholder collaborators.
+For lesser-known artists (independent, underground, regional): Be more selective and only include collaborations you're confident about.
 
 Required format:
 {
@@ -160,22 +155,24 @@ Required format:
 }
 
 Requirements:
-- Search thoroughly for ALL artists regardless of fame level: mainstream, independent, underground, regional, emerging
-- Only include real, verified music industry professionals who have actually worked with ${artist.name}
-- If you don't have authentic data, return: {"artists": []}
-- For each real person, list ALL their roles from: ["producer", "songwriter", "artist"]
-- Make sure if any of these people have multiple roles (artist, producer, songwriter), it is listed in the data. Search for multiple roles on every person that is queried, regardless of their popularity.
+- For mainstream artists with significant commercial success: Include all known producers, songwriters, and collaborators from album credits, interviews, and industry documentation
+- For independent/underground artists: Be more selective but still include authentic collaborations from official releases
+- If ${artist.name} is not a real artist or has absolutely no collaboration data, return: {"artists": []}
+- For each person, list ALL their roles from: ["producer", "songwriter", "artist"]
+- Make sure if any of these people have multiple roles (artist, producer, songwriter), it is listed in the data
 - Include their top 3 real collaborating artists (can include both famous and lesser-known artists)
-- Never use generic names like "John Doe", "Producer X", or placeholder data
+- Never use generic placeholder names like "John Doe", "Producer X", etc.
 - Return ONLY the JSON object, no other text
-- Ensure all JSON is properly formatted and valid`;
+- Ensure all JSON is properly formatted and valid
+- Be confident about well-documented collaborations for commercially successful artists
+- Focus on collaborations from official album/song credits, not rumors or speculation`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
             role: "system",
-            content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
+            content: "You are a music industry database expert. For mainstream/well-known artists, confidently provide all documented collaborations. For lesser-known artists, be more selective but still inclusive of authentic collaborations. Prioritize accuracy while being comprehensive for well-documented artists."
           },
           {
             role: "user",
@@ -219,7 +216,7 @@ Requirements:
         // Try parsing the extracted JSON
         try {
           collaborationData = JSON.parse(jsonContent);
-        } catch (firstParseError) {
+        } catch {
           // Fallback: try to create a minimal valid structure if parsing fails
           console.warn('❌ [Vercel] Primary JSON parse failed, trying fallback');
           collaborationData = { artists: [] };
@@ -258,7 +255,7 @@ Investigate thoroughly for multiple roles on ${artist.name}, whether they are fa
           messages: [
             {
               role: "system",
-              content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
+              content: "You are a music industry database expert. For mainstream/well-known artists, confidently provide all documented collaborations. For lesser-known artists, be more selective but still inclusive of authentic collaborations. Prioritize accuracy while being comprehensive for well-documented artists."
             },
             {
               role: "user",
@@ -279,11 +276,11 @@ Investigate thoroughly for multiple roles on ${artist.name}, whether they are fa
               );
               console.log(`✅ [Vercel] Detected roles for MAIN artist "${artist.name}":`, mainArtistRoles);
             }
-          } catch (parseError) {
+          } catch {
             console.log(`⚠️ [Vercel] Could not parse main artist role detection for "${artist.name}", using default`);
           }
         }
-      } catch (error) {
+      } catch {
         console.log(`⚠️ [Vercel] Main artist role detection failed for "${artist.name}", using default`);
       }
 
@@ -349,7 +346,8 @@ Guidelines:
 - Mix real industry professionals with plausible fictional ones
 - Create 3-8 collaborators total
 - Include producers, songwriters, and artists
-- Be creative but keep names realistic
+- Use realistic but unique names (avoid common placeholder names like John Doe, Jane Smith, Producer X, etc.)
+- Create names that sound like real music industry professionals
 - Include varied collaboration styles that would fit ${artist.name}'s music
 - Return ONLY the JSON object, no other text`;
 
@@ -381,11 +379,11 @@ Guidelines:
                 collaborationData = hallucinatedData;
                 console.log(`✨ [Vercel] Generated ${hallucinatedData.artists.length} hallucinated collaborators for "${artist.name}"`);
               }
-            } catch (parseError) {
+            } catch {
               console.warn('⚠️ [Vercel] Failed to parse hallucinated data, falling back to single node');
             }
           }
-        } catch (hallucinationError) {
+        } catch {
           console.warn('⚠️ [Vercel] Failed to generate hallucinated data, falling back to single node');
         }
         
@@ -402,14 +400,16 @@ Guidelines:
       const isFakeCollaborator = (name: string): boolean => {
         const lowerName = name.toLowerCase();
         const fakePatterns = [
+          'john doe', 'jane doe', 'john smith', 'jane smith', 'joe smith', 'mary johnson',
+          'bob johnson', 'sarah williams', 'mike brown', 'lisa davis', 'test user', 'test artist',
           'artist a', 'artist b', 'artist c', 'artist d', 'artist e',
           'producer a', 'producer b', 'producer c', 'producer d', 'producer e',
           'songwriter a', 'songwriter b', 'songwriter c', 'songwriter d', 'songwriter e',
           'artist 1', 'artist 2', 'artist 3', 'artist 4', 'artist 5',
           'producer 1', 'producer 2', 'producer 3', 'producer 4', 'producer 5',
           'songwriter 1', 'songwriter 2', 'songwriter 3', 'songwriter 4', 'songwriter 5',
-          'unknown', 'anonymous', 'various', 'n/a', 'tbd',
-          'placeholder', 'example', 'sample'
+          'unknown', 'anonymous', 'various', 'n/a', 'tbd', 'to be determined',
+          'placeholder', 'example', 'sample', 'fictional', 'generic', 'default'
         ];
         return fakePatterns.some(pattern => lowerName.includes(pattern)) ||
                !!lowerName.match(/^(artist|producer|songwriter)\s+[a-z]$/i) ||
@@ -505,7 +505,7 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
                 messages: [
                   {
                     role: "system",
-                    content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
+                    content: "You are a music industry database expert. For mainstream/well-known artists, confidently provide all documented collaborations. For lesser-known artists, be more selective but still inclusive of authentic collaborations. Prioritize accuracy while being comprehensive for well-documented artists."
                   },
                   {
                     role: "user",
@@ -526,11 +526,11 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
                     );
                     console.log(`✅ [Vercel] Detected roles for artist "${branchingArtist}":`, branchingRoles);
                   }
-                } catch (parseError) {
+                } catch {
                   console.log(`⚠️ [Vercel] Could not parse role detection for "${branchingArtist}", using default`);
                 }
               }
-            } catch (error) {
+            } catch {
               console.log(`⚠️ [Vercel] Role detection failed for "${branchingArtist}", using default`);
             }
 

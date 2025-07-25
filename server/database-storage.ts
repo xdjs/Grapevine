@@ -337,15 +337,16 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
             const authenticCollaborators = openAIData.artists.filter(collaborator => {
               const name = collaborator.name.toLowerCase();
               const fakePatterns = [
-                'john doe', 'jane doe', 'john smith', 'jane smith',
+                'john doe', 'jane doe', 'john smith', 'jane smith', 'joe smith', 'mary johnson',
+                'bob johnson', 'sarah williams', 'mike brown', 'lisa davis', 'test user', 'test artist',
                 'producer x', 'songwriter y', 'artist a', 'artist b', 'artist c', 'artist d', 'artist e',
                 'producer a', 'producer b', 'producer c', 'producer d', 'producer e',
                 'songwriter a', 'songwriter b', 'songwriter c', 'songwriter d', 'songwriter e',
                 'artist 1', 'artist 2', 'artist 3', 'artist 4', 'artist 5',
                 'producer 1', 'producer 2', 'producer 3', 'producer 4', 'producer 5',
                 'songwriter 1', 'songwriter 2', 'songwriter 3', 'songwriter 4', 'songwriter 5',
-                'unknown', 'anonymous', 'various', 'n/a', 'tbd',
-                'placeholder', 'example', 'sample'
+                'unknown', 'anonymous', 'various', 'n/a', 'tbd', 'to be determined',
+                'placeholder', 'example', 'sample', 'fictional', 'generic', 'default'
               ];
               return !fakePatterns.some(pattern => name.includes(pattern)) &&
                      !name.match(/^(artist|producer|songwriter)\s+[a-z]$/i) &&

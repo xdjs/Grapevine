@@ -651,6 +651,7 @@ export default function NetworkVisualizer({
       const roles = d.types || [d.type];
       const roleDisplay = roles.length > 1 ? roles.join(", ") : roles[0];
 
+
       // Update these paths if the assets live elsewhere
       const networkIconPath = "/grapevine-logo.png"; // grape + clef icon
       const artistIconPath = "/music_nerd_logo.png";   // Music Nerd logo PNG served from public
@@ -663,11 +664,10 @@ export default function NetworkVisualizer({
       const titleFontSize = isMobile ? "14px" : "16px";
       const roleFontSize = isMobile ? "11px" : "12px";
       const linkFontSize = isMobile ? "11px" : "12px";
-      const closeButtonSize = isMobile ? "20px" : "24px";
-      const paddingRight = isMobile ? "25px" : "30px";
-      const gap = isMobile ? "6px" : "8px";
-
-      const content = 
+              const closeButtonSize = isMobile ? "20px" : "24px";
+        const paddingRight = isMobile ? "25px" : "30px";
+        const gap = isMobile ? "6px" : "8px";
+        const content =  
         '<div style="position:relative; max-width:' + maxWidth + '; padding-right:' + paddingRight + ';">' +
           '<span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:' + closeButtonSize + '; color:white;">&times;</span>' +
           '<div style="font-weight:bold; font-size:' + titleFontSize + '; line-height:1.2; text-align:left;">' + d.name + '</div>' +
