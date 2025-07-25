@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -40,6 +40,7 @@ interface MobileControlsProps {
   onZoomOut: () => void;
   onZoomReset: () => void;
   onClearAll: () => void;
+  artistId?: string | null;
 }
 
 export default function MobileControls({
@@ -47,6 +48,7 @@ export default function MobileControls({
   onZoomOut,
   onZoomReset,
   onClearAll,
+  artistId,
 }: MobileControlsProps) {
   const [showControls, setShowControls] = useState(false); // existing zoom / clear panel
   const [showMenu, setShowMenu] = useState(false); // new three-dot options menu
@@ -55,8 +57,34 @@ export default function MobileControls({
   const [currentUrl, setCurrentUrl] = useState("");
   const [isCapturing, setIsCapturing] = useState(false);
   const [snapshotDataUrl, setSnapshotDataUrl] = useState<string | null>(null);
+  const [artistXUsername, setArtistXUsername] = useState<string | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  // Fetch artist X username when artistId changes
+  useEffect(() => {
+    const fetchArtistXUsername = async () => {
+      if (!artistId) {
+        setArtistXUsername(null);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/artist-social/${artistId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setArtistXUsername(data.xUsername);
+        } else {
+          setArtistXUsername(null);
+        }
+      } catch (error) {
+        console.error('Error fetching artist X username:', error);
+        setArtistXUsername(null);
+      }
+    };
+
+    fetchArtistXUsername();
+  }, [artistId]);
 
   if (!isMobile) return null;
 
@@ -134,7 +162,14 @@ export default function MobileControls({
   };
   
   const shareToX = () => {
-    const text = encodeURIComponent(`Check out this artist collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+    let text;
+    if (artistXUsername) {
+      // Use artist's X username if available
+      text = encodeURIComponent(`Check out @${artistXUsername}'s collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+    } else {
+      // Fallback to generic message
+      text = encodeURIComponent(`Check out this artist collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+    }
     const url = encodeURIComponent(window.location.href);
     const twitterUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
     window.open(twitterUrl, '_blank', 'width=600,height=400');

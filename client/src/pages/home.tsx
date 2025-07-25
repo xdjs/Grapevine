@@ -111,6 +111,7 @@ export default function Home() {
   const [showNetworkView, setShowNetworkView] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentArtistName, setCurrentArtistName] = useState<string>("");
+  const [currentArtistId, setCurrentArtistId] = useState<string | null>(null);
   const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
   const [clearSearchField, setClearSearchField] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
@@ -162,6 +163,7 @@ export default function Home() {
             const data = await response.json();
             setNetworkData(data);
             setShowNetworkView(true);
+            setCurrentArtistId(params.artistId);
           } else {
             console.error(`Failed to load artist ${params.artistId}:`, response.status);
             // Redirect to home if artist not found
@@ -184,6 +186,10 @@ export default function Home() {
     setNetworkData(data);
     setShowNetworkView(true);
     setIsLoading(false);
+    
+    // Extract or use the provided artist ID
+    const finalArtistId = artistId || data.nodes.find(node => node.size === 30)?.artistId || null;
+    setCurrentArtistId(finalArtistId);
     
     // Update URL to reflect the artist being displayed
     if (artistId) {
@@ -221,6 +227,7 @@ export default function Home() {
     setNetworkData(null);
     setIsLoading(false);
     setCurrentArtistName("");
+    setCurrentArtistId(null);
     setClearSearchField(true);
     // Clear the URL to remove artist ID
     setLocation('/');
@@ -402,13 +409,14 @@ export default function Home() {
             onZoomOut={handleZoomOut}
             onZoomReset={handleZoomReset}
             onClearAll={handleClearNetwork}
+            artistId={currentArtistId}
           />
         </>
       )}
 
 
       {/* Share Button - Only visible when network is shown and not on mobile */}
-      {showNetworkView && !isMobile && <ShareButton />}
+      {showNetworkView && !isMobile && <ShareButton artistId={currentArtistId} />}
 
       {/* Help Button - Hide on mobile when network view is shown */}
       {(!showNetworkView || !isMobile) && <HelpButton />}

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { Share2, Copy, Camera, Download, Facebook, Instagram } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import html2canvas from "html2canvas";
 
 // Custom SVG icons for social media platforms
@@ -19,14 +19,42 @@ const PinterestIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export default function ShareButton() {
+interface ShareButtonProps {
+  artistId?: string | null;
+}
+
+export default function ShareButton({ artistId }: ShareButtonProps = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentUrl, setCurrentUrl] = useState("");
   const [isCapturing, setIsCapturing] = useState(false);
   const [snapshotDataUrl, setSnapshotDataUrl] = useState<string | null>(null);
+  const [artistXUsername, setArtistXUsername] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Fetch artist X username when artistId changes
+  useEffect(() => {
+    const fetchArtistXUsername = async () => {
+      if (!artistId) {
+        setArtistXUsername(null);
+        return;
+      }
 
+      try {
+        const response = await fetch(`/api/artist-social/${artistId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setArtistXUsername(data.xUsername);
+        } else {
+          setArtistXUsername(null);
+        }
+      } catch (error) {
+        console.error('Error fetching artist X username:', error);
+        setArtistXUsername(null);
+      }
+    };
+
+    fetchArtistXUsername();
+  }, [artistId]);
 
   // Platform-specific share functions - direct URL sharing
   const shareToFacebook = () => {
@@ -102,7 +130,14 @@ export default function ShareButton() {
   };
   
   const shareToX = () => {
-    const text = encodeURIComponent(`Check out this artist collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+    let text;
+    if (artistXUsername) {
+      // Use artist's X username if available
+      text = encodeURIComponent(`Check out @${artistXUsername}'s collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+    } else {
+      // Fallback to generic message
+      text = encodeURIComponent(`Check out this artist collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+    }
     const url = encodeURIComponent(window.location.href);
     const twitterUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
     window.open(twitterUrl, '_blank', 'width=600,height=400');
