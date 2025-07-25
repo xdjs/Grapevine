@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, Music, Disc3, Mic2 } from 'lucide-react';
+import { X, ExternalLink, Music, Disc3, Mic2, Users, Loader2 } from 'lucide-react';
 import { CollaborationDetails } from '@/types/network';
 
 interface CollaborationDetailsPopupProps {
@@ -93,21 +93,34 @@ export default function CollaborationDetailsPopup({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div 
+        className="bg-black/95 backdrop-blur-sm border-2 border-purple-500/30 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden text-white"
+        style={{
+          boxShadow: '0 0 20px rgba(180, 39, 180, 0.3)',
+          borderColor: '#b427b4'
+        }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">
-              Collaboration Details
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              {artistName} & {collaboratorName}
-            </p>
+        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-500/20 border border-purple-500/30">
+              <Users className="h-4 w-4 text-purple-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-white">
+                Collaboration Details
+              </h2>
+              <p className="text-sm text-gray-300 mt-1">
+                <span className="font-medium text-purple-300">{artistName}</span>
+                <span className="text-gray-400"> & </span>
+                <span className="font-medium text-purple-300">{collaboratorName}</span>
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800"
           >
             <X className="w-6 h-6" />
           </button>
@@ -116,19 +129,32 @@ export default function CollaborationDetailsPopup({
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
           {loading && (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-600">Loading collaboration details...</span>
+            <div className="flex items-center justify-center py-12">
+              <div className="flex items-center gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
+                <span className="text-gray-300">Loading collaboration details...</span>
+              </div>
             </div>
           )}
 
           {error && (
-            <div className="text-center py-8">
-              <div className="text-red-600 mb-2">Error loading collaboration details</div>
-              <div className="text-sm text-gray-600">{error}</div>
+            <div className="text-center py-12">
+              <div className="text-red-400 mb-4 text-lg font-medium">Error loading collaboration details</div>
+              <div className="text-sm text-gray-400 mb-6">{error}</div>
               <button
                 onClick={fetchCollaborationDetails}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                style={{
+                  boxShadow: '0 4px 12px rgba(180, 39, 180, 0.3)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#8f1c8f';
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(180, 39, 180, 0.5)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#b427b4';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(180, 39, 180, 0.3)';
+                }}
               >
                 Try Again
               </button>
@@ -138,33 +164,39 @@ export default function CollaborationDetailsPopup({
           {details && !loading && (
             <div className="space-y-6">
               {/* Description */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Collaboration</h3>
-                <p className="text-gray-700 leading-relaxed">{details.description}</p>
+              <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
+                <h3 className="text-lg font-medium text-white mb-3 flex items-center gap-2">
+                  <Users className="text-purple-400" style={{ width: '10px', height: '10px' }} />
+                  Collaboration
+                </h3>
+                <p className="text-gray-300 leading-relaxed">{details.description}</p>
               </div>
 
               {/* Projects */}
               {details.projects && details.projects.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">Projects Together</h3>
+                  <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+                    <Music className="text-purple-400" style={{ width: '10px', height: '10px' }} />
+                    Projects Together
+                  </h3>
                   <div className="space-y-3">
                     {details.projects.map((project, index) => (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                        className="flex items-center justify-between p-4 bg-gray-900/50 border border-gray-700 rounded-lg hover:bg-gray-800/50 transition-colors"
                       >
                         <div className="flex items-center space-x-3">
-                          <div className="text-blue-600">
+                          <div className="text-purple-400">
                             {getProjectIcon(project.type)}
                           </div>
                           <div>
-                            <div className="font-medium text-gray-900">{project.name}</div>
-                            <div className="flex items-center space-x-2 text-sm text-gray-600">
-                              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                            <div className="font-medium text-white">{project.name}</div>
+                            <div className="flex items-center space-x-2 text-sm text-gray-400 mt-1">
+                              <span className="bg-purple-500/20 text-purple-300 px-2 py-1 rounded text-xs border border-purple-500/30">
                                 {getProjectTypeLabel(project.type)}
                               </span>
                               {project.year && (
-                                <span>{project.year}</span>
+                                <span className="text-gray-500">{project.year}</span>
                               )}
                             </div>
                           </div>
@@ -174,7 +206,7 @@ export default function CollaborationDetailsPopup({
                             href={project.spotifyUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-green-600 hover:text-green-700 transition-colors"
+                            className="text-green-400 hover:text-green-300 transition-colors p-2 rounded-lg hover:bg-green-500/10"
                             title="Open in Spotify"
                           >
                             <ExternalLink className="w-5 h-5" />
@@ -188,17 +220,18 @@ export default function CollaborationDetailsPopup({
 
               {/* Personal History */}
               {details.personalHistory && (
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Background</h3>
-                  <p className="text-gray-700 leading-relaxed">{details.personalHistory}</p>
+                <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
+                  <h3 className="text-lg font-medium text-white mb-3">Background</h3>
+                  <p className="text-gray-300 leading-relaxed">{details.personalHistory}</p>
                 </div>
               )}
 
               {/* No projects found */}
               {(!details.projects || details.projects.length === 0) && (
-                <div className="text-center py-8 text-gray-500">
-                  <Music className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p>No specific collaboration projects found between these artists.</p>
+                <div className="text-center py-12 text-gray-400">
+                  <Music className="w-8 h-8 mx-auto mb-4 text-gray-600" />
+                  <p className="text-lg">No specific collaboration projects found between these artists.</p>
+                  <p className="text-sm text-gray-500 mt-2">This could mean they haven't officially collaborated yet, or the data isn't available.</p>
                 </div>
               )}
             </div>
@@ -206,13 +239,13 @@ export default function CollaborationDetailsPopup({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
-          <div className="text-sm text-gray-600">
+        <div className="flex items-center justify-between p-6 border-t border-gray-700 bg-gray-900/50">
+          <div className="text-sm text-gray-400">
             Powered by OpenAI & Spotify
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+            className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
           >
             Close
           </button>
