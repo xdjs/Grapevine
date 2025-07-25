@@ -576,41 +576,22 @@ export default function NetworkVisualizer({
           const mainArtistName = mainArtistNode?.name || "";
           setMainArtistName(mainArtistName);
           
-          // Find the direct connection to determine the relationship
-          const directLink = data.links.find(link => {
+          // Check if the clicked node is directly connected to main artist (first layer)
+          const isFirstLayer = data.links.some(link => {
             const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
             const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-            return (sourceId === d.name && targetId !== mainArtistName) || 
-                   (targetId === d.name && sourceId !== mainArtistName);
+            return (sourceId === mainArtistName && targetId === d.name) || 
+                   (sourceId === d.name && targetId === mainArtistName);
           });
           
-          if (directLink) {
-            // This is a second or third layer node - find its direct connection
-            const connectedNodeId = directLink.source === d.name ? 
-              (typeof directLink.target === 'string' ? directLink.target : directLink.target.id) :
-              (typeof directLink.source === 'string' ? directLink.source : directLink.source.id);
-            
-            // Check if the clicked node is directly connected to main artist (first layer)
-            const isFirstLayer = data.links.some(link => {
-              const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-              const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-              return (sourceId === mainArtistName && targetId === d.name) || 
-                     (sourceId === d.name && targetId === mainArtistName);
-            });
-            
-            if (isFirstLayer) {
-              // First layer: clicked node is directly connected to main artist
-              // Show collaboration between clicked node and main artist
-              setCollaborationArtist(mainArtistName);
-              setCollaborationCollaborator(d.name);
-            } else {
-              // Second layer: clicked node is connected to a first-layer node
-              // Show collaboration between clicked node and their direct connection
-              setCollaborationArtist(connectedNodeId);
-              setCollaborationCollaborator(d.name);
-            }
+          if (isFirstLayer) {
+            // First layer: clicked node is directly connected to main artist
+            // Show collaboration between clicked node and main artist
+            setCollaborationArtist(mainArtistName);
+            setCollaborationCollaborator(d.name);
           } else {
-            // Fallback: direct connection to main artist
+            // Second layer: clicked node is not directly connected to main artist
+            // Show collaboration between clicked node and main artist
             setCollaborationArtist(mainArtistName);
             setCollaborationCollaborator(d.name);
           }
@@ -753,41 +734,22 @@ export default function NetworkVisualizer({
           // For collaborators, find the direct connection to determine the relationship
           const mainArtistName = mainArtistNode?.name || "";
           
-          // Find the direct connection to determine the relationship
-          const directLink = data.links.find(link => {
+          // Check if the clicked node is directly connected to main artist (first layer)
+          const isFirstLayer = data.links.some(link => {
             const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
             const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-            return (sourceId === d.name && targetId !== mainArtistName) || 
-                   (targetId === d.name && sourceId !== mainArtistName);
+            return (sourceId === mainArtistName && targetId === d.name) || 
+                   (sourceId === d.name && targetId === mainArtistName);
           });
           
-          if (directLink) {
-            // This is a second or third layer node - find its direct connection
-            const connectedNodeId = directLink.source === d.name ? 
-              (typeof directLink.target === 'string' ? directLink.target : directLink.target.id) :
-              (typeof directLink.source === 'string' ? directLink.source : directLink.source.id);
-            
-            // Check if the clicked node is directly connected to main artist (first layer)
-            const isFirstLayer = data.links.some(link => {
-              const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-              const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-              return (sourceId === mainArtistName && targetId === d.name) || 
-                     (sourceId === d.name && targetId === mainArtistName);
-            });
-            
-            if (isFirstLayer) {
-              // First layer: clicked node is directly connected to main artist
-              // Show collaboration between clicked node and main artist
-              setCollaborationArtist(mainArtistName);
-              setCollaborationCollaborator(d.name);
-            } else {
-              // Second layer: clicked node is connected to a first-layer node
-              // Show collaboration between clicked node and their direct connection
-              setCollaborationArtist(connectedNodeId);
-              setCollaborationCollaborator(d.name);
-            }
+          if (isFirstLayer) {
+            // First layer: clicked node is directly connected to main artist
+            // Show collaboration between clicked node and main artist
+            setCollaborationArtist(mainArtistName);
+            setCollaborationCollaborator(d.name);
           } else {
-            // Fallback: direct connection to main artist
+            // Second layer: clicked node is not directly connected to main artist
+            // Show collaboration between clicked node and main artist
             setCollaborationArtist(mainArtistName);
             setCollaborationCollaborator(d.name);
           }
