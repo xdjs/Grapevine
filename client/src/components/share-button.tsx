@@ -441,7 +441,8 @@ export default function ShareButton() {
                 <Button
                   size="icon"
                   variant="secondary"
-                  className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
+                  className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+                  style={{ borderColor: '#b427b4' }}
                   onClick={handleShareClick}
                   disabled={isCapturing}
                 >
