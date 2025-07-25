@@ -576,38 +576,41 @@ export default function NetworkVisualizer({
           const mainArtistName = mainArtistNode?.name || "";
           setMainArtistName(mainArtistName);
           
-          // Find the direct connection to the main artist
+          // Find the direct connection to determine the relationship
           const directLink = data.links.find(link => {
             const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
             const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-            return (sourceId === mainArtistName && targetId === d.name) || 
-                   (sourceId === d.name && targetId === mainArtistName);
+            return (sourceId === d.name && targetId !== mainArtistName) || 
+                   (targetId === d.name && sourceId !== mainArtistName);
           });
           
           if (directLink) {
-            // Direct connection to main artist
-            setCollaborationArtist(mainArtistName);
-            setCollaborationCollaborator(d.name);
-          } else {
-            // Find the intermediate collaborator that connects to main artist
-            const intermediateLink = data.links.find(link => {
+            // This is a second or third layer node - find its direct connection
+            const connectedNodeId = directLink.source === d.name ? 
+              (typeof directLink.target === 'string' ? directLink.target : directLink.target.id) :
+              (typeof directLink.source === 'string' ? directLink.source : directLink.source.id);
+            
+            // Determine which is the "parent" and which is the "child" in the relationship
+            const isSecondLayer = data.links.some(link => {
               const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
               const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-              return sourceId === d.name || targetId === d.name;
+              return (sourceId === mainArtistName && targetId === connectedNodeId) || 
+                     (sourceId === connectedNodeId && targetId === mainArtistName);
             });
             
-            if (intermediateLink) {
-              const intermediateId = intermediateLink.source === d.name ? 
-                (typeof intermediateLink.target === 'string' ? intermediateLink.target : intermediateLink.target.id) :
-                (typeof intermediateLink.source === 'string' ? intermediateLink.source : intermediateLink.source.id);
-              
-              setCollaborationArtist(intermediateId);
+            if (isSecondLayer) {
+              // Second layer: clicked node is connected to main artist through connectedNodeId
+              setCollaborationArtist(connectedNodeId);
               setCollaborationCollaborator(d.name);
             } else {
-              // Fallback to main artist
-              setCollaborationArtist(mainArtistName);
+              // Third layer: clicked node is connected to connectedNodeId
+              setCollaborationArtist(connectedNodeId);
               setCollaborationCollaborator(d.name);
             }
+          } else {
+            // Fallback: direct connection to main artist
+            setCollaborationArtist(mainArtistName);
+            setCollaborationCollaborator(d.name);
           }
         }
       })
@@ -745,11 +748,45 @@ export default function NetworkVisualizer({
           setCollaborationArtist(d.name);
           setCollaborationCollaborator(d.name);
         } else {
-          // For collaborators, use the stored collaboration data
+          // For collaborators, find the direct connection to determine the relationship
           const mainArtistName = mainArtistNode?.name || "";
-          setMainArtistName(mainArtistName);
-          setCollaborationArtist(mainArtistName);
-          setCollaborationCollaborator(d.name);
+          
+          // Find the direct connection to determine the relationship
+          const directLink = data.links.find(link => {
+            const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+            const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+            return (sourceId === d.name && targetId !== mainArtistName) || 
+                   (targetId === d.name && sourceId !== mainArtistName);
+          });
+          
+          if (directLink) {
+            // This is a second or third layer node - find its direct connection
+            const connectedNodeId = directLink.source === d.name ? 
+              (typeof directLink.target === 'string' ? directLink.target : directLink.target.id) :
+              (typeof directLink.source === 'string' ? directLink.source : directLink.source.id);
+            
+            // Determine which is the "parent" and which is the "child" in the relationship
+            const isSecondLayer = data.links.some(link => {
+              const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+              const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+              return (sourceId === mainArtistName && targetId === connectedNodeId) || 
+                     (sourceId === connectedNodeId && targetId === mainArtistName);
+            });
+            
+            if (isSecondLayer) {
+              // Second layer: clicked node is connected to main artist through connectedNodeId
+              setCollaborationArtist(connectedNodeId);
+              setCollaborationCollaborator(d.name);
+            } else {
+              // Third layer: clicked node is connected to connectedNodeId
+              setCollaborationArtist(connectedNodeId);
+              setCollaborationCollaborator(d.name);
+            }
+          } else {
+            // Fallback: direct connection to main artist
+            setCollaborationArtist(mainArtistName);
+            setCollaborationCollaborator(d.name);
+          }
         }
         
         setShowCollaborationPopup(true);
@@ -1221,3 +1258,4 @@ export default function NetworkVisualizer({
     </div>
   );
 }
+
