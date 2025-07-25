@@ -651,6 +651,7 @@ export default function NetworkVisualizer({
       const roles = d.types || [d.type];
       const roleDisplay = roles.length > 1 ? roles.join(", ") : roles[0];
 
+
       // Update these paths if the assets live elsewhere
       const networkIconPath = "/grapevine-logo.png"; // grape + clef icon
       const artistIconPath = "/music_nerd_logo.png";   // Music Nerd logo PNG served from public
@@ -684,6 +685,64 @@ export default function NetworkVisualizer({
             <div style="display:flex; align-items:center; gap:${gap}; cursor:pointer;" class="collaboration-action">
               <img src="${collaborationIconPath}" alt="Collaboration Details" class="collaboration-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
               <a href="#" class="popup-action collaboration-link" style="font-size:${linkFontSize}; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">Collaboration details</a>
+
+      // Use enhanced layout only for artist nodes
+      if (roles.includes("artist")) {
+        const roleDisplay = roles.length > 1 ? roles.join(", ") : roles[0];
+
+        // Find the main artist node - it's the largest artist node
+        const mainArtistNode = data.nodes
+          .filter(node => node.type === 'artist' || (node.types && node.types.includes('artist')))
+          .reduce((largest, current) => 
+            !largest || current.size > largest.size ? current : largest, 
+            null as NetworkNode | null
+          );
+
+        // Check if this is the main artist
+        const isMainArtist = d === mainArtistNode;
+
+        // Update these paths if the assets live elsewhere
+        const networkIconPath = "/grapevine-logo.png"; // grape + clef icon
+        const artistIconPath = "/music_nerd_logo.png";   // Music Nerd logo PNG served from public
+
+        // Detect mobile and adjust sizes accordingly
+        const isMobile = window.innerWidth <= 768;
+        const maxWidth = isMobile ? "280px" : "320px";
+        const iconSize = isMobile ? 28 : 40;
+        const titleFontSize = isMobile ? "14px" : "16px";
+        const roleFontSize = isMobile ? "11px" : "12px";
+        const linkFontSize = isMobile ? "12px" : "13px";
+        const closeButtonSize = isMobile ? "20px" : "24px";
+        const paddingRight = isMobile ? "25px" : "30px";
+        const gap = isMobile ? "8px" : "10px";
+
+        // Build content - only include network action for non-main artists
+        let actionsHtml = '';
+        
+        // Only show "generate artist network" button for non-main artists
+        if (!isMainArtist) {
+          actionsHtml += `
+            <div style="display:flex; align-items:center; gap:${gap}; cursor:pointer;" class="network-action">
+              <img src="${networkIconPath}" alt="Network" class="network-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
+              <a href="#" class="popup-action network-link" style="font-size:${linkFontSize}; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s network</a>
+            </div>`;
+        }
+        
+        // Always show Music Nerd profile button
+        actionsHtml += `
+          <div style="display:flex; align-items:center; gap:${gap}; cursor:pointer;" class="artist-action">
+            <img src="${artistIconPath}" alt="Artist Page" class="artist-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
+            <a href="#" class="popup-action artist-page-link" style="font-size:${linkFontSize}; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s Music Nerd profile</a>
+          </div>`;
+
+        const content = `
+          <div style="position:relative; max-width:${maxWidth}; padding-right:${paddingRight};">
+            <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:${closeButtonSize}; color:white;">&times;</span>
+            <div style="font-weight:bold; font-size:${titleFontSize}; line-height:1.2; text-align:left;">${d.name}</div>
+            <div style="margin-top:2px; font-size:${roleFontSize}; text-align:left;">Roles: ${roleDisplay}</div>
+            <div style="display:flex; flex-direction:column; gap:${gap}; margin-top:${gap};">
+              ${actionsHtml}
+
             </div>
           </div>
         </div>`;
