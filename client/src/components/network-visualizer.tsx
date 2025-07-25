@@ -673,12 +673,22 @@ export default function NetworkVisualizer({
         const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === 'artist');
         const isMainArtist = d === mainArtistNode;
         
+        // Check if this node is an artist (has artist role)
+        const isArtist = roles.includes('artist');
+        
         // Build collaboration details section conditionally
         const collaborationSection = isMainArtist ? '' : 
           '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="collaboration-action">' +
             '<div class="collaboration-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer; pointer-events: auto;">' + collaborationIconSvg + '</div>' +
             '<a href="#" class="popup-action collaboration-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">Collaboration details</a>' +
           '</div>';
+        
+        // Build Music Nerd profile section conditionally (only for artists)
+        const musicNerdSection = isArtist ? 
+          '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="artist-action">' +
+            '<img src="' + artistIconPath + '" alt="Artist Page" class="artist-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer;" />' +
+            '<a href="#" class="popup-action artist-page-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">' + d.name + '\'s Music Nerd profile</a>' +
+          '</div>' : '';
         
         const content =  
         '<div style="position:relative; max-width:' + maxWidth + '; padding-right:' + paddingRight + ';">' +
@@ -690,10 +700,7 @@ export default function NetworkVisualizer({
               '<img src="' + networkIconPath + '" alt="Network" class="network-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer;" />' +
               '<a href="#" class="popup-action network-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">' + d.name + '\'s network</a>' +
             '</div>' +
-            '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="artist-action">' +
-              '<img src="' + artistIconPath + '" alt="Artist Page" class="artist-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer;" />' +
-              '<a href="#" class="popup-action artist-page-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">' + d.name + '\'s Music Nerd profile</a>' +
-            '</div>' +
+            musicNerdSection +
             collaborationSection +
           '</div>' +
         '</div>';
@@ -807,7 +814,11 @@ export default function NetworkVisualizer({
 
       // Attach event handlers
       tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
-      tooltip.selectAll(".artist-page-link, .artist-icon, .artist-action").on("click", profileHandler);
+      
+      // Only attach Music Nerd profile handler if profile section exists (only for artists)
+      if (isArtist) {
+        tooltip.selectAll(".artist-page-link, .artist-icon, .artist-action").on("click", profileHandler);
+      }
       
       // Only attach collaboration handler if collaboration section exists (not for main artist)
       if (!isMainArtist) {
