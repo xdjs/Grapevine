@@ -120,6 +120,7 @@ export default function Home() {
     showArtists: true,
   });
   const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
+  const saveToHistoryRef = useRef<((artistName: string, artistId: string | null) => void) | null>(null);
   const isMobile = useIsMobile();
   const spacing = useDynamicSpacing();
 
@@ -258,6 +259,10 @@ export default function Home() {
     }
   };
 
+  const handleHistorySave = (saveHistoryFn: (artistName: string, artistId: string | null) => void) => {
+    saveToHistoryRef.current = saveHistoryFn;
+  };
+
   const handleArtistNodeClick = useCallback(async (artistName: string, artistId?: string) => {
     console.log(`🔗 [Home] Artist node clicked: ${artistName} (ID: ${artistId})`);
     
@@ -278,6 +283,11 @@ export default function Home() {
         const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
         const finalArtistId = mainArtist?.artistId || mainArtist?.id || artistId;
         handleNetworkData(data, finalArtistId);
+        
+        // Save to search history
+        if (saveToHistoryRef.current) {
+          saveToHistoryRef.current(artistName, finalArtistId || null);
+        }
       } else {
         // Handle no collaborators response
         console.warn(`No network data found for ${artistName}`);
@@ -318,6 +328,7 @@ export default function Home() {
           triggerSearchRef.current = searchFn;
         }}
         onClearAll={handleReset}
+        onHistorySave={handleHistorySave}
       />
 
       {/* Attribution Content - Only visible when not showing network */}
