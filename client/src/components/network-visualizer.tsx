@@ -660,7 +660,7 @@ export default function NetworkVisualizer({
       // Detect mobile and adjust sizes accordingly
       const isMobile = window.innerWidth <= 768;
       const maxWidth = isMobile ? "320px" : "380px";
-      const iconSize = isMobile ? 24 : 32;
+      const iconSize = isMobile ? 16 : 20;
       const titleFontSize = isMobile ? "14px" : "16px";
       const roleFontSize = isMobile ? "11px" : "12px";
       const linkFontSize = isMobile ? "11px" : "12px";
