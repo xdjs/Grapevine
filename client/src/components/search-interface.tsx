@@ -18,6 +18,7 @@ interface SearchInterfaceProps {
   onLoadingChange?: (loading: boolean, artistName?: string) => void;
   onSearchFunction?: (searchFn: (artistName: string) => void) => void;
   onClearAll?: () => void;
+  onHistorySave?: (saveHistoryFn: (artistName: string, artistId: string | null) => void) => void;
 }
 
 interface ArtistOption {
@@ -126,7 +127,7 @@ const useDynamicSpacing = () => {
   return spacing;
 };
 
-function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction, onClearAll }: SearchInterfaceProps) {
+function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction, onClearAll, onHistorySave }: SearchInterfaceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentSearch, setCurrentSearch] = useState("");
   const [artistOptions, setArtistOptions] = useState<ArtistOption[]>([]);
@@ -583,6 +584,13 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       });
     }
   }, [onSearchFunction, onNetworkData, onLoadingChange, toast, saveToSearchHistory]);
+
+  // Register history save function with parent
+  useEffect(() => {
+    if (onHistorySave) {
+      onHistorySave(saveToSearchHistory);
+    }
+  }, [onHistorySave, saveToSearchHistory]);
 
   return (
     <>

@@ -17,11 +17,6 @@ interface NetworkLink {
   target: string;
 }
 
-interface NetworkData {
-  nodes: NetworkNode[];
-  links: NetworkLink[];
-}
-
 interface CollaborationData {
   artists: Array<{
     name: string;
@@ -221,7 +216,7 @@ Requirements:
         // Try parsing the extracted JSON
         try {
           collaborationData = JSON.parse(jsonContent);
-        } catch (firstParseError) {
+        } catch {
           // Fallback: try to create a minimal valid structure if parsing fails
           console.warn('❌ [Vercel] Primary JSON parse failed, trying fallback');
           collaborationData = { artists: [] };
@@ -281,11 +276,11 @@ Investigate thoroughly for multiple roles on ${artist.name}, whether they are fa
               );
               console.log(`✅ [Vercel] Detected roles for MAIN artist "${artist.name}":`, mainArtistRoles);
             }
-          } catch (parseError) {
+          } catch {
             console.log(`⚠️ [Vercel] Could not parse main artist role detection for "${artist.name}", using default`);
           }
         }
-      } catch (error) {
+      } catch {
         console.log(`⚠️ [Vercel] Main artist role detection failed for "${artist.name}", using default`);
       }
 
@@ -384,11 +379,11 @@ Guidelines:
                 collaborationData = hallucinatedData;
                 console.log(`✨ [Vercel] Generated ${hallucinatedData.artists.length} hallucinated collaborators for "${artist.name}"`);
               }
-            } catch (parseError) {
+            } catch {
               console.warn('⚠️ [Vercel] Failed to parse hallucinated data, falling back to single node');
             }
           }
-        } catch (hallucinationError) {
+        } catch {
           console.warn('⚠️ [Vercel] Failed to generate hallucinated data, falling back to single node');
         }
         
@@ -531,11 +526,11 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
                     );
                     console.log(`✅ [Vercel] Detected roles for artist "${branchingArtist}":`, branchingRoles);
                   }
-                } catch (parseError) {
+                } catch {
                   console.log(`⚠️ [Vercel] Could not parse role detection for "${branchingArtist}", using default`);
                 }
               }
-            } catch (error) {
+            } catch {
               console.log(`⚠️ [Vercel] Role detection failed for "${branchingArtist}", using default`);
             }
 

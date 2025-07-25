@@ -17,11 +17,6 @@ interface NetworkLink {
   target: string;
 }
 
-interface NetworkData {
-  nodes: NetworkNode[];
-  links: NetworkLink[];
-}
-
 interface Collaborator {
   name: string;
   type: string;
@@ -35,6 +30,51 @@ interface CollaborationData {
     topCollaborators: string[];
   }>;
   artists?: Collaborator[];
+}
+
+// Add artist name normalization function
+function normalizeArtistName(name: string): string {
+  // Remove parenthetical information like "(French Kiwi Juice)"
+  let normalized = name.replace(/\s*\([^)]*\)\s*/g, '').trim();
+  
+  // Remove common suffixes that might cause mismatches
+  normalized = normalized.replace(/\s+(aka|also known as|formerly)\s+.*$/i, '').trim();
+  
+  // Remove extra whitespace
+  normalized = normalized.replace(/\s+/g, ' ').trim();
+  
+  return normalized;
+}
+
+// Add enhanced artist lookup function
+async function findArtistInDatabase(client: any, artistName: string): Promise<{id: string, name: string} | null> {
+  const variations = [
+    artistName, // Original name
+    normalizeArtistName(artistName), // Normalized name
+  ];
+  
+  // Remove duplicates
+  const uniqueVariations = [...new Set(variations)];
+  
+  for (const variation of uniqueVariations) {
+    if (!variation || variation.length < 2) continue;
+    
+    console.log(`🔍 [Vercel] Trying artist lookup with variation: "${variation}"`);
+    
+    const query = 'SELECT id, name FROM artists WHERE LOWER(name) = LOWER($1)';
+    const result = await client.query(query, [variation]);
+    
+    if (result.rows.length > 0) {
+      console.log(`✅ [Vercel] Found match for "${artistName}" using variation "${variation}": "${result.rows[0].name}" (${result.rows[0].id})`);
+      return {
+        id: result.rows[0].id.toString(),
+        name: result.rows[0].name
+      };
+    }
+  }
+  
+  console.log(`📭 [Vercel] No database match found for "${artistName}" with any variation`);
+  return null;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -89,10 +129,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await client.connect();
       
       // First check if artist exists in database and get the correct capitalization
-      const artistExistsQuery = 'SELECT id, name FROM artists WHERE LOWER(name) = LOWER($1)';
-      const artistExistsResult = await client.query(artistExistsQuery, [artistName]);
+      const artistMatch = await findArtistInDatabase(client, artistName);
       
-      if (artistExistsResult.rows.length === 0) {
+      if (!artistMatch) {
         await client.end();
         return res.status(404).json({ 
           message: `Artist "${artistName}" not found in database. Please search for an existing artist.`
@@ -100,7 +139,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       
       // Use the correct artist name from database (with proper capitalization)
-      const correctArtistName = artistExistsResult.rows[0].name;
+      const correctArtistName = artistMatch.name;
       
       // Skip cache and force fresh generation for all artists with data-only approach
       console.log(`🔄 [Vercel] Skipping cache and forcing fresh generation for ${artistName} with data-only approach`);
@@ -203,7 +242,7 @@ Guidelines:
         // Try parsing the extracted JSON
         try {
           collaborationData = JSON.parse(jsonContent);
-        } catch (firstParseError) {
+        } catch {
           // Fallback: try to create a minimal valid structure if parsing fails
           console.warn('❌ [Vercel] Primary JSON parse failed, trying fallback');
           collaborationData = { artists: [] };
@@ -270,11 +309,11 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
                   }
                 }
               }
-            } catch (parseError) {
+            } catch {
               console.log(`⚠️ [Vercel] Could not parse batch role detection, falling back to defaults`);
             }
           }
-        } catch (error) {
+        } catch {
           console.log(`⚠️ [Vercel] Batch role detection failed, falling back to defaults`);
         }
       };
@@ -328,11 +367,11 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
                 globalRoleMap.set(correctArtistName, mainArtistTypes);
               }
             }
-          } catch (parseError) {
+          } catch {
             console.log(`⚠️ [Vercel] Could not parse main artist role detection for "${correctArtistName}", using default`);
           }
         }
-      } catch (error) {
+      } catch {
         console.log(`⚠️ [Vercel] Main artist role detection failed for "${correctArtistName}", using default`);
       }
       
@@ -346,10 +385,10 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
         id: correctArtistName,
         name: correctArtistName,
         type: orderedMainArtistTypes[0],
-        types: orderedMainArtistTypes,
+        types: orderedMainArtistTypes, // Always an array of all roles
         color: '#FF69B4',
         size: 30,
-        artistId: artistExistsResult.rows[0].id
+        artistId: artistMatch.id
       };
       nodeMap.set(correctArtistName, mainNode);
       
@@ -444,7 +483,7 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
           res.json({
             noCollaborators: true,
             artistName: correctArtistName,
-            artistId: artistExistsResult.rows[0].id,
+            artistId: artistMatch.id,
             singleNodeNetwork: singleNodeData
           });
           return;
@@ -525,11 +564,11 @@ Guidelines:
                 
                 console.log(`✨ [Vercel] Generated ${collaborators.length} hallucinated collaborators for "${correctArtistName}"`);
               }
-            } catch (parseError) {
+            } catch {
               console.warn('⚠️ [Vercel] Failed to parse hallucinated data, falling back to single node');
             }
           }
-        } catch (hallucinationError) {
+        } catch {
           console.warn('⚠️ [Vercel] Failed to generate hallucinated data, falling back to single node');
         }
         
@@ -555,7 +594,9 @@ Guidelines:
           // Person already exists - add the new role to their types array
           if (!collabNode.types.includes(collaborator.type)) {
             collabNode.types.push(collaborator.type);
-            console.log(`🎭 [Vercel] Added ${collaborator.type} role to existing ${collaborator.name} node (now has ${collabNode.types.length} roles)`);
+            // Ensure types is always unique and sorted
+            collabNode.types = Array.from(new Set(collabNode.types)).sort();
+            collabNode.type = collabNode.types[0];
           }
           // Update collaborations list
           if (collaborator.topCollaborators && collaborator.topCollaborators.length > 0) {
@@ -577,19 +618,20 @@ Guidelines:
             id: collaborator.name,
             name: collaborator.name,
             type: enhancedRoles[0],
-            types: enhancedRoles,
+            types: enhancedRoles, // Always an array of all roles
             color: color,
             size: 20, // Smaller size for collaborators
             artistId: null,
             collaborations: collaborator.topCollaborators || []
           };
 
-          // Look up MusicNerd ID for collaborator
-          const collabQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
-          const collabResult = await client.query(collabQuery, [collaborator.name]);
-          if (collabResult.rows.length > 0) {
-            collabNode.artistId = collabResult.rows[0].id;
-          }
+                      // Look up MusicNerd ID for collaborator using enhanced lookup
+            const collabMatch = await findArtistInDatabase(client, collaborator.name);
+            if (collabMatch) {
+              collabNode.artistId = collabMatch.id;
+              // Use the normalized/correct name from database for consistency
+              collabNode.name = collabMatch.name;
+            }
 
           nodeMap.set(collaborator.name, collabNode);
         }
@@ -644,11 +686,11 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
                     );
                     console.log(`✅ [Vercel] Detected roles for artist "${branchingArtist}":`, branchingRoles);
                   }
-                } catch (parseError) {
+                } catch {
                   console.log(`⚠️ [Vercel] Could not parse role detection for "${branchingArtist}", using default`);
                 }
               }
-            } catch (error) {
+            } catch {
               console.log(`⚠️ [Vercel] Role detection failed for "${branchingArtist}", using default`);
             }
 
@@ -656,17 +698,18 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
               id: branchingArtist,
               name: branchingArtist,
               type: branchingRoles[0],
-              types: branchingRoles,
+              types: branchingRoles, // Always an array of all roles
               color: '#FF69B4',
               size: 16,
               artistId: null
             };
 
-            // Look up MusicNerd ID for branching artist
-            const branchQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
-            const branchResult = await client.query(branchQuery, [branchingArtist]);
-            if (branchResult.rows.length > 0) {
-              branchNode.artistId = branchResult.rows[0].id;
+            // Look up MusicNerd ID for branching artist using enhanced lookup
+            const branchMatch = await findArtistInDatabase(client, branchingArtist);
+            if (branchMatch) {
+              branchNode.artistId = branchMatch.id;
+              // Use the normalized/correct name from database for consistency
+              branchNode.name = branchMatch.name;
             }
 
             nodeMap.set(branchingArtist, branchNode);
