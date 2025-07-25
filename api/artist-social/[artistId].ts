@@ -1,3 +1,4 @@
+
 import { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -17,6 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+
     const { Client } = await import('pg');
     const client = new Client({
       connectionString: CONNECTION_STRING,
@@ -24,6 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         rejectUnauthorized: false
       }
     });
+
 
     await client.connect();
 
@@ -48,5 +51,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     console.error('Error fetching artist social data:', error);
     return res.status(500).json({ message: 'Internal server error' });
+
   }
 } 

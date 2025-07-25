@@ -27,6 +27,7 @@ export default function ArtistNetwork() {
     showArtists: true,
   });
   const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
+  const saveToHistoryRef = useRef<((artistName: string, artistId: string | null) => void) | null>(null);
   const isMobile = useIsMobile();
 
   const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
@@ -66,6 +67,10 @@ export default function ArtistNetwork() {
     }
   };
 
+  const handleHistorySave = (saveHistoryFn: (artistName: string, artistId: string | null) => void) => {
+    saveToHistoryRef.current = saveHistoryFn;
+  };
+
   // Handle node click to load new artist network
   const handleArtistNodeClick = useCallback(async (artistName: string, artistId?: string) => {
     console.log(`🔗 [Artist Network] Artist node clicked: ${artistName} (ID: ${artistId})`);
@@ -85,7 +90,13 @@ export default function ArtistNetwork() {
         // Normal network data - pass to parent
         const mainArtist = data.nodes.find((node: NetworkNode) => node.size === 30 && node.type === 'artist');
         const finalArtistId = mainArtist?.artistId || mainArtist?.id || artistId;
+
         handleNetworkData(data, finalArtistId);
+        // Save to search history
+        if (saveToHistoryRef.current) {
+          saveToHistoryRef.current(artistName, finalArtistId || null);
+        }
+
       } else {
         // Handle no collaborators response
         console.warn(`No network data found for ${artistName}`);
@@ -149,6 +160,7 @@ export default function ArtistNetwork() {
           triggerSearchRef.current = searchFn;
         }}
         onClearAll={handleClearNetwork}
+        onHistorySave={handleHistorySave}
       />
 
       {/* Network Visualization - Only show when network data exists */}

@@ -17,11 +17,6 @@ interface NetworkLink {
   target: string;
 }
 
-interface NetworkData {
-  nodes: NetworkNode[];
-  links: NetworkLink[];
-}
-
 interface Collaborator {
   name: string;
   type: string;
@@ -35,6 +30,51 @@ interface CollaborationData {
     topCollaborators: string[];
   }>;
   artists?: Collaborator[];
+}
+
+// Add artist name normalization function
+function normalizeArtistName(name: string): string {
+  // Remove parenthetical information like "(French Kiwi Juice)"
+  let normalized = name.replace(/\s*\([^)]*\)\s*/g, '').trim();
+  
+  // Remove common suffixes that might cause mismatches
+  normalized = normalized.replace(/\s+(aka|also known as|formerly)\s+.*$/i, '').trim();
+  
+  // Remove extra whitespace
+  normalized = normalized.replace(/\s+/g, ' ').trim();
+  
+  return normalized;
+}
+
+// Add enhanced artist lookup function
+async function findArtistInDatabase(client: any, artistName: string): Promise<{id: string, name: string} | null> {
+  const variations = [
+    artistName, // Original name
+    normalizeArtistName(artistName), // Normalized name
+  ];
+  
+  // Remove duplicates
+  const uniqueVariations = [...new Set(variations)];
+  
+  for (const variation of uniqueVariations) {
+    if (!variation || variation.length < 2) continue;
+    
+    console.log(`🔍 [Vercel] Trying artist lookup with variation: "${variation}"`);
+    
+    const query = 'SELECT id, name FROM artists WHERE LOWER(name) = LOWER($1)';
+    const result = await client.query(query, [variation]);
+    
+    if (result.rows.length > 0) {
+      console.log(`✅ [Vercel] Found match for "${artistName}" using variation "${variation}": "${result.rows[0].name}" (${result.rows[0].id})`);
+      return {
+        id: result.rows[0].id.toString(),
+        name: result.rows[0].name
+      };
+    }
+  }
+  
+  console.log(`📭 [Vercel] No database match found for "${artistName}" with any variation`);
+  return null;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -89,10 +129,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await client.connect();
       
       // First check if artist exists in database and get the correct capitalization
-      const artistExistsQuery = 'SELECT id, name FROM artists WHERE LOWER(name) = LOWER($1)';
-      const artistExistsResult = await client.query(artistExistsQuery, [artistName]);
+      const artistMatch = await findArtistInDatabase(client, artistName);
       
-      if (artistExistsResult.rows.length === 0) {
+      if (!artistMatch) {
         await client.end();
         return res.status(404).json({ 
           message: `Artist "${artistName}" not found in database. Please search for an existing artist.`
@@ -100,7 +139,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       
       // Use the correct artist name from database (with proper capitalization)
-      const correctArtistName = artistExistsResult.rows[0].name;
+      const correctArtistName = artistMatch.name;
       
       // Skip cache and force fresh generation for all artists with data-only approach
       console.log(`🔄 [Vercel] Skipping cache and forcing fresh generation for ${artistName} with data-only approach`);
@@ -125,11 +164,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         apiKey: OPENAI_API_KEY,
       });
 
-      const prompt = `If ${correctArtistName} is a real artist with known music industry collaborations, provide a comprehensive list of music industry professionals who have collaborated with them. Include people who work as producers, songwriters, or both.
+      const prompt = `Provide a comprehensive list of music industry professionals who have collaborated with ${correctArtistName}. Focus on producers, songwriters, and other artists who have worked with them.
 
-IMPORTANT: Search for collaborations regardless of ${correctArtistName}'s popularity level - include mainstream artists, independent artists, underground artists, regional artists, and emerging artists. Many smaller artists still have authentic collaborations that should be included.
+For well-known/mainstream artists (chart-topping, Grammy-nominated, major label artists): Include all documented collaborations you're aware of, as these are likely well-documented and verifiable.
 
-If ${correctArtistName} is not a real artist or you have absolutely no authentic collaboration data for them, return an empty collaborators array. Do NOT create fake or placeholder collaborators.
+For lesser-known artists (independent, underground, regional): Be more selective and only include collaborations you're confident about.
 
 Please respond with JSON in this exact format:
 {
@@ -143,21 +182,23 @@ Please respond with JSON in this exact format:
 }
 
 Guidelines:
-- Search thoroughly for ALL artists regardless of fame level: mainstream, independent, underground, regional, emerging
-- Only include real, verified music industry professionals who have actually worked with ${correctArtistName}
-- If you don't have authentic data, return: {"collaborators": []}
-- For each real person, list ALL their roles from: ["producer", "songwriter", "artist"]
-- Make sure if any of these people have multiple roles (artist, producer, songwriter), it is listed in the data. Search for multiple roles on every person that is queried, regardless of their popularity.
+- For mainstream artists with significant commercial success: Include all known producers, songwriters, and collaborators from album credits, interviews, and industry documentation
+- For independent/underground artists: Be more selective but still include authentic collaborations from official releases
+- If ${correctArtistName} is not a real artist or has absolutely no collaboration data, return: {"collaborators": []}
+- For each person, list ALL their roles from: ["producer", "songwriter", "artist"]
+- Make sure if any of these people have multiple roles (artist, producer, songwriter), it is listed in the data
 - Include their top 3 real collaborating artists (can include both famous and lesser-known artists)
-- Never use generic names like "John Doe", "Producer X", or placeholder data
-- Maximum 10 real collaborators if they exist`;
+- Never use generic placeholder names like "John Doe", "Producer X", etc.
+- Maximum 10 real collaborators if they exist
+- Be confident about well-documented collaborations for commercially successful artists
+- Focus on collaborations from official album/song credits, not rumors or speculation`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
             role: "system",
-            content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
+            content: "You are a music industry database expert. For mainstream/well-known artists, confidently provide all documented collaborations. For lesser-known artists, be more selective but still inclusive of authentic collaborations. Prioritize accuracy while being comprehensive for well-documented artists."
           },
           {
             role: "user",
@@ -201,7 +242,7 @@ Guidelines:
         // Try parsing the extracted JSON
         try {
           collaborationData = JSON.parse(jsonContent);
-        } catch (firstParseError) {
+        } catch {
           // Fallback: try to create a minimal valid structure if parsing fails
           console.warn('❌ [Vercel] Primary JSON parse failed, trying fallback');
           collaborationData = { artists: [] };
@@ -268,11 +309,11 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
                   }
                 }
               }
-            } catch (parseError) {
+            } catch {
               console.log(`⚠️ [Vercel] Could not parse batch role detection, falling back to defaults`);
             }
           }
-        } catch (error) {
+        } catch {
           console.log(`⚠️ [Vercel] Batch role detection failed, falling back to defaults`);
         }
       };
@@ -302,7 +343,7 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
           messages: [
             {
               role: "system",
-              content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
+              content: "You are a music industry database expert. For mainstream/well-known artists, confidently provide all documented collaborations. For lesser-known artists, be more selective but still inclusive of authentic collaborations. Prioritize accuracy while being comprehensive for well-documented artists."
             },
             {
               role: "user",
@@ -326,11 +367,11 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
                 globalRoleMap.set(correctArtistName, mainArtistTypes);
               }
             }
-          } catch (parseError) {
+          } catch {
             console.log(`⚠️ [Vercel] Could not parse main artist role detection for "${correctArtistName}", using default`);
           }
         }
-      } catch (error) {
+      } catch {
         console.log(`⚠️ [Vercel] Main artist role detection failed for "${correctArtistName}", using default`);
       }
       
@@ -344,10 +385,10 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
         id: correctArtistName,
         name: correctArtistName,
         type: orderedMainArtistTypes[0],
-        types: orderedMainArtistTypes,
+        types: orderedMainArtistTypes, // Always an array of all roles
         color: '#FF69B4',
         size: 30,
-        artistId: artistExistsResult.rows[0].id
+        artistId: artistMatch.id
       };
       nodeMap.set(correctArtistName, mainNode);
       
@@ -361,14 +402,16 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
       const isFakeCollaborator = (name: string): boolean => {
         const lowerName = name.toLowerCase();
         const fakePatterns = [
+          'john doe', 'jane doe', 'john smith', 'jane smith', 'joe smith', 'mary johnson',
+          'bob johnson', 'sarah williams', 'mike brown', 'lisa davis', 'test user', 'test artist',
           'artist a', 'artist b', 'artist c', 'artist d', 'artist e',
           'producer a', 'producer b', 'producer c', 'producer d', 'producer e',
           'songwriter a', 'songwriter b', 'songwriter c', 'songwriter d', 'songwriter e',
           'artist 1', 'artist 2', 'artist 3', 'artist 4', 'artist 5',
           'producer 1', 'producer 2', 'producer 3', 'producer 4', 'producer 5',
           'songwriter 1', 'songwriter 2', 'songwriter 3', 'songwriter 4', 'songwriter 5',
-          'unknown', 'anonymous', 'various', 'n/a', 'tbd',
-          'placeholder', 'example', 'sample'
+          'unknown', 'anonymous', 'various', 'n/a', 'tbd', 'to be determined',
+          'placeholder', 'example', 'sample', 'fictional', 'generic', 'default'
         ];
         return fakePatterns.some(pattern => lowerName.includes(pattern)) ||
                !!lowerName.match(/^(artist|producer|songwriter)\s+[a-z]$/i) ||
@@ -440,7 +483,7 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
           res.json({
             noCollaborators: true,
             artistName: correctArtistName,
-            artistId: artistExistsResult.rows[0].id,
+            artistId: artistMatch.id,
             singleNodeNetwork: singleNodeData
           });
           return;
@@ -467,7 +510,8 @@ Guidelines:
 - Mix real industry professionals with plausible fictional ones
 - Create 3-8 collaborators total
 - Include producers, songwriters, and artists
-- Be creative but keep names realistic
+- Use realistic but unique names (avoid common placeholder names like John Doe, Jane Smith, Producer X, etc.)
+- Create names that sound like real music industry professionals
 - Include varied collaboration styles that would fit ${correctArtistName}'s music
 - Return ONLY the JSON object, no other text`;
 
@@ -520,11 +564,11 @@ Guidelines:
                 
                 console.log(`✨ [Vercel] Generated ${collaborators.length} hallucinated collaborators for "${correctArtistName}"`);
               }
-            } catch (parseError) {
+            } catch {
               console.warn('⚠️ [Vercel] Failed to parse hallucinated data, falling back to single node');
             }
           }
-        } catch (hallucinationError) {
+        } catch {
           console.warn('⚠️ [Vercel] Failed to generate hallucinated data, falling back to single node');
         }
         
@@ -550,7 +594,9 @@ Guidelines:
           // Person already exists - add the new role to their types array
           if (!collabNode.types.includes(collaborator.type)) {
             collabNode.types.push(collaborator.type);
-            console.log(`🎭 [Vercel] Added ${collaborator.type} role to existing ${collaborator.name} node (now has ${collabNode.types.length} roles)`);
+            // Ensure types is always unique and sorted
+            collabNode.types = Array.from(new Set(collabNode.types)).sort();
+            collabNode.type = collabNode.types[0];
           }
           // Update collaborations list
           if (collaborator.topCollaborators && collaborator.topCollaborators.length > 0) {
@@ -572,19 +618,20 @@ Guidelines:
             id: collaborator.name,
             name: collaborator.name,
             type: enhancedRoles[0],
-            types: enhancedRoles,
+            types: enhancedRoles, // Always an array of all roles
             color: color,
             size: 20, // Smaller size for collaborators
             artistId: null,
             collaborations: collaborator.topCollaborators || []
           };
 
-          // Look up MusicNerd ID for collaborator
-          const collabQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
-          const collabResult = await client.query(collabQuery, [collaborator.name]);
-          if (collabResult.rows.length > 0) {
-            collabNode.artistId = collabResult.rows[0].id;
-          }
+                      // Look up MusicNerd ID for collaborator using enhanced lookup
+            const collabMatch = await findArtistInDatabase(client, collaborator.name);
+            if (collabMatch) {
+              collabNode.artistId = collabMatch.id;
+              // Use the normalized/correct name from database for consistency
+              collabNode.name = collabMatch.name;
+            }
 
           nodeMap.set(collaborator.name, collabNode);
         }
@@ -618,7 +665,7 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
                 messages: [
                   {
                     role: "system",
-                    content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
+                    content: "You are a music industry database expert. For mainstream/well-known artists, confidently provide all documented collaborations. For lesser-known artists, be more selective but still inclusive of authentic collaborations. Prioritize accuracy while being comprehensive for well-documented artists."
                   },
                   {
                     role: "user",
@@ -639,11 +686,11 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
                     );
                     console.log(`✅ [Vercel] Detected roles for artist "${branchingArtist}":`, branchingRoles);
                   }
-                } catch (parseError) {
+                } catch {
                   console.log(`⚠️ [Vercel] Could not parse role detection for "${branchingArtist}", using default`);
                 }
               }
-            } catch (error) {
+            } catch {
               console.log(`⚠️ [Vercel] Role detection failed for "${branchingArtist}", using default`);
             }
 
@@ -651,17 +698,18 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
               id: branchingArtist,
               name: branchingArtist,
               type: branchingRoles[0],
-              types: branchingRoles,
+              types: branchingRoles, // Always an array of all roles
               color: '#FF69B4',
               size: 16,
               artistId: null
             };
 
-            // Look up MusicNerd ID for branching artist
-            const branchQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
-            const branchResult = await client.query(branchQuery, [branchingArtist]);
-            if (branchResult.rows.length > 0) {
-              branchNode.artistId = branchResult.rows[0].id;
+            // Look up MusicNerd ID for branching artist using enhanced lookup
+            const branchMatch = await findArtistInDatabase(client, branchingArtist);
+            if (branchMatch) {
+              branchNode.artistId = branchMatch.id;
+              // Use the normalized/correct name from database for consistency
+              branchNode.name = branchMatch.name;
             }
 
             nodeMap.set(branchingArtist, branchNode);
