@@ -669,6 +669,17 @@ export default function NetworkVisualizer({
               const closeButtonSize = isMobile ? "20px" : "24px";
         const paddingRight = isMobile ? "25px" : "30px";
         const gap = isMobile ? "6px" : "8px";
+        // Check if this is the main artist
+        const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const isMainArtist = d === mainArtistNode;
+        
+        // Build collaboration details section conditionally
+        const collaborationSection = isMainArtist ? '' : 
+          '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="collaboration-action">' +
+            '<div class="collaboration-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer; pointer-events: auto;">' + collaborationIconSvg + '</div>' +
+            '<a href="#" class="popup-action collaboration-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">Collaboration details</a>' +
+          '</div>';
+        
         const content =  
         '<div style="position:relative; max-width:' + maxWidth + '; padding-right:' + paddingRight + ';">' +
           '<span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:' + closeButtonSize + '; color:white;">&times;</span>' +
@@ -683,10 +694,7 @@ export default function NetworkVisualizer({
               '<img src="' + artistIconPath + '" alt="Artist Page" class="artist-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer;" />' +
               '<a href="#" class="popup-action artist-page-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">' + d.name + '\'s Music Nerd profile</a>' +
             '</div>' +
-            '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="collaboration-action">' +
-              '<div class="collaboration-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer; pointer-events: auto;">' + collaborationIconSvg + '</div>' +
-              '<a href="#" class="popup-action collaboration-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">Collaboration details</a>' +
-            '</div>' +
+            collaborationSection +
           '</div>' +
         '</div>';
 
@@ -800,7 +808,11 @@ export default function NetworkVisualizer({
       // Attach event handlers
       tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
       tooltip.selectAll(".artist-page-link, .artist-icon, .artist-action").on("click", profileHandler);
-      tooltip.selectAll(".collaboration-link, .collaboration-icon, .collaboration-action").on("click", collaborationHandler);
+      
+      // Only attach collaboration handler if collaboration section exists (not for main artist)
+      if (!isMainArtist) {
+        tooltip.selectAll(".collaboration-link, .collaboration-icon, .collaboration-action").on("click", collaborationHandler);
+      }
 
       // Close button handler
       tooltip.select(".tooltip-close").on("click", () => {
