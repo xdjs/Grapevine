@@ -45,7 +45,7 @@ export default function NetworkVisualizer({
   const [expandingArtistName, setExpandingArtistName] = useState("");
 
   // Find the main artist node
-  const mainArtistNode = data.nodes.find(node => 
+  const mainArtistNode = (fullNetworkData ? fullNetworkData.nodes : data.nodes).find(node => 
     node.size === 30 && (node.type === 'artist' || (node.types && node.types.includes('artist')))
   );
 
@@ -75,7 +75,12 @@ export default function NetworkVisualizer({
     const nodes = fullNetworkData ? fullNetworkData.nodes : data.nodes;
     const links = fullNetworkData ? fullNetworkData.links : data.links;
     
-    if (!mainArtistNode) return nodes;
+    console.log(`🔍 [getVisibleNodes] Total nodes: ${nodes.length}, mainArtistNode:`, mainArtistNode?.name || 'not found');
+    
+    if (!mainArtistNode) {
+      console.log(`🔍 [getVisibleNodes] No main artist node found, returning all ${nodes.length} nodes`);
+      return nodes;
+    }
     
     const firstDegreeIds = getFirstDegreeCollaborators();
     const visibleIds = new Set([mainArtistNode.id]);
@@ -103,7 +108,10 @@ export default function NetworkVisualizer({
       });
     });
     
-    return nodes.filter(node => visibleIds.has(node.id));
+    const filteredNodes = nodes.filter(node => visibleIds.has(node.id));
+    console.log(`🔍 [getVisibleNodes] Filtered to ${filteredNodes.length} visible nodes out of ${nodes.length} total`);
+    
+    return filteredNodes;
   };
 
   // Get visible links based on visible nodes
@@ -203,17 +211,11 @@ export default function NetworkVisualizer({
     console.log(`🔄 Reset to first-degree view for ${mainArtistNode?.name || 'main artist'}`);
   };
 
-  // Get the data to display (either filtered or full)
-  const displayData = fullNetworkData || {
+  // Always use filtered data based on expanded nodes, but use full network data as base when available
+  const finalDisplayData = {
     nodes: getVisibleNodes(),
     links: getVisibleLinks()
   };
-
-  // Always use filtered data based on expanded nodes, but use full network data as base when available
-  const finalDisplayData = fullNetworkData ? {
-    nodes: getVisibleNodes(),
-    links: getVisibleLinks()
-  } : displayData;
 
   // Log the current state for debugging
   useEffect(() => {
