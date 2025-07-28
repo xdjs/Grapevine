@@ -1,5 +1,6 @@
 import { apiRequest } from "./queryClient";
 import { NetworkData, NetworkResponse, NoCollaboratorsResponse } from "../types/network";
+import { fetchMainArtistProfilePictures } from "./profile-pictures";
 
 export async function fetchNetworkData(artistName: string, allowHallucinations?: boolean): Promise<NetworkResponse> {
   try {
@@ -39,6 +40,20 @@ export async function fetchNetworkData(artistName: string, allowHallucinations?:
     }
     
     console.log(`✅ [Frontend] Received network data with ${data.nodes?.length || 0} nodes`);
+    
+    // If we have network data with nodes, fetch profile pictures for main artists
+    if (data && 'nodes' in data && data.nodes && data.nodes.length > 0) {
+      console.log(`🖼️ [Frontend] Fetching profile pictures for main artists...`);
+      try {
+        const dataWithProfilePictures = await fetchMainArtistProfilePictures(data);
+        console.log(`🖼️✅ [Frontend] Profile pictures fetched successfully`);
+        return dataWithProfilePictures;
+      } catch (profileError) {
+        console.warn(`🖼️⚠️ [Frontend] Failed to fetch profile pictures, continuing without them:`, profileError);
+        return data; // Return original data if profile picture fetching fails
+      }
+    }
+    
     return data;
   } catch (error) {
     console.error(`❌ [Frontend] Error fetching network data:`, error);
@@ -84,6 +99,20 @@ export async function fetchNetworkDataById(artistId: string, allowHallucinations
     }
     
     console.log(`✅ [Frontend] Received network data with ${data.nodes?.length || 0} nodes for artist ID: ${artistId}`);
+    
+    // If we have network data with nodes, fetch profile pictures for main artists
+    if (data && 'nodes' in data && data.nodes && data.nodes.length > 0) {
+      console.log(`🖼️ [Frontend] Fetching profile pictures for main artists...`);
+      try {
+        const dataWithProfilePictures = await fetchMainArtistProfilePictures(data);
+        console.log(`🖼️✅ [Frontend] Profile pictures fetched successfully`);
+        return dataWithProfilePictures;
+      } catch (profileError) {
+        console.warn(`🖼️⚠️ [Frontend] Failed to fetch profile pictures, continuing without them:`, profileError);
+        return data; // Return original data if profile picture fetching fails
+      }
+    }
+    
     return data;
   } catch (error) {
     console.error(`❌ [Frontend] Error fetching network data:`, error);

@@ -511,7 +511,7 @@ export default function NetworkVisualizer({
           
           // Create a circular clipping path using D3
           const clipId = `clip-${d.id.replace(/[^a-zA-Z0-9]/g, '')}`;
-          const svg = d3.select(container).select("svg");
+          const svg = d3.select(svgRef.current);
           
           // Ensure defs exists
           if (svg.select("defs").empty()) {
@@ -588,7 +588,7 @@ export default function NetworkVisualizer({
           
           // Create a circular clipping path using D3
           const clipId = `clip-multi-${d.id.replace(/[^a-zA-Z0-9]/g, '')}`;
-          const svg = d3.select(container).select("svg");
+          const svg = d3.select(svgRef.current);
           
           // Ensure defs exists
           if (svg.select("defs").empty()) {
