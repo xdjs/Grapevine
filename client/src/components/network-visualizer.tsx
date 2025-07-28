@@ -606,7 +606,7 @@ export default function NetworkVisualizer({
 
     // Create simulation with centering force for main artist
     const simulation = d3
-      .forceSimulation<NetworkNode>(displayData.nodes)
+      .forceSimulation<NetworkNode>(finalDisplayData.nodes)
       .force(
         "link",
         d3
@@ -653,7 +653,7 @@ export default function NetworkVisualizer({
     // Create nodes with multi-role support
     const nodeElements = networkGroup
       .selectAll(".node")
-      .data(displayData.nodes)
+      .data(finalDisplayData.nodes)
       .enter()
       .append("g")
       .attr("class", (d) => `node-group network-node node-${d.type}`)
