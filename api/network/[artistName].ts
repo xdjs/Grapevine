@@ -822,7 +822,7 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
   } catch (error) {
     console.error("❌ [Vercel] Error fetching network data:", error);
     console.error('❌ [Vercel] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    res.status(500).json({ 
+    return res.status(500).json({ 
       message: "Internal server error",
       error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
