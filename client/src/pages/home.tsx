@@ -186,10 +186,6 @@ export default function Home() {
             setShowNetworkView(true);
 
             setCurrentArtistId(params.artistId);
-          } else {
-            console.error(`Failed to load artist ${params.artistId}:`, response.status);
-            // Redirect to home if artist not found
-            setLocation('/');
           }
         } catch (error) {
           console.error(`Error loading artist ${params.artistId}:`, error);
