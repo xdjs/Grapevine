@@ -40,6 +40,7 @@ export default function NetworkVisualizer({
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [fullNetworkData, setFullNetworkData] = useState<NetworkData | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [persistenceKey, setPersistenceKey] = useState<string>('');
   
   // Persist expanded networks to localStorage
   const persistExpandedNetworks = useCallback(() => {
@@ -47,12 +48,13 @@ export default function NetworkVisualizer({
       const persistData = {
         expandedNodes: Array.from(expandedNodes),
         fullNetworkData: fullNetworkData,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        key: persistenceKey || `network-${Date.now()}`
       };
       localStorage.setItem('grapevine-expanded-networks', JSON.stringify(persistData));
-      console.log(`💾 [Persistence] Saved expanded networks to localStorage`);
+      console.log(`💾 [Persistence] Saved expanded networks to localStorage with key: ${persistData.key}`);
     }
-  }, [fullNetworkData, expandedNodes]);
+  }, [fullNetworkData, expandedNodes, persistenceKey]);
   
   // Restore expanded networks from localStorage
   const restoreExpandedNetworks = useCallback(() => {
@@ -271,6 +273,9 @@ export default function NetworkVisualizer({
           return newSet;
         });
         
+        // Set persistence key for this expansion session
+        setPersistenceKey(`expansion-${Date.now()}`);
+        
         // Persist the expanded networks
         setTimeout(() => persistExpandedNetworks(), 100);
         
@@ -355,57 +360,15 @@ export default function NetworkVisualizer({
     }
   }, [fullNetworkData, expandedNodes]);
 
-  // Handle visibility changes (app switching)
+  // Persist expanded networks whenever they change
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      console.log(`📱 [Visibility] Document visibility changed: ${document.visibilityState}`);
-      console.log(`📱 [Visibility] fullNetworkData exists: ${!!fullNetworkData}`);
-      console.log(`📱 [Visibility] expandedNodes count: ${expandedNodes.size}`);
-      
-      if (document.visibilityState === 'visible' && fullNetworkData) {
-        console.log(`📱 [Visibility] App became visible, ensuring expanded networks persist`);
-        // Force a re-render to ensure expanded networks are still visible
-        setFullNetworkData(prev => prev);
-      }
-    };
+    if (expandedNodes.size > 0 || fullNetworkData) {
+      console.log(`💾 [Persistence] Auto-saving expanded networks`);
+      setTimeout(() => persistExpandedNetworks(), 100);
+    }
+  }, [expandedNodes, fullNetworkData, persistExpandedNetworks]);
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [fullNetworkData, expandedNodes]);
-
-  // Handle window focus/blur events
-  useEffect(() => {
-    const handleWindowFocus = () => {
-      console.log(`🪟 [Window] Window gained focus`);
-      console.log(`🪟 [Window] fullNetworkData exists: ${!!fullNetworkData}`);
-      console.log(`🪟 [Window] expandedNodes count: ${expandedNodes.size}`);
-      
-      if (fullNetworkData) {
-        console.log(`🪟 [Window] Ensuring expanded networks persist after window focus`);
-        // Force a re-render to ensure expanded networks are still visible
-        setFullNetworkData(prev => prev);
-      }
-    };
-
-    const handleWindowBlur = () => {
-      console.log(`🪟 [Window] Window lost focus`);
-      console.log(`🪟 [Window] fullNetworkData exists: ${!!fullNetworkData}`);
-      console.log(`🪟 [Window] expandedNodes count: ${expandedNodes.size}`);
-    };
-
-    window.addEventListener('focus', handleWindowFocus);
-    window.addEventListener('blur', handleWindowBlur);
-    
-    return () => {
-      window.removeEventListener('focus', handleWindowFocus);
-      window.removeEventListener('blur', handleWindowBlur);
-    };
-  }, [fullNetworkData, expandedNodes]);
-
-  // Restore expanded networks when data becomes available
+  // Restore expanded networks when data becomes available (only once)
   useEffect(() => {
     if (data && data.nodes && data.nodes.length > 0 && !isInitialized) {
       console.log(`🔄 [Mount] Data available, attempting to restore expanded networks`);
@@ -420,6 +383,14 @@ export default function NetworkVisualizer({
       console.log(`🔄 [Mount] No data available yet, skipping restoration`);
     }
   }, [data, restoreExpandedNetworks, isInitialized]);
+  
+  // Ensure expanded networks persist across component re-renders
+  useEffect(() => {
+    if (isInitialized && expandedNodes.size > 0 && !fullNetworkData) {
+      console.log(`🔄 [Persistence] Restoring expanded networks after component re-render`);
+      restoreExpandedNetworks();
+    }
+  }, [isInitialized, expandedNodes.size, fullNetworkData, restoreExpandedNetworks]);
 
   // Fetch configuration on component mount
   useEffect(() => {
