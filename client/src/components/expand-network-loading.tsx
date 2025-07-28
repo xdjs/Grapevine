@@ -6,7 +6,12 @@ interface ExpandNetworkLoadingProps {
 }
 
 export default function ExpandNetworkLoading({ isVisible, artistName }: ExpandNetworkLoadingProps) {
-  if (!isVisible) return null;
+  console.log(`🔗 [Loading] Component render - isVisible: ${isVisible}, artistName: ${artistName}`);
+  
+  if (!isVisible) {
+    console.log(`🔗 [Loading] Component not visible, returning null`);
+    return null;
+  }
 
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 p-4">

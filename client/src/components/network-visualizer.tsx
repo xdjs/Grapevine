@@ -122,17 +122,31 @@ export default function NetworkVisualizer({
 
   // Function to expand a node's network
   const expandNodeNetwork = async (nodeName: string, nodeId?: string) => {
-    console.log(`🔗 Expanding network for: ${nodeName}`);
+    console.log(`🔗 [Expand] Starting expansion for: ${nodeName}`);
+    console.log(`🔗 [Expand] Current expandedNodes:`, Array.from(expandedNodes));
+    console.log(`🔗 [Expand] Current fullNetworkData exists:`, !!fullNetworkData);
     
     // Set loading state
     setIsExpandingNetwork(true);
     setExpandingArtistName(nodeName);
     
+    console.log(`🔗 [Expand] Loading state set to true for: ${nodeName}`);
+    
     try {
       // Fetch the full network for this collaborator
+      console.log(`🔗 [Expand] Fetching network from: /api/network/${encodeURIComponent(nodeName)}`);
       const response = await fetch(`/api/network/${encodeURIComponent(nodeName)}`);
+      console.log(`🔗 [Expand] Response status:`, response.status);
+      console.log(`🔗 [Expand] Response ok:`, response.ok);
+      
       if (response.ok) {
         const collaboratorNetwork = await response.json();
+        console.log(`🔗 [Expand] Received collaborator network:`, {
+          nodesCount: collaboratorNetwork.nodes?.length || 0,
+          linksCount: collaboratorNetwork.links?.length || 0,
+          hasNodes: !!collaboratorNetwork.nodes,
+          hasLinks: !!collaboratorNetwork.links
+        });
         
         // Merge the collaborator's network with the existing network
         const mergedNodes = [...data.nodes];
@@ -171,19 +185,35 @@ export default function NetworkVisualizer({
           links: mergedLinks
         };
         
+        console.log(`🔗 [Expand] Merged network data:`, {
+          totalNodes: mergedNodes.length,
+          totalLinks: mergedLinks.length,
+          originalNodes: data.nodes.length,
+          originalLinks: data.links.length,
+          addedNodes: mergedNodes.length - data.nodes.length,
+          addedLinks: mergedLinks.length - data.links.length
+        });
+        
         setFullNetworkData(mergedNetworkData);
         
         // Add this node to expanded set
-        setExpandedNodes(prev => new Set([...prev, nodeName]));
+        setExpandedNodes(prev => {
+          const newSet = new Set([...prev, nodeName]);
+          console.log(`🔗 [Expand] Updated expandedNodes:`, Array.from(newSet));
+          return newSet;
+        });
         
-        console.log(`✅ Expanded network for ${nodeName} - added ${collaboratorNetwork.nodes.length} nodes and ${collaboratorNetwork.links.length} links`);
+        console.log(`✅ [Expand] Successfully expanded network for ${nodeName} - added ${collaboratorNetwork.nodes.length} nodes and ${collaboratorNetwork.links.length} links`);
       } else {
-        console.error(`❌ Failed to fetch network for ${nodeName}`);
+        console.error(`❌ [Expand] Failed to fetch network for ${nodeName} - status: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`❌ [Expand] Error response:`, errorText);
       }
     } catch (error) {
-      console.error(`❌ Error expanding network for ${nodeName}:`, error);
+      console.error(`❌ [Expand] Error expanding network for ${nodeName}:`, error);
     } finally {
       // Clear loading state
+      console.log(`🔗 [Expand] Clearing loading state for: ${nodeName}`);
       setIsExpandingNetwork(false);
       setExpandingArtistName("");
     }
@@ -1060,7 +1090,11 @@ export default function NetworkVisualizer({
         e.preventDefault();
         e.stopPropagation();
         
-        console.log(`🔗 Expanding network for ${d.name}`);
+        console.log(`🔗 [Handler] Expand button clicked for ${d.name}`);
+        console.log(`🔗 [Handler] Artist ID:`, d.artistId);
+        console.log(`🔗 [Handler] Is first-degree collaborator:`, isFirstDegreeCollaborator);
+        console.log(`🔗 [Handler] Is main artist:`, isMainArtist);
+        
         await expandNodeNetwork(d.name, d.artistId);
         hideTooltip();
       };
@@ -1079,14 +1113,20 @@ export default function NetworkVisualizer({
       tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
       
       // Only attach expand/shrink handlers if section exists (first-degree collaborators only)
+      console.log(`🔗 [Tooltip] Setting up handlers - isFirstDegreeCollaborator: ${isFirstDegreeCollaborator}, isMainArtist: ${isMainArtist}, isExpanded: ${isExpanded}`);
+      
       if (isFirstDegreeCollaborator && !isMainArtist) {
         if (isExpanded) {
           // Attach shrink handler for expanded nodes
+          console.log(`🔗 [Tooltip] Attaching shrink handler for ${d.name}`);
           tooltip.selectAll(".shrink-link, .shrink-icon, .shrink-action").on("click", shrinkHandler);
         } else {
           // Attach expand handler for non-expanded nodes
+          console.log(`🔗 [Tooltip] Attaching expand handler for ${d.name}`);
           tooltip.selectAll(".expand-link, .expand-icon, .expand-action").on("click", expandHandler);
         }
+      } else {
+        console.log(`🔗 [Tooltip] Not attaching expand/shrink handlers - not first-degree or is main artist`);
       }
       
       // Only attach Music Nerd profile handler if profile section exists (only for artists)
