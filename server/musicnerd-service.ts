@@ -233,6 +233,59 @@ class MusicNerdService {
     }
   }
 
+  async getArtistProfilePicture(artistName: string): Promise<{ id: string | null, imageUrl: string | null }> {
+    if (!this.isAvailable) {
+      console.log(`🔒 [DEBUG] MusicNerd service not available for "${artistName}"`);
+      return { id: null, imageUrl: null };
+    }
+
+    try {
+      console.log(`🖼️ [DEBUG] Looking up profile picture for: "${artistName}"`);
+      
+      const connectionString = process.env.CONNECTION_STRING;
+      if (connectionString && connectionString.includes('postgresql://')) {
+        try {
+          const { Client } = await import('pg');
+          const client = new Client({ connectionString });
+          
+          await client.connect();
+          
+          // Query for artist with imageUrl
+          const query = 'SELECT id, name, image_url FROM artists WHERE LOWER(name) = LOWER($1)';
+          const result = await client.query(query, [artistName]);
+          
+          await client.end();
+          
+          if (result.rows.length > 0) {
+            const artist = result.rows[0];
+            
+            // Check for exact case match first
+            const exactMatch = result.rows.find(row => row.name === artistName);
+            const selectedArtist = exactMatch || artist;
+            
+            console.log(`🖼️ [DEBUG] Found artist: "${selectedArtist.name}" (ID: ${selectedArtist.id})`);
+            console.log(`🖼️ [DEBUG] Image URL: ${selectedArtist.image_url || 'None'}`);
+            
+            return {
+              id: selectedArtist.id,
+              imageUrl: selectedArtist.image_url || null
+            };
+          } else {
+            console.log(`📭 [DEBUG] No artist found for "${artistName}" in MusicNerd database`);
+            return { id: null, imageUrl: null };
+          }
+        } catch (dbError) {
+          console.log(`⚠️ [DEBUG] Database query failed for "${artistName}":`, dbError);
+          return { id: null, imageUrl: null };
+        }
+      }
+      
+      return { id: null, imageUrl: null };
+    } catch (error) {
+      console.error(`💥 [DEBUG] Exception during profile picture lookup for "${artistName}":`, error);
+      return { id: null, imageUrl: null };
+    }
+  }
 
 
   async searchArtistByName(artistName: string): Promise<MusicNerdArtist | null> {

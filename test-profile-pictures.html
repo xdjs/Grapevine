@@ -116,7 +116,15 @@
         </div>
 
         <div class="test-section">
-            <h3>2. Network API Test</h3>
+            <h3>2. MusicNerd Images Test</h3>
+            <p>Test if MusicNerd database has profile pictures for artists.</p>
+            <input type="text" id="musicnerdArtist" placeholder="Artist name" value="Taylor Swift">
+            <button onclick="testMusicNerdAPI()">Test MusicNerd Images</button>
+            <div id="musicnerdResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Network API Test</h3>
             <p>Test if the network API returns nodes with profile pictures.</p>
             <input type="text" id="networkArtist" placeholder="Artist name" value="Taylor Swift">
             <button onclick="testNetworkAPI()">Test Network API</button>
@@ -193,6 +201,59 @@
             }
         }
 
+        async function testMusicNerdAPI() {
+            const artistName = document.getElementById('musicnerdArtist').value;
+            const resultDiv = document.getElementById('musicnerdResult');
+            
+            resultDiv.innerHTML = '<div class="loading">Testing MusicNerd Images...</div>';
+            
+            try {
+                const response = await fetch(`/api/test-musicnerd-images?artistName=${encodeURIComponent(artistName)}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="result ${data.testResults.hasImageUrl ? 'success' : 'info'}">
+                            <h4>${data.testResults.hasImageUrl ? '✅' : 'ℹ️'} MusicNerd Images Test ${data.testResults.hasImageUrl ? 'Successful' : 'Completed'}</h4>
+                            <p><strong>Artist:</strong> ${data.artistName}</p>
+                            <p><strong>MusicNerd ID:</strong> ${data.testResults.artistId || 'None'}</p>
+                            <p><strong>Has Image URL:</strong> ${data.testResults.hasImageUrl ? '✅ Yes' : '❌ No'}</p>
+                            ${data.testResults.imageUrl ? `<p><strong>Image URL:</strong> ${data.testResults.imageUrl}</p>` : ''}
+                            ${data.testResults.imageUrl ? `<img src="${data.testResults.imageUrl}" alt="${data.artistName}" class="artist-image">` : ''}
+                        </div>
+                    `;
+                    
+                    // Update visual test if we have an image
+                    if (data.testResults.imageUrl) {
+                        const testImage = document.getElementById('testNodeImage');
+                        testImage.src = data.testResults.imageUrl;
+                        testImage.style.display = 'block';
+                    }
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            <h4>❌ MusicNerd Images Test Failed</h4>
+                            <p><strong>Message:</strong> ${data.message}</p>
+                            <p><strong>Available:</strong> ${data.musicNerdAvailable}</p>
+                            ${data.envVars ? `
+                                <p><strong>Environment Variables:</strong></p>
+                                <ul>
+                                    <li>CONNECTION_STRING: ${data.envVars.CONNECTION_STRING ? '✅ Set' : '❌ Missing'}</li>
+                                </ul>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h4>❌ Error Testing MusicNerd Images</h4>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
         async function testNetworkAPI() {
             const artistName = document.getElementById('networkArtist').value;
             const resultDiv = document.getElementById('networkResult');
@@ -241,7 +302,10 @@
             setTimeout(() => {
                 testSpotifyAPI();
                 setTimeout(() => {
-                    testNetworkAPI();
+                    testMusicNerdAPI();
+                    setTimeout(() => {
+                        testNetworkAPI();
+                    }, 1000);
                 }, 1000);
             }, 500);
         };

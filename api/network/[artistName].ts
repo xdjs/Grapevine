@@ -477,10 +477,12 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
         ? ['artist', ...mainArtistTypes.filter(r => r !== 'artist')]
         : mainArtistTypes;
 
-      // Get Spotify image for main artist
+      // Get profile picture for main artist (try Spotify first, then MusicNerd)
       let mainArtistImage = null;
       let mainArtistSpotifyId = null;
+      let mainArtistMusicNerdId = null;
       
+      // Try Spotify first
       if (spotifyService.isConfigured()) {
         try {
           const spotifyArtist = await spotifyService.searchArtist(correctArtistName);
@@ -491,6 +493,21 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
           }
         } catch (error) {
           console.warn(`Could not fetch Spotify data for ${correctArtistName}:`, error);
+        }
+      }
+      
+      // If no Spotify image, try MusicNerd
+      if (!mainArtistImage) {
+        try {
+          const { musicNerdService } = await import('../../server/musicnerd-service');
+          const musicNerdData = await musicNerdService.getArtistProfilePicture(correctArtistName);
+          if (musicNerdData.imageUrl) {
+            mainArtistImage = musicNerdData.imageUrl;
+            mainArtistMusicNerdId = musicNerdData.id;
+            console.log(`🎵 [Vercel] Found MusicNerd image for main artist "${correctArtistName}": ${mainArtistImage}`);
+          }
+        } catch (error) {
+          console.warn(`Could not fetch MusicNerd data for ${correctArtistName}:`, error);
         }
       }
 
@@ -727,10 +744,12 @@ Guidelines:
             collabNode.color = '#8A2BE2'; // Keep producer color for producer-songwriters
           }
         } else {
-          // Get Spotify image for collaborator
+          // Get profile picture for collaborator (try Spotify first, then MusicNerd)
           let collaboratorImage = null;
           let collaboratorSpotifyId = null;
+          let collaboratorMusicNerdId = null;
           
+          // Try Spotify first
           if (spotifyService.isConfigured()) {
             try {
               const spotifyCollaborator = await spotifyService.searchArtist(collaborator.name);
@@ -738,6 +757,21 @@ Guidelines:
                 collaboratorImage = spotifyService.getArtistImageUrl(spotifyCollaborator, 'medium');
                 collaboratorSpotifyId = spotifyCollaborator.id;
                 console.log(`🎵 [Vercel] Found Spotify image for collaborator "${collaborator.name}": ${collaboratorImage}`);
+              }
+            } catch (error) {
+              // Continue without image
+            }
+          }
+          
+          // If no Spotify image, try MusicNerd
+          if (!collaboratorImage) {
+            try {
+              const { musicNerdService } = await import('../../server/musicnerd-service');
+              const musicNerdData = await musicNerdService.getArtistProfilePicture(collaborator.name);
+              if (musicNerdData.imageUrl) {
+                collaboratorImage = musicNerdData.imageUrl;
+                collaboratorMusicNerdId = musicNerdData.id;
+                console.log(`🎵 [Vercel] Found MusicNerd image for collaborator "${collaborator.name}": ${collaboratorImage}`);
               }
             } catch (error) {
               // Continue without image
@@ -829,10 +863,12 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
               console.log(`⚠️ [Vercel] Role detection failed for "${branchingArtist}", using default`);
             }
 
-            // Get Spotify image for branching artist
+            // Get profile picture for branching artist (try Spotify first, then MusicNerd)
             let branchingArtistImage = null;
             let branchingArtistSpotifyId = null;
+            let branchingArtistMusicNerdId = null;
             
+            // Try Spotify first
             if (spotifyService.isConfigured()) {
               try {
                 const spotifyBranchingArtist = await spotifyService.searchArtist(branchingArtist);
@@ -840,6 +876,21 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
                   branchingArtistImage = spotifyService.getArtistImageUrl(spotifyBranchingArtist, 'medium');
                   branchingArtistSpotifyId = spotifyBranchingArtist.id;
                   console.log(`🎵 [Vercel] Found Spotify image for branching artist "${branchingArtist}": ${branchingArtistImage}`);
+                }
+              } catch (error) {
+                // Continue without image
+              }
+            }
+            
+            // If no Spotify image, try MusicNerd
+            if (!branchingArtistImage) {
+              try {
+                const { musicNerdService } = await import('../../server/musicnerd-service');
+                const musicNerdData = await musicNerdService.getArtistProfilePicture(branchingArtist);
+                if (musicNerdData.imageUrl) {
+                  branchingArtistImage = musicNerdData.imageUrl;
+                  branchingArtistMusicNerdId = musicNerdData.id;
+                  console.log(`🎵 [Vercel] Found MusicNerd image for branching artist "${branchingArtist}": ${branchingArtistImage}`);
                 }
               } catch (error) {
                 // Continue without image
