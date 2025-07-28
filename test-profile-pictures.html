@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Pictures Test - Grapevine</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .artist-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #007bff;
+        }
+        .network-node {
+            display: inline-block;
+            margin: 10px;
+            text-align: center;
+        }
+        .node-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid #FF0ACF;
+            background: transparent;
+            position: relative;
+            margin: 0 auto 10px;
+        }
+        .node-image {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Grapevine Profile Pictures Test</h1>
+        <p>This page tests the Spotify profile picture integration for artist network visualization.</p>
+
+        <div class="test-section">
+            <h3>1. Spotify API Test</h3>
+            <p>Test if Spotify API is working and can fetch artist images.</p>
+            <input type="text" id="testArtist" placeholder="Artist name" value="Taylor Swift">
+            <button onclick="testSpotifyAPI()">Test Spotify API</button>
+            <div id="spotifyResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Network API Test</h3>
+            <p>Test if the network API returns nodes with profile pictures.</p>
+            <input type="text" id="networkArtist" placeholder="Artist name" value="Taylor Swift">
+            <button onclick="testNetworkAPI()">Test Network API</button>
+            <div id="networkResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Visual Node Test</h3>
+            <p>Test how nodes with profile pictures would look in the visualization.</p>
+            <div id="visualTest">
+                <div class="network-node">
+                    <div class="node-circle">
+                        <img id="testNodeImage" class="node-image" src="" alt="Artist" style="display: none;">
+                    </div>
+                    <div>Main Artist</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function testSpotifyAPI() {
+            const artistName = document.getElementById('testArtist').value;
+            const resultDiv = document.getElementById('spotifyResult');
+            
+            resultDiv.innerHTML = '<div class="loading">Testing Spotify API...</div>';
+            
+            try {
+                const response = await fetch(`/api/test-spotify?artistName=${encodeURIComponent(artistName)}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h4>✅ Spotify API Test Successful</h4>
+                            <p><strong>Artist:</strong> ${data.spotifyArtist.name}</p>
+                            <p><strong>Spotify ID:</strong> ${data.spotifyArtist.id}</p>
+                            <p><strong>Has Images:</strong> ${data.testResults.hasImages}</p>
+                            <p><strong>Image Count:</strong> ${data.testResults.imageCount}</p>
+                            <p><strong>Image URL:</strong> ${data.testResults.imageUrl || 'None'}</p>
+                            ${data.testResults.imageUrl ? `<img src="${data.testResults.imageUrl}" alt="${data.spotifyArtist.name}" class="artist-image">` : ''}
+                        </div>
+                    `;
+                    
+                    // Update visual test
+                    if (data.testResults.imageUrl) {
+                        const testImage = document.getElementById('testNodeImage');
+                        testImage.src = data.testResults.imageUrl;
+                        testImage.style.display = 'block';
+                    }
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            <h4>❌ Spotify API Test Failed</h4>
+                            <p><strong>Message:</strong> ${data.message}</p>
+                            <p><strong>Configured:</strong> ${data.spotifyConfigured}</p>
+                            ${data.envVars ? `
+                                <p><strong>Environment Variables:</strong></p>
+                                <ul>
+                                    <li>SPOTIFY_CLIENT_ID: ${data.envVars.SPOTIFY_CLIENT_ID ? '✅ Set' : '❌ Missing'}</li>
+                                    <li>SPOTIFY_CLIENT_SECRET: ${data.envVars.SPOTIFY_CLIENT_SECRET ? '✅ Set' : '❌ Missing'}</li>
+                                </ul>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h4>❌ Error Testing Spotify API</h4>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testNetworkAPI() {
+            const artistName = document.getElementById('networkArtist').value;
+            const resultDiv = document.getElementById('networkResult');
+            
+            resultDiv.innerHTML = '<div class="loading">Testing Network API...</div>';
+            
+            try {
+                const response = await fetch(`/api/network/${encodeURIComponent(artistName)}`);
+                const data = await response.json();
+                
+                if (data.nodes && data.nodes.length > 0) {
+                    const mainArtist = data.nodes.find(node => node.size === 30);
+                    const hasImageUrl = mainArtist && mainArtist.imageUrl;
+                    
+                    resultDiv.innerHTML = `
+                        <div class="result ${hasImageUrl ? 'success' : 'info'}">
+                            <h4>${hasImageUrl ? '✅' : 'ℹ️'} Network API Test ${hasImageUrl ? 'Successful' : 'Completed'}</h4>
+                            <p><strong>Nodes:</strong> ${data.nodes.length}</p>
+                            <p><strong>Links:</strong> ${data.links.length}</p>
+                            <p><strong>Main Artist:</strong> ${mainArtist ? mainArtist.name : 'Not found'}</p>
+                            <p><strong>Has Image URL:</strong> ${hasImageUrl ? '✅ Yes' : '❌ No'}</p>
+                            ${hasImageUrl ? `<p><strong>Image URL:</strong> ${mainArtist.imageUrl}</p>` : ''}
+                            ${hasImageUrl ? `<img src="${mainArtist.imageUrl}" alt="${mainArtist.name}" class="artist-image">` : ''}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            <h4>❌ Network API Test Failed</h4>
+                            <p>No nodes returned from API</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h4>❌ Error Testing Network API</h4>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Auto-run tests on page load
+        window.onload = function() {
+            setTimeout(() => {
+                testSpotifyAPI();
+                setTimeout(() => {
+                    testNetworkAPI();
+                }, 1000);
+            }, 500);
+        };
+    </script>
+</body>
+</html> 

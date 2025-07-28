@@ -1,5 +1,100 @@
 import 'dotenv/config';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import axios from 'axios';
+
+// Spotify service for fetching artist images
+class SpotifyService {
+  private clientId: string;
+  private clientSecret: string;
+  private accessToken: string | null = null;
+  private tokenExpiry: number = 0;
+
+  constructor() {
+    this.clientId = process.env.SPOTIFY_CLIENT_ID || '';
+    this.clientSecret = process.env.SPOTIFY_CLIENT_SECRET || '';
+  }
+
+  private async getAccessToken(): Promise<string> {
+    if (this.accessToken && Date.now() < this.tokenExpiry) {
+      return this.accessToken;
+    }
+
+    try {
+      const response = await axios.post(
+        'https://accounts.spotify.com/api/token',
+        'grant_type=client_credentials',
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64')}`
+          }
+        }
+      );
+
+      this.accessToken = response.data.access_token;
+      this.tokenExpiry = Date.now() + (response.data.expires_in * 1000) - 60000; // 1 minute buffer
+
+      if (!this.accessToken) {
+        throw new Error('Access token is null after successful API response');
+      }
+      return this.accessToken;
+    } catch (error) {
+      console.error('Failed to get Spotify access token:', error);
+      throw new Error('Spotify API authentication failed');
+    }
+  }
+
+  async searchArtist(artistName: string): Promise<any | null> {
+    try {
+      const token = await this.getAccessToken();
+      
+      const response = await axios.get(
+        'https://api.spotify.com/v1/search',
+        {
+          params: {
+            q: artistName,
+            type: 'artist',
+            limit: 1
+          },
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      const artists = response.data.artists.items;
+      return artists.length > 0 ? artists[0] : null;
+    } catch (error) {
+      console.error(`Failed to search for artist ${artistName}:`, error);
+      return null;
+    }
+  }
+
+  getArtistImageUrl(artist: any, size: 'small' | 'medium' | 'large' = 'medium'): string | null {
+    if (!artist.images || artist.images.length === 0) {
+      return null;
+    }
+
+    // Sort images by size (largest first)
+    const sortedImages = artist.images.sort((a: any, b: any) => b.width - a.width);
+
+    switch (size) {
+      case 'small':
+        return sortedImages[sortedImages.length - 1]?.url || sortedImages[0]?.url;
+      case 'large':
+        return sortedImages[0]?.url;
+      case 'medium':
+      default:
+        return sortedImages[Math.floor(sortedImages.length / 2)]?.url || sortedImages[0]?.url;
+    }
+  }
+
+  isConfigured(): boolean {
+    return !!(this.clientId && this.clientSecret);
+  }
+}
+
+const spotifyService = new SpotifyService();
 
 interface NetworkNode {
   id: string;
@@ -9,6 +104,8 @@ interface NetworkNode {
   color: string;
   size: number;
   artistId: string | null;
+  imageUrl?: string | null;
+  spotifyId?: string | null;
   collaborations?: string[];
 }
 
@@ -380,6 +477,23 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
         ? ['artist', ...mainArtistTypes.filter(r => r !== 'artist')]
         : mainArtistTypes;
 
+      // Get Spotify image for main artist
+      let mainArtistImage = null;
+      let mainArtistSpotifyId = null;
+      
+      if (spotifyService.isConfigured()) {
+        try {
+          const spotifyArtist = await spotifyService.searchArtist(correctArtistName);
+          if (spotifyArtist) {
+            mainArtistImage = spotifyService.getArtistImageUrl(spotifyArtist, 'medium');
+            mainArtistSpotifyId = spotifyArtist.id;
+            console.log(`🎵 [Vercel] Found Spotify image for main artist "${correctArtistName}": ${mainArtistImage}`);
+          }
+        } catch (error) {
+          console.warn(`Could not fetch Spotify data for ${correctArtistName}:`, error);
+        }
+      }
+
       // Add main artist node using correct capitalization from database and detected roles
       const mainNode = {
         id: correctArtistName,
@@ -388,7 +502,9 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
         types: orderedMainArtistTypes, // Always an array of all roles
         color: '#FF69B4',
         size: 30,
-        artistId: artistMatch.id
+        artistId: artistMatch.id,
+        imageUrl: mainArtistImage,
+        spotifyId: mainArtistSpotifyId
       };
       nodeMap.set(correctArtistName, mainNode);
       
@@ -611,6 +727,23 @@ Guidelines:
             collabNode.color = '#8A2BE2'; // Keep producer color for producer-songwriters
           }
         } else {
+          // Get Spotify image for collaborator
+          let collaboratorImage = null;
+          let collaboratorSpotifyId = null;
+          
+          if (spotifyService.isConfigured()) {
+            try {
+              const spotifyCollaborator = await spotifyService.searchArtist(collaborator.name);
+              if (spotifyCollaborator) {
+                collaboratorImage = spotifyService.getArtistImageUrl(spotifyCollaborator, 'medium');
+                collaboratorSpotifyId = spotifyCollaborator.id;
+                console.log(`🎵 [Vercel] Found Spotify image for collaborator "${collaborator.name}": ${collaboratorImage}`);
+              }
+            } catch (error) {
+              // Continue without image
+            }
+          }
+
           // Create new node with optimized role detection
           const enhancedRoles = getOptimizedRoles(collaborator.name, collaborator.type);
           const color = enhancedRoles.includes('producer') ? '#8A2BE2' : '#00CED1';
@@ -622,16 +755,18 @@ Guidelines:
             color: color,
             size: 20, // Smaller size for collaborators
             artistId: null,
+            imageUrl: collaboratorImage,
+            spotifyId: collaboratorSpotifyId,
             collaborations: collaborator.topCollaborators || []
           };
 
-                      // Look up MusicNerd ID for collaborator using enhanced lookup
-            const collabMatch = await findArtistInDatabase(client, collaborator.name);
-            if (collabMatch) {
-              collabNode.artistId = collabMatch.id;
-              // Use the normalized/correct name from database for consistency
-              collabNode.name = collabMatch.name;
-            }
+          // Look up MusicNerd ID for collaborator using enhanced lookup
+          const collabMatch = await findArtistInDatabase(client, collaborator.name);
+          if (collabMatch) {
+            collabNode.artistId = collabMatch.id;
+            // Use the normalized/correct name from database for consistency
+            collabNode.name = collabMatch.name;
+          }
 
           nodeMap.set(collaborator.name, collabNode);
         }
@@ -694,6 +829,23 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
               console.log(`⚠️ [Vercel] Role detection failed for "${branchingArtist}", using default`);
             }
 
+            // Get Spotify image for branching artist
+            let branchingArtistImage = null;
+            let branchingArtistSpotifyId = null;
+            
+            if (spotifyService.isConfigured()) {
+              try {
+                const spotifyBranchingArtist = await spotifyService.searchArtist(branchingArtist);
+                if (spotifyBranchingArtist) {
+                  branchingArtistImage = spotifyService.getArtistImageUrl(spotifyBranchingArtist, 'medium');
+                  branchingArtistSpotifyId = spotifyBranchingArtist.id;
+                  console.log(`🎵 [Vercel] Found Spotify image for branching artist "${branchingArtist}": ${branchingArtistImage}`);
+                }
+              } catch (error) {
+                // Continue without image
+              }
+            }
+
             const branchNode = {
               id: branchingArtist,
               name: branchingArtist,
@@ -701,7 +853,9 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
               types: branchingRoles, // Always an array of all roles
               color: '#FF69B4',
               size: 16,
-              artistId: null
+              artistId: null,
+              imageUrl: branchingArtistImage,
+              spotifyId: branchingArtistSpotifyId
             };
 
             // Look up MusicNerd ID for branching artist using enhanced lookup

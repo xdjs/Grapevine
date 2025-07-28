@@ -499,18 +499,39 @@ export default function NetworkVisualizer({
         console.log(`🎭 [Frontend] Multi-role node "${d.name}": roles = [${roles.join(', ')}]`);
       }
       
+      // Add profile picture if available (for main artist or artists with images)
+      if (d.imageUrl) {
+        const imageSize = d.size * 1.8; // Make image slightly larger than the circle
+        group.append("defs")
+          .append("clipPath")
+          .attr("id", `clip-${d.id}`)
+          .append("circle")
+          .attr("r", d.size * 0.9)
+          .attr("cx", 0)
+          .attr("cy", 0);
+        
+        group.append("image")
+          .attr("href", d.imageUrl)
+          .attr("x", -imageSize / 2)
+          .attr("y", -imageSize / 2)
+          .attr("width", imageSize)
+          .attr("height", imageSize)
+          .attr("clip-path", `url(#clip-${d.id})`)
+          .style("pointer-events", "none"); // Don't interfere with click events
+      }
+      
       if (roles.length === 1) {
         // Single role - simple circle
         group.append("circle")
           .attr("r", d.size)
-          .attr("fill", "transparent")
+          .attr("fill", d.imageUrl ? "transparent" : "rgba(255, 255, 255, 0.1)") // Transparent if image, light background if no image
           .attr("stroke", () => {
             if (roles[0] === 'artist') return '#FF0ACF';       // Magenta Pink
             if (roles[0] === 'producer') return '#AE53FF';     // Bright Purple  
             if (roles[0] === 'songwriter') return '#67D1F8';   // Light Blue
             return '#355367';  // Police Blue
           })
-          .attr("stroke-width", 4);
+          .attr("stroke-width", d.imageUrl ? 2 : 4); // Thinner stroke if image, thicker if no image
       } else {
         // Multiple roles - create segmented circle
         const angleStep = (2 * Math.PI) / roles.length;
@@ -542,7 +563,7 @@ export default function NetworkVisualizer({
         // Add inner circle for better visibility
         group.append("circle")
           .attr("r", d.size - 4)
-          .attr("fill", "transparent")
+          .attr("fill", d.imageUrl ? "transparent" : "rgba(255, 255, 255, 0.1)")
           .attr("stroke", "white")
           .attr("stroke-width", 2);
       }
