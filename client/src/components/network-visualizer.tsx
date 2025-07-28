@@ -194,6 +194,13 @@ export default function NetworkVisualizer({
     setExpandedNodes(prev => {
       const newSet = new Set(prev);
       newSet.delete(nodeName);
+      
+      // If no nodes are expanded, reset to first-degree view
+      if (newSet.size === 0) {
+        setFullNetworkData(null);
+        console.log(`🔄 No more expanded nodes, resetting to first-degree view`);
+      }
+      
       return newSet;
     });
   };
@@ -698,6 +705,17 @@ export default function NetworkVisualizer({
             return '#355367';  // Police Blue
           })
           .attr("stroke-width", 4);
+          
+        // Add expansion indicator for expanded nodes
+        if (expandedNodes.has(d.name)) {
+          group.append("circle")
+            .attr("r", 3)
+            .attr("fill", "#FF6B6B")
+            .attr("stroke", "white")
+            .attr("stroke-width", 1)
+            .attr("cx", d.size + 2)
+            .attr("cy", -d.size + 2);
+        }
       } else {
         // Multiple roles - create segmented circle
         const angleStep = (2 * Math.PI) / roles.length;
@@ -732,6 +750,17 @@ export default function NetworkVisualizer({
           .attr("fill", "transparent")
           .attr("stroke", "white")
           .attr("stroke-width", 2);
+      }
+      
+      // Add expansion indicator for expanded nodes
+      if (expandedNodes.has(d.name)) {
+        group.append("circle")
+          .attr("r", 3)
+          .attr("fill", "#FF6B6B")
+          .attr("stroke", "white")
+          .attr("stroke-width", 1)
+          .attr("cx", d.size + 2)
+          .attr("cy", -d.size + 2);
       }
     })
       .on("click", function(event, d) {
@@ -867,14 +896,27 @@ export default function NetworkVisualizer({
         const firstDegreeIds = getFirstDegreeCollaborators();
         const isFirstDegreeCollaborator = firstDegreeIds.has(d.name);
         
-        // Build expand network section for first-degree collaborators
-        const expandSection = isFirstDegreeCollaborator && !isMainArtist ? 
-          '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="expand-action">' +
-            '<div class="expand-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer; pointer-events: auto; display:flex; align-items:center; justify-content:center; background:#4CAF50;">' +
-              '<span style="color:white; font-size:16px; font-weight:bold;">+</span>' +
-            '</div>' +
-            '<a href="#" class="popup-action expand-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">Expand ' + d.name + '\'s network</a>' +
-          '</div>' : '';
+        // Check if this node has been expanded
+        const isExpanded = expandedNodes.has(d.name);
+        
+        // Build expand/shrink network section for first-degree collaborators
+        const expandShrinkSection = isFirstDegreeCollaborator && !isMainArtist ? 
+          (isExpanded ? 
+            // Shrink button for expanded nodes
+            '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="shrink-action">' +
+              '<div class="shrink-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer; pointer-events: auto; display:flex; align-items:center; justify-content:center; background:#FF6B6B;">' +
+                '<span style="color:white; font-size:16px; font-weight:bold;">−</span>' +
+              '</div>' +
+              '<a href="#" class="popup-action shrink-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">Shrink ' + d.name + '\'s network</a>' +
+            '</div>' :
+            // Expand button for non-expanded nodes
+            '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="expand-action">' +
+              '<div class="expand-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer; pointer-events: auto; display:flex; align-items:center; justify-content:center; background:#4CAF50;">' +
+                '<span style="color:white; font-size:16px; font-weight:bold;">+</span>' +
+              '</div>' +
+              '<a href="#" class="popup-action expand-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">Expand ' + d.name + '\'s network</a>' +
+            '</div>'
+          ) : '';
         
         // Build collaboration details section conditionally
         const collaborationSection = isMainArtist ? '' : 
@@ -900,7 +942,7 @@ export default function NetworkVisualizer({
               '<img src="' + networkIconPath + '" alt="Network" class="network-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer;" />' +
               '<a href="#" class="popup-action network-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">' + d.name + '\'s network</a>' +
             '</div>' +
-            expandSection +
+            expandShrinkSection +
             musicNerdSection +
             collaborationSection +
           '</div>' +
@@ -1023,12 +1065,28 @@ export default function NetworkVisualizer({
         hideTooltip();
       };
 
+      // Shrink network handler
+      const shrinkHandler = async (e: any) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log(`🔗 Shrinking network for ${d.name}`);
+        collapseNodeNetwork(d.name);
+        hideTooltip();
+      };
+
       // Attach event handlers
       tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
       
-      // Only attach expand handler if expand section exists (first-degree collaborators only)
+      // Only attach expand/shrink handlers if section exists (first-degree collaborators only)
       if (isFirstDegreeCollaborator && !isMainArtist) {
-        tooltip.selectAll(".expand-link, .expand-icon, .expand-action").on("click", expandHandler);
+        if (isExpanded) {
+          // Attach shrink handler for expanded nodes
+          tooltip.selectAll(".shrink-link, .shrink-icon, .shrink-action").on("click", shrinkHandler);
+        } else {
+          // Attach expand handler for non-expanded nodes
+          tooltip.selectAll(".expand-link, .expand-icon, .expand-action").on("click", expandHandler);
+        }
       }
       
       // Only attach Music Nerd profile handler if profile section exists (only for artists)
