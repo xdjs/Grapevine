@@ -39,7 +39,6 @@ export default function NetworkVisualizer({
   // State for managing expanded networks
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [fullNetworkData, setFullNetworkData] = useState<NetworkData | null>(null);
-  const [isExpandedMode, setIsExpandedMode] = useState(false);
   
   // Loading state for expand network functionality
   const [isExpandingNetwork, setIsExpandingNetwork] = useState(false);
@@ -54,8 +53,9 @@ export default function NetworkVisualizer({
   const getFirstDegreeCollaborators = () => {
     if (!mainArtistNode) return new Set<string>();
     
+    const links = fullNetworkData ? fullNetworkData.links : data.links;
     const firstDegreeIds = new Set<string>();
-    data.links.forEach(link => {
+    links.forEach(link => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       
@@ -71,7 +71,11 @@ export default function NetworkVisualizer({
 
   // Get visible nodes based on expansion state
   const getVisibleNodes = () => {
-    if (!mainArtistNode) return data.nodes;
+    // Use fullNetworkData if available, otherwise use data
+    const nodes = fullNetworkData ? fullNetworkData.nodes : data.nodes;
+    const links = fullNetworkData ? fullNetworkData.links : data.links;
+    
+    if (!mainArtistNode) return nodes;
     
     const firstDegreeIds = getFirstDegreeCollaborators();
     const visibleIds = new Set([mainArtistNode.id]);
@@ -87,7 +91,7 @@ export default function NetworkVisualizer({
       visibleIds.add(expandedNodeId);
       
       // Add all nodes connected to this expanded node
-      data.links.forEach(link => {
+      links.forEach(link => {
         const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
         const targetId = typeof link.target === 'string' ? link.target : link.target.id;
         
@@ -99,14 +103,15 @@ export default function NetworkVisualizer({
       });
     });
     
-    return data.nodes.filter(node => visibleIds.has(node.id));
+    return nodes.filter(node => visibleIds.has(node.id));
   };
 
   // Get visible links based on visible nodes
   const getVisibleLinks = () => {
     const visibleNodeIds = new Set(getVisibleNodes().map(node => node.id));
+    const links = fullNetworkData ? fullNetworkData.links : data.links;
     
-    return data.links.filter(link => {
+    return links.filter(link => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       return visibleNodeIds.has(sourceId) && visibleNodeIds.has(targetId);
@@ -168,7 +173,6 @@ export default function NetworkVisualizer({
         
         // Add this node to expanded set
         setExpandedNodes(prev => new Set([...prev, nodeName]));
-        setIsExpandedMode(true);
         
         console.log(`✅ Expanded network for ${nodeName} - added ${collaboratorNetwork.nodes.length} nodes and ${collaboratorNetwork.links.length} links`);
       } else {
@@ -196,7 +200,6 @@ export default function NetworkVisualizer({
   const resetToFirstDegree = () => {
     setFullNetworkData(null);
     setExpandedNodes(new Set());
-    setIsExpandedMode(false);
     console.log(`🔄 Reset to first-degree view for ${mainArtistNode?.name || 'main artist'}`);
   };
 
@@ -206,8 +209,11 @@ export default function NetworkVisualizer({
     links: getVisibleLinks()
   };
 
-  // When in expanded mode, show all nodes from the full network data
-  const finalDisplayData = isExpandedMode && fullNetworkData ? fullNetworkData : displayData;
+  // Always use filtered data based on expanded nodes, but use full network data as base when available
+  const finalDisplayData = fullNetworkData ? {
+    nodes: getVisibleNodes(),
+    links: getVisibleLinks()
+  } : displayData;
 
   // Log the current state for debugging
   useEffect(() => {
@@ -1481,7 +1487,7 @@ export default function NetworkVisualizer({
       <svg ref={svgRef} className="w-full h-full" />
       
       {/* Reset button for expanded mode */}
-      {isExpandedMode && (
+      {fullNetworkData && (
         <button
           onClick={resetToFirstDegree}
           className="absolute top-4 right-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors duration-200 z-10"
