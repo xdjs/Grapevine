@@ -193,6 +193,9 @@ export default function NetworkVisualizer({
     links: getVisibleLinks()
   };
 
+  // When in expanded mode, show all nodes from the full network data
+  const finalDisplayData = isExpandedMode && fullNetworkData ? fullNetworkData : displayData;
+
   // Log the current state for debugging
   useEffect(() => {
     if (fullNetworkData) {
@@ -233,7 +236,7 @@ export default function NetworkVisualizer({
   }, []);
 
   useEffect(() => {
-    if (!svgRef.current || !displayData || !visible) return;
+    if (!svgRef.current || !finalDisplayData || !visible) return;
 
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
@@ -246,8 +249,8 @@ export default function NetworkVisualizer({
     svg.selectAll("*").remove();
 
     // Filter out links where either node doesn't exist or is isolated
-    const nodeSet = new Set(displayData.nodes.map(n => n.id));
-    const validLinks = displayData.links.filter(link => {
+    const nodeSet = new Set(finalDisplayData.nodes.map(n => n.id));
+    const validLinks = finalDisplayData.links.filter(link => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       return nodeSet.has(sourceId) && nodeSet.has(targetId);
@@ -510,7 +513,7 @@ export default function NetworkVisualizer({
       const visited = new Set<string>();
       const components: NetworkNode[][] = [];
       
-      for (const node of displayData.nodes) {
+      for (const node of finalDisplayData.nodes) {
         if (visited.has(node.id)) continue;
         
         const component: NetworkNode[] = [];
@@ -529,10 +532,10 @@ export default function NetworkVisualizer({
             const targetId = typeof link.target === 'string' ? link.target : link.target.id;
             
             if (sourceId === current.id) {
-              const target = displayData.nodes.find(n => n.id === targetId);
+              const target = finalDisplayData.nodes.find(n => n.id === targetId);
               if (target && !visited.has(target.id)) queue.push(target);
             } else if (targetId === current.id) {
-              const source = displayData.nodes.find(n => n.id === sourceId);
+              const source = finalDisplayData.nodes.find(n => n.id === sourceId);
               if (source && !visited.has(source.id)) queue.push(source);
             }
           }
@@ -552,7 +555,7 @@ export default function NetworkVisualizer({
     const componentHeight = height / Math.ceil(components.length / componentsPerRow);
     
     // Find the main artist node - it's the largest artist node (size can be 20, 25, or 30)
-    const mainArtistNode = displayData.nodes
+    const mainArtistNode = finalDisplayData.nodes
       .filter(node => node.type === 'artist' || (node.types && node.types.includes('artist')))
       .reduce((largest, current) => 
         !largest || current.size > largest.size ? current : largest, 
@@ -586,7 +589,7 @@ export default function NetworkVisualizer({
       const currentWidth = container ? container.clientWidth : width;
       const currentHeight = container ? container.clientHeight : height;
       
-      for (const node of displayData.nodes) {
+      for (const node of finalDisplayData.nodes) {
         // Ensure nodes stay well within bounds
         if (node.x! < margin) node.x = margin;
         if (node.x! > currentWidth - margin) node.x = currentWidth - margin;
