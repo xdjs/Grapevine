@@ -211,12 +211,7 @@ export default function NetworkVisualizer({
     links: getVisibleLinks()
   };
   
-  console.log(`🔍 [NetworkVisualizer] finalDisplayData calculated:`, {
-    nodesCount: finalDisplayData.nodes.length,
-    linksCount: finalDisplayData.links.length,
-    hasFullNetworkData: !!fullNetworkData,
-    expandedNodesCount: expandedNodes.size
-  });
+
 
   // Log the current state for debugging
   useEffect(() => {
@@ -258,22 +253,7 @@ export default function NetworkVisualizer({
   }, []);
 
   useEffect(() => {
-    console.log(`🔍 [NetworkVisualizer] useEffect triggered:`, {
-      svgRef: !!svgRef.current,
-      finalDisplayData: !!finalDisplayData,
-      visible,
-      nodesCount: finalDisplayData?.nodes?.length || 0,
-      linksCount: finalDisplayData?.links?.length || 0
-    });
-    
-    if (!svgRef.current || !finalDisplayData || !visible) {
-      console.log(`🔍 [NetworkVisualizer] Early return:`, {
-        noSvgRef: !svgRef.current,
-        noData: !finalDisplayData,
-        notVisible: !visible
-      });
-      return;
-    }
+    if (!svgRef.current || !finalDisplayData || !visible) return;
 
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
@@ -643,7 +623,7 @@ export default function NetworkVisualizer({
 
     // Create simulation with centering force for main artist
     const simulation = d3
-      .forceSimulation<NetworkNode>(displayData.nodes)
+      .forceSimulation<NetworkNode>(finalDisplayData.nodes)
       .force(
         "link",
         d3
@@ -690,7 +670,7 @@ export default function NetworkVisualizer({
     // Create nodes with multi-role support
     const nodeElements = networkGroup
       .selectAll(".node")
-      .data(displayData.nodes)
+      .data(finalDisplayData.nodes)
       .enter()
       .append("g")
       .attr("class", (d) => `node-group network-node node-${d.type}`)
@@ -784,7 +764,7 @@ export default function NetworkVisualizer({
           setMainArtistName(mainArtistName);
           
           // Check if the clicked node is directly connected to main artist (first layer)
-          const isFirstLayer = displayData.links.some(link => {
+          const isFirstLayer = finalDisplayData.links.some(link => {
             const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
             const targetId = typeof link.target === 'string' ? link.target : link.target.id;
             return (sourceId === mainArtistName && targetId === d.name) || 
@@ -799,7 +779,7 @@ export default function NetworkVisualizer({
           } else {
             // Second layer: clicked node is not directly connected to main artist
             // Find the first layer node that this second layer node is connected to
-            const directLink = displayData.links.find(link => {
+            const directLink = finalDisplayData.links.find(link => {
               const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
               const targetId = typeof link.target === 'string' ? link.target : link.target.id;
               return (sourceId === d.name && targetId !== mainArtistName) || 
@@ -833,7 +813,7 @@ export default function NetworkVisualizer({
     // Add labels for all nodes
     const labelElements = networkGroup
       .selectAll(".label")
-      .data(displayData.nodes)
+      .data(finalDisplayData.nodes)
       .enter()
       .append("text")
       .attr("class", "label")
@@ -877,7 +857,7 @@ export default function NetworkVisualizer({
         const paddingRight = isMobile ? "25px" : "30px";
         const gap = isMobile ? "6px" : "8px";
         // Check if this is the main artist
-        const mainArtistNode = displayData.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const mainArtistNode = finalDisplayData.nodes.find(node => node.size === 30 && node.type === 'artist');
         const isMainArtist = d === mainArtistNode;
         
         // Check if this node is an artist (has artist role)
@@ -991,7 +971,7 @@ export default function NetworkVisualizer({
           const mainArtistName = mainArtistNode?.name || "";
           
           // Check if the clicked node is directly connected to main artist (first layer)
-          const isFirstLayer = displayData.links.some(link => {
+          const isFirstLayer = finalDisplayData.links.some(link => {
             const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
             const targetId = typeof link.target === 'string' ? link.target : link.target.id;
             return (sourceId === mainArtistName && targetId === d.name) || 
@@ -1006,7 +986,7 @@ export default function NetworkVisualizer({
           } else {
             // Second layer: clicked node is not directly connected to main artist
             // Find the first layer node that this second layer node is connected to
-            const directLink = displayData.links.find(link => {
+            const directLink = finalDisplayData.links.find(link => {
               const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
               const targetId = typeof link.target === 'string' ? link.target : link.target.id;
               return (sourceId === d.name && targetId !== mainArtistName) || 
@@ -1306,7 +1286,7 @@ export default function NetworkVisualizer({
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
     };
-  }, [displayData, visible, onZoomChange, expandedNodes, fullNetworkData, isExpandedMode]);
+      }, [finalDisplayData, visible, onZoomChange, expandedNodes, fullNetworkData]);
 
   // Helper function to check if a node should be visible based on filter state
   // For multi-role nodes, they are visible if ANY of their roles should be shown
