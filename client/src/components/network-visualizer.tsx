@@ -929,8 +929,8 @@ export default function NetworkVisualizer({
         // Check if this node has been expanded
         const isExpanded = expandedNodes.has(d.name);
         
-        // Build expand/shrink network section for first-degree collaborators
-        const expandShrinkSection = isFirstDegreeCollaborator && !isMainArtist ? 
+        // Build expand/shrink network section for ALL nodes (except main artist)
+        const expandShrinkSection = !isMainArtist ? 
           (isExpanded ? 
             // Shrink button for expanded nodes
             '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="shrink-action">' +
@@ -1092,7 +1092,6 @@ export default function NetworkVisualizer({
         
         console.log(`🔗 [Handler] Expand button clicked for ${d.name}`);
         console.log(`🔗 [Handler] Artist ID:`, d.artistId);
-        console.log(`🔗 [Handler] Is first-degree collaborator:`, isFirstDegreeCollaborator);
         console.log(`🔗 [Handler] Is main artist:`, isMainArtist);
         
         await expandNodeNetwork(d.name, d.artistId);
@@ -1112,10 +1111,10 @@ export default function NetworkVisualizer({
       // Attach event handlers
       tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
       
-      // Only attach expand/shrink handlers if section exists (first-degree collaborators only)
-      console.log(`🔗 [Tooltip] Setting up handlers - isFirstDegreeCollaborator: ${isFirstDegreeCollaborator}, isMainArtist: ${isMainArtist}, isExpanded: ${isExpanded}`);
+      // Only attach expand/shrink handlers if section exists (all nodes except main artist)
+      console.log(`🔗 [Tooltip] Setting up handlers - isMainArtist: ${isMainArtist}, isExpanded: ${isExpanded}`);
       
-      if (isFirstDegreeCollaborator && !isMainArtist) {
+      if (!isMainArtist) {
         if (isExpanded) {
           // Attach shrink handler for expanded nodes
           console.log(`🔗 [Tooltip] Attaching shrink handler for ${d.name}`);
@@ -1126,7 +1125,7 @@ export default function NetworkVisualizer({
           tooltip.selectAll(".expand-link, .expand-icon, .expand-action").on("click", expandHandler);
         }
       } else {
-        console.log(`🔗 [Tooltip] Not attaching expand/shrink handlers - not first-degree or is main artist`);
+        console.log(`🔗 [Tooltip] Not attaching expand/shrink handlers - is main artist`);
       }
       
       // Only attach Music Nerd profile handler if profile section exists (only for artists)
