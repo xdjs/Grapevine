@@ -18,6 +18,7 @@ export default function ArtistNetwork() {
   const [networkData, setNetworkData] = useState<NetworkData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentArtistName, setCurrentArtistName] = useState<string>("");
+  const [currentArtistId, setCurrentArtistId] = useState<string | null>(null);
   const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
   const [clearSearchField, setClearSearchField] = useState(false);
   const [filterState, setFilterState] = useState<FilterState>({
@@ -29,8 +30,11 @@ export default function ArtistNetwork() {
   const saveToHistoryRef = useRef<((artistName: string, artistId: string | null) => void) | null>(null);
   const isMobile = useIsMobile();
 
-  const handleNetworkData = useCallback((data: NetworkData) => {
+  const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
     setNetworkData(data);
+    // Extract the artist ID from the network data
+    const finalArtistId = artistId || data.nodes.find(node => node.size === 30)?.artistId || null;
+    setCurrentArtistId(finalArtistId);
   }, []);
 
   // Navigate back to home
@@ -86,12 +90,13 @@ export default function ArtistNetwork() {
         // Normal network data - pass to parent
         const mainArtist = data.nodes.find((node: NetworkNode) => node.size === 30 && node.type === 'artist');
         const finalArtistId = mainArtist?.artistId || mainArtist?.id || artistId;
-        handleNetworkData(data);
-        
+
+        handleNetworkData(data, finalArtistId);
         // Save to search history
         if (saveToHistoryRef.current) {
           saveToHistoryRef.current(artistName, finalArtistId || null);
         }
+
       } else {
         // Handle no collaborators response
         console.warn(`No network data found for ${artistName}`);
@@ -124,6 +129,7 @@ export default function ArtistNetwork() {
     setNetworkData(null);
     setIsLoading(false);
     setCurrentArtistName("");
+    setCurrentArtistId(null);
     setClearSearchField(true);
     // Clear the URL to remove artist ID
     setLocation('/');
@@ -199,6 +205,7 @@ export default function ArtistNetwork() {
           onZoomOut={handleZoomOut}
           onZoomReset={handleZoomReset}
           onClearAll={handleClearNetwork}
+          artistId={currentArtistId}
         />
       </>
     </div>

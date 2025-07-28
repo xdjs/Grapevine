@@ -16,11 +16,6 @@ interface ArtistSocialData {
   facebookUsername?: string | null;
 }
 
-// Interface for ShareButton props
-interface ShareButtonProps {
-  networkData?: NetworkData | null;
-}
-
 // Custom SVG icons for social media platforms
 const XIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -34,48 +29,57 @@ const PinterestIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export default function ShareButton({ networkData }: ShareButtonProps) {
+
+interface ShareButtonProps {
+  artistId?: string | null;
+  networkData?: NetworkData | null;
+}
+
+export default function ShareButton({ artistId, networkData }: ShareButtonProps = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentUrl, setCurrentUrl] = useState("");
   const [isCapturing, setIsCapturing] = useState(false);
   const [snapshotDataUrl, setSnapshotDataUrl] = useState<string | null>(null);
+
+  const [artistXUsername, setArtistXUsername] = useState<string | null>(null);
   const [artistSocialData, setArtistSocialData] = useState<ArtistSocialData | null>(null);
   const { toast } = useToast();
 
-  // Fetch artist social media data when network data changes
+  // Fetch artist social data when artistId changes
   useEffect(() => {
     const fetchArtistSocialData = async () => {
-      if (!networkData || !networkData.nodes) {
-        setArtistSocialData(null);
-        return;
-      }
-
-      // Find the main artist (the one with size 30)
-      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
-        node.size === 30 && node.type === 'artist'
-      );
-
-      if (!mainArtist || !mainArtist.artistId) {
+      if (!artistId) {
+        setArtistXUsername(null);
         setArtistSocialData(null);
         return;
       }
 
       try {
-        const response = await fetch(`/api/artist-social/${mainArtist.artistId}`);
-        
+        const response = await fetch(`/api/artist-social/${artistId}`);
         if (response.ok) {
-          const socialData = await response.json();
-          setArtistSocialData(socialData);
+          const data = await response.json();
+          setArtistXUsername(data.xUsername);
+          setArtistSocialData({
+            artistId: data.id,
+            name: data.name,
+            xUsername: data.xUsername,
+            instagramUsername: data.instagramUsername,
+            facebookUsername: data.facebookUsername
+          });
         } else {
+          setArtistXUsername(null);
           setArtistSocialData(null);
         }
       } catch (error) {
+        console.error('Error fetching artist social data:', error);
+        setArtistXUsername(null);
         setArtistSocialData(null);
       }
     };
 
     fetchArtistSocialData();
-  }, [networkData]);
+  }, [artistId]);
+
 
   // Platform-specific share functions - direct URL sharing
   const shareToFacebook = () => {
@@ -183,26 +187,18 @@ export default function ShareButton({ networkData }: ShareButtonProps) {
   };
   
   const shareToX = () => {
-    let text = `Check out this artist's collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
-    
-    // Use X username if available from Supabase
-    if (artistSocialData && artistSocialData.xUsername) {
-      text = `Check out @${artistSocialData.xUsername}'s artist collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
-    } else if (artistSocialData && artistSocialData.name) {
-      text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
-    } else if (networkData) {
-      // Find main artist from network data as fallback
-      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
-        node.size === 30 && node.type === 'artist'
-      );
-      if (mainArtist) {
-        text = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇\n\n#music #artists #collaboration`;
-      }
+
+    let text;
+    if (artistXUsername) {
+      // Use artist's X username if available
+      text = encodeURIComponent(`Check out @${artistXUsername}'s collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+    } else {
+      // Fallback to generic message
+      text = encodeURIComponent(`Check out this artist collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
     }
-    
-    const encodedText = encodeURIComponent(text);
+
     const url = encodeURIComponent(window.location.href);
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodedText}&url=${url}`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
     window.open(twitterUrl, '_blank', 'width=600,height=400');
   };
   

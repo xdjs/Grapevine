@@ -111,6 +111,7 @@ export default function Home() {
   const [showNetworkView, setShowNetworkView] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentArtistName, setCurrentArtistName] = useState<string>("");
+  const [currentArtistId, setCurrentArtistId] = useState<string | null>(null);
   const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
   const [clearSearchField, setClearSearchField] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
@@ -183,6 +184,8 @@ export default function Home() {
             // Normal network data - proceed as usual
             setNetworkData(data);
             setShowNetworkView(true);
+
+            setCurrentArtistId(params.artistId);
           }
         } catch (error) {
           console.error(`Error loading artist ${params.artistId}:`, error);
@@ -201,6 +204,10 @@ export default function Home() {
     setNetworkData(data);
     setShowNetworkView(true);
     setIsLoading(false);
+    
+    // Extract or use the provided artist ID
+    const finalArtistId = artistId || data.nodes.find(node => node.size === 30)?.artistId || null;
+    setCurrentArtistId(finalArtistId);
     
     // Update URL to reflect the artist being displayed
     if (artistId) {
@@ -238,6 +245,7 @@ export default function Home() {
     setNetworkData(null);
     setIsLoading(false);
     setCurrentArtistName("");
+    setCurrentArtistId(null);
     setClearSearchField(true);
     // Clear the URL to remove artist ID
     setLocation('/');
@@ -429,7 +437,8 @@ export default function Home() {
             onZoomOut={handleZoomOut}
             onZoomReset={handleZoomReset}
             onClearAll={handleClearNetwork}
-            networkData={networkData}
+            artistId={currentArtistId}
+
           />
         </>
       )}
@@ -437,7 +446,7 @@ export default function Home() {
 
 
       {/* Share Button - Only visible when network is shown and not on mobile */}
-      {showNetworkView && !isMobile && <ShareButton networkData={networkData} />}
+      {showNetworkView && !isMobile && <ShareButton artistId={currentArtistId} />}
 
 
       {/* Help Button - Hide on mobile when network view is shown */}
