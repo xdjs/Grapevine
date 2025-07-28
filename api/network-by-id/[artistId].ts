@@ -10,6 +10,7 @@ interface NetworkNode {
   size: number;
   artistId: string | null;
   collaborations?: string[];
+  imageUrl?: string | null;
 }
 
 interface NetworkLink {
@@ -116,7 +117,65 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
           // If hallucinations requested, continue to generation logic below
         } else {
-          // Multi-node network, return cached data normally
+          // Multi-node network, but check if main artist needs profile picture
+          const mainArtistNode = cachedData.nodes.find((node: NetworkNode) => 
+            node.size === 30 && (node.type === 'artist' || (node.types && node.types.includes('artist')))
+          );
+          
+          if (mainArtistNode && !mainArtistNode.imageUrl) {
+            // Main artist node doesn't have profile picture, fetch it
+            try {
+              const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
+              const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
+              
+              if (SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET) {
+                const authString = Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64');
+                const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Basic ${authString}`,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                  },
+                  body: 'grant_type=client_credentials'
+                });
+                
+                if (tokenResponse.ok) {
+                  const tokenData = await tokenResponse.json() as { access_token: string };
+                  const accessToken = tokenData.access_token;
+                  
+                  const searchResponse = await fetch(
+                    `https://api.spotify.com/v1/search?q=${encodeURIComponent(mainArtistNode.name)}&type=artist&limit=1`,
+                    {
+                      headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                      }
+                    }
+                  );
+                  
+                  if (searchResponse.ok) {
+                    const searchData = await searchResponse.json() as { artists: { items: Array<{ images: Array<{ url: string }> }> } };
+                    const artists = searchData.artists.items;
+                    if (artists.length > 0 && artists[0].images && artists[0].images.length > 0) {
+                      mainArtistNode.imageUrl = artists[0].images[artists[0].images.length - 1].url;
+                      console.log(`🎵 [Vercel] Updated cached data with Spotify profile image for ${mainArtistNode.name}`);
+                      
+                      // Update the cache with the new profile picture
+                      try {
+                        const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE id = $2';
+                        await client.query(updateQuery, [JSON.stringify(cachedData), artistId]);
+                        console.log(`💾 [Vercel] Updated cache with profile picture for artist ID ${artistId}`);
+                      } catch (updateError) {
+                        console.warn('⚠️ [Vercel] Failed to update cache with profile picture:', updateError);
+                      }
+                    }
+                  }
+                }
+              }
+            } catch (spotifyError) {
+              console.warn(`🎵 [Vercel] Could not fetch profile picture for cached data:`, spotifyError);
+            }
+          }
+          
           await client.end();
           return res.json(cachedData);
         }
@@ -287,6 +346,54 @@ Investigate thoroughly for multiple roles on ${artist.name}, whether they are fa
         console.log(`⚠️ [Vercel] Main artist role detection failed for "${artist.name}", using default`);
       }
 
+      // Fetch Spotify profile picture for main artist
+      let profileImageUrl = null;
+      try {
+        // Get Spotify access token
+        const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
+        const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
+        
+        if (SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET) {
+          // Get access token
+          const authString = Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64');
+          const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Basic ${authString}`,
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: 'grant_type=client_credentials'
+          });
+          
+          if (tokenResponse.ok) {
+            const tokenData = await tokenResponse.json() as { access_token: string };
+            const accessToken = tokenData.access_token;
+            
+            // Search for artist
+            const searchResponse = await fetch(
+              `https://api.spotify.com/v1/search?q=${encodeURIComponent(artist.name)}&type=artist&limit=1`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${accessToken}`
+                }
+              }
+            );
+            
+            if (searchResponse.ok) {
+              const searchData = await searchResponse.json() as { artists: { items: Array<{ images: Array<{ url: string }> }> } };
+              const artists = searchData.artists.items;
+              if (artists.length > 0 && artists[0].images && artists[0].images.length > 0) {
+                // Use the smallest image for better performance (usually the last one)
+                profileImageUrl = artists[0].images[artists[0].images.length - 1].url;
+                console.log(`🎵 [Vercel] Found Spotify profile image for ${artist.name}: ${profileImageUrl}`);
+              }
+            }
+          }
+        }
+      } catch (spotifyError) {
+        console.warn(`🎵 [Vercel] Could not fetch Spotify profile image for ${artist.name}:`, spotifyError);
+      }
+
       // Add main artist node with detected roles
       const mainNode = {
         id: artist.name,
@@ -295,7 +402,8 @@ Investigate thoroughly for multiple roles on ${artist.name}, whether they are fa
         types: mainArtistRoles,
         color: '#FF69B4',
         size: 30,
-        artistId: artist.id
+        artistId: artist.id,
+        imageUrl: profileImageUrl
       };
       nodeMap.set(artist.name, mainNode);
       console.log(`🎭 [Vercel] Created MAIN artist node "${artist.name}" with ${mainArtistRoles.length} roles: [${mainArtistRoles.join(', ')}]`);
