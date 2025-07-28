@@ -110,9 +110,10 @@ export default function NetworkVisualizer({
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       
-      if (sourceId === mainArtistNode.name) {
+      // Use mainArtistNode.id consistently for comparison
+      if (sourceId === mainArtistNode.id) {
         firstDegreeIds.add(targetId);
-      } else if (targetId === mainArtistNode.name) {
+      } else if (targetId === mainArtistNode.id) {
         firstDegreeIds.add(sourceId);
       }
     });
@@ -150,21 +151,27 @@ export default function NetworkVisualizer({
     firstDegreeIds.forEach(id => visibleIds.add(id));
     
     // Include expanded nodes and their connections
-    expandedNodes.forEach(expandedNodeId => {
-      visibleIds.add(expandedNodeId);
-      console.log(`🔗 [VisibleNodes] Added expanded node: ${expandedNodeId}`);
-      
-      // Add all nodes connected to this expanded node
-      links.forEach(link => {
-        const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-        const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+    expandedNodes.forEach(expandedNodeName => {
+      // Find the node by name to get its ID
+      const expandedNode = nodes.find(node => node.name === expandedNodeName);
+      if (expandedNode) {
+        visibleIds.add(expandedNode.id);
+        console.log(`🔗 [VisibleNodes] Added expanded node: ${expandedNodeName} (ID: ${expandedNode.id})`);
         
-        if (sourceId === expandedNodeId) {
-          visibleIds.add(targetId);
-        } else if (targetId === expandedNodeId) {
-          visibleIds.add(sourceId);
-        }
-      });
+        // Add all nodes connected to this expanded node
+        links.forEach(link => {
+          const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+          const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+          
+          if (sourceId === expandedNode.id) {
+            visibleIds.add(targetId);
+          } else if (targetId === expandedNode.id) {
+            visibleIds.add(sourceId);
+          }
+        });
+      } else {
+        console.warn(`⚠️ [VisibleNodes] Could not find expanded node: ${expandedNodeName}`);
+      }
     });
     
     const visibleNodes = nodes.filter(node => visibleIds.has(node.id));
@@ -366,7 +373,7 @@ export default function NetworkVisualizer({
       console.log(`💾 [Persistence] Auto-saving expanded networks`);
       setTimeout(() => persistExpandedNetworks(), 100);
     }
-  }, [expandedNodes, fullNetworkData, persistExpandedNetworks]);
+  }, [expandedNodes, fullNetworkData]); // Removed persistExpandedNetworks from deps to prevent infinite loops
 
   // Restore expanded networks when data becomes available (only once)
   useEffect(() => {
@@ -390,7 +397,7 @@ export default function NetworkVisualizer({
       console.log(`🔄 [Persistence] Restoring expanded networks after component re-render`);
       restoreExpandedNetworks();
     }
-  }, [isInitialized, expandedNodes.size, fullNetworkData, restoreExpandedNetworks]);
+  }, [isInitialized, expandedNodes.size, fullNetworkData]); // Removed restoreExpandedNetworks from deps to prevent race conditions
 
   // Fetch configuration on component mount
   useEffect(() => {
