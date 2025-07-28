@@ -509,26 +509,25 @@ export default function NetworkVisualizer({
         if (d.imageUrl) {
           console.log(`🖼️ [D3] Rendering profile image for ${d.name}: ${d.imageUrl}`);
           
-          // Create a circular clipping path using a simpler approach
+          // Create a circular clipping path using D3
           const clipId = `clip-${d.id.replace(/[^a-zA-Z0-9]/g, '')}`;
-          if (container) {
-            const svgElement = container.querySelector("svg");
-            if (svgElement) {
-              let defsElement = svgElement.querySelector("defs");
-              if (!defsElement) {
-                defsElement = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-                svgElement.insertBefore(defsElement, svgElement.firstChild);
-              }
-              
-              // Create clipPath element
-              const clipPath = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
-              clipPath.id = clipId;
-              const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-              circle.setAttribute("r", (d.size - 4).toString());
-              clipPath.appendChild(circle);
-              defsElement.appendChild(clipPath);
-            }
+          const svg = d3.select(container).select("svg");
+          
+          // Ensure defs exists
+          if (svg.select("defs").empty()) {
+            svg.insert("defs", ":first-child");
           }
+          
+          // Remove existing clipPath if it exists
+          svg.select("defs").select(`#${clipId}`).remove();
+          
+          // Create new clipPath with properly centered circle
+          svg.select("defs").append("clipPath")
+            .attr("id", clipId)
+            .append("circle")
+            .attr("cx", 0)
+            .attr("cy", 0)
+            .attr("r", d.size - 4);
 
           // Add the profile image with error handling
           group.append("image")
@@ -539,6 +538,7 @@ export default function NetworkVisualizer({
             .attr("height", (d.size - 4) * 2)
             .attr("clip-path", `url(#${clipId})`)
             .attr("preserveAspectRatio", "xMidYMid slice")
+            .style("pointer-events", "none") // Prevent image from interfering with node events
             .on("load", function() {
               console.log(`🖼️✅ [D3] Image loaded successfully for ${d.name}`);
             })
@@ -586,26 +586,25 @@ export default function NetworkVisualizer({
         if (d.imageUrl) {
           console.log(`🖼️ [D3] Rendering multi-role profile image for ${d.name}: ${d.imageUrl}`);
           
-          // Create a circular clipping path using a simpler approach
+          // Create a circular clipping path using D3
           const clipId = `clip-multi-${d.id.replace(/[^a-zA-Z0-9]/g, '')}`;
-          if (container) {
-            const svgElement = container.querySelector("svg");
-            if (svgElement) {
-              let defsElement = svgElement.querySelector("defs");
-              if (!defsElement) {
-                defsElement = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-                svgElement.insertBefore(defsElement, svgElement.firstChild);
-              }
-              
-              // Create clipPath element
-              const clipPath = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
-              clipPath.id = clipId;
-              const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-              circle.setAttribute("r", (d.size - 8).toString()); // Even smaller for multi-role nodes
-              clipPath.appendChild(circle);
-              defsElement.appendChild(clipPath);
-            }
+          const svg = d3.select(container).select("svg");
+          
+          // Ensure defs exists
+          if (svg.select("defs").empty()) {
+            svg.insert("defs", ":first-child");
           }
+          
+          // Remove existing clipPath if it exists
+          svg.select("defs").select(`#${clipId}`).remove();
+          
+          // Create new clipPath with properly centered circle (smaller for multi-role)
+          svg.select("defs").append("clipPath")
+            .attr("id", clipId)
+            .append("circle")
+            .attr("cx", 0)
+            .attr("cy", 0)
+            .attr("r", d.size - 8); // Even smaller for multi-role nodes
 
           // Add the profile image with error handling
           group.append("image")
@@ -616,6 +615,7 @@ export default function NetworkVisualizer({
             .attr("height", (d.size - 8) * 2)
             .attr("clip-path", `url(#${clipId})`)
             .attr("preserveAspectRatio", "xMidYMid slice")
+            .style("pointer-events", "none") // Prevent image from interfering with node events
             .on("load", function() {
               console.log(`🖼️✅ [D3] Multi-role image loaded successfully for ${d.name}`);
             })
