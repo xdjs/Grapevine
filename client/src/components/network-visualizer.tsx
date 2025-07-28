@@ -507,15 +507,30 @@ export default function NetworkVisualizer({
 
         // Add profile picture if available (for main artist)
         if (d.imageUrl) {
-          // Create a circular clipping path
+          console.log(`🖼️ [D3] Rendering profile image for ${d.name}: ${d.imageUrl}`);
+          
+          // Create a circular clipping path using a simpler approach
           const clipId = `clip-${d.id.replace(/[^a-zA-Z0-9]/g, '')}`;
-          group.append("defs")
-            .append("clipPath")
-            .attr("id", clipId)
-            .append("circle")
-            .attr("r", d.size - 4); // Slightly smaller than the border
+          if (container) {
+            const svgElement = container.querySelector("svg");
+            if (svgElement) {
+              let defsElement = svgElement.querySelector("defs");
+              if (!defsElement) {
+                defsElement = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+                svgElement.insertBefore(defsElement, svgElement.firstChild);
+              }
+              
+              // Create clipPath element
+              const clipPath = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+              clipPath.id = clipId;
+              const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+              circle.setAttribute("r", (d.size - 4).toString());
+              clipPath.appendChild(circle);
+              defsElement.appendChild(clipPath);
+            }
+          }
 
-          // Add the profile image
+          // Add the profile image with error handling
           group.append("image")
             .attr("href", d.imageUrl)
             .attr("x", -(d.size - 4))
@@ -523,7 +538,15 @@ export default function NetworkVisualizer({
             .attr("width", (d.size - 4) * 2)
             .attr("height", (d.size - 4) * 2)
             .attr("clip-path", `url(#${clipId})`)
-            .attr("preserveAspectRatio", "xMidYMid slice");
+            .attr("preserveAspectRatio", "xMidYMid slice")
+            .on("load", function() {
+              console.log(`🖼️✅ [D3] Image loaded successfully for ${d.name}`);
+            })
+            .on("error", function() {
+              console.warn(`🖼️❌ [D3] Image failed to load for ${d.name}: ${d.imageUrl}`);
+              // Remove the failed image
+              d3.select(this).remove();
+            });
         }
       } else {
         // Multiple roles - create segmented circle
@@ -561,15 +584,30 @@ export default function NetworkVisualizer({
 
         // Add profile picture if available (for main artist with multiple roles)
         if (d.imageUrl) {
-          // Create a circular clipping path
-          const clipId = `clip-${d.id.replace(/[^a-zA-Z0-9]/g, '')}`;
-          group.append("defs")
-            .append("clipPath")
-            .attr("id", clipId)
-            .append("circle")
-            .attr("r", d.size - 8); // Even smaller for multi-role nodes
+          console.log(`🖼️ [D3] Rendering multi-role profile image for ${d.name}: ${d.imageUrl}`);
+          
+          // Create a circular clipping path using a simpler approach
+          const clipId = `clip-multi-${d.id.replace(/[^a-zA-Z0-9]/g, '')}`;
+          if (container) {
+            const svgElement = container.querySelector("svg");
+            if (svgElement) {
+              let defsElement = svgElement.querySelector("defs");
+              if (!defsElement) {
+                defsElement = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+                svgElement.insertBefore(defsElement, svgElement.firstChild);
+              }
+              
+              // Create clipPath element
+              const clipPath = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+              clipPath.id = clipId;
+              const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+              circle.setAttribute("r", (d.size - 8).toString()); // Even smaller for multi-role nodes
+              clipPath.appendChild(circle);
+              defsElement.appendChild(clipPath);
+            }
+          }
 
-          // Add the profile image
+          // Add the profile image with error handling
           group.append("image")
             .attr("href", d.imageUrl)
             .attr("x", -(d.size - 8))
@@ -577,7 +615,15 @@ export default function NetworkVisualizer({
             .attr("width", (d.size - 8) * 2)
             .attr("height", (d.size - 8) * 2)
             .attr("clip-path", `url(#${clipId})`)
-            .attr("preserveAspectRatio", "xMidYMid slice");
+            .attr("preserveAspectRatio", "xMidYMid slice")
+            .on("load", function() {
+              console.log(`🖼️✅ [D3] Multi-role image loaded successfully for ${d.name}`);
+            })
+            .on("error", function() {
+              console.warn(`🖼️❌ [D3] Multi-role image failed to load for ${d.name}: ${d.imageUrl}`);
+              // Remove the failed image
+              d3.select(this).remove();
+            });
         }
       }
     })
