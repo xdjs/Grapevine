@@ -3,6 +3,7 @@ import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import ArtistSelectionModal from "./artist-selection-modal";
 import CollaborationDetailsPopup from "./collaboration-details-popup";
+import ExpandNetworkLoading from "./expand-network-loading";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -39,6 +40,10 @@ export default function NetworkVisualizer({
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [fullNetworkData, setFullNetworkData] = useState<NetworkData | null>(null);
   const [isExpandedMode, setIsExpandedMode] = useState(false);
+  
+  // Loading state for expand network functionality
+  const [isExpandingNetwork, setIsExpandingNetwork] = useState(false);
+  const [expandingArtistName, setExpandingArtistName] = useState("");
 
   // Find the main artist node
   const mainArtistNode = data.nodes.find(node => 
@@ -112,6 +117,10 @@ export default function NetworkVisualizer({
   const expandNodeNetwork = async (nodeName: string, nodeId?: string) => {
     console.log(`🔗 Expanding network for: ${nodeName}`);
     
+    // Set loading state
+    setIsExpandingNetwork(true);
+    setExpandingArtistName(nodeName);
+    
     try {
       // Fetch the full network for this collaborator
       const response = await fetch(`/api/network/${encodeURIComponent(nodeName)}`);
@@ -167,6 +176,10 @@ export default function NetworkVisualizer({
       }
     } catch (error) {
       console.error(`❌ Error expanding network for ${nodeName}:`, error);
+    } finally {
+      // Clear loading state
+      setIsExpandingNetwork(false);
+      setExpandingArtistName("");
     }
   };
 
@@ -1491,6 +1504,12 @@ export default function NetworkVisualizer({
         artistName={collaborationArtist}
         collaboratorName={collaborationCollaborator}
         mainArtistName={mainArtistName}
+      />
+      
+      {/* Loading screen for expand network functionality */}
+      <ExpandNetworkLoading 
+        isVisible={isExpandingNetwork} 
+        artistName={expandingArtistName}
       />
     </div>
   );
