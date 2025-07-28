@@ -340,14 +340,21 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
         ? ['artist', ...mainArtistTypes.filter(r => r !== 'artist')]
         : mainArtistTypes;
 
-      // Fetch Spotify profile picture for main artist
+      // Fetch profile picture for main artist with multiple fallbacks
       let profileImageUrl = null;
+      
+      // Method 1: Try Spotify API (if properly configured)
       try {
-        // Get Spotify access token
         const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
         const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
         
-        if (SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET) {
+        // Check if we have real Spotify credentials (not placeholders)
+        if (SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET && 
+            !SPOTIFY_CLIENT_ID.includes('placeholder') && 
+            !SPOTIFY_CLIENT_ID.includes('your_') &&
+            !SPOTIFY_CLIENT_SECRET.includes('placeholder') && 
+            !SPOTIFY_CLIENT_SECRET.includes('your_')) {
+          
           // Get access token
           const authString = Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64');
           const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
@@ -379,13 +386,65 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
               if (artists.length > 0 && artists[0].images && artists[0].images.length > 0) {
                 // Use the smallest image for better performance (usually the last one)
                 profileImageUrl = artists[0].images[artists[0].images.length - 1].url;
-                console.log(`🎵 [Vercel] Found Spotify profile image for ${correctArtistName}: ${profileImageUrl}`);
+                console.log(`🎵✅ [Vercel] Found Spotify profile image for ${correctArtistName}: ${profileImageUrl}`);
               }
             }
           }
+        } else {
+          console.log(`🎵⚠️ [Vercel] Spotify credentials not properly configured (using placeholders)`);
         }
       } catch (spotifyError) {
-        console.warn(`🎵 [Vercel] Could not fetch Spotify profile image for ${correctArtistName}:`, spotifyError);
+        console.warn(`🎵❌ [Vercel] Spotify API failed for ${correctArtistName}:`, spotifyError instanceof Error ? spotifyError.message : 'Unknown error');
+      }
+      
+      // Method 2: Fallback to MusicBrainz for artist image (if Spotify failed)
+      if (!profileImageUrl) {
+        try {
+          console.log(`🎵🔄 [Vercel] Trying MusicBrainz fallback for ${correctArtistName}`);
+          const mbResponse = await fetch(
+            `https://musicbrainz.org/ws/2/artist/?query=artist:"${encodeURIComponent(correctArtistName)}"&fmt=json&limit=1`
+          );
+          
+          if (mbResponse.ok) {
+            const mbData = await mbResponse.json() as { artists: Array<{ id: string }> };
+            if (mbData.artists && mbData.artists.length > 0) {
+              const artistId = mbData.artists[0].id;
+              
+              // Try to get Cover Art Archive image
+              const caaResponse = await fetch(
+                `https://coverartarchive.org/artist/${artistId}`,
+                { 
+                  headers: { 'User-Agent': 'Grapevine/1.0 (https://grapevine.app)' }
+                }
+              );
+              
+              if (caaResponse.ok) {
+                const caaData = await caaResponse.json() as { images: Array<{ image: string, thumbnails: { small: string } }> };
+                if (caaData.images && caaData.images.length > 0) {
+                  profileImageUrl = caaData.images[0].thumbnails?.small || caaData.images[0].image;
+                  console.log(`🎵✅ [Vercel] Found MusicBrainz profile image for ${correctArtistName}: ${profileImageUrl}`);
+                }
+              }
+            }
+          }
+        } catch (mbError) {
+          console.warn(`🎵⚠️ [Vercel] MusicBrainz fallback failed for ${correctArtistName}:`, mbError instanceof Error ? mbError.message : 'Unknown error');
+        }
+      }
+      
+      // Method 3: Last resort fallback - use a service that generates initials
+      if (!profileImageUrl) {
+        try {
+          const initials = correctArtistName.split(' ')
+            .map((word: string) => word.charAt(0).toUpperCase())
+            .join('')
+            .substring(0, 2);
+          
+          profileImageUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&size=200&background=FF0ACF&color=fff&font-size=0.6`;
+          console.log(`🎵🎨 [Vercel] Using generated avatar for ${correctArtistName}: ${profileImageUrl}`);
+        } catch (fallbackError) {
+          console.warn(`🎵❌ [Vercel] All image fallbacks failed for ${correctArtistName}`);
+        }
       }
 
       // Add main artist node using correct capitalization from database and detected roles

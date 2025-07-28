@@ -123,12 +123,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           );
           
           if (mainArtistNode && !mainArtistNode.imageUrl) {
-            // Main artist node doesn't have profile picture, fetch it
+            // Main artist node doesn't have profile picture, fetch it with fallbacks
+            let updatedImageUrl = null;
+            
+            // Try Spotify first
             try {
               const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
               const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
               
-              if (SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET) {
+              if (SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET && 
+                  !SPOTIFY_CLIENT_ID.includes('placeholder') && 
+                  !SPOTIFY_CLIENT_ID.includes('your_') &&
+                  !SPOTIFY_CLIENT_SECRET.includes('placeholder') && 
+                  !SPOTIFY_CLIENT_SECRET.includes('your_')) {
+                
                 const authString = Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64');
                 const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
                   method: 'POST',
@@ -156,23 +164,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     const searchData = await searchResponse.json() as { artists: { items: Array<{ images: Array<{ url: string }> }> } };
                     const artists = searchData.artists.items;
                     if (artists.length > 0 && artists[0].images && artists[0].images.length > 0) {
-                      mainArtistNode.imageUrl = artists[0].images[artists[0].images.length - 1].url;
-                      console.log(`🎵 [Vercel] Updated cached data with Spotify profile image for ${mainArtistNode.name}`);
-                      
-                      // Update the cache with the new profile picture
-                      try {
-                        const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE id = $2';
-                        await client.query(updateQuery, [JSON.stringify(cachedData), artistId]);
-                        console.log(`💾 [Vercel] Updated cache with profile picture for artist ID ${artistId}`);
-                      } catch (updateError) {
-                        console.warn('⚠️ [Vercel] Failed to update cache with profile picture:', updateError);
-                      }
+                      updatedImageUrl = artists[0].images[artists[0].images.length - 1].url;
+                      console.log(`🎵✅ [Vercel] Updated cached data with Spotify profile image for ${mainArtistNode.name}`);
                     }
                   }
                 }
               }
             } catch (spotifyError) {
-              console.warn(`🎵 [Vercel] Could not fetch profile picture for cached data:`, spotifyError);
+              console.warn(`🎵❌ [Vercel] Spotify failed for cached data:`, spotifyError instanceof Error ? spotifyError.message : 'Unknown error');
+            }
+            
+            // Fallback to generated avatar if Spotify failed
+            if (!updatedImageUrl) {
+              try {
+                const initials = mainArtistNode.name.split(' ')
+                  .map((word: string) => word.charAt(0).toUpperCase())
+                  .join('')
+                  .substring(0, 2);
+                
+                updatedImageUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&size=200&background=FF0ACF&color=fff&font-size=0.6`;
+                console.log(`🎵🎨 [Vercel] Using generated avatar for cached ${mainArtistNode.name}`);
+              } catch (fallbackError) {
+                console.warn(`🎵❌ [Vercel] All fallbacks failed for cached data`);
+              }
+            }
+            
+            // Update the node and cache if we got an image
+            if (updatedImageUrl) {
+              mainArtistNode.imageUrl = updatedImageUrl;
+              
+              // Update the cache with the new profile picture
+              try {
+                const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE id = $2';
+                await client.query(updateQuery, [JSON.stringify(cachedData), artistId]);
+                console.log(`💾 [Vercel] Updated cache with profile picture for artist ID ${artistId}`);
+              } catch (updateError) {
+                console.warn('⚠️ [Vercel] Failed to update cache with profile picture:', updateError);
+              }
             }
           }
           
@@ -346,14 +374,21 @@ Investigate thoroughly for multiple roles on ${artist.name}, whether they are fa
         console.log(`⚠️ [Vercel] Main artist role detection failed for "${artist.name}", using default`);
       }
 
-      // Fetch Spotify profile picture for main artist
+      // Fetch profile picture for main artist with multiple fallbacks
       let profileImageUrl = null;
+      
+      // Method 1: Try Spotify API (if properly configured)
       try {
-        // Get Spotify access token
         const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
         const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
         
-        if (SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET) {
+        // Check if we have real Spotify credentials (not placeholders)
+        if (SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET && 
+            !SPOTIFY_CLIENT_ID.includes('placeholder') && 
+            !SPOTIFY_CLIENT_ID.includes('your_') &&
+            !SPOTIFY_CLIENT_SECRET.includes('placeholder') && 
+            !SPOTIFY_CLIENT_SECRET.includes('your_')) {
+          
           // Get access token
           const authString = Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64');
           const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
@@ -385,13 +420,30 @@ Investigate thoroughly for multiple roles on ${artist.name}, whether they are fa
               if (artists.length > 0 && artists[0].images && artists[0].images.length > 0) {
                 // Use the smallest image for better performance (usually the last one)
                 profileImageUrl = artists[0].images[artists[0].images.length - 1].url;
-                console.log(`🎵 [Vercel] Found Spotify profile image for ${artist.name}: ${profileImageUrl}`);
+                console.log(`🎵✅ [Vercel] Found Spotify profile image for ${artist.name}: ${profileImageUrl}`);
               }
             }
           }
+        } else {
+          console.log(`🎵⚠️ [Vercel] Spotify credentials not properly configured (using placeholders)`);
         }
       } catch (spotifyError) {
-        console.warn(`🎵 [Vercel] Could not fetch Spotify profile image for ${artist.name}:`, spotifyError);
+        console.warn(`🎵❌ [Vercel] Spotify API failed for ${artist.name}:`, spotifyError instanceof Error ? spotifyError.message : 'Unknown error');
+      }
+      
+      // Method 2: Fallback to generated avatar (since we don't need MusicBrainz here)
+      if (!profileImageUrl) {
+        try {
+          const initials = artist.name.split(' ')
+            .map((word: string) => word.charAt(0).toUpperCase())
+            .join('')
+            .substring(0, 2);
+          
+          profileImageUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&size=200&background=FF0ACF&color=fff&font-size=0.6`;
+          console.log(`🎵🎨 [Vercel] Using generated avatar for ${artist.name}: ${profileImageUrl}`);
+        } catch (fallbackError) {
+          console.warn(`🎵❌ [Vercel] All image fallbacks failed for ${artist.name}`);
+        }
       }
 
       // Add main artist node with detected roles
