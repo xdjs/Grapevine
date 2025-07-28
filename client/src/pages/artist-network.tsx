@@ -28,22 +28,10 @@ export default function ArtistNetwork() {
   const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
   const isMobile = useIsMobile();
 
-  const handleNetworkData = useCallback(async (data: NetworkData) => {
-    // Set network data immediately for display
+  const handleNetworkData = useCallback((data: NetworkData) => {
+    // Set network data (profile pictures are now included from backend)
     setNetworkData(data);
-
-    // Fetch profile pictures for main artists in the background
-    try {
-      const { fetchMainArtistProfilePictures } = await import('../lib/profile-pictures');
-      const updatedData = await fetchMainArtistProfilePictures(data);
-      
-      // Update network data with profile pictures
-      setNetworkData(updatedData);
-      console.log(`🖼️✅ [Artist Network] Updated network with profile pictures`);
-    } catch (error) {
-      console.error(`🖼️❌ [Artist Network] Failed to fetch profile pictures:`, error);
-      // Continue without profile pictures - original design will be used
-    }
+    console.log(`🖼️✅ [Artist Network] Network loaded with profile pictures included from backend`);
   }, []);
 
   // Navigate back to home
