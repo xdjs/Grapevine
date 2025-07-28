@@ -75,7 +75,12 @@ export default function NetworkVisualizer({
     const nodes = fullNetworkData ? fullNetworkData.nodes : data.nodes;
     const links = fullNetworkData ? fullNetworkData.links : data.links;
     
+    console.log(`🔗 [VisibleNodes] Using ${fullNetworkData ? 'fullNetworkData' : 'original data'}`);
+    console.log(`🔗 [VisibleNodes] Total nodes available:`, nodes.length);
+    console.log(`🔗 [VisibleNodes] Expanded nodes:`, Array.from(expandedNodes));
+    
     if (!mainArtistNode) {
+      console.log(`🔗 [VisibleNodes] No main artist node, returning all nodes`);
       return nodes;
     }
     
@@ -105,7 +110,9 @@ export default function NetworkVisualizer({
       });
     });
     
-    return nodes.filter(node => visibleIds.has(node.id));
+    const visibleNodes = nodes.filter(node => visibleIds.has(node.id));
+    console.log(`🔗 [VisibleNodes] Returning ${visibleNodes.length} visible nodes`);
+    return visibleNodes;
   };
 
   // Get visible links based on visible nodes
@@ -149,11 +156,15 @@ export default function NetworkVisualizer({
         });
         
         // Merge the collaborator's network with the existing network
-        const mergedNodes = [...data.nodes];
-        const mergedLinks = [...data.links];
+        // Use current fullNetworkData as base if available, otherwise use original data
+        const baseNodes = fullNetworkData ? fullNetworkData.nodes : data.nodes;
+        const baseLinks = fullNetworkData ? fullNetworkData.links : data.links;
+        
+        const mergedNodes = [...baseNodes];
+        const mergedLinks = [...baseLinks];
         
         // Add new nodes from collaborator's network (avoiding duplicates)
-        const existingNodeIds = new Set(data.nodes.map(n => n.id));
+        const existingNodeIds = new Set(baseNodes.map(n => n.id));
         collaboratorNetwork.nodes.forEach(collaboratorNode => {
           if (!existingNodeIds.has(collaboratorNode.id)) {
             mergedNodes.push(collaboratorNode);
@@ -162,7 +173,7 @@ export default function NetworkVisualizer({
         });
         
         // Add new links from collaborator's network (avoiding duplicates)
-        const existingLinkIds = new Set(data.links.map(link => {
+        const existingLinkIds = new Set(baseLinks.map(link => {
           const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
           const targetId = typeof link.target === 'string' ? link.target : link.target.id;
           return `${sourceId}-${targetId}`;
