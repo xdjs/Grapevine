@@ -218,8 +218,34 @@ export default function NetworkVisualizer({
           nodesCount: collaboratorNetwork.nodes?.length || 0,
           linksCount: collaboratorNetwork.links?.length || 0,
           hasNodes: !!collaboratorNetwork.nodes,
-          hasLinks: !!collaboratorNetwork.links
+          hasLinks: !!collaboratorNetwork.links,
+          noCollaborators: collaboratorNetwork.noCollaborators || false,
+          artistName: collaboratorNetwork.artistName || 'unknown'
         });
+        
+        // Check if this is a "no collaborators" response
+        if (collaboratorNetwork.noCollaborators) {
+          console.log(`⚠️ [Expand] No collaborators found for ${nodeName}, showing single node`);
+          // Don't add to expanded nodes since there's nothing to expand
+          setIsExpandingNetwork(false);
+          setExpandingArtistName("");
+          return;
+        }
+        
+        // Validate that we have the required data
+        if (!collaboratorNetwork.nodes || !Array.isArray(collaboratorNetwork.nodes)) {
+          console.error(`❌ [Expand] Invalid network data received for ${nodeName} - missing or invalid nodes`);
+          setIsExpandingNetwork(false);
+          setExpandingArtistName("");
+          return;
+        }
+        
+        if (!collaboratorNetwork.links || !Array.isArray(collaboratorNetwork.links)) {
+          console.error(`❌ [Expand] Invalid network data received for ${nodeName} - missing or invalid links`);
+          setIsExpandingNetwork(false);
+          setExpandingArtistName("");
+          return;
+        }
         
         // Merge the collaborator's network with the existing network
         // Use current fullNetworkData as base if available, otherwise use original data
@@ -291,6 +317,15 @@ export default function NetworkVisualizer({
         console.error(`❌ [Expand] Failed to fetch network for ${nodeName} - status: ${response.status}`);
         const errorText = await response.text();
         console.error(`❌ [Expand] Error response:`, errorText);
+        
+        // Handle specific error cases
+        if (response.status === 404) {
+          console.error(`❌ [Expand] Artist "${nodeName}" not found in database`);
+        } else if (response.status === 503) {
+          console.error(`❌ [Expand] Service unavailable - OpenAI API or database issue`);
+        } else if (response.status === 500) {
+          console.error(`❌ [Expand] Internal server error during network generation`);
+        }
       }
     } catch (error) {
       console.error(`❌ [Expand] Error expanding network for ${nodeName}:`, error);
