@@ -432,19 +432,9 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
         }
       }
       
-      // Method 3: Last resort fallback - use a service that generates initials
+      // If no profile image found, fall back to original node design (no image)
       if (!profileImageUrl) {
-        try {
-          const initials = correctArtistName.split(' ')
-            .map((word: string) => word.charAt(0).toUpperCase())
-            .join('')
-            .substring(0, 2);
-          
-          profileImageUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&size=200&background=FF0ACF&color=fff&font-size=0.6`;
-          console.log(`🎵🎨 [Vercel] Using generated avatar for ${correctArtistName}: ${profileImageUrl}`);
-        } catch (fallbackError) {
-          console.warn(`🎵❌ [Vercel] All image fallbacks failed for ${correctArtistName}`);
-        }
+        console.log(`🎵⭕ [Vercel] No profile image found for ${correctArtistName}, using original node design`);
       }
 
       // Add main artist node using correct capitalization from database and detected roles

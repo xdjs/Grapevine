@@ -174,19 +174,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               console.warn(`🎵❌ [Vercel] Spotify failed for cached data:`, spotifyError instanceof Error ? spotifyError.message : 'Unknown error');
             }
             
-            // Fallback to generated avatar if Spotify failed
+            // If no profile image found, fall back to original node design (no image)
             if (!updatedImageUrl) {
-              try {
-                const initials = mainArtistNode.name.split(' ')
-                  .map((word: string) => word.charAt(0).toUpperCase())
-                  .join('')
-                  .substring(0, 2);
-                
-                updatedImageUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&size=200&background=FF0ACF&color=fff&font-size=0.6`;
-                console.log(`🎵🎨 [Vercel] Using generated avatar for cached ${mainArtistNode.name}`);
-              } catch (fallbackError) {
-                console.warn(`🎵❌ [Vercel] All fallbacks failed for cached data`);
-              }
+              console.log(`🎵⭕ [Vercel] No profile image found for cached ${mainArtistNode.name}, using original node design`);
             }
             
             // Update the node and cache if we got an image
@@ -431,19 +421,9 @@ Investigate thoroughly for multiple roles on ${artist.name}, whether they are fa
         console.warn(`🎵❌ [Vercel] Spotify API failed for ${artist.name}:`, spotifyError instanceof Error ? spotifyError.message : 'Unknown error');
       }
       
-      // Method 2: Fallback to generated avatar (since we don't need MusicBrainz here)
+      // If no profile image found, fall back to original node design (no image)
       if (!profileImageUrl) {
-        try {
-          const initials = artist.name.split(' ')
-            .map((word: string) => word.charAt(0).toUpperCase())
-            .join('')
-            .substring(0, 2);
-          
-          profileImageUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&size=200&background=FF0ACF&color=fff&font-size=0.6`;
-          console.log(`🎵🎨 [Vercel] Using generated avatar for ${artist.name}: ${profileImageUrl}`);
-        } catch (fallbackError) {
-          console.warn(`🎵❌ [Vercel] All image fallbacks failed for ${artist.name}`);
-        }
+        console.log(`🎵⭕ [Vercel] No profile image found for ${artist.name}, using original node design`);
       }
 
       // Add main artist node with detected roles
