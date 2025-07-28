@@ -146,7 +146,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
   const viewportHeight = useViewportHeight();
   const spacing = useDynamicSpacing();
   
-  // Calculate dynamic dropdown height based on available space
+  // Calculate dynamic dropdown height based on available space - memoized for performance
   const calculateDropdownHeight = useCallback((baseHeight: number, isNetworkView: boolean = false) => {
     const inputRef = isNetworkView ? networkSearchInputRef.current : searchInputRef.current;
     if (!inputRef) return `${baseHeight}px`;
@@ -167,7 +167,8 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         // Sort by timestamp, most recent first
         const sorted = parsed.sort((a, b) => b.timestamp - a.timestamp);
         // Keep only the last 10 entries
-        setSearchHistory(sorted.slice(0, 10));
+        const limitedHistory = sorted.slice(0, 10);
+        setSearchHistory(limitedHistory);
       } else {
         setSearchHistory([]);
       }
@@ -291,7 +292,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     });
   }, [pendingArtistInfo, onClearAll, setLocation, toast]);
 
-  // Fetch artist options for instant search
+  // Fetch artist options for instant search - optimized for performance
   const fetchArtistOptions = useCallback(async (query: string) => {
     if (query.trim().length < 1) {
       setArtistOptions([]);
@@ -304,8 +305,9 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       const response = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`);
       if (response.ok) {
         const options = await response.json();
-        setArtistOptions(Array.isArray(options) ? options : []);
-        setShowDropdown(Array.isArray(options) && options.length > 0);
+        const validOptions = Array.isArray(options) ? options : [];
+        setArtistOptions(validOptions);
+        setShowDropdown(validOptions.length > 0);
       } else {
         setArtistOptions([]);
         setShowDropdown(false);
@@ -319,13 +321,13 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     }
   }, []);
 
-  // Debounced version for instant search
+  // Debounced version for instant search - increased delay to reduce API calls
   const debouncedFetchOptions = useCallback(
-    debounce((query: string) => fetchArtistOptions(query), 150),
+    debounce((query: string) => fetchArtistOptions(query), 300),
     [fetchArtistOptions]
   );
 
-  const handleInputChange = (value: string) => {
+  const handleInputChange = useCallback((value: string) => {
     setSearchQuery(value);
     if (value.trim().length >= 1) {
       debouncedFetchOptions(value.trim());
@@ -333,19 +335,12 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       setArtistOptions([]);
       setShowDropdown(false);
     }
-  };
+  }, [debouncedFetchOptions]);
 
-  // Load search history on component mount and when dropdown is shown
+  // Load search history on component mount only
   useEffect(() => {
     loadSearchHistory();
   }, [loadSearchHistory]);
-
-  // Also reload search history when dropdown is shown to ensure it's up to date
-  useEffect(() => {
-    if (showDropdown && searchQuery.trim().length === 0) {
-      loadSearchHistory();
-    }
-  }, [showDropdown, searchQuery, loadSearchHistory]);
 
   const handleArtistSelect = async (artist: ArtistOption) => {
     setSearchQuery(artist.name);
@@ -662,10 +657,11 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 }
               }}
               onBlur={() => {
+                // Reduced timeout to improve responsiveness
                 setTimeout(() => {
                   setIsSearchFocused(false);
                   setShowDropdown(false);
-                }, 150);
+                }, 100);
               }}
               className="w-full pl-2 pr-10 py-3 sm:pl-3 sm:pr-12 sm:py-4 bg-gray-800 text-white placeholder-gray-400 text-base sm:text-lg rounded-xl flex items-center"
               style={{ 
@@ -863,10 +859,11 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                   }
                 }}
                 onBlur={() => {
+                  // Reduced timeout to improve responsiveness
                   setTimeout(() => {
                     setIsSearchFocused(false);
                     setShowDropdown(false);
-                  }, 150);
+                  }, 100);
                 }}
                 className="w-full pl-2 pr-10 py-2 sm:pl-3 sm:pr-12 sm:py-2 bg-gray-800 text-white placeholder-gray-400 text-sm sm:text-base rounded-xl flex items-center"
                 style={{ 

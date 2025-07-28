@@ -75,10 +75,7 @@ export default function NetworkVisualizer({
     const nodes = fullNetworkData ? fullNetworkData.nodes : data.nodes;
     const links = fullNetworkData ? fullNetworkData.links : data.links;
     
-    console.log(`🔍 [getVisibleNodes] Total nodes: ${nodes.length}, mainArtistNode:`, mainArtistNode?.name || 'not found');
-    
     if (!mainArtistNode) {
-      console.log(`🔍 [getVisibleNodes] No main artist node found, returning all ${nodes.length} nodes`);
       return nodes;
     }
     
@@ -108,10 +105,7 @@ export default function NetworkVisualizer({
       });
     });
     
-    const filteredNodes = nodes.filter(node => visibleIds.has(node.id));
-    console.log(`🔍 [getVisibleNodes] Filtered to ${filteredNodes.length} visible nodes out of ${nodes.length} total`);
-    
-    return filteredNodes;
+    return nodes.filter(node => visibleIds.has(node.id));
   };
 
   // Get visible links based on visible nodes
