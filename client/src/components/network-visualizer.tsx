@@ -117,13 +117,51 @@ export default function NetworkVisualizer({
       const response = await fetch(`/api/network/${encodeURIComponent(nodeName)}`);
       if (response.ok) {
         const collaboratorNetwork = await response.json();
-        setFullNetworkData(collaboratorNetwork);
+        
+        // Merge the collaborator's network with the existing network
+        const mergedNodes = [...data.nodes];
+        const mergedLinks = [...data.links];
+        
+        // Add new nodes from collaborator's network (avoiding duplicates)
+        const existingNodeIds = new Set(data.nodes.map(n => n.id));
+        collaboratorNetwork.nodes.forEach(collaboratorNode => {
+          if (!existingNodeIds.has(collaboratorNode.id)) {
+            mergedNodes.push(collaboratorNode);
+            existingNodeIds.add(collaboratorNode.id);
+          }
+        });
+        
+        // Add new links from collaborator's network (avoiding duplicates)
+        const existingLinkIds = new Set(data.links.map(link => {
+          const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+          const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+          return `${sourceId}-${targetId}`;
+        }));
+        
+        collaboratorNetwork.links.forEach(collaboratorLink => {
+          const sourceId = typeof collaboratorLink.source === 'string' ? collaboratorLink.source : collaboratorLink.source.id;
+          const targetId = typeof collaboratorLink.target === 'string' ? collaboratorLink.target : collaboratorLink.target.id;
+          const linkId = `${sourceId}-${targetId}`;
+          
+          if (!existingLinkIds.has(linkId)) {
+            mergedLinks.push(collaboratorLink);
+            existingLinkIds.add(linkId);
+          }
+        });
+        
+        // Create merged network data
+        const mergedNetworkData = {
+          nodes: mergedNodes,
+          links: mergedLinks
+        };
+        
+        setFullNetworkData(mergedNetworkData);
         
         // Add this node to expanded set
         setExpandedNodes(prev => new Set([...prev, nodeName]));
         setIsExpandedMode(true);
         
-        console.log(`✅ Expanded network for ${nodeName} with ${collaboratorNetwork.nodes.length} nodes`);
+        console.log(`✅ Expanded network for ${nodeName} - added ${collaboratorNetwork.nodes.length} nodes and ${collaboratorNetwork.links.length} links`);
       } else {
         console.error(`❌ Failed to fetch network for ${nodeName}`);
       }
@@ -146,6 +184,7 @@ export default function NetworkVisualizer({
     setFullNetworkData(null);
     setExpandedNodes(new Set());
     setIsExpandedMode(false);
+    console.log(`🔄 Reset to first-degree view for ${mainArtistNode?.name || 'main artist'}`);
   };
 
   // Get the data to display (either filtered or full)
@@ -153,6 +192,15 @@ export default function NetworkVisualizer({
     nodes: getVisibleNodes(),
     links: getVisibleLinks()
   };
+
+  // Log the current state for debugging
+  useEffect(() => {
+    if (fullNetworkData) {
+      console.log(`📊 Displaying expanded network with ${fullNetworkData.nodes.length} nodes and ${fullNetworkData.links.length} links`);
+    } else {
+      console.log(`📊 Displaying first-degree network with ${getVisibleNodes().length} nodes and ${getVisibleLinks().length} links`);
+    }
+  }, [fullNetworkData, expandedNodes]);
 
   // Fetch configuration on component mount
   useEffect(() => {
