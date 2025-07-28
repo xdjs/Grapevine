@@ -177,6 +177,16 @@ export default function ArtistNetwork() {
           />
         </div>
       )}
+      
+      {/* Debug info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div style={{ position: 'fixed', top: '10px', right: '10px', background: 'rgba(0,0,0,0.8)', color: 'white', padding: '10px', fontSize: '12px', zIndex: 9999 }}>
+          <div>networkData: {networkData ? 'exists' : 'null'}</div>
+          <div>isLoading: {isLoading ? 'true' : 'false'}</div>
+          <div>nodes: {networkData?.nodes?.length || 0}</div>
+          <div>links: {networkData?.links?.length || 0}</div>
+        </div>
+      )}
 
       {/* Loading Screen */}
       <LoadingScreen isVisible={isLoading} artistName={currentArtistName} />

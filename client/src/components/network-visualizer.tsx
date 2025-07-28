@@ -210,6 +210,13 @@ export default function NetworkVisualizer({
     nodes: getVisibleNodes(),
     links: getVisibleLinks()
   };
+  
+  console.log(`🔍 [NetworkVisualizer] finalDisplayData calculated:`, {
+    nodesCount: finalDisplayData.nodes.length,
+    linksCount: finalDisplayData.links.length,
+    hasFullNetworkData: !!fullNetworkData,
+    expandedNodesCount: expandedNodes.size
+  });
 
   // Log the current state for debugging
   useEffect(() => {
@@ -251,7 +258,22 @@ export default function NetworkVisualizer({
   }, []);
 
   useEffect(() => {
-    if (!svgRef.current || !finalDisplayData || !visible) return;
+    console.log(`🔍 [NetworkVisualizer] useEffect triggered:`, {
+      svgRef: !!svgRef.current,
+      finalDisplayData: !!finalDisplayData,
+      visible,
+      nodesCount: finalDisplayData?.nodes?.length || 0,
+      linksCount: finalDisplayData?.links?.length || 0
+    });
+    
+    if (!svgRef.current || !finalDisplayData || !visible) {
+      console.log(`🔍 [NetworkVisualizer] Early return:`, {
+        noSvgRef: !svgRef.current,
+        noData: !finalDisplayData,
+        notVisible: !visible
+      });
+      return;
+    }
 
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
