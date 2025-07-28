@@ -111,12 +111,19 @@ export default function NetworkVisualizer({
   // Function to expand a node's network
   const expandNodeNetwork = async (nodeName: string, nodeId?: string) => {
     console.log(`🔗 Expanding network for: ${nodeName}`);
+    console.log(`🔗 Current data nodes: ${data.nodes.length}`);
+    console.log(`🔗 Current data links: ${data.links.length}`);
     
     try {
       // Fetch the full network for this collaborator
+      console.log(`🔗 Fetching network from: /api/network/${encodeURIComponent(nodeName)}`);
       const response = await fetch(`/api/network/${encodeURIComponent(nodeName)}`);
+      console.log(`🔗 Response status: ${response.status}`);
+      
       if (response.ok) {
         const collaboratorNetwork = await response.json();
+        console.log(`🔗 Collaborator network nodes: ${collaboratorNetwork.nodes.length}`);
+        console.log(`🔗 Collaborator network links: ${collaboratorNetwork.links.length}`);
         
         // Merge the collaborator's network with the existing network
         const mergedNodes = [...data.nodes];
@@ -124,10 +131,12 @@ export default function NetworkVisualizer({
         
         // Add new nodes from collaborator's network (avoiding duplicates)
         const existingNodeIds = new Set(data.nodes.map(n => n.id));
+        let addedNodes = 0;
         collaboratorNetwork.nodes.forEach(collaboratorNode => {
           if (!existingNodeIds.has(collaboratorNode.id)) {
             mergedNodes.push(collaboratorNode);
             existingNodeIds.add(collaboratorNode.id);
+            addedNodes++;
           }
         });
         
@@ -138,6 +147,7 @@ export default function NetworkVisualizer({
           return `${sourceId}-${targetId}`;
         }));
         
+        let addedLinks = 0;
         collaboratorNetwork.links.forEach(collaboratorLink => {
           const sourceId = typeof collaboratorLink.source === 'string' ? collaboratorLink.source : collaboratorLink.source.id;
           const targetId = typeof collaboratorLink.target === 'string' ? collaboratorLink.target : collaboratorLink.target.id;
@@ -146,6 +156,7 @@ export default function NetworkVisualizer({
           if (!existingLinkIds.has(linkId)) {
             mergedLinks.push(collaboratorLink);
             existingLinkIds.add(linkId);
+            addedLinks++;
           }
         });
         
@@ -155,15 +166,26 @@ export default function NetworkVisualizer({
           links: mergedLinks
         };
         
+        console.log(`🔗 Merged network - total nodes: ${mergedNodes.length}, total links: ${mergedLinks.length}`);
+        console.log(`🔗 Added ${addedNodes} new nodes and ${addedLinks} new links`);
+        
         setFullNetworkData(mergedNetworkData);
         
         // Add this node to expanded set
         setExpandedNodes(prev => new Set([...prev, nodeName]));
         setIsExpandedMode(true);
         
-        console.log(`✅ Expanded network for ${nodeName} - added ${collaboratorNetwork.nodes.length} nodes and ${collaboratorNetwork.links.length} links`);
+        console.log(`✅ Expanded network for ${nodeName} - added ${addedNodes} nodes and ${addedLinks} links`);
       } else {
-        console.error(`❌ Failed to fetch network for ${nodeName}`);
+        const errorText = await response.text();
+        console.error(`❌ Failed to fetch network for ${nodeName}: ${response.status} - ${errorText}`);
+        
+        // Show user-friendly message for 404 errors
+        if (response.status === 404) {
+          alert(`Sorry, we don't have network data available for ${nodeName} yet. They may be added in future updates!`);
+        } else {
+          alert(`Failed to load ${nodeName}'s network. Please try again later.`);
+        }
       }
     } catch (error) {
       console.error(`❌ Error expanding network for ${nodeName}:`, error);
@@ -796,7 +818,7 @@ export default function NetworkVisualizer({
     // Add labels for all nodes
     const labelElements = networkGroup
       .selectAll(".label")
-      .data(displayData.nodes)
+      .data(finalDisplayData.nodes)
       .enter()
       .append("text")
       .attr("class", "label")
@@ -840,7 +862,7 @@ export default function NetworkVisualizer({
         const paddingRight = isMobile ? "25px" : "30px";
         const gap = isMobile ? "6px" : "8px";
         // Check if this is the main artist
-        const mainArtistNode = displayData.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const mainArtistNode = finalDisplayData.nodes.find(node => node.size === 30 && node.type === 'artist');
         const isMainArtist = d === mainArtistNode;
         
         // Check if this node is an artist (has artist role)
@@ -850,8 +872,17 @@ export default function NetworkVisualizer({
         const firstDegreeIds = getFirstDegreeCollaborators();
         const isFirstDegreeCollaborator = firstDegreeIds.has(d.name);
         
-        // Build expand network section for first-degree collaborators
-        const expandSection = isFirstDegreeCollaborator && !isMainArtist ? 
+        // Show expand button for any first-degree collaborator (artist, producer, songwriter, etc.)
+        const shouldShowExpandButton = isFirstDegreeCollaborator && !isMainArtist;
+        
+        console.log(`🔍 Tooltip for ${d.name}:`);
+        console.log(`🔍 isFirstDegreeCollaborator: ${isFirstDegreeCollaborator}`);
+        console.log(`🔍 isMainArtist: ${isMainArtist}`);
+        console.log(`🔍 shouldShowExpandButton: ${shouldShowExpandButton}`);
+        console.log(`🔍 firstDegreeIds:`, Array.from(firstDegreeIds));
+        
+        // Build expand network section for first-degree collaborators who are artists
+        const expandSection = shouldShowExpandButton ? 
           '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="expand-action">' +
             '<div class="expand-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer; pointer-events: auto; display:flex; align-items:center; justify-content:center; background:#4CAF50;">' +
               '<span style="color:white; font-size:16px; font-weight:bold;">+</span>' +
@@ -941,7 +972,7 @@ export default function NetworkVisualizer({
         e.stopPropagation();
         
         // Check if this is the main artist or a collaborator
-        const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const mainArtistNode = finalDisplayData.nodes.find(node => node.size === 30 && node.type === 'artist');
         const isMainArtist = d === mainArtistNode;
         
         if (isMainArtist) {
@@ -954,7 +985,7 @@ export default function NetworkVisualizer({
           const mainArtistName = mainArtistNode?.name || "";
           
           // Check if the clicked node is directly connected to main artist (first layer)
-          const isFirstLayer = displayData.links.some(link => {
+          const isFirstLayer = finalDisplayData.links.some(link => {
             const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
             const targetId = typeof link.target === 'string' ? link.target : link.target.id;
             return (sourceId === mainArtistName && targetId === d.name) || 
@@ -969,7 +1000,7 @@ export default function NetworkVisualizer({
           } else {
             // Second layer: clicked node is not directly connected to main artist
             // Find the first layer node that this second layer node is connected to
-            const directLink = displayData.links.find(link => {
+            const directLink = finalDisplayData.links.find(link => {
               const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
               const targetId = typeof link.target === 'string' ? link.target : link.target.id;
               return (sourceId === d.name && targetId !== mainArtistName) || 
@@ -1002,15 +1033,25 @@ export default function NetworkVisualizer({
         e.stopPropagation();
         
         console.log(`🔗 Expanding network for ${d.name}`);
-        await expandNodeNetwork(d.name, d.artistId);
+        console.log(`🔗 isFirstDegreeCollaborator: ${isFirstDegreeCollaborator}`);
+        console.log(`🔗 isMainArtist: ${isMainArtist}`);
+        console.log(`🔗 d.artistId: ${d.artistId}`);
+        
+        try {
+          await expandNodeNetwork(d.name, d.artistId);
+          console.log(`✅ Successfully expanded network for ${d.name}`);
+        } catch (error) {
+          console.error(`❌ Error expanding network for ${d.name}:`, error);
+        }
+        
         hideTooltip();
       };
 
       // Attach event handlers
       tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
       
-      // Only attach expand handler if expand section exists (first-degree collaborators only)
-      if (isFirstDegreeCollaborator && !isMainArtist) {
+      // Only attach expand handler if expand section exists (first-degree collaborators who are artists)
+      if (shouldShowExpandButton) {
         tooltip.selectAll(".expand-link, .expand-icon, .expand-action").on("click", expandHandler);
       }
       
@@ -1269,7 +1310,7 @@ export default function NetworkVisualizer({
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
     };
-  }, [displayData, visible, onZoomChange, expandedNodes, fullNetworkData, isExpandedMode]);
+  }, [finalDisplayData, visible, onZoomChange, expandedNodes, fullNetworkData, isExpandedMode]);
 
   // Helper function to check if a node should be visible based on filter state
   // For multi-role nodes, they are visible if ANY of their roles should be shown
