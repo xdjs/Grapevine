@@ -39,6 +39,7 @@ export default function NetworkVisualizer({
   // State for managing expanded networks
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [fullNetworkData, setFullNetworkData] = useState<NetworkData | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   // Persist expanded networks to localStorage
   const persistExpandedNetworks = useCallback(() => {
@@ -55,6 +56,12 @@ export default function NetworkVisualizer({
   
   // Restore expanded networks from localStorage
   const restoreExpandedNetworks = useCallback(() => {
+    // Only restore if we have valid data to work with
+    if (!data || !data.nodes || data.nodes.length === 0) {
+      console.log(`💾 [Persistence] No valid data available, skipping restoration`);
+      return false;
+    }
+    
     try {
       const savedData = localStorage.getItem('grapevine-expanded-networks');
       if (savedData) {
@@ -78,7 +85,7 @@ export default function NetworkVisualizer({
       localStorage.removeItem('grapevine-expanded-networks');
     }
     return false;
-  }, []);
+  }, [data]);
   
   // Loading state for expand network functionality
   const [isExpandingNetwork, setIsExpandingNetwork] = useState(false);
@@ -308,6 +315,13 @@ export default function NetworkVisualizer({
     links: getVisibleLinks()
   };
   
+  // Fallback: if no nodes are visible, use original data
+  if (finalDisplayData.nodes.length === 0 && data && data.nodes.length > 0) {
+    console.log(`⚠️ [Fallback] No visible nodes found, using original data`);
+    finalDisplayData.nodes = data.nodes;
+    finalDisplayData.links = data.links;
+  }
+  
 
 
   // Log the current state for debugging
@@ -373,16 +387,21 @@ export default function NetworkVisualizer({
     };
   }, [fullNetworkData, expandedNodes]);
 
-  // Restore expanded networks on component mount
+  // Restore expanded networks when data becomes available
   useEffect(() => {
-    console.log(`🔄 [Mount] Attempting to restore expanded networks`);
-    const restored = restoreExpandedNetworks();
-    if (restored) {
-      console.log(`🔄 [Mount] Successfully restored expanded networks`);
-    } else {
-      console.log(`🔄 [Mount] No saved networks to restore`);
+    if (data && data.nodes && data.nodes.length > 0 && !isInitialized) {
+      console.log(`🔄 [Mount] Data available, attempting to restore expanded networks`);
+      const restored = restoreExpandedNetworks();
+      if (restored) {
+        console.log(`🔄 [Mount] Successfully restored expanded networks`);
+      } else {
+        console.log(`🔄 [Mount] No saved networks to restore`);
+      }
+      setIsInitialized(true);
+    } else if (!data || !data.nodes || data.nodes.length === 0) {
+      console.log(`🔄 [Mount] No data available yet, skipping restoration`);
     }
-  }, [restoreExpandedNetworks]);
+  }, [data, restoreExpandedNetworks, isInitialized]);
 
   // Fetch configuration on component mount
   useEffect(() => {
