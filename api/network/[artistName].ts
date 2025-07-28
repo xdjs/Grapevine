@@ -10,6 +10,7 @@ interface NetworkNode {
   size: number;
   artistId: string | null;
   collaborations?: string[];
+  imageUrl?: string | null;
 }
 
 interface NetworkLink {
@@ -339,6 +340,54 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
         ? ['artist', ...mainArtistTypes.filter(r => r !== 'artist')]
         : mainArtistTypes;
 
+      // Fetch Spotify profile picture for main artist
+      let profileImageUrl = null;
+      try {
+        // Get Spotify access token
+        const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
+        const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
+        
+        if (SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET) {
+          // Get access token
+          const authString = Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64');
+          const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Basic ${authString}`,
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: 'grant_type=client_credentials'
+          });
+          
+          if (tokenResponse.ok) {
+            const tokenData = await tokenResponse.json() as { access_token: string };
+            const accessToken = tokenData.access_token;
+            
+            // Search for artist
+            const searchResponse = await fetch(
+              `https://api.spotify.com/v1/search?q=${encodeURIComponent(correctArtistName)}&type=artist&limit=1`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${accessToken}`
+                }
+              }
+            );
+            
+            if (searchResponse.ok) {
+              const searchData = await searchResponse.json() as { artists: { items: Array<{ images: Array<{ url: string }> }> } };
+              const artists = searchData.artists.items;
+              if (artists.length > 0 && artists[0].images && artists[0].images.length > 0) {
+                // Use the smallest image for better performance (usually the last one)
+                profileImageUrl = artists[0].images[artists[0].images.length - 1].url;
+                console.log(`🎵 [Vercel] Found Spotify profile image for ${correctArtistName}: ${profileImageUrl}`);
+              }
+            }
+          }
+        }
+      } catch (spotifyError) {
+        console.warn(`🎵 [Vercel] Could not fetch Spotify profile image for ${correctArtistName}:`, spotifyError);
+      }
+
       // Add main artist node using correct capitalization from database and detected roles
       const mainNode = {
         id: correctArtistName,
@@ -347,7 +396,8 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
         types: orderedMainArtistTypes,
         color: '#FF69B4',
         size: 30,
-        artistId: artistExistsResult.rows[0].id
+        artistId: artistExistsResult.rows[0].id,
+        imageUrl: profileImageUrl
       };
       nodeMap.set(correctArtistName, mainNode);
       

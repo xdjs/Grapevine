@@ -494,7 +494,7 @@ export default function NetworkVisualizer({
       
       if (roles.length === 1) {
         // Single role - simple circle
-        group.append("circle")
+        const circle = group.append("circle")
           .attr("r", d.size)
           .attr("fill", "transparent")
           .attr("stroke", () => {
@@ -504,6 +504,27 @@ export default function NetworkVisualizer({
             return '#355367';  // Police Blue
           })
           .attr("stroke-width", 4);
+
+        // Add profile picture if available (for main artist)
+        if (d.imageUrl) {
+          // Create a circular clipping path
+          const clipId = `clip-${d.id.replace(/[^a-zA-Z0-9]/g, '')}`;
+          group.append("defs")
+            .append("clipPath")
+            .attr("id", clipId)
+            .append("circle")
+            .attr("r", d.size - 4); // Slightly smaller than the border
+
+          // Add the profile image
+          group.append("image")
+            .attr("href", d.imageUrl)
+            .attr("x", -(d.size - 4))
+            .attr("y", -(d.size - 4))
+            .attr("width", (d.size - 4) * 2)
+            .attr("height", (d.size - 4) * 2)
+            .attr("clip-path", `url(#${clipId})`)
+            .attr("preserveAspectRatio", "xMidYMid slice");
+        }
       } else {
         // Multiple roles - create segmented circle
         const angleStep = (2 * Math.PI) / roles.length;
@@ -537,6 +558,27 @@ export default function NetworkVisualizer({
           .attr("fill", "transparent")
           .attr("stroke", "white")
           .attr("stroke-width", 2);
+
+        // Add profile picture if available (for main artist with multiple roles)
+        if (d.imageUrl) {
+          // Create a circular clipping path
+          const clipId = `clip-${d.id.replace(/[^a-zA-Z0-9]/g, '')}`;
+          group.append("defs")
+            .append("clipPath")
+            .attr("id", clipId)
+            .append("circle")
+            .attr("r", d.size - 8); // Even smaller for multi-role nodes
+
+          // Add the profile image
+          group.append("image")
+            .attr("href", d.imageUrl)
+            .attr("x", -(d.size - 8))
+            .attr("y", -(d.size - 8))
+            .attr("width", (d.size - 8) * 2)
+            .attr("height", (d.size - 8) * 2)
+            .attr("clip-path", `url(#${clipId})`)
+            .attr("preserveAspectRatio", "xMidYMid slice");
+        }
       }
     })
       .on("click", function(event, d) {
@@ -574,7 +616,13 @@ export default function NetworkVisualizer({
       .append("text")
       .attr("class", "label")
       .attr("text-anchor", "middle")
-      .attr("dy", "0.35em")
+      .attr("dy", (d) => {
+        // If node has a profile picture, position text below the border
+        if (d.imageUrl) {
+          return `${d.size + 15}px`; // Position below the node border
+        }
+        return "0.35em"; // Default center positioning
+      })
       .attr("font-size", (d) => d.type === 'artist' ? "14px" : "11px")
       .attr("font-weight", (d) => d.type === 'artist' ? "600" : "500")
       .attr("fill", "white")
