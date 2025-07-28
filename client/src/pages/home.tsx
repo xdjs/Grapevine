@@ -179,8 +179,8 @@ export default function Home() {
     loadArtistFromUrl();
   }, [params.artistId, networkData, isLoading, isClearing, setLocation]);
 
-  const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
-    // Replace existing network with new data
+  const handleNetworkData = useCallback(async (data: NetworkData, artistId?: string) => {
+    // Replace existing network with new data first (for immediate display)
     setNetworkData(data);
     setShowNetworkView(true);
     setIsLoading(false);
@@ -188,6 +188,19 @@ export default function Home() {
     // Update URL to reflect the artist being displayed
     if (artistId) {
       setLocation(`/${artistId}`);
+    }
+
+    // Fetch profile pictures for main artists in the background
+    try {
+      const { fetchMainArtistProfilePictures } = await import('../lib/profile-pictures');
+      const updatedData = await fetchMainArtistProfilePictures(data);
+      
+      // Update network data with profile pictures
+      setNetworkData(updatedData);
+      console.log(`🖼️✅ [Home] Updated network with profile pictures`);
+    } catch (error) {
+      console.error(`🖼️❌ [Home] Failed to fetch profile pictures:`, error);
+      // Continue without profile pictures - original design will be used
     }
   }, [setLocation]);
 

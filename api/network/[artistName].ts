@@ -340,102 +340,7 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
         ? ['artist', ...mainArtistTypes.filter(r => r !== 'artist')]
         : mainArtistTypes;
 
-      // Fetch profile picture for main artist with multiple fallbacks
-      let profileImageUrl = null;
-      
-      // Method 1: Try Spotify API (if properly configured)
-      try {
-        const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
-        const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
-        
-        // Check if we have real Spotify credentials (not placeholders)
-        if (SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET && 
-            !SPOTIFY_CLIENT_ID.includes('placeholder') && 
-            !SPOTIFY_CLIENT_ID.includes('your_') &&
-            !SPOTIFY_CLIENT_SECRET.includes('placeholder') && 
-            !SPOTIFY_CLIENT_SECRET.includes('your_')) {
-          
-          // Get access token
-          const authString = Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64');
-          const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Basic ${authString}`,
-              'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: 'grant_type=client_credentials'
-          });
-          
-          if (tokenResponse.ok) {
-            const tokenData = await tokenResponse.json() as { access_token: string };
-            const accessToken = tokenData.access_token;
-            
-            // Search for artist
-            const searchResponse = await fetch(
-              `https://api.spotify.com/v1/search?q=${encodeURIComponent(correctArtistName)}&type=artist&limit=1`,
-              {
-                headers: {
-                  'Authorization': `Bearer ${accessToken}`
-                }
-              }
-            );
-            
-            if (searchResponse.ok) {
-              const searchData = await searchResponse.json() as { artists: { items: Array<{ images: Array<{ url: string }> }> } };
-              const artists = searchData.artists.items;
-              if (artists.length > 0 && artists[0].images && artists[0].images.length > 0) {
-                // Use the smallest image for better performance (usually the last one)
-                profileImageUrl = artists[0].images[artists[0].images.length - 1].url;
-                console.log(`🎵✅ [Vercel] Found Spotify profile image for ${correctArtistName}: ${profileImageUrl}`);
-              }
-            }
-          }
-        } else {
-          console.log(`🎵⚠️ [Vercel] Spotify credentials not properly configured (using placeholders)`);
-        }
-      } catch (spotifyError) {
-        console.warn(`🎵❌ [Vercel] Spotify API failed for ${correctArtistName}:`, spotifyError instanceof Error ? spotifyError.message : 'Unknown error');
-      }
-      
-      // Method 2: Fallback to MusicBrainz for artist image (if Spotify failed)
-      if (!profileImageUrl) {
-        try {
-          console.log(`🎵🔄 [Vercel] Trying MusicBrainz fallback for ${correctArtistName}`);
-          const mbResponse = await fetch(
-            `https://musicbrainz.org/ws/2/artist/?query=artist:"${encodeURIComponent(correctArtistName)}"&fmt=json&limit=1`
-          );
-          
-          if (mbResponse.ok) {
-            const mbData = await mbResponse.json() as { artists: Array<{ id: string }> };
-            if (mbData.artists && mbData.artists.length > 0) {
-              const artistId = mbData.artists[0].id;
-              
-              // Try to get Cover Art Archive image
-              const caaResponse = await fetch(
-                `https://coverartarchive.org/artist/${artistId}`,
-                { 
-                  headers: { 'User-Agent': 'Grapevine/1.0 (https://grapevine.app)' }
-                }
-              );
-              
-              if (caaResponse.ok) {
-                const caaData = await caaResponse.json() as { images: Array<{ image: string, thumbnails: { small: string } }> };
-                if (caaData.images && caaData.images.length > 0) {
-                  profileImageUrl = caaData.images[0].thumbnails?.small || caaData.images[0].image;
-                  console.log(`🎵✅ [Vercel] Found MusicBrainz profile image for ${correctArtistName}: ${profileImageUrl}`);
-                }
-              }
-            }
-          }
-        } catch (mbError) {
-          console.warn(`🎵⚠️ [Vercel] MusicBrainz fallback failed for ${correctArtistName}:`, mbError instanceof Error ? mbError.message : 'Unknown error');
-        }
-      }
-      
-      // If no profile image found, fall back to original node design (no image)
-      if (!profileImageUrl) {
-        console.log(`🎵⭕ [Vercel] No profile image found for ${correctArtistName}, using original node design`);
-      }
+      // Note: Profile pictures are now fetched separately via /api/artist-profile-picture/[artistName]
 
       // Add main artist node using correct capitalization from database and detected roles
       const mainNode = {
@@ -446,7 +351,7 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
         color: '#FF69B4',
         size: 30,
         artistId: artistExistsResult.rows[0].id,
-        imageUrl: profileImageUrl
+        imageUrl: null
       };
       nodeMap.set(correctArtistName, mainNode);
       
