@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
+import { useNetworkData } from "@/hooks/use-network-data";
 import ArtistSelectionModal from "./artist-selection-modal";
 import CollaborationDetailsPopup from "./collaboration-details-popup";
 
@@ -35,175 +36,30 @@ export default function NetworkVisualizer({
   const [collaborationCollaborator, setCollaborationCollaborator] = useState("");
   const [mainArtistName, setMainArtistName] = useState("");
 
-  // State for managing expanded networks
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-  const [fullNetworkData, setFullNetworkData] = useState<NetworkData | null>(null);
-  const [isExpandedMode, setIsExpandedMode] = useState(false);
+  // Use network data management hook
+  const {
+    expandedNodes,
+    fullNetworkData, 
+    isExpandedMode,
+    mainArtistNode,
+    visibleNodes,
+    visibleLinks,
+    displayData: finalDisplayData,
+    expandNodeNetwork,
+    collapseNodeNetwork,
+    resetToFirstDegree
+  } = useNetworkData({ data });
 
-  // Find the main artist node
-  const mainArtistNode = data.nodes.find(node => 
-    node.size === 30 && (node.type === 'artist' || (node.types && node.types.includes('artist')))
-  );
 
-  // Get first-degree collaborators (nodes directly connected to main artist)
-  const getFirstDegreeCollaborators = () => {
-    if (!mainArtistNode) return new Set<string>();
-    
-    const firstDegreeIds = new Set<string>();
-    data.links.forEach(link => {
-      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-      
-      if (sourceId === mainArtistNode.name) {
-        firstDegreeIds.add(targetId);
-      } else if (targetId === mainArtistNode.name) {
-        firstDegreeIds.add(sourceId);
-      }
-    });
-    
-    return firstDegreeIds;
-  };
-
-  // Get visible nodes based on expansion state
-  const getVisibleNodes = () => {
-    if (!mainArtistNode) return data.nodes;
-    
-    const firstDegreeIds = getFirstDegreeCollaborators();
-    const visibleIds = new Set([mainArtistNode.id]);
-    
-    // Always include main artist
-    visibleIds.add(mainArtistNode.id);
-    
-    // Include first-degree collaborators
-    firstDegreeIds.forEach(id => visibleIds.add(id));
-    
-    // Include expanded nodes and their connections
-    expandedNodes.forEach(expandedNodeId => {
-      visibleIds.add(expandedNodeId);
-      
-      // Add all nodes connected to this expanded node
-      data.links.forEach(link => {
-        const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-        const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-        
-        if (sourceId === expandedNodeId) {
-          visibleIds.add(targetId);
-        } else if (targetId === expandedNodeId) {
-          visibleIds.add(sourceId);
-        }
-      });
-    });
-    
-    return data.nodes.filter(node => visibleIds.has(node.id));
-  };
-
-  // Get visible links based on visible nodes
-  const getVisibleLinks = () => {
-    const visibleNodeIds = new Set(getVisibleNodes().map(node => node.id));
-    
-    return data.links.filter(link => {
-      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-      return visibleNodeIds.has(sourceId) && visibleNodeIds.has(targetId);
-    });
-  };
-
-  // Function to expand a node's network
-  const expandNodeNetwork = async (nodeName: string, nodeId?: string) => {
-    console.log(`🔗 Expanding network for: ${nodeName}`);
-    
-    try {
-      // Fetch the full network for this collaborator
-      const response = await fetch(`/api/network/${encodeURIComponent(nodeName)}`);
-      if (response.ok) {
-        const collaboratorNetwork = await response.json();
-        
-        // Merge the collaborator's network with the existing network
-        const mergedNodes = [...data.nodes];
-        const mergedLinks = [...data.links];
-        
-        // Add new nodes from collaborator's network (avoiding duplicates)
-        const existingNodeIds = new Set(data.nodes.map(n => n.id));
-        collaboratorNetwork.nodes.forEach(collaboratorNode => {
-          if (!existingNodeIds.has(collaboratorNode.id)) {
-            mergedNodes.push(collaboratorNode);
-            existingNodeIds.add(collaboratorNode.id);
-          }
-        });
-        
-        // Add new links from collaborator's network (avoiding duplicates)
-        const existingLinkIds = new Set(data.links.map(link => {
-          const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-          const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-          return `${sourceId}-${targetId}`;
-        }));
-        
-        collaboratorNetwork.links.forEach(collaboratorLink => {
-          const sourceId = typeof collaboratorLink.source === 'string' ? collaboratorLink.source : collaboratorLink.source.id;
-          const targetId = typeof collaboratorLink.target === 'string' ? collaboratorLink.target : collaboratorLink.target.id;
-          const linkId = `${sourceId}-${targetId}`;
-          
-          if (!existingLinkIds.has(linkId)) {
-            mergedLinks.push(collaboratorLink);
-            existingLinkIds.add(linkId);
-          }
-        });
-        
-        // Create merged network data
-        const mergedNetworkData = {
-          nodes: mergedNodes,
-          links: mergedLinks
-        };
-        
-        setFullNetworkData(mergedNetworkData);
-        
-        // Add this node to expanded set
-        setExpandedNodes(prev => new Set([...prev, nodeName]));
-        setIsExpandedMode(true);
-        
-        console.log(`✅ Expanded network for ${nodeName} - added ${collaboratorNetwork.nodes.length} nodes and ${collaboratorNetwork.links.length} links`);
-      } else {
-        console.error(`❌ Failed to fetch network for ${nodeName}`);
-      }
-    } catch (error) {
-      console.error(`❌ Error expanding network for ${nodeName}:`, error);
-    }
-  };
-
-  // Function to collapse a node's network
-  const collapseNodeNetwork = (nodeName: string) => {
-    setExpandedNodes(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(nodeName);
-      return newSet;
-    });
-  };
-
-  // Function to reset to first-degree view
-  const resetToFirstDegree = () => {
-    setFullNetworkData(null);
-    setExpandedNodes(new Set());
-    setIsExpandedMode(false);
-    console.log(`🔄 Reset to first-degree view for ${mainArtistNode?.name || 'main artist'}`);
-  };
-
-  // Get the data to display (either filtered or full)
-  const displayData = fullNetworkData || {
-    nodes: getVisibleNodes(),
-    links: getVisibleLinks()
-  };
-
-  // When in expanded mode, show all nodes from the full network data
-  const finalDisplayData = isExpandedMode && fullNetworkData ? fullNetworkData : displayData;
 
   // Log the current state for debugging
   useEffect(() => {
     if (fullNetworkData) {
       console.log(`📊 Displaying expanded network with ${fullNetworkData.nodes.length} nodes and ${fullNetworkData.links.length} links`);
     } else {
-      console.log(`📊 Displaying first-degree network with ${getVisibleNodes().length} nodes and ${getVisibleLinks().length} links`);
+      console.log(`📊 Displaying first-degree network with ${visibleNodes.length} nodes and ${visibleLinks.length} links`);
     }
-  }, [fullNetworkData, expandedNodes]);
+  }, [fullNetworkData, visibleNodes, visibleLinks]);
 
   // Fetch configuration on component mount
   useEffect(() => {
@@ -606,7 +462,7 @@ export default function NetworkVisualizer({
 
     // Create simulation with centering force for main artist
     const simulation = d3
-      .forceSimulation<NetworkNode>(displayData.nodes)
+              .forceSimulation<NetworkNode>(finalDisplayData.nodes)
       .force(
         "link",
         d3
@@ -653,7 +509,7 @@ export default function NetworkVisualizer({
     // Create nodes with multi-role support
     const nodeElements = networkGroup
       .selectAll(".node")
-      .data(displayData.nodes)
+      .data(finalDisplayData.nodes)
       .enter()
       .append("g")
       .attr("class", (d) => `node-group network-node node-${d.type}`)
@@ -747,7 +603,7 @@ export default function NetworkVisualizer({
           setMainArtistName(mainArtistName);
           
           // Check if the clicked node is directly connected to main artist (first layer)
-          const isFirstLayer = displayData.links.some(link => {
+          const isFirstLayer = finalDisplayData.links.some(link => {
             const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
             const targetId = typeof link.target === 'string' ? link.target : link.target.id;
             return (sourceId === mainArtistName && targetId === d.name) || 
@@ -762,7 +618,7 @@ export default function NetworkVisualizer({
           } else {
             // Second layer: clicked node is not directly connected to main artist
             // Find the first layer node that this second layer node is connected to
-            const directLink = displayData.links.find(link => {
+            const directLink = finalDisplayData.links.find(link => {
               const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
               const targetId = typeof link.target === 'string' ? link.target : link.target.id;
               return (sourceId === d.name && targetId !== mainArtistName) || 
@@ -796,7 +652,7 @@ export default function NetworkVisualizer({
     // Add labels for all nodes
     const labelElements = networkGroup
       .selectAll(".label")
-      .data(displayData.nodes)
+      .data(finalDisplayData.nodes)
       .enter()
       .append("text")
       .attr("class", "label")
@@ -840,15 +696,19 @@ export default function NetworkVisualizer({
         const paddingRight = isMobile ? "25px" : "30px";
         const gap = isMobile ? "6px" : "8px";
         // Check if this is the main artist
-        const mainArtistNode = displayData.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const mainArtistNode = finalDisplayData.nodes.find(node => node.size === 30 && node.type === 'artist');
         const isMainArtist = d === mainArtistNode;
         
         // Check if this node is an artist (has artist role)
         const isArtist = roles.includes('artist');
         
         // Check if this is a first-degree collaborator (directly connected to main artist)
-        const firstDegreeIds = getFirstDegreeCollaborators();
-        const isFirstDegreeCollaborator = firstDegreeIds.has(d.name);
+        const isFirstDegreeCollaborator = mainArtistNode && finalDisplayData.links.some(link => {
+          const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+          const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+          return (sourceId === mainArtistNode.name && targetId === d.name) || 
+                 (sourceId === d.name && targetId === mainArtistNode.name);
+        });
         
         // Build expand network section for first-degree collaborators
         const expandSection = isFirstDegreeCollaborator && !isMainArtist ? 
@@ -954,7 +814,7 @@ export default function NetworkVisualizer({
           const mainArtistName = mainArtistNode?.name || "";
           
           // Check if the clicked node is directly connected to main artist (first layer)
-          const isFirstLayer = displayData.links.some(link => {
+          const isFirstLayer = finalDisplayData.links.some(link => {
             const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
             const targetId = typeof link.target === 'string' ? link.target : link.target.id;
             return (sourceId === mainArtistName && targetId === d.name) || 
@@ -969,7 +829,7 @@ export default function NetworkVisualizer({
           } else {
             // Second layer: clicked node is not directly connected to main artist
             // Find the first layer node that this second layer node is connected to
-            const directLink = displayData.links.find(link => {
+            const directLink = finalDisplayData.links.find(link => {
               const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
               const targetId = typeof link.target === 'string' ? link.target : link.target.id;
               return (sourceId === d.name && targetId !== mainArtistName) || 
@@ -1269,7 +1129,7 @@ export default function NetworkVisualizer({
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
     };
-  }, [displayData, visible, onZoomChange, expandedNodes, fullNetworkData, isExpandedMode]);
+      }, [finalDisplayData, visible, onZoomChange, expandedNodes, fullNetworkData, isExpandedMode]);
 
   // Helper function to check if a node should be visible based on filter state
   // For multi-role nodes, they are visible if ANY of their roles should be shown
