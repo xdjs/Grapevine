@@ -200,7 +200,7 @@ export default function Home() {
   }, [params.artistId, networkData, isLoading, isClearing, setLocation]);
 
   const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
-    // Replace existing network with new data
+    // Display network data (profile pictures are now included from backend)
     setNetworkData(data);
     setShowNetworkView(true);
     setIsLoading(false);
@@ -213,6 +213,8 @@ export default function Home() {
     if (artistId) {
       setLocation(`/${artistId}`);
     }
+    
+    console.log(`🖼️✅ [Home] Network loaded with profile pictures included from backend`);
   }, [setLocation]);
 
   const handleLoadingChange = useCallback((loading: boolean, artistName?: string) => {

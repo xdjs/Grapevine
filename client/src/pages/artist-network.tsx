@@ -30,11 +30,10 @@ export default function ArtistNetwork() {
   const saveToHistoryRef = useRef<((artistName: string, artistId: string | null) => void) | null>(null);
   const isMobile = useIsMobile();
 
-  const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
+  const handleNetworkData = useCallback((data: NetworkData) => {
+    // Set network data (profile pictures are now included from backend)
     setNetworkData(data);
-    // Extract the artist ID from the network data
-    const finalArtistId = artistId || data.nodes.find(node => node.size === 30)?.artistId || null;
-    setCurrentArtistId(finalArtistId);
+    console.log(`🖼️✅ [Artist Network] Network loaded with profile pictures included from backend`);
   }, []);
 
   // Navigate back to home

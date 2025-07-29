@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import ArtistSelectionModal from "./artist-selection-modal";
+import { ensureArtistProfilePictures } from "@/lib/profile-pictures";
 import CollaborationDetailsPopup from "./collaboration-details-popup";
 
 interface NetworkVisualizerProps {
@@ -28,182 +29,30 @@ export default function NetworkVisualizer({
   const [showArtistModal, setShowArtistModal] = useState(false);
   const [selectedArtistName, setSelectedArtistName] = useState("");
   const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("");
-  
-  // Collaboration details popup state
-  const [showCollaborationPopup, setShowCollaborationPopup] = useState(false);
-  const [collaborationArtist, setCollaborationArtist] = useState("");
-  const [collaborationCollaborator, setCollaborationCollaborator] = useState("");
-  const [mainArtistName, setMainArtistName] = useState("");
+  const [dataWithPictures, setDataWithPictures] = useState<NetworkData | null>(null);
 
-  // State for managing expanded networks
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-  const [fullNetworkData, setFullNetworkData] = useState<NetworkData | null>(null);
-  const [isExpandedMode, setIsExpandedMode] = useState(false);
-
-  // Find the main artist node
-  const mainArtistNode = data.nodes.find(node => 
-    node.size === 30 && (node.type === 'artist' || (node.types && node.types.includes('artist')))
-  );
-
-  // Get first-degree collaborators (nodes directly connected to main artist)
-  const getFirstDegreeCollaborators = () => {
-    if (!mainArtistNode) return new Set<string>();
-    
-    const firstDegreeIds = new Set<string>();
-    data.links.forEach(link => {
-      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-      
-      if (sourceId === mainArtistNode.name) {
-        firstDegreeIds.add(targetId);
-      } else if (targetId === mainArtistNode.name) {
-        firstDegreeIds.add(sourceId);
-      }
-    });
-    
-    return firstDegreeIds;
-  };
-
-  // Get visible nodes based on expansion state
-  const getVisibleNodes = () => {
-    if (!mainArtistNode) return data.nodes;
-    
-    const firstDegreeIds = getFirstDegreeCollaborators();
-    const visibleIds = new Set([mainArtistNode.id]);
-    
-    // Always include main artist
-    visibleIds.add(mainArtistNode.id);
-    
-    // Include first-degree collaborators
-    firstDegreeIds.forEach(id => visibleIds.add(id));
-    
-    // Include expanded nodes and their connections
-    expandedNodes.forEach(expandedNodeId => {
-      visibleIds.add(expandedNodeId);
-      
-      // Add all nodes connected to this expanded node
-      data.links.forEach(link => {
-        const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-        const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-        
-        if (sourceId === expandedNodeId) {
-          visibleIds.add(targetId);
-        } else if (targetId === expandedNodeId) {
-          visibleIds.add(sourceId);
-        }
-      });
-    });
-    
-    return data.nodes.filter(node => visibleIds.has(node.id));
-  };
-
-  // Get visible links based on visible nodes
-  const getVisibleLinks = () => {
-    const visibleNodeIds = new Set(getVisibleNodes().map(node => node.id));
-    
-    return data.links.filter(link => {
-      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-      return visibleNodeIds.has(sourceId) && visibleNodeIds.has(targetId);
-    });
-  };
-
-  // Function to expand a node's network
-  const expandNodeNetwork = async (nodeName: string, nodeId?: string) => {
-    console.log(`🔗 Expanding network for: ${nodeName}`);
-    
-    try {
-      // Fetch the full network for this collaborator
-      const response = await fetch(`/api/network/${encodeURIComponent(nodeName)}`);
-      if (response.ok) {
-        const collaboratorNetwork = await response.json();
-        
-        // Merge the collaborator's network with the existing network
-        const mergedNodes = [...data.nodes];
-        const mergedLinks = [...data.links];
-        
-        // Add new nodes from collaborator's network (avoiding duplicates)
-        const existingNodeIds = new Set(data.nodes.map(n => n.id));
-        collaboratorNetwork.nodes.forEach(collaboratorNode => {
-          if (!existingNodeIds.has(collaboratorNode.id)) {
-            mergedNodes.push(collaboratorNode);
-            existingNodeIds.add(collaboratorNode.id);
-          }
-        });
-        
-        // Add new links from collaborator's network (avoiding duplicates)
-        const existingLinkIds = new Set(data.links.map(link => {
-          const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-          const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-          return `${sourceId}-${targetId}`;
-        }));
-        
-        collaboratorNetwork.links.forEach(collaboratorLink => {
-          const sourceId = typeof collaboratorLink.source === 'string' ? collaboratorLink.source : collaboratorLink.source.id;
-          const targetId = typeof collaboratorLink.target === 'string' ? collaboratorLink.target : collaboratorLink.target.id;
-          const linkId = `${sourceId}-${targetId}`;
-          
-          if (!existingLinkIds.has(linkId)) {
-            mergedLinks.push(collaboratorLink);
-            existingLinkIds.add(linkId);
-          }
-        });
-        
-        // Create merged network data
-        const mergedNetworkData = {
-          nodes: mergedNodes,
-          links: mergedLinks
-        };
-        
-        setFullNetworkData(mergedNetworkData);
-        
-        // Add this node to expanded set
-        setExpandedNodes(prev => new Set([...prev, nodeName]));
-        setIsExpandedMode(true);
-        
-        console.log(`✅ Expanded network for ${nodeName} - added ${collaboratorNetwork.nodes.length} nodes and ${collaboratorNetwork.links.length} links`);
-      } else {
-        console.error(`❌ Failed to fetch network for ${nodeName}`);
-      }
-    } catch (error) {
-      console.error(`❌ Error expanding network for ${nodeName}:`, error);
-    }
-  };
-
-  // Function to collapse a node's network
-  const collapseNodeNetwork = (nodeName: string) => {
-    setExpandedNodes(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(nodeName);
-      return newSet;
-    });
-  };
-
-  // Function to reset to first-degree view
-  const resetToFirstDegree = () => {
-    setFullNetworkData(null);
-    setExpandedNodes(new Set());
-    setIsExpandedMode(false);
-    console.log(`🔄 Reset to first-degree view for ${mainArtistNode?.name || 'main artist'}`);
-  };
-
-  // Get the data to display (either filtered or full)
-  const displayData = fullNetworkData || {
-    nodes: getVisibleNodes(),
-    links: getVisibleLinks()
-  };
-
-  // When in expanded mode, show all nodes from the full network data
-  const finalDisplayData = isExpandedMode && fullNetworkData ? fullNetworkData : displayData;
-
-  // Log the current state for debugging
+  // Ensure profile pictures are always available when data changes
   useEffect(() => {
-    if (fullNetworkData) {
-      console.log(`📊 Displaying expanded network with ${fullNetworkData.nodes.length} nodes and ${fullNetworkData.links.length} links`);
-    } else {
-      console.log(`📊 Displaying first-degree network with ${getVisibleNodes().length} nodes and ${getVisibleLinks().length} links`);
+    if (!data || !visible) {
+      setDataWithPictures(null);
+      return;
     }
-  }, [fullNetworkData, expandedNodes]);
+
+    console.log(`🖼️ [NetworkVisualizer] Ensuring profile pictures for network data...`);
+    
+    const ensurePictures = async () => {
+      try {
+        const updatedData = await ensureArtistProfilePictures(data);
+        setDataWithPictures(updatedData);
+        console.log(`🖼️ [NetworkVisualizer] Profile pictures ensured and ready for display`);
+      } catch (error) {
+        console.error(`🖼️ [NetworkVisualizer] Error ensuring profile pictures:`, error);
+        setDataWithPictures(data); // Use original data if profile picture fetching fails
+      }
+    };
+
+    ensurePictures();
+  }, [data, visible]);
 
   // Fetch configuration on component mount
   useEffect(() => {
@@ -236,7 +85,9 @@ export default function NetworkVisualizer({
   }, []);
 
   useEffect(() => {
-    if (!svgRef.current || !finalDisplayData || !visible) return;
+    // Use dataWithPictures instead of data to ensure profile pictures are included
+    const networkData = dataWithPictures;
+    if (!svgRef.current || !networkData || !visible) return;
 
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
@@ -249,8 +100,8 @@ export default function NetworkVisualizer({
     svg.selectAll("*").remove();
 
     // Filter out links where either node doesn't exist or is isolated
-    const nodeSet = new Set(finalDisplayData.nodes.map(n => n.id));
-    const validLinks = finalDisplayData.links.filter(link => {
+    const nodeSet = new Set(networkData.nodes.map(n => n.id));
+    const validLinks = networkData.links.filter(link => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       return nodeSet.has(sourceId) && nodeSet.has(targetId);
@@ -513,7 +364,7 @@ export default function NetworkVisualizer({
       const visited = new Set<string>();
       const components: NetworkNode[][] = [];
       
-      for (const node of finalDisplayData.nodes) {
+      for (const node of networkData.nodes) {
         if (visited.has(node.id)) continue;
         
         const component: NetworkNode[] = [];
@@ -532,10 +383,10 @@ export default function NetworkVisualizer({
             const targetId = typeof link.target === 'string' ? link.target : link.target.id;
             
             if (sourceId === current.id) {
-              const target = finalDisplayData.nodes.find(n => n.id === targetId);
+              const target = networkData.nodes.find(n => n.id === targetId);
               if (target && !visited.has(target.id)) queue.push(target);
             } else if (targetId === current.id) {
-              const source = finalDisplayData.nodes.find(n => n.id === sourceId);
+              const source = networkData.nodes.find(n => n.id === sourceId);
               if (source && !visited.has(source.id)) queue.push(source);
             }
           }
@@ -555,7 +406,7 @@ export default function NetworkVisualizer({
     const componentHeight = height / Math.ceil(components.length / componentsPerRow);
     
     // Find the main artist node - it's the largest artist node (size can be 20, 25, or 30)
-    const mainArtistNode = finalDisplayData.nodes
+    const mainArtistNode = networkData.nodes
       .filter(node => node.type === 'artist' || (node.types && node.types.includes('artist')))
       .reduce((largest, current) => 
         !largest || current.size > largest.size ? current : largest, 
@@ -589,7 +440,7 @@ export default function NetworkVisualizer({
       const currentWidth = container ? container.clientWidth : width;
       const currentHeight = container ? container.clientHeight : height;
       
-      for (const node of finalDisplayData.nodes) {
+      for (const node of networkData.nodes) {
         // Ensure nodes stay well within bounds
         if (node.x! < margin) node.x = margin;
         if (node.x! > currentWidth - margin) node.x = currentWidth - margin;
@@ -606,7 +457,7 @@ export default function NetworkVisualizer({
 
     // Create simulation with centering force for main artist
     const simulation = d3
-      .forceSimulation<NetworkNode>(displayData.nodes)
+      .forceSimulation<NetworkNode>(networkData.nodes)
       .force(
         "link",
         d3
@@ -653,7 +504,7 @@ export default function NetworkVisualizer({
     // Create nodes with multi-role support
     const nodeElements = networkGroup
       .selectAll(".node")
-      .data(displayData.nodes)
+      .data(networkData.nodes)
       .enter()
       .append("g")
       .attr("class", (d) => `node-group network-node node-${d.type}`)
@@ -671,7 +522,7 @@ export default function NetworkVisualizer({
       
       if (roles.length === 1) {
         // Single role - simple circle
-        group.append("circle")
+        const circle = group.append("circle")
           .attr("r", d.size)
           .attr("fill", "transparent")
           .attr("stroke", () => {
@@ -681,6 +532,53 @@ export default function NetworkVisualizer({
             return '#355367';  // Police Blue
           })
           .attr("stroke-width", 4);
+
+        // Add profile picture if available (for any artist node)
+        if (d.imageUrl) {
+          console.log(`🖼️ [D3] Rendering profile image for ${d.name} (size: ${d.size}): ${d.imageUrl}`);
+          
+          // Create a circular clipping path using D3
+          const clipId = `clip-${d.id.replace(/[^a-zA-Z0-9]/g, '')}`;
+          const svg = d3.select(svgRef.current);
+          
+          // Ensure defs exists
+          if (svg.select("defs").empty()) {
+            svg.insert("defs", ":first-child");
+          }
+          
+          // Remove existing clipPath if it exists
+          svg.select("defs").select(`#${clipId}`).remove();
+          
+          // Create new clipPath with properly centered circle
+          // Adjust clipping radius based on node size for better visual balance
+          const clipRadius = d.size >= 25 ? d.size - 4 : d.size - 3;
+          svg.select("defs").append("clipPath")
+            .attr("id", clipId)
+            .append("circle")
+            .attr("cx", 0)
+            .attr("cy", 0)
+            .attr("r", clipRadius);
+
+          // Add the profile image with error handling
+          const imageSize = d.size >= 25 ? d.size - 4 : d.size - 3;
+          group.append("image")
+            .attr("href", d.imageUrl)
+            .attr("x", -imageSize)
+            .attr("y", -imageSize)
+            .attr("width", imageSize * 2)
+            .attr("height", imageSize * 2)
+            .attr("clip-path", `url(#${clipId})`)
+            .attr("preserveAspectRatio", "xMidYMid slice")
+            .style("pointer-events", "none") // Prevent image from interfering with node events
+            .on("load", function() {
+              console.log(`🖼️✅ [D3] Image loaded successfully for ${d.name} (size: ${d.size})`);
+            })
+            .on("error", function() {
+              console.warn(`🖼️❌ [D3] Image failed to load for ${d.name}: ${d.imageUrl}`);
+              // Remove the failed image
+              d3.select(this).remove();
+            });
+        }
       } else {
         // Multiple roles - create segmented circle
         const angleStep = (2 * Math.PI) / roles.length;
@@ -715,6 +613,53 @@ export default function NetworkVisualizer({
           .attr("fill", "transparent")
           .attr("stroke", "white")
           .attr("stroke-width", 2);
+
+        // Add profile picture if available (for main artist with multiple roles)
+        if (d.imageUrl) {
+          console.log(`🖼️ [D3] Rendering multi-role profile image for ${d.name} (size: ${d.size}): ${d.imageUrl}`);
+          
+          // Create a circular clipping path using D3
+          const clipId = `clip-multi-${d.id.replace(/[^a-zA-Z0-9]/g, '')}`;
+          const svg = d3.select(svgRef.current);
+          
+          // Ensure defs exists
+          if (svg.select("defs").empty()) {
+            svg.insert("defs", ":first-child");
+          }
+          
+          // Remove existing clipPath if it exists
+          svg.select("defs").select(`#${clipId}`).remove();
+          
+          // Create new clipPath with properly centered circle (smaller for multi-role)
+          // Adjust clipping radius based on node size, accounting for the outer role rings
+          const clipRadius = d.size >= 25 ? d.size - 8 : d.size - 6;
+          svg.select("defs").append("clipPath")
+            .attr("id", clipId)
+            .append("circle")
+            .attr("cx", 0)
+            .attr("cy", 0)
+            .attr("r", clipRadius);
+
+          // Add the profile image with error handling
+          const imageSize = d.size >= 25 ? d.size - 8 : d.size - 6;
+          group.append("image")
+            .attr("href", d.imageUrl)
+            .attr("x", -imageSize)
+            .attr("y", -imageSize)
+            .attr("width", imageSize * 2)
+            .attr("height", imageSize * 2)
+            .attr("clip-path", `url(#${clipId})`)
+            .attr("preserveAspectRatio", "xMidYMid slice")
+            .style("pointer-events", "none") // Prevent image from interfering with node events
+            .on("load", function() {
+              console.log(`🖼️✅ [D3] Multi-role image loaded successfully for ${d.name} (size: ${d.size})`);
+            })
+            .on("error", function() {
+              console.warn(`🖼️❌ [D3] Multi-role image failed to load for ${d.name}: ${d.imageUrl}`);
+              // Remove the failed image
+              d3.select(this).remove();
+            });
+        }
       }
     })
       .on("click", function(event, d) {
@@ -796,14 +741,37 @@ export default function NetworkVisualizer({
     // Add labels for all nodes
     const labelElements = networkGroup
       .selectAll(".label")
-      .data(displayData.nodes)
+      .data(networkData.nodes)
       .enter()
       .append("text")
       .attr("class", "label")
       .attr("text-anchor", "middle")
-      .attr("dy", "0.35em")
-      .attr("font-size", (d) => d.type === 'artist' ? "14px" : "11px")
-      .attr("font-weight", (d) => d.type === 'artist' ? "600" : "500")
+      .attr("dy", (d) => {
+        // If node has a profile picture, position text below the border
+        if (d.imageUrl) {
+          // Adjust spacing based on node size for better visual balance
+          const spacing = d.size >= 25 ? 15 : d.size >= 20 ? 12 : 10;
+          return `${d.size + spacing}px`; // Position below the node border
+        }
+        return "0.35em"; // Default center positioning
+      })
+      .attr("font-size", (d) => {
+        // Scale font size based on node type and size
+        if (d.type === 'artist' || (d.types && d.types.includes('artist'))) {
+          // Artist nodes: larger font for larger nodes
+          if (d.size >= 25) return "14px";      // Main artists
+          if (d.size >= 20) return "12px";      // Medium artists  
+          return "11px";                        // Smaller artists
+        }
+        return "10px"; // Non-artist nodes
+      })
+      .attr("font-weight", (d) => {
+        // Bold for artists, normal for others
+        if (d.type === 'artist' || (d.types && d.types.includes('artist'))) {
+          return d.size >= 25 ? "600" : "500";  // Extra bold for main artists
+        }
+        return "400"; // Normal weight for non-artists
+      })
       .attr("fill", "white")
       .attr("pointer-events", "none")
       .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.8)")
@@ -1269,7 +1237,7 @@ export default function NetworkVisualizer({
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
     };
-  }, [displayData, visible, onZoomChange, expandedNodes, fullNetworkData, isExpandedMode]);
+  }, [dataWithPictures, visible, onZoomChange]);
 
   // Helper function to check if a node should be visible based on filter state
   // For multi-role nodes, they are visible if ANY of their roles should be shown
@@ -1294,7 +1262,7 @@ export default function NetworkVisualizer({
 
   // Update visibility based on filter state
   useEffect(() => {
-    if (!svgRef.current || !visible) return;
+    if (!svgRef.current || !visible || !dataWithPictures) return;
 
     const svg = d3.select(svgRef.current);
 
@@ -1341,7 +1309,7 @@ export default function NetworkVisualizer({
       
       return sourceVisible && targetVisible ? null : "none";
     });
-  }, [filterState, visible]);
+  }, [filterState, visible, dataWithPictures]);
 
   // SVG viewBox zoom function (working implementation)
   const applyZoom = (scale: number) => {
