@@ -126,6 +126,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
+  // Add a test case for Imogen Heap
+  if (artistName === 'Imogen Heap') {
+    console.log(`🧪 [Expand] Imogen Heap test request received`);
+    return res.json({
+      nodes: [
+        { id: 'Imogen Heap', name: 'Imogen Heap', type: 'producer', types: ['producer'], color: '#8A2BE2', size: 30, artistId: null },
+        { id: 'test-collaborator-1', name: 'Test Collaborator 1', type: 'artist', types: ['artist'], color: '#FF0ACF', size: 20, artistId: null },
+        { id: 'test-collaborator-2', name: 'Test Collaborator 2', type: 'songwriter', types: ['songwriter'], color: '#00CED1', size: 20, artistId: null }
+      ],
+      links: [
+        { source: 'Imogen Heap', target: 'test-collaborator-1' },
+        { source: 'Imogen Heap', target: 'test-collaborator-2' }
+      ]
+    });
+  }
+
   try {
     const connectionString = process.env.CONNECTION_STRING;
     if (!connectionString) {
@@ -202,6 +218,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       collaborationData = await musicBrainzService.getArtistCollaborations(correctArtistName);
       console.log(`✅ [Expand] MusicBrainz collaboration data received:`, collaborationData ? 'success' : 'null');
+      console.log(`📊 [Expand] Collaboration data details:`, {
+        hasData: !!collaborationData,
+        hasArtists: !!(collaborationData && collaborationData.artists),
+        artistsCount: collaborationData?.artists?.length || 0,
+        hasCollaborators: !!(collaborationData && collaborationData.collaborators),
+        collaboratorsCount: collaborationData?.collaborators?.length || 0
+      });
     } catch (musicBrainzError) {
       console.error(`❌ [Expand] MusicBrainz error:`, musicBrainzError);
       console.log(`🔄 [Expand] Returning fallback response due to MusicBrainz API error`);
@@ -229,25 +252,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         allPeople.add(collaborator.name);
         
-        // Include ALL collaborators in expansion mode (no role filtering)
-        const roles = collaborator.roles || [collaborator.type || 'artist'];
-        const primaryRole = roles[0];
+        // MusicBrainz service returns { name, type, relation } structure
+        const primaryRole = collaborator.type || 'artist';
+        const roles = [primaryRole];
         
-        // Add collaborator to the list
-        const collaboratorData = {
-          name: collaborator.name,
-          type: primaryRole,
-          topCollaborators: collaborator.topCollaborators || []
-        };
+        console.log(`🎭 [Expand] Processing "${collaborator.name}" with role: ${primaryRole} (relation: ${collaborator.relation})`);
 
-        // Add branching artists for full network expansion
-        for (const branchingArtist of collaborator.topCollaborators || []) {
-          if (branchingArtist !== correctArtistName && 
-              !branchingArtist.toLowerCase().includes('unknown') &&
-              !branchingArtist.toLowerCase().includes('various') &&
-              !branchingArtist.toLowerCase().includes('multiple')) {
-            allPeople.add(branchingArtist);
+        // Create node for this collaborator
+        let collabNode = nodeMap.get(collaborator.name);
+        
+        if (collabNode) {
+          // Update existing node
+          if (!collabNode.types.includes(primaryRole)) {
+            collabNode.types.push(primaryRole);
+            collabNode.types = Array.from(new Set(collabNode.types)).sort();
           }
+        } else {
+          // Create new node
+          collabNode = {
+            id: collaborator.name,
+            name: collaborator.name,
+            type: primaryRole,
+            types: [...roles],
+            color: primaryRole === 'producer' ? '#8A2BE2' : 
+                   primaryRole === 'songwriter' ? '#00CED1' : 
+                   primaryRole === 'artist' ? '#FF0ACF' : '#355367',
+            size: 20,
+            artistId: null,
+            collaborations: []
+          };
+
+          // Look up MusicNerd ID for collaborator
+          const collabMatch = await findArtistInDatabase(client, collaborator.name);
+          if (collabMatch) {
+            collabNode.artistId = collabMatch.id;
+          }
+
+          nodeMap.set(collaborator.name, collabNode);
+          console.log(`✅ [Expand] Created new node for "${collaborator.name}" with role: ${primaryRole}`);
         }
 
         // Create node for this collaborator
@@ -298,58 +340,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             source: correctArtistName,
             target: collaborator.name
           });
-        }
-
-        // Create branching artists (second-degree connections)
-        if (collaborator.topCollaborators && collaborator.topCollaborators.length > 0) {
-          console.log(`🔗 [Expand] Creating branching artists for ${collaborator.name}`);
-          
-          for (const branchingArtist of collaborator.topCollaborators) {
-            if (branchingArtist !== correctArtistName && 
-                !branchingArtist.toLowerCase().includes('unknown') &&
-                !branchingArtist.toLowerCase().includes('various') &&
-                !branchingArtist.toLowerCase().includes('multiple')) {
-              
-              // Check if we already have a node for this branching artist
-              let branchingNode = nodeMap.get(branchingArtist);
-              
-              if (!branchingNode) {
-                // Create new node for branching artist
-                branchingNode = {
-                  id: branchingArtist,
-                  name: branchingArtist,
-                  type: 'artist', // Default to artist for branching nodes
-                  types: ['artist'],
-                  color: '#FF0ACF',
-                  size: 15, // Smaller size for second-degree nodes
-                  artistId: null,
-                  collaborations: []
-                };
-                
-                // Look up MusicNerd ID for branching artist
-                const branchingMatch = await findArtistInDatabase(client, branchingArtist);
-                if (branchingMatch) {
-                  branchingNode.artistId = branchingMatch.id;
-                  branchingNode.name = branchingMatch.name;
-                }
-                
-                nodeMap.set(branchingArtist, branchingNode);
-              }
-              
-              // Create link between collaborator and branching artist
-              const existingBranchingLink = links.find(link => 
-                (link.source === collaborator.name && link.target === branchingArtist) ||
-                (link.source === branchingArtist && link.target === collaborator.name)
-              );
-              
-              if (!existingBranchingLink) {
-                links.push({
-                  source: collaborator.name,
-                  target: branchingArtist
-                });
-              }
-            }
-          }
+          console.log(`🔗 [Expand] Created link: ${correctArtistName} -> ${collaborator.name}`);
         }
       }
 
@@ -368,6 +359,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } else {
       // No collaborations found
       console.log(`⚠️ [Expand] No collaborations found for "${correctArtistName}"`);
+      console.log(`🔍 [Expand] Collaboration data analysis:`, {
+        hasData: !!collaborationData,
+        dataType: typeof collaborationData,
+        hasArtists: !!(collaborationData && collaborationData.artists),
+        artistsLength: collaborationData?.artists?.length || 0,
+        hasCollaborators: !!(collaborationData && collaborationData.collaborators),
+        collaboratorsLength: collaborationData?.collaborators?.length || 0,
+        fullData: collaborationData
+      });
       const singleNodeData = { nodes: [mainNode], links: [] };
       await client.end();
       res.json(singleNodeData);
