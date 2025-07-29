@@ -442,7 +442,8 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
           // In expansion mode, include ALL collaborators (not just producers/songwriters)
           // In initial mode, only include producers/songwriters
           const primaryRole = roles[0];
-          const shouldInclude = isExpansion ? true : (primaryRole === 'producer' || primaryRole === 'songwriter');
+          const hasProducerOrSongwriterRole = roles.includes('producer') || roles.includes('songwriter');
+          const shouldInclude = isExpansion ? true : hasProducerOrSongwriterRole;
           
           if (shouldInclude) {
             collaborators.push({
@@ -473,7 +474,9 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
           // In expansion mode, include ALL collaborators (not just producers/songwriters)
           // In initial mode, only include producers/songwriters
           const primaryRole = collaborator.type || 'artist';
-          const shouldInclude = isExpansion ? true : (primaryRole === 'producer' || primaryRole === 'songwriter');
+          const collaboratorRoles = collaborator.roles || [primaryRole];
+          const hasProducerOrSongwriterRole = collaboratorRoles.includes('producer') || collaboratorRoles.includes('songwriter');
+          const shouldInclude = isExpansion ? true : hasProducerOrSongwriterRole;
           
           if (shouldInclude) {
             collaborators.push(collaborator);
