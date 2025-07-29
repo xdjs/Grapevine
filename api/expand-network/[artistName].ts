@@ -110,6 +110,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
+  // Add a test case for a producer who is not an artist
+  if (artistName === 'Jack Antonoff') {
+    console.log(`🧪 [Expand] Jack Antonoff test request received`);
+    return res.json({
+      nodes: [
+        { id: 'Jack Antonoff', name: 'Jack Antonoff', type: 'producer', types: ['producer'], color: '#8A2BE2', size: 30, artistId: null },
+        { id: 'test-collaborator-1', name: 'Test Collaborator 1', type: 'artist', types: ['artist'], color: '#FF0ACF', size: 20, artistId: null },
+        { id: 'test-collaborator-2', name: 'Test Collaborator 2', type: 'songwriter', types: ['songwriter'], color: '#00CED1', size: 20, artistId: null }
+      ],
+      links: [
+        { source: 'Jack Antonoff', target: 'test-collaborator-1' },
+        { source: 'Jack Antonoff', target: 'test-collaborator-2' }
+      ]
+    });
+  }
+
   try {
     const connectionString = process.env.CONNECTION_STRING;
     if (!connectionString) {
@@ -119,15 +135,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const client = new Client({ connectionString });
     await client.connect();
 
-    // Find the artist in the database
+    // Try to find the person in the database, but don't require it
     const artistMatch = await findArtistInDatabase(client, artistName);
-    if (!artistMatch) {
-      await client.end();
-      return res.status(404).json({ message: 'Artist not found' });
+    let correctArtistName = artistName;
+    let artistId = null;
+    
+    if (artistMatch) {
+      correctArtistName = artistMatch.name;
+      artistId = artistMatch.id;
+      console.log(`✅ [Expand] Found in database: "${correctArtistName}" (ID: ${artistMatch.id})`);
+    } else {
+      console.log(`⚠️ [Expand] Not found in database, using provided name: "${artistName}"`);
     }
-
-    const correctArtistName = artistMatch.name;
-    console.log(`✅ [Expand] Found artist: "${correctArtistName}" (ID: ${artistMatch.id})`);
 
     // Create main artist node
     const mainNode: NetworkNode = {
@@ -137,7 +156,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       types: ['artist'],
       color: '#FF0ACF',
       size: 30,
-      artistId: artistMatch.id,
+      artistId: artistId,
       collaborations: []
     };
 
@@ -188,7 +207,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log(`🔄 [Expand] Returning fallback response due to MusicBrainz API error`);
       return res.json({
         nodes: [
-          { id: correctArtistName, name: correctArtistName, type: 'artist', types: ['artist'], color: '#FF0ACF', size: 30, artistId: artistMatch.id }
+          { id: correctArtistName, name: correctArtistName, type: 'artist', types: ['artist'], color: '#FF0ACF', size: 30, artistId: artistId }
         ],
         links: []
       });
