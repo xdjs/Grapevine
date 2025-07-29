@@ -864,6 +864,7 @@ export default function NetworkVisualizer({
       }
     })
       .on("click", function(event, d) {
+        console.log(`🖱️ [Click] Node clicked: ${d.name} (${d.type})`);
         event.stopPropagation();
 
         // Reset previous node highlighting
@@ -884,6 +885,7 @@ export default function NetworkVisualizer({
         const isMainArtist = d === mainArtistNode;
         
         // For all nodes, show the comprehensive tooltip with all options
+        console.log(`🖱️ [Click] Showing tooltip for ${d.name}`);
         showTooltip(event, d);
         moveTooltip(event as unknown as MouseEvent);
         
@@ -961,7 +963,18 @@ export default function NetworkVisualizer({
       .append("div")
       .attr("class", "network-tooltip")
       .style("position", "absolute")
-      .style("opacity", 0);
+      .style("opacity", 0)
+      .style("background", "rgba(0, 0, 0, 0.9)")
+      .style("color", "white")
+      .style("padding", "12px")
+      .style("border-radius", "8px")
+      .style("font-family", "Arial, sans-serif")
+      .style("font-size", "12px")
+      .style("z-index", "1000")
+      .style("pointer-events", "none")
+      .style("max-width", "300px")
+      .style("box-shadow", "0 4px 8px rgba(0, 0, 0, 0.3)")
+      .style("border", "1px solid rgba(255, 255, 255, 0.2)");
 
     function showTooltip(event: MouseEvent, d: NetworkNode) {
       const roles = d.types || [d.type];
@@ -1048,7 +1061,9 @@ export default function NetworkVisualizer({
           '</div>' +
         '</div>';
 
+      console.log(`🖱️ [Tooltip] Setting tooltip content for ${d.name}`);
       tooltip.html(content).style("opacity", 1).style("pointer-events", "auto");
+      console.log(`🖱️ [Tooltip] Tooltip should now be visible`);
       
       // Network handler
       const networkHandler = async (e: any) => {
@@ -1269,6 +1284,7 @@ export default function NetworkVisualizer({
       left = Math.max(10, Math.min(viewportWidth - tooltipWidth - 10, left));
       top = Math.max(10, Math.min(viewportHeight - tooltipHeight - 10, top));
       
+      console.log(`🖱️ [Tooltip] Positioning tooltip at: ${left}px, ${top}px`);
       tooltip
         .style("left", left + "px")
         .style("top", top + "px");
@@ -1306,6 +1322,7 @@ export default function NetworkVisualizer({
     }
 
     function hideTooltip() {
+      console.log(`🖱️ [Tooltip] Hiding tooltip`);
       tooltip.style("opacity", 0).style("pointer-events", "none");
       resetNodeHighlight();
     }
@@ -1410,6 +1427,7 @@ export default function NetworkVisualizer({
       }
     }
     function dragstarted(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
+      console.log(`🖱️ [Drag] Drag started for ${d.name}`);
       // Prevent event bubbling to avoid interfering with zoom behavior
       event.sourceEvent.stopPropagation();
       if (!event.active) simulation.alphaTarget(0.3).restart();
