@@ -231,7 +231,7 @@ export default function CollaborationDetailsPopup({
                 <div className="text-center py-12 text-gray-400">
                   <Music className="w-8 h-8 mx-auto mb-4 text-gray-600" />
                   <p className="text-lg">No specific collaboration projects found between these artists.</p>
-                  <p className="text-sm text-gray-500 mt-2">This could mean they haven't officially collaborated yet, or the data isn't available.</p>
+                  <p className="text-sm text-gray-500 mt-2">This means the data may not be public or available.</p>
                 </div>
               )}
             </div>
