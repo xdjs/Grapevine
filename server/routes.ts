@@ -144,6 +144,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Clear all cached network data (temporary debugging endpoint)
+  app.delete("/api/clear-all-cache", async (req, res) => {
+    try {
+      console.log(`🗑️ [DEBUG] Clearing all cached network data`);
+      
+      const connectionString = process.env.CONNECTION_STRING;
+      if (connectionString) {
+        const { Client } = await import('pg');
+        const client = new Client({ connectionString });
+        await client.connect();
+        await client.query('UPDATE artists SET webmapdata = NULL');
+        await client.end();
+        console.log(`✅ [DEBUG] All cache cleared`);
+        res.json({ message: `All cached network data cleared` });
+        return;
+      }
+      
+      res.json({ message: `No database connection available` });
+    } catch (error) {
+      console.error("Clear all cache error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get configuration including MusicNerd base URL
   app.get("/api/config", async (req, res) => {
     try {

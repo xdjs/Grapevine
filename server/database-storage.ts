@@ -360,15 +360,12 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
               return { nodes: [mainArtistNode], links: [] };
             }
             
-            // Collect all people for batch role detection
+            // Collect all people for batch role detection (only first-degree collaborators)
             const allPeople = new Set<string>();
             for (const collaborator of authenticCollaborators) {
               allPeople.add(collaborator.name);
-              for (const branchingArtist of collaborator.topCollaborators || []) {
-                if (branchingArtist !== artistName) {
-                  allPeople.add(branchingArtist);
-                }
-              }
+              // REMOVED: Branching artists collection
+              // We don't want any outer circle nodes in initial generation
             }
             
             // Batch detect roles
@@ -667,10 +664,8 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
       
       console.log(`✅ [DEBUG] Found artist: "${artist.name}" (ID: ${artistId})`);
       
-      if (artist.webmapdata && typeof artist.webmapdata === 'object' && 'nodes' in artist.webmapdata && 'links' in artist.webmapdata) {
-        console.log(`💾 [DEBUG] Found cached webmapdata for artist ID "${artistId}" (${artist.name})`);
-        return artist.webmapdata as NetworkData;
-      }
+      // Skip cache and force fresh generation to ensure no outer circle nodes
+      console.log(`🔄 [DEBUG] Skipping cache and forcing fresh generation for artist ID "${artistId}" (${artist.name})`);
       
       console.log(`🔄 [DEBUG] No cached data found for artist ID "${artistId}" (${artist.name}), generating new network...`);
       const networkData = await this.generateRealCollaborationNetwork(artist.name);

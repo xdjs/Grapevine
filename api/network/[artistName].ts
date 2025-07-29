@@ -441,12 +441,8 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
               type: primaryRole,
               topCollaborators: person.topCollaborators || []
             });
-            // Add branching artists to the batch
-            for (const branchingArtist of person.topCollaborators || []) {
-              if (branchingArtist !== correctArtistName && !isFakeCollaborator(branchingArtist)) {
-                allPeople.add(branchingArtist);
-              }
-            }
+            // REMOVED: Branching artists collection for role detection
+            // We don't want any outer circle nodes in initial generation
           }
         }
       } else if (collaborationData.artists) {
@@ -460,11 +456,8 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
           
           collaborators.push(collaborator);
           allPeople.add(collaborator.name);
-          for (const branchingArtist of collaborator.topCollaborators || []) {
-            if (branchingArtist !== correctArtistName && !isFakeCollaborator(branchingArtist)) {
-              allPeople.add(branchingArtist);
-            }
-          }
+          // REMOVED: Branching artists collection for role detection
+          // We don't want any outer circle nodes in initial generation
         }
       }
       
@@ -555,11 +548,8 @@ Guidelines:
                         type: role,
                         topCollaborators: person.topCollaborators || []
                       });
-                      for (const branchingArtist of person.topCollaborators || []) {
-                        if (branchingArtist !== correctArtistName) {
-                          allPeople.add(branchingArtist);
-                        }
-                      }
+                      // REMOVED: Branching artists collection for role detection
+                      // We don't want any outer circle nodes in initial generation
                     }
                   }
                 }

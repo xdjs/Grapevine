@@ -237,23 +237,8 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
             allPeopleInNetwork.add(collaborator.name);
           }
           
-          // Also collect branching artists from topCollaborators
-          for (const collaborator of collaborationData.artists) {
-            if (collaborator.type === 'producer' || collaborator.type === 'songwriter') {
-              try {
-                const producerCollaborations = await musicBrainzService.getArtistCollaborations(collaborator.name);
-                if (producerCollaborations && producerCollaborations.artists.length > 0) {
-                  const branchingArtists = producerCollaborations.artists
-                    .filter(c => c.name !== collaborator.name && c.name !== artistName)
-                    .slice(0, 3)
-                    .map(c => c.name);
-                  branchingArtists.forEach(name => allPeopleInNetwork.add(name));
-                }
-              } catch (error) {
-                // Continue without branching artists for this collaborator
-              }
-            }
-          }
+          // REMOVED: Branching artists collection from MusicBrainz
+          // We don't want any outer circle nodes in initial generation
           
           const allPeopleArray = Array.from(allPeopleInNetwork);
           const peopleListStr = allPeopleArray.map(name => `"${name}"`).join(', ');
