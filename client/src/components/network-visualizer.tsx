@@ -213,37 +213,57 @@ export default function NetworkVisualizer({
       console.log(`🔗 [Expand] Response ok:`, response.ok);
       
       if (response.ok) {
-        const collaboratorNetwork = await response.json();
+        const responseData = await response.json();
+        console.log(`🔗 [Expand] Received response data:`, responseData);
+        
+        // Check if this is a noCollaborators response
+        if (responseData.noCollaborators === true) {
+          console.log(`⚠️ [Expand] Artist ${nodeName} has no collaborators`);
+          
+          // Still add the node to expanded set to show it was attempted
+          setExpandedNodes(prev => {
+            const newSet = new Set([...prev, nodeName]);
+            console.log(`🔗 [Expand] Updated expandedNodes (no collaborators):`, Array.from(newSet));
+            return newSet;
+          });
+          
+          // Set persistence key for this expansion session
+          setPersistenceKey(`expansion-${Date.now()}`);
+          
+          // Persist the expanded networks
+          setTimeout(() => persistExpandedNetworks(), 100);
+          
+          console.log(`✅ [Expand] Marked ${nodeName} as expanded (no collaborators found)`);
+          return;
+        }
+        
+        // Handle regular network response
+        const collaboratorNetwork = responseData;
         console.log(`🔗 [Expand] Received collaborator network:`, {
           nodesCount: collaboratorNetwork.nodes?.length || 0,
           linksCount: collaboratorNetwork.links?.length || 0,
           hasNodes: !!collaboratorNetwork.nodes,
-          hasLinks: !!collaboratorNetwork.links,
-          noCollaborators: collaboratorNetwork.noCollaborators || false,
-          artistName: collaboratorNetwork.artistName || 'unknown'
+          hasLinks: !!collaboratorNetwork.links
         });
         
-        // Check if this is a "no collaborators" response
-        if (collaboratorNetwork.noCollaborators) {
-          console.log(`⚠️ [Expand] No collaborators found for ${nodeName}, showing single node`);
-          // Don't add to expanded nodes since there's nothing to expand
-          setIsExpandingNetwork(false);
-          setExpandingArtistName("");
-          return;
-        }
-        
-        // Validate that we have the required data
-        if (!collaboratorNetwork.nodes || !Array.isArray(collaboratorNetwork.nodes)) {
-          console.error(`❌ [Expand] Invalid network data received for ${nodeName} - missing or invalid nodes`);
-          setIsExpandingNetwork(false);
-          setExpandingArtistName("");
-          return;
-        }
-        
-        if (!collaboratorNetwork.links || !Array.isArray(collaboratorNetwork.links)) {
-          console.error(`❌ [Expand] Invalid network data received for ${nodeName} - missing or invalid links`);
-          setIsExpandingNetwork(false);
-          setExpandingArtistName("");
+        // Check if the network has any nodes (should always have at least the main artist)
+        if (!collaboratorNetwork.nodes || collaboratorNetwork.nodes.length === 0) {
+          console.log(`⚠️ [Expand] Artist ${nodeName} returned empty network`);
+          
+          // Still add the node to expanded set to show it was attempted
+          setExpandedNodes(prev => {
+            const newSet = new Set([...prev, nodeName]);
+            console.log(`🔗 [Expand] Updated expandedNodes (empty network):`, Array.from(newSet));
+            return newSet;
+          });
+          
+          // Set persistence key for this expansion session
+          setPersistenceKey(`expansion-${Date.now()}`);
+          
+          // Persist the expanded networks
+          setTimeout(() => persistExpandedNetworks(), 100);
+          
+          console.log(`✅ [Expand] Marked ${nodeName} as expanded (empty network)`);
           return;
         }
         
@@ -317,15 +337,6 @@ export default function NetworkVisualizer({
         console.error(`❌ [Expand] Failed to fetch network for ${nodeName} - status: ${response.status}`);
         const errorText = await response.text();
         console.error(`❌ [Expand] Error response:`, errorText);
-        
-        // Handle specific error cases
-        if (response.status === 404) {
-          console.error(`❌ [Expand] Artist "${nodeName}" not found in database`);
-        } else if (response.status === 503) {
-          console.error(`❌ [Expand] Service unavailable - OpenAI API or database issue`);
-        } else if (response.status === 500) {
-          console.error(`❌ [Expand] Internal server error during network generation`);
-        }
       }
     } catch (error) {
       console.error(`❌ [Expand] Error expanding network for ${nodeName}:`, error);
@@ -804,9 +815,8 @@ export default function NetworkVisualizer({
             node.x = width / 2;
             node.y = height / 2;
           } else {
-            // Position other nodes closer to the center with smaller random offset
-            node.x = centerX + (Math.random() - 0.5) * 50; // Reduced random offset
-            node.y = centerY + (Math.random() - 0.5) * 50; // Reduced random offset
+            node.x = centerX + (Math.random() - 0.5) * 100;
+            node.y = centerY + (Math.random() - 0.5) * 100;
           }
         }
       });
@@ -814,38 +824,22 @@ export default function NetworkVisualizer({
 
     // Create boundary force to keep nodes within viewport
     const boundaryForce = () => {
-      const margin = 50; // Increased margin for better bounds
+      const margin = 30; // Reduced margin for tighter bounds
       const container = svgRef.current?.parentElement;
       const currentWidth = container ? container.clientWidth : width;
       const currentHeight = container ? container.clientHeight : height;
       
       for (const node of finalDisplayData.nodes) {
-        if (!node.x || !node.y) continue;
-        
-        // Ensure nodes stay well within bounds with stronger constraints
-        if (node.x < margin) {
-          node.x = margin;
-          node.vx = 0; // Stop velocity
-        }
-        if (node.x > currentWidth - margin) {
-          node.x = currentWidth - margin;
-          node.vx = 0; // Stop velocity
-        }
-        if (node.y < margin) {
-          node.y = margin;
-          node.vy = 0; // Stop velocity
-        }
-        if (node.y > currentHeight - margin) {
-          node.y = currentHeight - margin;
-          node.vy = 0; // Stop velocity
-        }
+        // Ensure nodes stay well within bounds
+        if (node.x! < margin) node.x = margin;
+        if (node.x! > currentWidth - margin) node.x = currentWidth - margin;
+        if (node.y! < margin) node.y = margin;
+        if (node.y! > currentHeight - margin) node.y = currentHeight - margin;
         
         // Additional safety check - if somehow a node is outside, bring it back
-        if (node.x < 0 || node.x > currentWidth || node.y < 0 || node.y > currentHeight) {
-          node.x = Math.max(margin, Math.min(currentWidth - margin, node.x));
-          node.y = Math.max(margin, Math.min(currentHeight - margin, node.y));
-          node.vx = 0; // Stop velocity
-          node.vy = 0; // Stop velocity
+        if (node.x! < 0 || node.x! > currentWidth || node.y! < 0 || node.y! > currentHeight) {
+          node.x = Math.max(margin, Math.min(currentWidth - margin, node.x!));
+          node.y = Math.max(margin, Math.min(currentHeight - margin, node.y!));
         }
       }
     };
@@ -858,19 +852,15 @@ export default function NetworkVisualizer({
         d3
           .forceLink<NetworkNode, NetworkLink>(validLinks)
           .id((d) => d.id)
-          .distance(60) // Reduced distance
+          .distance(80)
       )
-      .force("charge", d3.forceManyBody().strength(-100)) // Reduced charge strength
-      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 15))
+      .force("charge", d3.forceManyBody().strength(-150))
+      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
       .force("boundary", boundaryForce)
-      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.05 : 0.01)) // Weaker centering
-      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.05 : 0.01)); // Weaker centering
+      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
+      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.1 : 0));
 
     simulationRef.current = simulation;
-    
-    // Add damping to slow down the simulation and prevent nodes from flying away
-    simulation.alphaDecay(0.02); // Slower decay
-    simulation.velocityDecay(0.4); // Higher damping
 
     // Add resize listener to handle orientation changes
     const handleResize = () => {
