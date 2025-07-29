@@ -257,8 +257,19 @@ export default function NetworkVisualizer({
         const errorText = await response.text();
         console.error(`❌ [Expand] Error response:`, errorText);
         
+        // Try to parse error response for more specific message
+        let errorMessage = `Failed to expand ${nodeName}'s network.`;
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch (parseError) {
+          console.error(`❌ [Expand] Could not parse error response:`, parseError);
+        }
+        
         // Show user-friendly error message
-        alert(`Failed to expand ${nodeName}'s network. Please try again.`);
+        alert(errorMessage);
       }
     } catch (error) {
       console.error(`❌ [Expand] Error expanding network for ${nodeName}:`, error);
