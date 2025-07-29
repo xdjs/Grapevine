@@ -39,11 +39,11 @@ class OpenAIService {
     console.log(`🤖 [DEBUG] Querying OpenAI for collaborations with "${artistName}"`);
 
     try {
-      const prompt = `If ${artistName} is a real artist with known music industry collaborations, provide a comprehensive list of music industry professionals who have collaborated with them. Include people who work as producers, songwriters, or both.
+      const prompt = `Provide a comprehensive list of music industry professionals who have collaborated with ${artistName}. Focus on producers, songwriters, and other artists who have worked with them.
 
-IMPORTANT: Search for collaborations regardless of ${artistName}'s popularity level - include mainstream artists, independent artists, underground artists, regional artists, and emerging artists. Many smaller artists still have authentic collaborations that should be included.
+For well-known/mainstream artists (chart-topping, Grammy-nominated, major label artists): Include all documented collaborations you're aware of, as these are likely well-documented and verifiable.
 
-If ${artistName} is not a real artist or you have absolutely no authentic collaboration data for them, return an empty collaborators array. Do NOT create fake or placeholder collaborators.
+For lesser-known artists (independent, underground, regional): Be more selective and only include collaborations you're confident about.
 
 Please respond with JSON in this exact format:
 {
@@ -57,21 +57,23 @@ Please respond with JSON in this exact format:
 }
 
 Guidelines:
-- Search thoroughly for ALL artists regardless of fame level: mainstream, independent, underground, regional, emerging
-- Only include real, verified music industry professionals who have actually worked with ${artistName}
-- If you don't have authentic data, return: {"collaborators": []}
-- For each real person, list ALL their roles from: ["producer", "songwriter", "artist"]
-- Make sure if any of these people have multiple roles (artist, producer, songwriter), it is listed in the data. Search for multiple roles on every person that is queried, regardless of their popularity.
+- For mainstream artists with significant commercial success: Include all known producers, songwriters, and collaborators from album credits, interviews, and industry documentation
+- For independent/underground artists: Be more selective but still include authentic collaborations from official releases
+- If ${artistName} is not a real artist or has absolutely no collaboration data, return: {"collaborators": []}
+- For each person, list ALL their roles from: ["producer", "songwriter", "artist"]
+- Make sure if any of these people have multiple roles (artist, producer, songwriter), it is listed in the data
 - Include their top 3 real collaborating artists (can include both famous and lesser-known artists)
-- Never use generic names like "John Doe", "Producer X", or placeholder data
-- Maximum 10 real collaborators if they exist`;
+- Never use generic placeholder names like "John Doe", "Producer X", etc.
+- Maximum 10 real collaborators if they exist
+- Be confident about well-documented collaborations for commercially successful artists
+- Focus on collaborations from official album/song credits, not rumors or speculation`;
 
       const response = await this.openai!.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
             role: "system",
-            content: "You are a music industry database expert. Provide accurate information about real producer and songwriter collaborations from ALL levels of the music industry - mainstream, independent, underground, regional, and emerging artists. Only include verified, authentic collaborations. Do not discriminate based on popularity level."
+            content: "You are a music industry database expert. For mainstream/well-known artists, confidently provide all documented collaborations. For lesser-known artists, be more selective but still inclusive of authentic collaborations. Prioritize accuracy while being comprehensive for well-documented artists."
           },
           {
             role: "user",

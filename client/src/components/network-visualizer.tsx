@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import ArtistSelectionModal from "./artist-selection-modal";
+import { ensureArtistProfilePictures } from "@/lib/profile-pictures";
+import CollaborationDetailsPopup from "./collaboration-details-popup";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -27,6 +29,30 @@ export default function NetworkVisualizer({
   const [showArtistModal, setShowArtistModal] = useState(false);
   const [selectedArtistName, setSelectedArtistName] = useState("");
   const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("");
+  const [dataWithPictures, setDataWithPictures] = useState<NetworkData | null>(null);
+
+  // Ensure profile pictures are always available when data changes
+  useEffect(() => {
+    if (!data || !visible) {
+      setDataWithPictures(null);
+      return;
+    }
+
+    console.log(`🖼️ [NetworkVisualizer] Ensuring profile pictures for network data...`);
+    
+    const ensurePictures = async () => {
+      try {
+        const updatedData = await ensureArtistProfilePictures(data);
+        setDataWithPictures(updatedData);
+        console.log(`🖼️ [NetworkVisualizer] Profile pictures ensured and ready for display`);
+      } catch (error) {
+        console.error(`🖼️ [NetworkVisualizer] Error ensuring profile pictures:`, error);
+        setDataWithPictures(data); // Use original data if profile picture fetching fails
+      }
+    };
+
+    ensurePictures();
+  }, [data, visible]);
 
   // Fetch configuration on component mount
   useEffect(() => {
@@ -59,7 +85,9 @@ export default function NetworkVisualizer({
   }, []);
 
   useEffect(() => {
-    if (!svgRef.current || !data || !visible) return;
+    // Use dataWithPictures instead of data to ensure profile pictures are included
+    const networkData = dataWithPictures;
+    if (!svgRef.current || !networkData || !visible) return;
 
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
@@ -72,8 +100,8 @@ export default function NetworkVisualizer({
     svg.selectAll("*").remove();
 
     // Filter out links where either node doesn't exist or is isolated
-    const nodeSet = new Set(data.nodes.map(n => n.id));
-    const validLinks = data.links.filter(link => {
+    const nodeSet = new Set(networkData.nodes.map(n => n.id));
+    const validLinks = networkData.links.filter(link => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       return nodeSet.has(sourceId) && nodeSet.has(targetId);
@@ -336,7 +364,7 @@ export default function NetworkVisualizer({
       const visited = new Set<string>();
       const components: NetworkNode[][] = [];
       
-      for (const node of data.nodes) {
+      for (const node of networkData.nodes) {
         if (visited.has(node.id)) continue;
         
         const component: NetworkNode[] = [];
@@ -355,10 +383,10 @@ export default function NetworkVisualizer({
             const targetId = typeof link.target === 'string' ? link.target : link.target.id;
             
             if (sourceId === current.id) {
-              const target = data.nodes.find(n => n.id === targetId);
+              const target = networkData.nodes.find(n => n.id === targetId);
               if (target && !visited.has(target.id)) queue.push(target);
             } else if (targetId === current.id) {
-              const source = data.nodes.find(n => n.id === sourceId);
+              const source = networkData.nodes.find(n => n.id === sourceId);
               if (source && !visited.has(source.id)) queue.push(source);
             }
           }
@@ -378,7 +406,7 @@ export default function NetworkVisualizer({
     const componentHeight = height / Math.ceil(components.length / componentsPerRow);
     
     // Find the main artist node - it's the largest artist node (size can be 20, 25, or 30)
-    const mainArtistNode = data.nodes
+    const mainArtistNode = networkData.nodes
       .filter(node => node.type === 'artist' || (node.types && node.types.includes('artist')))
       .reduce((largest, current) => 
         !largest || current.size > largest.size ? current : largest, 
@@ -412,7 +440,7 @@ export default function NetworkVisualizer({
       const currentWidth = container ? container.clientWidth : width;
       const currentHeight = container ? container.clientHeight : height;
       
-      for (const node of data.nodes) {
+      for (const node of networkData.nodes) {
         // Ensure nodes stay well within bounds
         if (node.x! < margin) node.x = margin;
         if (node.x! > currentWidth - margin) node.x = currentWidth - margin;
@@ -429,7 +457,7 @@ export default function NetworkVisualizer({
 
     // Create simulation with centering force for main artist
     const simulation = d3
-      .forceSimulation<NetworkNode>(data.nodes)
+      .forceSimulation<NetworkNode>(networkData.nodes)
       .force(
         "link",
         d3
@@ -476,7 +504,7 @@ export default function NetworkVisualizer({
     // Create nodes with multi-role support
     const nodeElements = networkGroup
       .selectAll(".node")
-      .data(data.nodes)
+      .data(networkData.nodes)
       .enter()
       .append("g")
       .attr("class", (d) => `node-group network-node node-${d.type}`)
@@ -494,7 +522,7 @@ export default function NetworkVisualizer({
       
       if (roles.length === 1) {
         // Single role - simple circle
-        group.append("circle")
+        const circle = group.append("circle")
           .attr("r", d.size)
           .attr("fill", "transparent")
           .attr("stroke", () => {
@@ -504,6 +532,53 @@ export default function NetworkVisualizer({
             return '#355367';  // Police Blue
           })
           .attr("stroke-width", 4);
+
+        // Add profile picture if available (for any artist node)
+        if (d.imageUrl) {
+          console.log(`🖼️ [D3] Rendering profile image for ${d.name} (size: ${d.size}): ${d.imageUrl}`);
+          
+          // Create a circular clipping path using D3
+          const clipId = `clip-${d.id.replace(/[^a-zA-Z0-9]/g, '')}`;
+          const svg = d3.select(svgRef.current);
+          
+          // Ensure defs exists
+          if (svg.select("defs").empty()) {
+            svg.insert("defs", ":first-child");
+          }
+          
+          // Remove existing clipPath if it exists
+          svg.select("defs").select(`#${clipId}`).remove();
+          
+          // Create new clipPath with properly centered circle
+          // Adjust clipping radius based on node size for better visual balance
+          const clipRadius = d.size >= 25 ? d.size - 4 : d.size - 3;
+          svg.select("defs").append("clipPath")
+            .attr("id", clipId)
+            .append("circle")
+            .attr("cx", 0)
+            .attr("cy", 0)
+            .attr("r", clipRadius);
+
+          // Add the profile image with error handling
+          const imageSize = d.size >= 25 ? d.size - 4 : d.size - 3;
+          group.append("image")
+            .attr("href", d.imageUrl)
+            .attr("x", -imageSize)
+            .attr("y", -imageSize)
+            .attr("width", imageSize * 2)
+            .attr("height", imageSize * 2)
+            .attr("clip-path", `url(#${clipId})`)
+            .attr("preserveAspectRatio", "xMidYMid slice")
+            .style("pointer-events", "none") // Prevent image from interfering with node events
+            .on("load", function() {
+              console.log(`🖼️✅ [D3] Image loaded successfully for ${d.name} (size: ${d.size})`);
+            })
+            .on("error", function() {
+              console.warn(`🖼️❌ [D3] Image failed to load for ${d.name}: ${d.imageUrl}`);
+              // Remove the failed image
+              d3.select(this).remove();
+            });
+        }
       } else {
         // Multiple roles - create segmented circle
         const angleStep = (2 * Math.PI) / roles.length;
@@ -520,7 +595,7 @@ export default function NetworkVisualizer({
             .endAngle(endAngle);
           
           group.append("path")
-            .attr("d", arcPath as any)
+            .attr("d", arcPath)
             .attr("fill", () => {
               if (role === 'artist') return '#FF0ACF';       // Magenta Pink
               if (role === 'producer') return '#AE53FF';     // Bright Purple  
@@ -528,7 +603,8 @@ export default function NetworkVisualizer({
               return '#355367';  // Police Blue
             })
             .attr("stroke", "white")
-            .attr("stroke-width", 1);
+            .attr("stroke-width", 1)
+            .style("pointer-events", "all"); // Ensure click events work on arcs
         });
         
         // Add inner circle for better visibility
@@ -537,6 +613,53 @@ export default function NetworkVisualizer({
           .attr("fill", "transparent")
           .attr("stroke", "white")
           .attr("stroke-width", 2);
+
+        // Add profile picture if available (for main artist with multiple roles)
+        if (d.imageUrl) {
+          console.log(`🖼️ [D3] Rendering multi-role profile image for ${d.name} (size: ${d.size}): ${d.imageUrl}`);
+          
+          // Create a circular clipping path using D3
+          const clipId = `clip-multi-${d.id.replace(/[^a-zA-Z0-9]/g, '')}`;
+          const svg = d3.select(svgRef.current);
+          
+          // Ensure defs exists
+          if (svg.select("defs").empty()) {
+            svg.insert("defs", ":first-child");
+          }
+          
+          // Remove existing clipPath if it exists
+          svg.select("defs").select(`#${clipId}`).remove();
+          
+          // Create new clipPath with properly centered circle (smaller for multi-role)
+          // Adjust clipping radius based on node size, accounting for the outer role rings
+          const clipRadius = d.size >= 25 ? d.size - 8 : d.size - 6;
+          svg.select("defs").append("clipPath")
+            .attr("id", clipId)
+            .append("circle")
+            .attr("cx", 0)
+            .attr("cy", 0)
+            .attr("r", clipRadius);
+
+          // Add the profile image with error handling
+          const imageSize = d.size >= 25 ? d.size - 8 : d.size - 6;
+          group.append("image")
+            .attr("href", d.imageUrl)
+            .attr("x", -imageSize)
+            .attr("y", -imageSize)
+            .attr("width", imageSize * 2)
+            .attr("height", imageSize * 2)
+            .attr("clip-path", `url(#${clipId})`)
+            .attr("preserveAspectRatio", "xMidYMid slice")
+            .style("pointer-events", "none") // Prevent image from interfering with node events
+            .on("load", function() {
+              console.log(`🖼️✅ [D3] Multi-role image loaded successfully for ${d.name} (size: ${d.size})`);
+            })
+            .on("error", function() {
+              console.warn(`🖼️❌ [D3] Multi-role image failed to load for ${d.name}: ${d.imageUrl}`);
+              // Remove the failed image
+              d3.select(this).remove();
+            });
+        }
       }
     })
       .on("click", function(event, d) {
@@ -549,14 +672,63 @@ export default function NetworkVisualizer({
         const currentNode = d3.select(this);
         currentNode.selectAll("circle, path")
           .attr("stroke", "white")
-          .attr("stroke-width", 3);
+          .attr("stroke-width", 3)
+          .style("stroke-opacity", 1);
         
         // Track this node as highlighted
         currentlyHighlightedNode = currentNode;
 
-        // Show the tooltip and use cursor coordinates for placement
+        // Check if this is the main artist or a collaborator
+        const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const isMainArtist = d === mainArtistNode;
+        
+        // For all nodes, show the comprehensive tooltip with all options
         showTooltip(event, d);
         moveTooltip(event as unknown as MouseEvent);
+        
+        // Store collaboration data for the popup (for non-main artists)
+        if (!isMainArtist) {
+          const mainArtistName = mainArtistNode?.name || "";
+          setMainArtistName(mainArtistName);
+          
+          // Check if the clicked node is directly connected to main artist (first layer)
+          const isFirstLayer = displayData.links.some(link => {
+            const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+            const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+            return (sourceId === mainArtistName && targetId === d.name) || 
+                   (sourceId === d.name && targetId === mainArtistName);
+          });
+          
+          if (isFirstLayer) {
+            // First layer: clicked node is directly connected to main artist
+            // Show collaboration between clicked node and main artist
+            setCollaborationArtist(mainArtistName);
+            setCollaborationCollaborator(d.name);
+          } else {
+            // Second layer: clicked node is not directly connected to main artist
+            // Find the first layer node that this second layer node is connected to
+            const directLink = displayData.links.find(link => {
+              const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+              const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+              return (sourceId === d.name && targetId !== mainArtistName) || 
+                     (targetId === d.name && sourceId !== mainArtistName);
+            });
+            
+            if (directLink) {
+              const connectedNodeId = directLink.source === d.name ? 
+                (typeof directLink.target === 'string' ? directLink.target : directLink.target.id) :
+                (typeof directLink.source === 'string' ? directLink.source : directLink.source.id);
+              
+              // Show collaboration between clicked node and their direct connection
+              setCollaborationArtist(connectedNodeId);
+              setCollaborationCollaborator(d.name);
+            } else {
+              // Fallback: direct connection to main artist
+              setCollaborationArtist(mainArtistName);
+              setCollaborationCollaborator(d.name);
+            }
+          }
+        }
       })
       .call(
         d3
@@ -569,14 +741,37 @@ export default function NetworkVisualizer({
     // Add labels for all nodes
     const labelElements = networkGroup
       .selectAll(".label")
-      .data(data.nodes)
+      .data(networkData.nodes)
       .enter()
       .append("text")
       .attr("class", "label")
       .attr("text-anchor", "middle")
-      .attr("dy", "0.35em")
-      .attr("font-size", (d) => d.type === 'artist' ? "14px" : "11px")
-      .attr("font-weight", (d) => d.type === 'artist' ? "600" : "500")
+      .attr("dy", (d) => {
+        // If node has a profile picture, position text below the border
+        if (d.imageUrl) {
+          // Adjust spacing based on node size for better visual balance
+          const spacing = d.size >= 25 ? 15 : d.size >= 20 ? 12 : 10;
+          return `${d.size + spacing}px`; // Position below the node border
+        }
+        return "0.35em"; // Default center positioning
+      })
+      .attr("font-size", (d) => {
+        // Scale font size based on node type and size
+        if (d.type === 'artist' || (d.types && d.types.includes('artist'))) {
+          // Artist nodes: larger font for larger nodes
+          if (d.size >= 25) return "14px";      // Main artists
+          if (d.size >= 20) return "12px";      // Medium artists  
+          return "11px";                        // Smaller artists
+        }
+        return "10px"; // Non-artist nodes
+      })
+      .attr("font-weight", (d) => {
+        // Bold for artists, normal for others
+        if (d.type === 'artist' || (d.types && d.types.includes('artist'))) {
+          return d.size >= 25 ? "600" : "500";  // Extra bold for main artists
+        }
+        return "400"; // Normal weight for non-artists
+      })
       .attr("fill", "white")
       .attr("pointer-events", "none")
       .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.8)")
@@ -592,132 +787,215 @@ export default function NetworkVisualizer({
 
     function showTooltip(event: MouseEvent, d: NetworkNode) {
       const roles = d.types || [d.type];
+      const roleDisplay = roles.length > 1 ? roles.join(", ") : roles[0];
 
-      // Use enhanced layout only for artist nodes
-      if (roles.includes("artist")) {
-        const roleDisplay = roles.length > 1 ? roles.join(", ") : roles[0];
 
-        // Update these paths if the assets live elsewhere
-        const networkIconPath = "/grapevine-logo.png"; // grape + clef icon
-        const artistIconPath = "/music_nerd_logo.png";   // Music Nerd logo PNG served from public
+      // Update these paths if the assets live elsewhere
+      const networkIconPath = "/grapevine-logo.png"; // grape + clef icon
+      const artistIconPath = "/music_nerd_logo.png";   // Music Nerd logo PNG served from public
 
-        // Detect mobile and adjust sizes accordingly
-        const isMobile = window.innerWidth <= 768;
-        const maxWidth = isMobile ? "280px" : "320px";
-        const iconSize = isMobile ? 28 : 40;
-        const titleFontSize = isMobile ? "14px" : "16px";
-        const roleFontSize = isMobile ? "11px" : "12px";
-        const linkFontSize = isMobile ? "12px" : "13px";
-        const closeButtonSize = isMobile ? "20px" : "24px";
-        const paddingRight = isMobile ? "25px" : "30px";
-        const gap = isMobile ? "8px" : "10px";
-
-        const content = `
-          <div style="position:relative; max-width:${maxWidth}; padding-right:${paddingRight};">
-            <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:${closeButtonSize}; color:white;">&times;</span>
-            <div style="font-weight:bold; font-size:${titleFontSize}; line-height:1.2; text-align:left;">${d.name}</div>
-            <div style="margin-top:2px; font-size:${roleFontSize}; text-align:left;">Roles: ${roleDisplay}</div>
-            <div style="display:flex; flex-direction:column; gap:${gap}; margin-top:${gap};">
-              <div style="display:flex; align-items:center; gap:${gap}; cursor:pointer;" class="network-action">
-                <img src="${networkIconPath}" alt="Network" class="network-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
-                <a href="#" class="popup-action network-link" style="font-size:${linkFontSize}; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s network</a>
-              </div>
-              <div style="display:flex; align-items:center; gap:${gap}; cursor:pointer;" class="artist-action">
-                <img src="${artistIconPath}" alt="Artist Page" class="artist-icon" style="width:${iconSize}px;height:${iconSize}px;border-radius:50%; cursor:pointer;" />
-                <a href="#" class="popup-action artist-page-link" style="font-size:${linkFontSize}; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">${d.name}'s Music Nerd profile</a>
+      // Detect mobile and adjust sizes accordingly
+      const isMobile = window.innerWidth <= 768;
+      const maxWidth = isMobile ? "320px" : "380px";
+      const iconSize = isMobile ? 24 : 32;
       
-              </div>
-            </div>
-          </div>`;
+      // Pink Users icon SVG for collaboration details
+      const collaborationIconSvg = '<svg width="' + iconSize + '" height="' + iconSize + '" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="pointer-events: none;"><path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H6C4.93913 15 3.92172 15.4214 3.17157 16.1716C2.42143 16.9217 2 17.9391 2 19V21" stroke="#ff69b4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="7" r="4" stroke="#ff69b4" stroke-width="2"/><path d="M22 21V19C21.9993 18.1137 21.7044 17.2528 21.1614 16.5523C20.6184 15.8519 19.8581 15.3516 19 15.13" stroke="#ff69b4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89317 18.7122 8.75608 18.1676 9.45768C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="#ff69b4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const titleFontSize = isMobile ? "14px" : "16px";
+      const roleFontSize = isMobile ? "11px" : "12px";
+      const linkFontSize = isMobile ? "11px" : "12px";
+              const closeButtonSize = isMobile ? "20px" : "24px";
+        const paddingRight = isMobile ? "25px" : "30px";
+        const gap = isMobile ? "6px" : "8px";
+        // Check if this is the main artist
+        const mainArtistNode = displayData.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const isMainArtist = d === mainArtistNode;
+        
+        // Check if this node is an artist (has artist role)
+        const isArtist = roles.includes('artist');
+        
+        // Check if this is a first-degree collaborator (directly connected to main artist)
+        const firstDegreeIds = getFirstDegreeCollaborators();
+        const isFirstDegreeCollaborator = firstDegreeIds.has(d.name);
+        
+        // Build expand network section for first-degree collaborators
+        const expandSection = isFirstDegreeCollaborator && !isMainArtist ? 
+          '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="expand-action">' +
+            '<div class="expand-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer; pointer-events: auto; display:flex; align-items:center; justify-content:center; background:#4CAF50;">' +
+              '<span style="color:white; font-size:16px; font-weight:bold;">+</span>' +
+            '</div>' +
+            '<a href="#" class="popup-action expand-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">Expand ' + d.name + '\'s network</a>' +
+          '</div>' : '';
+        
+        // Build collaboration details section conditionally
+        const collaborationSection = isMainArtist ? '' : 
+          '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="collaboration-action">' +
+            '<div class="collaboration-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer; pointer-events: auto;">' + collaborationIconSvg + '</div>' +
+            '<a href="#" class="popup-action collaboration-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">Collaboration details</a>' +
+          '</div>';
+        
+        // Build Music Nerd profile section conditionally (only for artists)
+        const musicNerdSection = isArtist ? 
+          '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="artist-action">' +
+            '<img src="' + artistIconPath + '" alt="Artist Page" class="artist-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer;" />' +
+            '<a href="#" class="popup-action artist-page-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">' + d.name + '\'s Music Nerd profile</a>' +
+          '</div>' : '';
+        
+        const content =  
+        '<div style="position:relative; max-width:' + maxWidth + '; padding-right:' + paddingRight + ';">' +
+          '<span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:' + closeButtonSize + '; color:white;">&times;</span>' +
+          '<div style="font-weight:bold; font-size:' + titleFontSize + '; line-height:1.2; text-align:left;">' + d.name + '</div>' +
+          '<div style="margin-top:2px; font-size:' + roleFontSize + '; text-align:left;">Roles: ' + roleDisplay + '</div>' +
+          '<div style="display:flex; flex-direction:column; gap:' + gap + '; margin-top:' + gap + ';">' +
+            '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="network-action">' +
+              '<img src="' + networkIconPath + '" alt="Network" class="network-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer;" />' +
+              '<a href="#" class="popup-action network-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">' + d.name + '\'s network</a>' +
+            '</div>' +
+            expandSection +
+            musicNerdSection +
+            collaborationSection +
+          '</div>' +
+        '</div>';
 
-        tooltip.html(content).style("opacity", 1).style("pointer-events", "auto");
-        const networkHandler = async (e: any) => {
-          e.preventDefault();
-          e.stopPropagation();
+      tooltip.html(content).style("opacity", 1).style("pointer-events", "auto");
+      
+      // Network handler
+      const networkHandler = async (e: any) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        let artistId = d.artistId;
+        
+        // If no artist ID, try to look it up via the artist options API
+        if (!artistId) {
+          console.log(`🔗 No artistId for ${d.name}, attempting lookup...`);
+          try {
+            const response = await fetch(`/api/artist-options/${encodeURIComponent(d.name)}`);
+            const data = await response.json();
+            
+            if (data.options && data.options.length > 0) {
+              // Use the first matching artist's ID
+              artistId = data.options[0].artistId || data.options[0].id;
+              console.log(`🔗 Found artistId for ${d.name}: ${artistId}`);
+            }
+          } catch (error) {
+            console.error(`🔗 Error looking up artist ID for ${d.name}:`, error);
+          }
+        }
+        
+        // Call the callback to load the artist's network within the app
+        if (onArtistNodeClick) {
+          console.log(`🔗 Loading ${d.name}'s network within the app`);
+          onArtistNodeClick(d.name, artistId);
+        } else {
+          console.warn(`🔗 No onArtistNodeClick callback provided for ${d.name}`);
+          alert(`Sorry, ${d.name} is not available in the network yet. They may be added in future updates!`);
+        }
+        
+        // Hide the tooltip after clicking
+        hideTooltip();
+      };
+
+      // Profile handler
+      const profileHandler = (e: any) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openMusicNerdProfile(d.name, d.artistId);
+      };
+
+      // Collaboration details handler
+      const collaborationHandler = (e: any) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Check if this is the main artist or a collaborator
+        const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const isMainArtist = d === mainArtistNode;
+        
+        if (isMainArtist) {
+          // For main artist, show collaboration details with themselves (empty)
+          setMainArtistName(d.name);
+          setCollaborationArtist(d.name);
+          setCollaborationCollaborator(d.name);
+        } else {
+          // For collaborators, find the direct connection to determine the relationship
+          const mainArtistName = mainArtistNode?.name || "";
           
-          let artistId = d.artistId;
+          // Check if the clicked node is directly connected to main artist (first layer)
+          const isFirstLayer = displayData.links.some(link => {
+            const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+            const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+            return (sourceId === mainArtistName && targetId === d.name) || 
+                   (sourceId === d.name && targetId === mainArtistName);
+          });
           
-          // If no artist ID, try to look it up via the artist options API
-          if (!artistId) {
-            console.log(`🔗 No artistId for ${d.name}, attempting lookup...`);
-            try {
-              const response = await fetch(`/api/artist-options/${encodeURIComponent(d.name)}`);
-              const data = await response.json();
+          if (isFirstLayer) {
+            // First layer: clicked node is directly connected to main artist
+            // Show collaboration between clicked node and main artist
+            setCollaborationArtist(mainArtistName);
+            setCollaborationCollaborator(d.name);
+          } else {
+            // Second layer: clicked node is not directly connected to main artist
+            // Find the first layer node that this second layer node is connected to
+            const directLink = displayData.links.find(link => {
+              const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+              const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+              return (sourceId === d.name && targetId !== mainArtistName) || 
+                     (targetId === d.name && sourceId !== mainArtistName);
+            });
+            
+            if (directLink) {
+              const connectedNodeId = directLink.source === d.name ? 
+                (typeof directLink.target === 'string' ? directLink.target : directLink.target.id) :
+                (typeof directLink.source === 'string' ? directLink.source : directLink.source.id);
               
-              if (data.options && data.options.length > 0) {
-                // Use the first matching artist's ID
-                artistId = data.options[0].artistId || data.options[0].id;
-                console.log(`🔗 Found artistId for ${d.name}: ${artistId}`);
-              }
-            } catch (error) {
-              console.error(`🔗 Error looking up artist ID for ${d.name}:`, error);
+              // Show collaboration between clicked node and their direct connection
+              setCollaborationArtist(connectedNodeId);
+              setCollaborationCollaborator(d.name);
+            } else {
+              // Fallback: direct connection to main artist
+              setCollaborationArtist(mainArtistName);
+              setCollaborationCollaborator(d.name);
             }
           }
-          
-          // Call the callback to load the artist's network within the app
-          if (onArtistNodeClick) {
-            console.log(`🔗 Loading ${d.name}'s network within the app`);
-            onArtistNodeClick(d.name, artistId || undefined);
-          } else {
-            console.warn(`🔗 No onArtistNodeClick callback provided for ${d.name}`);
-            alert(`Sorry, ${d.name} is not available in the network yet. They may be added in future updates!`);
-          }
-          
-          // Hide the tooltip after clicking
-          hideTooltip();
-        };
-
-        tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
-
-        const profileHandler = (e: any) => {
-          e.preventDefault();
-          e.stopPropagation();
-          openMusicNerdProfile(d.name, d.artistId);
-        };
-
-        tooltip.selectAll(".artist-page-link, .artist-icon, .artist-action").on("click", profileHandler);
-
-        // Close button handler
-        tooltip.select(".tooltip-close").on("click", () => {
-          hideTooltip();
-        });
-      } else {
-        /* ---- ORIGINAL NON-ARTIST TOOLTIP BEHAVIOUR ---- */
-        const roleDisplay = roles.length > 1 ? roles.join(" + ") : roles[0];
-
-        // Mobile optimization for non-artist tooltips too
-        const isMobile = window.innerWidth <= 768;
-        const maxWidth = isMobile ? "260px" : "320px";
-        const titleFontSize = isMobile ? "13px" : "14px";
-        const closeButtonSize = isMobile ? "20px" : "24px";
-        const paddingRight = isMobile ? "25px" : "30px";
-
-        let content = `<div style="position:relative; text-align:center; max-width:${maxWidth}; padding-right:${paddingRight};">
-                        <span class="tooltip-close" style="position:absolute; top:4px; right:6px; cursor:pointer; font-size:${closeButtonSize}; color:white;">&times;</span>
-                         <strong style="font-size:${titleFontSize};">${d.name}</strong><br/>Role${roles.length > 1 ? "s" : ""}: ${roleDisplay}`;
-
-        // Show collaboration information for producers and songwriters
-        const hasProducerRole = roles.includes("producer") || roles.includes("songwriter");
-        const collaborationData = d.collaborations || (d as any).topCollaborators;
-        if (hasProducerRole && collaborationData && collaborationData.length > 0) {
-          content += `<br/><br/><strong>Top Collaborations:</strong><br/>`;
-          content += collaborationData.join("<br/>");
         }
+        
+        setShowCollaborationPopup(true);
+        hideTooltip();
+      };
 
-        // Show general collaboration info for artists if available
-        if (roles.includes("artist") && d.collaborations && d.collaborations.length > 0) {
-          content += `<br/><br/><strong>Recent Collaborations:</strong><br/>`;
-          content += d.collaborations.slice(0, 3).join("<br/>");
-        }
+      // Expand network handler
+      const expandHandler = async (e: any) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log(`🔗 Expanding network for ${d.name}`);
+        await expandNodeNetwork(d.name, d.artistId);
+        hideTooltip();
+      };
 
-        // Close container div
-        content += `</div>`;
-        tooltip.html(content).style("opacity", 1).style("pointer-events", "auto");
-
-        tooltip.select(".tooltip-close").on("click", () => {
-          hideTooltip();
-        });
+      // Attach event handlers
+      tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
+      
+      // Only attach expand handler if expand section exists (first-degree collaborators only)
+      if (isFirstDegreeCollaborator && !isMainArtist) {
+        tooltip.selectAll(".expand-link, .expand-icon, .expand-action").on("click", expandHandler);
       }
+      
+      // Only attach Music Nerd profile handler if profile section exists (only for artists)
+      if (isArtist) {
+        tooltip.selectAll(".artist-page-link, .artist-icon, .artist-action").on("click", profileHandler);
+      }
+      
+      // Only attach collaboration handler if collaboration section exists (not for main artist)
+      if (!isMainArtist) {
+        tooltip.selectAll(".collaboration-link, .collaboration-icon, .collaboration-action").on("click", collaborationHandler);
+      }
+
+      // Close button handler
+      tooltip.select(".tooltip-close").on("click", () => {
+        hideTooltip();
+      });
     }
 
     // Helper to position tooltip next to a node element
@@ -959,7 +1237,7 @@ export default function NetworkVisualizer({
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
     };
-  }, [data, visible, onZoomChange]);
+  }, [dataWithPictures, visible, onZoomChange]);
 
   // Helper function to check if a node should be visible based on filter state
   // For multi-role nodes, they are visible if ANY of their roles should be shown
@@ -984,7 +1262,7 @@ export default function NetworkVisualizer({
 
   // Update visibility based on filter state
   useEffect(() => {
-    if (!svgRef.current || !visible) return;
+    if (!svgRef.current || !visible || !dataWithPictures) return;
 
     const svg = d3.select(svgRef.current);
 
@@ -1031,7 +1309,7 @@ export default function NetworkVisualizer({
       
       return sourceVisible && targetVisible ? null : "none";
     });
-  }, [filterState, visible]);
+  }, [filterState, visible, dataWithPictures]);
 
   // SVG viewBox zoom function (working implementation)
   const applyZoom = (scale: number) => {
@@ -1157,12 +1435,32 @@ export default function NetworkVisualizer({
     >
       <svg ref={svgRef} className="w-full h-full" />
       
+      {/* Reset button for expanded mode */}
+      {isExpandedMode && (
+        <button
+          onClick={resetToFirstDegree}
+          className="absolute top-4 right-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors duration-200 z-10"
+          style={{ fontSize: '14px', fontWeight: '500' }}
+        >
+          ← Back to {mainArtistNode?.name || 'Main Artist'}
+        </button>
+      )}
+      
       <ArtistSelectionModal
         isOpen={showArtistModal}
         onClose={() => setShowArtistModal(false)}
         artistName={selectedArtistName}
         onSelectArtist={handleArtistSelection}
       />
+      
+      <CollaborationDetailsPopup
+        isOpen={showCollaborationPopup}
+        onClose={() => setShowCollaborationPopup(false)}
+        artistName={collaborationArtist}
+        collaboratorName={collaborationCollaborator}
+        mainArtistName={mainArtistName}
+      />
     </div>
   );
 }
+
