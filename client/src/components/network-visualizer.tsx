@@ -110,10 +110,9 @@ export default function NetworkVisualizer({
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       
-      // Use mainArtistNode.id consistently for comparison
-      if (sourceId === mainArtistNode.id) {
+      if (sourceId === mainArtistNode.name) {
         firstDegreeIds.add(targetId);
-      } else if (targetId === mainArtistNode.id) {
+      } else if (targetId === mainArtistNode.name) {
         firstDegreeIds.add(sourceId);
       }
     });
@@ -151,27 +150,21 @@ export default function NetworkVisualizer({
     firstDegreeIds.forEach(id => visibleIds.add(id));
     
     // Include expanded nodes and their connections
-    expandedNodes.forEach(expandedNodeName => {
-      // Find the node by name to get its ID
-      const expandedNode = nodes.find(node => node.name === expandedNodeName);
-      if (expandedNode) {
-        visibleIds.add(expandedNode.id);
-        console.log(`🔗 [VisibleNodes] Added expanded node: ${expandedNodeName} (ID: ${expandedNode.id})`);
+    expandedNodes.forEach(expandedNodeId => {
+      visibleIds.add(expandedNodeId);
+      console.log(`🔗 [VisibleNodes] Added expanded node: ${expandedNodeId}`);
+      
+      // Add all nodes connected to this expanded node
+      links.forEach(link => {
+        const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+        const targetId = typeof link.target === 'string' ? link.target : link.target.id;
         
-        // Add all nodes connected to this expanded node
-        links.forEach(link => {
-          const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-          const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-          
-          if (sourceId === expandedNode.id) {
-            visibleIds.add(targetId);
-          } else if (targetId === expandedNode.id) {
-            visibleIds.add(sourceId);
-          }
-        });
-      } else {
-        console.warn(`⚠️ [VisibleNodes] Could not find expanded node: ${expandedNodeName}`);
-      }
+        if (sourceId === expandedNodeId) {
+          visibleIds.add(targetId);
+        } else if (targetId === expandedNodeId) {
+          visibleIds.add(sourceId);
+        }
+      });
     });
     
     const visibleNodes = nodes.filter(node => visibleIds.has(node.id));
@@ -213,59 +206,13 @@ export default function NetworkVisualizer({
       console.log(`🔗 [Expand] Response ok:`, response.ok);
       
       if (response.ok) {
-        const responseData = await response.json();
-        console.log(`🔗 [Expand] Received response data:`, responseData);
-        
-        // Check if this is a noCollaborators response
-        if (responseData.noCollaborators === true) {
-          console.log(`⚠️ [Expand] Artist ${nodeName} has no collaborators`);
-          
-          // Still add the node to expanded set to show it was attempted
-          setExpandedNodes(prev => {
-            const newSet = new Set([...prev, nodeName]);
-            console.log(`🔗 [Expand] Updated expandedNodes (no collaborators):`, Array.from(newSet));
-            return newSet;
-          });
-          
-          // Set persistence key for this expansion session
-          setPersistenceKey(`expansion-${Date.now()}`);
-          
-          // Persist the expanded networks
-          setTimeout(() => persistExpandedNetworks(), 100);
-          
-          console.log(`✅ [Expand] Marked ${nodeName} as expanded (no collaborators found)`);
-          return;
-        }
-        
-        // Handle regular network response
-        const collaboratorNetwork = responseData;
+        const collaboratorNetwork = await response.json();
         console.log(`🔗 [Expand] Received collaborator network:`, {
           nodesCount: collaboratorNetwork.nodes?.length || 0,
           linksCount: collaboratorNetwork.links?.length || 0,
           hasNodes: !!collaboratorNetwork.nodes,
           hasLinks: !!collaboratorNetwork.links
         });
-        
-        // Check if the network has any nodes (should always have at least the main artist)
-        if (!collaboratorNetwork.nodes || collaboratorNetwork.nodes.length === 0) {
-          console.log(`⚠️ [Expand] Artist ${nodeName} returned empty network`);
-          
-          // Still add the node to expanded set to show it was attempted
-          setExpandedNodes(prev => {
-            const newSet = new Set([...prev, nodeName]);
-            console.log(`🔗 [Expand] Updated expandedNodes (empty network):`, Array.from(newSet));
-            return newSet;
-          });
-          
-          // Set persistence key for this expansion session
-          setPersistenceKey(`expansion-${Date.now()}`);
-          
-          // Persist the expanded networks
-          setTimeout(() => persistExpandedNetworks(), 100);
-          
-          console.log(`✅ [Expand] Marked ${nodeName} as expanded (empty network)`);
-          return;
-        }
         
         // Merge the collaborator's network with the existing network
         // Use current fullNetworkData as base if available, otherwise use original data
@@ -419,7 +366,7 @@ export default function NetworkVisualizer({
       console.log(`💾 [Persistence] Auto-saving expanded networks`);
       setTimeout(() => persistExpandedNetworks(), 100);
     }
-  }, [expandedNodes, fullNetworkData]); // Removed persistExpandedNetworks from deps to prevent infinite loops
+  }, [expandedNodes, fullNetworkData, persistExpandedNetworks]);
 
   // Restore expanded networks when data becomes available (only once)
   useEffect(() => {
@@ -443,7 +390,7 @@ export default function NetworkVisualizer({
       console.log(`🔄 [Persistence] Restoring expanded networks after component re-render`);
       restoreExpandedNetworks();
     }
-  }, [isInitialized, expandedNodes.size, fullNetworkData]); // Removed restoreExpandedNetworks from deps to prevent race conditions
+  }, [isInitialized, expandedNodes.size, fullNetworkData, restoreExpandedNetworks]);
 
   // Fetch configuration on component mount
   useEffect(() => {
