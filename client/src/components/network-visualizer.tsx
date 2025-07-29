@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import ArtistSelectionModal from "./artist-selection-modal";
+import { ensureArtistProfilePictures } from "@/lib/profile-pictures";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -27,6 +28,30 @@ export default function NetworkVisualizer({
   const [showArtistModal, setShowArtistModal] = useState(false);
   const [selectedArtistName, setSelectedArtistName] = useState("");
   const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("");
+  const [dataWithPictures, setDataWithPictures] = useState<NetworkData | null>(null);
+
+  // Ensure profile pictures are always available when data changes
+  useEffect(() => {
+    if (!data || !visible) {
+      setDataWithPictures(null);
+      return;
+    }
+
+    console.log(`🖼️ [NetworkVisualizer] Ensuring profile pictures for network data...`);
+    
+    const ensurePictures = async () => {
+      try {
+        const updatedData = await ensureArtistProfilePictures(data);
+        setDataWithPictures(updatedData);
+        console.log(`🖼️ [NetworkVisualizer] Profile pictures ensured and ready for display`);
+      } catch (error) {
+        console.error(`🖼️ [NetworkVisualizer] Error ensuring profile pictures:`, error);
+        setDataWithPictures(data); // Use original data if profile picture fetching fails
+      }
+    };
+
+    ensurePictures();
+  }, [data, visible]);
 
   // Fetch configuration on component mount
   useEffect(() => {
@@ -59,7 +84,9 @@ export default function NetworkVisualizer({
   }, []);
 
   useEffect(() => {
-    if (!svgRef.current || !data || !visible) return;
+    // Use dataWithPictures instead of data to ensure profile pictures are included
+    const networkData = dataWithPictures;
+    if (!svgRef.current || !networkData || !visible) return;
 
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
@@ -72,8 +99,8 @@ export default function NetworkVisualizer({
     svg.selectAll("*").remove();
 
     // Filter out links where either node doesn't exist or is isolated
-    const nodeSet = new Set(data.nodes.map(n => n.id));
-    const validLinks = data.links.filter(link => {
+    const nodeSet = new Set(networkData.nodes.map(n => n.id));
+    const validLinks = networkData.links.filter(link => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       return nodeSet.has(sourceId) && nodeSet.has(targetId);
@@ -336,7 +363,7 @@ export default function NetworkVisualizer({
       const visited = new Set<string>();
       const components: NetworkNode[][] = [];
       
-      for (const node of data.nodes) {
+      for (const node of networkData.nodes) {
         if (visited.has(node.id)) continue;
         
         const component: NetworkNode[] = [];
@@ -355,10 +382,10 @@ export default function NetworkVisualizer({
             const targetId = typeof link.target === 'string' ? link.target : link.target.id;
             
             if (sourceId === current.id) {
-              const target = data.nodes.find(n => n.id === targetId);
+              const target = networkData.nodes.find(n => n.id === targetId);
               if (target && !visited.has(target.id)) queue.push(target);
             } else if (targetId === current.id) {
-              const source = data.nodes.find(n => n.id === sourceId);
+              const source = networkData.nodes.find(n => n.id === sourceId);
               if (source && !visited.has(source.id)) queue.push(source);
             }
           }
@@ -378,7 +405,7 @@ export default function NetworkVisualizer({
     const componentHeight = height / Math.ceil(components.length / componentsPerRow);
     
     // Find the main artist node - it's the largest artist node (size can be 20, 25, or 30)
-    const mainArtistNode = data.nodes
+    const mainArtistNode = networkData.nodes
       .filter(node => node.type === 'artist' || (node.types && node.types.includes('artist')))
       .reduce((largest, current) => 
         !largest || current.size > largest.size ? current : largest, 
@@ -412,7 +439,7 @@ export default function NetworkVisualizer({
       const currentWidth = container ? container.clientWidth : width;
       const currentHeight = container ? container.clientHeight : height;
       
-      for (const node of data.nodes) {
+      for (const node of networkData.nodes) {
         // Ensure nodes stay well within bounds
         if (node.x! < margin) node.x = margin;
         if (node.x! > currentWidth - margin) node.x = currentWidth - margin;
@@ -429,7 +456,7 @@ export default function NetworkVisualizer({
 
     // Create simulation with centering force for main artist
     const simulation = d3
-      .forceSimulation<NetworkNode>(data.nodes)
+      .forceSimulation<NetworkNode>(networkData.nodes)
       .force(
         "link",
         d3
@@ -476,7 +503,7 @@ export default function NetworkVisualizer({
     // Create nodes with multi-role support
     const nodeElements = networkGroup
       .selectAll(".node")
-      .data(data.nodes)
+      .data(networkData.nodes)
       .enter()
       .append("g")
       .attr("class", (d) => `node-group network-node node-${d.type}`)
@@ -663,7 +690,7 @@ export default function NetworkVisualizer({
     // Add labels for all nodes
     const labelElements = networkGroup
       .selectAll(".label")
-      .data(data.nodes)
+      .data(networkData.nodes)
       .enter()
       .append("text")
       .attr("class", "label")
@@ -1076,7 +1103,7 @@ export default function NetworkVisualizer({
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
     };
-  }, [data, visible, onZoomChange]);
+  }, [dataWithPictures, visible, onZoomChange]);
 
   // Helper function to check if a node should be visible based on filter state
   // For multi-role nodes, they are visible if ANY of their roles should be shown
@@ -1101,7 +1128,7 @@ export default function NetworkVisualizer({
 
   // Update visibility based on filter state
   useEffect(() => {
-    if (!svgRef.current || !visible) return;
+    if (!svgRef.current || !visible || !dataWithPictures) return;
 
     const svg = d3.select(svgRef.current);
 
@@ -1148,7 +1175,7 @@ export default function NetworkVisualizer({
       
       return sourceVisible && targetVisible ? null : "none";
     });
-  }, [filterState, visible]);
+  }, [filterState, visible, dataWithPictures]);
 
   // SVG viewBox zoom function (working implementation)
   const applyZoom = (scale: number) => {

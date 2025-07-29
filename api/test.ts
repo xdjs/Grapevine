@@ -98,12 +98,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       enabled: envStatus.spotifyConfigured,
       scope: envStatus.spotifyConfigured ? 'All artist nodes will get profile pictures if available on Spotify' : 'Disabled - add Spotify credentials',
       batchProcessing: 'Profile pictures are fetched in batches of 5 to avoid API rate limits',
-      fallback: 'If Spotify fails, system tries MusicBrainz Cover Art Archive'
+      fallback: 'If Spotify fails, system tries MusicBrainz Cover Art Archive',
+      consistency: {
+        cacheBusting: 'Profile picture requests include cache-busting parameters',
+        freshFetching: 'Profile pictures are always fetched fresh, regardless of network data cache status',
+        errorHandling: 'Robust error handling ensures app continues working even if some profile pictures fail',
+        displayGuarantee: 'NetworkVisualizer component ensures profile pictures are checked on every render'
+      }
     },
     recommendations: {
       profilePictures: envStatus.spotifyConfigured 
-        ? '✅ Profile pictures should work for all artist nodes' 
-        : '❌ Add SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET to Vercel environment variables for profile pictures'
+        ? '✅ Profile pictures should work for all artist nodes consistently' 
+        : '❌ Add SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET to Vercel environment variables for profile pictures',
+      testing: 'Search for artists like "Taylor Swift", "Ariana Grande", or "Ed Sheeran" to test profile picture functionality',
+      debugging: 'Open browser console to see detailed profile picture fetching logs'
     }
   };
 

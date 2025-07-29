@@ -41,12 +41,14 @@ export async function fetchNetworkData(artistName: string, allowHallucinations?:
     
     console.log(`✅ [Frontend] Received network data with ${data.nodes?.length || 0} nodes`);
     
-    // If we have network data with nodes, fetch profile pictures for all artist nodes
+    // Always fetch profile pictures for all artist nodes, regardless of cache status
+    // This ensures profile pictures are fresh and displayed consistently
     if (data && 'nodes' in data && data.nodes && data.nodes.length > 0) {
-      console.log(`🖼️ [Frontend] Fetching profile pictures for all artist nodes...`);
+      const cacheStatus = data.cached ? 'cached' : 'fresh';
+      console.log(`🖼️ [Frontend] Fetching profile pictures for all artist nodes (data source: ${cacheStatus})...`);
       try {
         const dataWithProfilePictures = await fetchAllArtistProfilePictures(data);
-        console.log(`🖼️✅ [Frontend] Profile pictures fetched successfully`);
+        console.log(`🖼️✅ [Frontend] Profile pictures fetched successfully for ${cacheStatus} data`);
         return dataWithProfilePictures;
       } catch (profileError) {
         console.warn(`🖼️⚠️ [Frontend] Failed to fetch profile pictures, continuing without them:`, profileError);
@@ -100,12 +102,14 @@ export async function fetchNetworkDataById(artistId: string, allowHallucinations
     
     console.log(`✅ [Frontend] Received network data with ${data.nodes?.length || 0} nodes for artist ID: ${artistId}`);
     
-    // If we have network data with nodes, fetch profile pictures for all artist nodes
+    // Always fetch profile pictures for all artist nodes, regardless of cache status
+    // This ensures profile pictures are fresh and displayed consistently
     if (data && 'nodes' in data && data.nodes && data.nodes.length > 0) {
-      console.log(`🖼️ [Frontend] Fetching profile pictures for all artist nodes...`);
+      const cacheStatus = data.cached ? 'cached' : 'fresh';
+      console.log(`🖼️ [Frontend] Fetching profile pictures for all artist nodes (data source: ${cacheStatus}, artist ID: ${artistId})...`);
       try {
         const dataWithProfilePictures = await fetchAllArtistProfilePictures(data);
-        console.log(`🖼️✅ [Frontend] Profile pictures fetched successfully`);
+        console.log(`🖼️✅ [Frontend] Profile pictures fetched successfully for ${cacheStatus} data (artist ID: ${artistId})`);
         return dataWithProfilePictures;
       } catch (profileError) {
         console.warn(`🖼️⚠️ [Frontend] Failed to fetch profile pictures, continuing without them:`, profileError);

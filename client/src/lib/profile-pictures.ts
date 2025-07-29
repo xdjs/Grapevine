@@ -20,7 +20,10 @@ interface ProfilePictureResponse {
 export async function fetchArtistProfilePicture(artistName: string): Promise<string | null> {
   try {
     console.log(`🖼️ [Frontend] Requesting profile picture for: ${artistName}`);
-    const response = await fetch(`/api/artist-profile-picture/${encodeURIComponent(artistName)}`);
+    
+    // Add cache-busting parameter to ensure fresh requests
+    const cacheBuster = Date.now();
+    const response = await fetch(`/api/artist-profile-picture/${encodeURIComponent(artistName)}?cb=${cacheBuster}`);
     
     if (!response.ok) {
       console.warn(`🖼️ [Frontend] Profile picture request failed for ${artistName}: ${response.status}`);
@@ -57,8 +60,45 @@ export async function fetchArtistProfilePicture(artistName: string): Promise<str
 }
 
 /**
+ * Ensures all artist nodes in network data have profile pictures
+ * Can be called multiple times safely - will only fetch missing profile pictures
+ */
+export async function ensureArtistProfilePictures(networkData: NetworkData): Promise<NetworkData> {
+  if (!networkData || !networkData.nodes || networkData.nodes.length === 0) {
+    return networkData;
+  }
+
+  const artistNodes = networkData.nodes.filter(node => 
+    node.type === 'artist' || (node.types && node.types.includes('artist'))
+  );
+
+  const nodesNeedingPictures = artistNodes.filter(node => !node.imageUrl);
+  
+  if (nodesNeedingPictures.length === 0) {
+    console.log(`🖼️ [Frontend] All ${artistNodes.length} artist nodes already have profile pictures`);
+    return networkData;
+  }
+
+  console.log(`🖼️ [Frontend] ${nodesNeedingPictures.length}/${artistNodes.length} artist nodes need profile pictures`);
+  
+  // Fetch profile pictures for nodes that don't have them
+  for (const node of nodesNeedingPictures) {
+    try {
+      const imageUrl = await fetchArtistProfilePicture(node.name);
+      node.imageUrl = imageUrl;
+    } catch (error) {
+      console.error(`🖼️ [Frontend] Failed to fetch profile picture for ${node.name}:`, error);
+      node.imageUrl = null;
+    }
+  }
+
+  return networkData;
+}
+
+/**
  * Fetches profile pictures for all artist nodes in a network
  * Fetches for all nodes with type 'artist' or that include 'artist' in their types array
+ * Always attempts to fetch fresh profile pictures to ensure consistent display
  */
 export async function fetchAllArtistProfilePictures(networkData: NetworkData): Promise<NetworkData> {
   // Create a copy of the network data
@@ -72,8 +112,18 @@ export async function fetchAllArtistProfilePictures(networkData: NetworkData): P
     node.type === 'artist' || (node.types && node.types.includes('artist'))
   );
 
+  if (artistNodes.length === 0) {
+    console.log(`🖼️ [Frontend] No artist nodes found - skipping profile picture fetching`);
+    return updatedData;
+  }
+
   console.log(`🖼️ [Frontend] Found ${artistNodes.length} artist nodes to fetch profile pictures for:`, 
     artistNodes.map(n => `${n.name} (size: ${n.size})`));
+
+  // Always clear existing profile pictures to ensure fresh fetching
+  artistNodes.forEach(node => {
+    node.imageUrl = null;
+  });
 
   // Fetch profile pictures for all artists in parallel
   // Limit concurrent requests to avoid overwhelming the API
@@ -86,24 +136,45 @@ export async function fetchAllArtistProfilePictures(networkData: NetworkData): P
 
   console.log(`🖼️ [Frontend] Processing ${batches.length} batches of ${batchSize} artists each`);
 
+  // Track overall progress
+  let totalProcessed = 0;
+  let totalSuccessful = 0;
+
   for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
     const batch = batches[batchIndex];
     console.log(`🖼️ [Frontend] Processing batch ${batchIndex + 1}/${batches.length}:`, batch.map(n => n.name));
     
     const batchPromises = batch.map(async (node) => {
-      const imageUrl = await fetchArtistProfilePicture(node.name);
-      if (imageUrl) {
-        console.log(`🖼️✅ [Frontend] Got profile picture for ${node.name} (size: ${node.size})`);
-        node.imageUrl = imageUrl;
-      } else {
-        console.log(`🖼️⭕ [Frontend] No profile picture for ${node.name} (size: ${node.size}), using original design`);
+      try {
+        const imageUrl = await fetchArtistProfilePicture(node.name);
+        if (imageUrl) {
+          console.log(`🖼️✅ [Frontend] Got profile picture for ${node.name} (size: ${node.size})`);
+          node.imageUrl = imageUrl;
+          return true; // Success
+        } else {
+          console.log(`🖼️⭕ [Frontend] No profile picture for ${node.name} (size: ${node.size}), using original design`);
+          node.imageUrl = null;
+          return false; // No picture found
+        }
+      } catch (error) {
+        console.error(`🖼️❌ [Frontend] Error fetching profile picture for ${node.name}:`, error);
         node.imageUrl = null;
+        return false; // Error occurred
       }
-      return node;
     });
     
     // Wait for this batch to complete before starting the next one
-    await Promise.allSettled(batchPromises);
+    const batchResults = await Promise.allSettled(batchPromises);
+    
+    // Count successful results
+    batchResults.forEach((result) => {
+      totalProcessed++;
+      if (result.status === 'fulfilled' && result.value === true) {
+        totalSuccessful++;
+      }
+    });
+    
+    console.log(`🖼️ [Frontend] Batch ${batchIndex + 1} complete. Progress: ${totalProcessed}/${artistNodes.length} processed, ${totalSuccessful} successful`);
     
     // Small delay between batches to be nice to the API
     if (batchIndex < batches.length - 1) {
@@ -114,7 +185,7 @@ export async function fetchAllArtistProfilePictures(networkData: NetworkData): P
   const withPictures = artistNodes.filter(n => n.imageUrl);
   const withoutPictures = artistNodes.filter(n => !n.imageUrl);
 
-  console.log(`🖼️ [Frontend] Profile picture fetching complete. Summary:`, {
+  console.log(`🖼️ [Frontend] Profile picture fetching complete. Final Summary:`, {
     totalArtists: artistNodes.length,
     withPictures: withPictures.length,
     withoutPictures: withoutPictures.length,
@@ -122,6 +193,9 @@ export async function fetchAllArtistProfilePictures(networkData: NetworkData): P
     artistsWithPictures: withPictures.map(n => n.name),
     artistsWithoutPictures: withoutPictures.map(n => n.name)
   });
+
+  // Ensure the network visualizer will re-render with the new profile pictures
+  console.log(`🖼️ [Frontend] Profile pictures ready for display. Artists with images: ${withPictures.length}/${artistNodes.length}`);
 
   return updatedData;
 
