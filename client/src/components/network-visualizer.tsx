@@ -143,9 +143,16 @@ export default function NetworkVisualizer({
     console.log(`🔗 [Expand] Loading state set to true for: ${nodeName}`);
     
     try {
-      // Fetch the full network for this collaborator (with expansion mode)
-      const expandUrl = `/api/network/${encodeURIComponent(nodeName)}?expand=true`;
-      console.log(`🔗 [Expand] Fetching network from: ${expandUrl}`);
+      // Fetch the full network for this collaborator using dedicated expansion endpoint
+      // Use artist ID if available, otherwise fall back to name
+      let expandUrl;
+      if (nodeId) {
+        expandUrl = `/api/expand-network-by-id/${nodeId}`;
+        console.log(`🔗 [Expand] Fetching expansion network by ID: ${expandUrl}`);
+      } else {
+        expandUrl = `/api/expand-network/${encodeURIComponent(nodeName)}`;
+        console.log(`🔗 [Expand] Fetching expansion network by name: ${expandUrl}`);
+      }
       const response = await fetch(expandUrl);
       console.log(`🔗 [Expand] Response status:`, response.status);
       console.log(`🔗 [Expand] Response ok:`, response.ok);
@@ -160,6 +167,8 @@ export default function NetworkVisualizer({
         });
         console.log(`🔗 [Expand] Collaborator network nodes:`, collaboratorNetwork.nodes?.map(n => `${n.name} (${n.type})`));
         console.log(`🔗 [Expand] Collaborator network links:`, collaboratorNetwork.links?.map(l => `${l.source} -> ${l.target}`));
+        console.log(`🔗 [Expand] Original network nodes:`, data.nodes.map(n => `${n.name} (${n.type})`));
+        console.log(`🔗 [Expand] Original network links:`, data.links.map(l => `${l.source} -> ${l.target}`));
         
         // Merge the collaborator's network with the existing network
         // Use current fullNetworkData as base if available, otherwise use original data
