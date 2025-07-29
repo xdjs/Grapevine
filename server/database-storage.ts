@@ -609,7 +609,7 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
   }
 
   async getNetworkData(artistName: string): Promise<NetworkData | null> {
-    console.log(`🔄 [DEBUG] Generating network data for "${artistName}"`);
+    console.log(`🔄 [DEBUG] Generating fresh network data for "${artistName}" (no caching)`);
     
     const artist = await this.getArtistByName(artistName);
     if (!artist) {
@@ -618,7 +618,11 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
     }
     
     const networkData = await this.generateRealCollaborationNetwork(artistName);
-    await this.cacheNetworkData(artistName, networkData);
+    // DISABLED: No caching to ensure fresh data generation
+    
+    console.log(`✅ [DEBUG] Generated network for "${artistName}" with ${networkData.nodes.length} nodes and ${networkData.links.length} links`);
+    console.log(`📊 [DEBUG] Nodes:`, networkData.nodes.map(n => `${n.name} (${n.type})`));
+    console.log(`🔗 [DEBUG] Links:`, networkData.links.map(l => `${l.source} -> ${l.target}`));
     
     // Convert SafeNetworkData to NetworkData
     const convertedData: NetworkData = {
@@ -667,9 +671,9 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
       // Skip cache and force fresh generation to ensure no outer circle nodes
       console.log(`🔄 [DEBUG] Skipping cache and forcing fresh generation for artist ID "${artistId}" (${artist.name})`);
       
-      console.log(`🔄 [DEBUG] No cached data found for artist ID "${artistId}" (${artist.name}), generating new network...`);
+      console.log(`🔄 [DEBUG] Generating fresh network data for artist ID "${artistId}" (${artist.name}) - no caching`);
       const networkData = await this.generateRealCollaborationNetwork(artist.name);
-      await this.cacheNetworkDataById(artistId, networkData);
+      // DISABLED: No caching to ensure fresh data generation
       
       // Convert SafeNetworkData to NetworkData
       const convertedData: NetworkData = {

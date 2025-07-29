@@ -647,18 +647,8 @@ Guidelines:
 
       const networkData = { nodes, links };
 
-      // Only cache the generated data if hallucinations were NOT used
-      if (!hallucinationsUsed) {
-        try {
-          const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE LOWER(name) = LOWER($2)';
-          await client.query(updateQuery, [JSON.stringify(networkData), correctArtistName]);
-          console.log(`💾 [Vercel] Cached network data for ${correctArtistName}`);
-        } catch (cacheError) {
-          console.warn('⚠️ [Vercel] Failed to cache data:', cacheError);
-        }
-      } else {
-        console.log(`🎭 [Vercel] Skipping cache for ${correctArtistName} due to hallucinated data`);
-      }
+      // DISABLED: No caching to ensure fresh data generation
+      console.log(`🔄 [Vercel] Skipping cache for ${correctArtistName} - caching disabled`);
 
       await client.end();
       console.log(`✅ [Vercel] Generated network with ${nodes.length} nodes for ${artistName}`);
