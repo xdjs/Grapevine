@@ -573,8 +573,10 @@ export default function MobileControls({
       {!showMenu && (
         <Button
           onClick={() => setShowMenu(true)}
-          className="fixed bottom-6 sm:bottom-4 right-4 z-40 w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg border-2"
-          style={{ borderColor: '#b427b4' }}
+          className="fixed bottom-6 sm:bottom-4 right-4 z-40 w-12 h-12 rounded-full shadow-lg"
+          style={{ backgroundColor: '#A534AF' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#8f2b9f'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#A534AF'}
           size="icon"
           title="Options"
         >
