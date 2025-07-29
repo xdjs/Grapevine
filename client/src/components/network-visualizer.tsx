@@ -145,17 +145,41 @@ export default function NetworkVisualizer({
     try {
       // Find the clicked node in the current data to get its collaborations
       const baseNodes = fullNetworkData ? fullNetworkData.nodes : data.nodes;
-      const clickedNode = baseNodes.find(node => node.name === nodeName);
+      console.log(`🔍 [Expand] Looking for node "${nodeName}" in ${baseNodes.length} nodes`);
+      console.log(`🔍 [Expand] Available nodes:`, baseNodes.map(n => n.name));
+      
+      let clickedNode = baseNodes.find(node => node.name === nodeName);
+      
+      // If not found by exact name, try case-insensitive match
+      if (!clickedNode) {
+        clickedNode = baseNodes.find(node => node.name.toLowerCase() === nodeName.toLowerCase());
+        console.log(`🔍 [Expand] Found node by case-insensitive match:`, clickedNode?.name);
+      }
+      
+      // If still not found, try partial match
+      if (!clickedNode) {
+        clickedNode = baseNodes.find(node => node.name.toLowerCase().includes(nodeName.toLowerCase()) || nodeName.toLowerCase().includes(node.name.toLowerCase()));
+        console.log(`🔍 [Expand] Found node by partial match:`, clickedNode?.name);
+      }
       
       if (!clickedNode) {
         console.error(`❌ [Expand] Could not find node "${nodeName}" in current network`);
+        console.error(`❌ [Expand] Available nodes:`, baseNodes.map(n => n.name));
         return;
       }
       
       console.log(`🔗 [Expand] Found clicked node:`, clickedNode);
       console.log(`🔗 [Expand] Collaborations data:`, clickedNode.collaborations);
+      console.log(`🔗 [Expand] Collaborations length:`, clickedNode.collaborations?.length || 0);
+      console.log(`🔗 [Expand] All nodes in current network:`, baseNodes.map(n => `${n.name} (collaborations: ${n.collaborations?.length || 0})`));
       
       // Check if the node has collaborations data
+      console.log(`🔍 [Expand] Node collaborations check:`, {
+        hasCollaborations: !!clickedNode.collaborations,
+        collaborationsLength: clickedNode.collaborations?.length || 0,
+        collaborationsData: clickedNode.collaborations
+      });
+      
       if (!clickedNode.collaborations || clickedNode.collaborations.length === 0) {
         console.log(`⚠️ [Expand] No collaborations data found for "${nodeName}", trying API fallback`);
         
@@ -220,6 +244,7 @@ export default function NetworkVisualizer({
       } else {
         // Use local collaborations data to create expansion network
         console.log(`🔗 [Expand] Using local collaborations data for "${nodeName}"`);
+        console.log(`🔗 [Expand] Creating ${clickedNode.collaborations.length} branching nodes`);
         
         // Create nodes for the branching artists (topCollaborators)
         const branchingNodes = clickedNode.collaborations.map(collaboratorName => ({
