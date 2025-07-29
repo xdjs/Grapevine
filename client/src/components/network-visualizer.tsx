@@ -144,8 +144,9 @@ export default function NetworkVisualizer({
     
     try {
       // Fetch the full network for this collaborator (with expansion mode)
-      console.log(`🔗 [Expand] Fetching network from: /api/network/${encodeURIComponent(nodeName)}?expand=true`);
-      const response = await fetch(`/api/network/${encodeURIComponent(nodeName)}?expand=true`);
+      const expandUrl = `/api/network/${encodeURIComponent(nodeName)}?expand=true`;
+      console.log(`🔗 [Expand] Fetching network from: ${expandUrl}`);
+      const response = await fetch(expandUrl);
       console.log(`🔗 [Expand] Response status:`, response.status);
       console.log(`🔗 [Expand] Response ok:`, response.ok);
       
@@ -157,6 +158,8 @@ export default function NetworkVisualizer({
           hasNodes: !!collaboratorNetwork.nodes,
           hasLinks: !!collaboratorNetwork.links
         });
+        console.log(`🔗 [Expand] Collaborator network nodes:`, collaboratorNetwork.nodes?.map(n => `${n.name} (${n.type})`));
+        console.log(`🔗 [Expand] Collaborator network links:`, collaboratorNetwork.links?.map(l => `${l.source} -> ${l.target}`));
         
         // Merge the collaborator's network with the existing network
         // Use current fullNetworkData as base if available, otherwise use original data

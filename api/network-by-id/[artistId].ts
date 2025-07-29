@@ -40,6 +40,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Check if this is an expansion request (for showing full network)
   const isExpansion = req.query.expand === 'true';
   console.log(`🎯 [Vercel] Network request for artist ID ${req.query.artistId} - Expansion mode: ${isExpansion}`);
+  console.log(`🎯 [Vercel] Query parameters:`, req.query);
 
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
@@ -432,11 +433,13 @@ Guidelines:
         const roles = collaborator.roles || [collaborator.type || 'producer'];
         console.log(`🎭 [Vercel] Processing "${collaborator.name}" with roles: [${roles.join(', ')}]`);
         
-        // Only include collaborators who are primarily producers/songwriters, not artists
-        // If someone has 'artist' as their primary role, exclude them from initial generation
+        // In expansion mode, include ALL collaborators (not just producers/songwriters)
+        // In initial mode, only include producers/songwriters
         const primaryRole = roles[0];
-        if (primaryRole !== 'producer' && primaryRole !== 'songwriter') {
-          console.log(`🚫 [Vercel] Skipping "${collaborator.name}" - primary role is "${primaryRole}", not producer/songwriter`);
+        const shouldInclude = isExpansion ? true : (primaryRole === 'producer' || primaryRole === 'songwriter');
+        
+        if (!shouldInclude) {
+          console.log(`🚫 [Vercel] Skipping "${collaborator.name}" - primary role is "${primaryRole}", not producer/songwriter (expansion mode: ${isExpansion})`);
           continue;
         }
         

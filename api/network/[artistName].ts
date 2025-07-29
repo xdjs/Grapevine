@@ -91,6 +91,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Check if this is an expansion request (for showing full network)
   const isExpansion = req.query.expand === 'true';
   console.log(`🎯 [Vercel] Network request for ${req.query.artistName} - Expansion mode: ${isExpansion}`);
+  console.log(`🎯 [Vercel] Query parameters:`, req.query);
 
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
@@ -436,10 +437,12 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
           allPeople.add(person.name);
           const roles = person.roles || ['producer'];
           
-          // Only include collaborators who are primarily producers/songwriters, not artists
-          // If someone has 'artist' as their primary role, exclude them from initial generation
+          // In expansion mode, include ALL collaborators (not just producers/songwriters)
+          // In initial mode, only include producers/songwriters
           const primaryRole = roles[0];
-          if (primaryRole === 'producer' || primaryRole === 'songwriter') {
+          const shouldInclude = isExpansion ? true : (primaryRole === 'producer' || primaryRole === 'songwriter');
+          
+          if (shouldInclude) {
             collaborators.push({
               name: person.name,
               type: primaryRole,
