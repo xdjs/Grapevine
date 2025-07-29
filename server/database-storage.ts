@@ -402,9 +402,17 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
                 // Create new node
                 const enhancedRoles = getOptimizedRoles(collaborator.name, safeCollaboratorType);
                 
+                // Only include collaborators who are primarily producers/songwriters, not artists
+                // If someone has 'artist' as their primary role, exclude them from initial generation
+                const primaryRole = enhancedRoles[0];
+                if (primaryRole !== 'producer' && primaryRole !== 'songwriter') {
+                  console.log(`🚫 [DEBUG] Skipping "${collaborator.name}" - primary role is "${primaryRole}", not producer/songwriter`);
+                  continue;
+                }
+                
                 collaboratorNode = createSafeNetworkNode({
                   name: collaborator.name,
-                  type: enhancedRoles[0],
+                  type: primaryRole,
                   types: enhancedRoles,
                   size: 20,
                   collaborations: collaborator.topCollaborators || [],

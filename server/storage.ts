@@ -374,10 +374,18 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         // Get enhanced roles from batch detection, fallback to original type
         const enhancedRoles = collaboratorRoleMap.get(collaborator.name) || [collaborator.type as 'artist' | 'producer' | 'songwriter'];
         
+        // Only include collaborators who are primarily producers/songwriters, not artists
+        // If someone has 'artist' as their primary role, exclude them from initial generation
+        const primaryRole = enhancedRoles[0];
+        if (primaryRole !== 'producer' && primaryRole !== 'songwriter') {
+          console.log(`🚫 [MemStorage] Skipping "${collaborator.name}" - primary role is "${primaryRole}", not producer/songwriter`);
+          continue;
+        }
+        
         const collaboratorNode: NetworkNode = {
           id: collaborator.name,
           name: collaborator.name,
-          type: enhancedRoles[0],
+          type: primaryRole,
           types: enhancedRoles,
           size: 20,
           imageUrl: collaboratorImage,

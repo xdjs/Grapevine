@@ -431,18 +431,20 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
           
           allPeople.add(person.name);
           const roles = person.roles || ['producer'];
-          for (const role of roles) {
-            if (role === 'producer' || role === 'songwriter') {
-              collaborators.push({
-                name: person.name,
-                type: role,
-                topCollaborators: person.topCollaborators || []
-              });
-              // Add branching artists to the batch
-              for (const branchingArtist of person.topCollaborators || []) {
-                if (branchingArtist !== correctArtistName && !isFakeCollaborator(branchingArtist)) {
-                  allPeople.add(branchingArtist);
-                }
+          
+          // Only include collaborators who are primarily producers/songwriters, not artists
+          // If someone has 'artist' as their primary role, exclude them from initial generation
+          const primaryRole = roles[0];
+          if (primaryRole === 'producer' || primaryRole === 'songwriter') {
+            collaborators.push({
+              name: person.name,
+              type: primaryRole,
+              topCollaborators: person.topCollaborators || []
+            });
+            // Add branching artists to the batch
+            for (const branchingArtist of person.topCollaborators || []) {
+              if (branchingArtist !== correctArtistName && !isFakeCollaborator(branchingArtist)) {
+                allPeople.add(branchingArtist);
               }
             }
           }

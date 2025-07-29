@@ -428,6 +428,14 @@ Guidelines:
         const roles = collaborator.roles || [collaborator.type || 'producer'];
         console.log(`🎭 [Vercel] Processing "${collaborator.name}" with roles: [${roles.join(', ')}]`);
         
+        // Only include collaborators who are primarily producers/songwriters, not artists
+        // If someone has 'artist' as their primary role, exclude them from initial generation
+        const primaryRole = roles[0];
+        if (primaryRole !== 'producer' && primaryRole !== 'songwriter') {
+          console.log(`🚫 [Vercel] Skipping "${collaborator.name}" - primary role is "${primaryRole}", not producer/songwriter`);
+          continue;
+        }
+        
         // Check if we already have a node for this person
         let collabNode = nodeMap.get(collaborator.name);
         
@@ -453,7 +461,6 @@ Guidelines:
           }
         } else {
           // Create new node with all roles
-          const primaryRole = roles[0];
           collabNode = {
             id: collaborator.name,
             name: collaborator.name,
