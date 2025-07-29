@@ -17,6 +17,18 @@ The current `network-visualizer.tsx` file is 1,499 lines long and handles multip
 - Improve testability with isolated functions
 - Maintain existing functionality
 - Improve code readability and maintainability
+- **Mandatory comprehensive testing** for all code changes
+
+## 🧪 Testing Policy
+**CRITICAL REQUIREMENT**: Every code modification and new code MUST include comprehensive tests before implementation. This is non-negotiable for all tasks.
+
+### Testing Requirements
+- **Unit Tests**: Test individual functions, hooks, and components in isolation
+- **Integration Tests**: Test component interactions and data flow between systems
+- **Runnable Tests**: All tests must be executable via standard test runners (Jest/Vitest)
+- **Coverage Goals**: Aim for >90% code coverage on all new/modified code
+- **Test-First Approach**: Write tests before or during implementation, not after
+- **Mock External Dependencies**: Properly mock APIs, D3, DOM events, and external libraries
 
 ---
 
@@ -70,11 +82,14 @@ The current `network-visualizer.tsx` file is 1,499 lines long and handles multip
 **Dependencies**: 
 - None
 
-**Tests**:
-- Create `use-config.test.ts`
-- Test config fetching on mount
-- Test error handling for config API failures
-- Mock `/api/config` endpoint
+**Tests** (MANDATORY):
+- Create `use-config.test.ts` with comprehensive coverage
+- Test config fetching on mount and loading states
+- Test error handling for config API failures and network issues
+- Test retry logic and fallback behavior
+- Mock `/api/config` endpoint with various response scenarios
+- Test TypeScript interfaces and return types
+- Test cleanup and unmounting behavior
 
 ---
 
@@ -96,12 +111,16 @@ The current `network-visualizer.tsx` file is 1,499 lines long and handles multip
 - Needs to coordinate with D3 visualization
 - May need SVG ref from parent
 
-**Tests**:
-- Create `use-zoom.test.ts`
-- Test zoom in/out functionality
-- Test zoom reset
-- Test zoom bounds (min/max limits)
-- Test custom zoom events
+**Tests** (MANDATORY):
+- Create `use-zoom.test.ts` with comprehensive coverage
+- Test zoom in/out functionality with various zoom levels
+- Test zoom reset to default state
+- Test zoom bounds enforcement (min/max limits)
+- Test custom zoom events and event handlers
+- Test zoom state persistence and updates
+- Test pinch zoom integration and touch events
+- Mock SVG refs and D3 zoom behavior
+- Test edge cases and error conditions
 
 ---
 
@@ -123,12 +142,17 @@ The current `network-visualizer.tsx` file is 1,499 lines long and handles multip
 - Needs access to zoom functions from Task 3
 - Requires SVG element reference
 
-**Tests**:
-- Create `use-touch-gestures.test.ts`
-- Test pinch gesture detection
-- Test wheel zoom handling
-- Test touch event cleanup
-- Mock touch events for testing
+**Tests** (MANDATORY):
+- Create `use-touch-gestures.test.ts` with comprehensive coverage
+- Test pinch gesture detection and multi-touch handling
+- Test wheel zoom handling with various devices
+- Test touch event lifecycle (start, move, end)
+- Test gesture state management and cleanup
+- Test touch event cleanup and memory leaks prevention
+- Mock touch events, wheel events, and pointer events
+- Test mobile vs desktop behavior differences
+- Test edge cases (rapid gestures, interrupted touches)
+- Test accessibility and keyboard navigation
 
 ---
 
@@ -152,13 +176,18 @@ The current `network-visualizer.tsx` file is 1,499 lines long and handles multip
 - Needs collaboration popup logic
 - Requires configuration hook from Task 2
 
-**Tests**:
-- Create `network-tooltip.test.tsx`
-- Create `use-tooltip.test.ts`
-- Test tooltip positioning logic
-- Test action handler functionality
-- Test mobile vs desktop tooltip behavior
-- Mock external navigation actions
+**Tests** (MANDATORY):
+- Create `network-tooltip.test.tsx` with comprehensive component testing
+- Create `use-tooltip.test.ts` with hook behavior testing
+- Test tooltip positioning logic and boundary detection
+- Test action handler functionality (expand, profile, collaboration)
+- Test tooltip show/hide/move state management
+- Test mobile vs desktop tooltip behavior differences
+- Test tooltip accessibility (ARIA labels, keyboard navigation)
+- Mock external navigation actions and API calls
+- Test tooltip content rendering with various data types
+- Test performance with rapid tooltip updates
+- Test tooltip cleanup and memory management
 
 ---
 
@@ -181,13 +210,18 @@ The current `network-visualizer.tsx` file is 1,499 lines long and handles multip
 - Needs network data from Task 1
 - Requires D3 node references
 
-**Tests**:
-- Create `use-node-interactions.test.ts`
-- Test node click handling
-- Test node highlighting/reset
-- Test drag behavior
-- Test collaboration data setting
-- Mock D3 event objects
+**Tests** (MANDATORY):
+- Create `use-node-interactions.test.ts` with comprehensive coverage
+- Test node click handling and event propagation
+- Test node highlighting/reset functionality
+- Test drag behavior (start, during, end states)
+- Test collaboration data setting and state updates
+- Test node selection and multi-node interactions
+- Mock D3 event objects and simulation references
+- Test mobile vs desktop interaction patterns
+- Test accessibility features (keyboard navigation, screen readers)
+- Test performance with large node datasets
+- Test error handling for invalid node data
 
 ---
 
@@ -210,13 +244,19 @@ The current `network-visualizer.tsx` file is 1,499 lines long and handles multip
 - Needs all hooks from previous tasks
 - Complex coordination with parent component
 
-**Tests**:
-- Create `d3-network-renderer.test.tsx`
-- Test D3 simulation initialization
-- Test node/link rendering
-- Test boundary force application
-- Test responsive behavior
-- Mock D3 selection and simulation APIs
+**Tests** (MANDATORY):
+- Create `d3-network-renderer.test.tsx` with comprehensive component testing
+- Test D3 simulation initialization and configuration
+- Test node/link rendering with various data sets
+- Test boundary force application and positioning constraints
+- Test responsive behavior across screen sizes
+- Test simulation lifecycle (start, tick, end)
+- Mock D3 selection and simulation APIs completely
+- Test performance with large networks (1000+ nodes)
+- Test memory management and cleanup
+- Test error handling for malformed network data
+- Test real-time updates and data synchronization
+- Test accessibility features in SVG rendering
 
 ---
 
@@ -237,12 +277,18 @@ The current `network-visualizer.tsx` file is 1,499 lines long and handles multip
 - Needs to coordinate with D3 renderer
 - Requires filter state from parent
 
-**Tests**:
-- Create `use-filter-visibility.test.ts`
-- Test node visibility calculation
-- Test multi-role node filtering
-- Test link visibility based on connected nodes
+**Tests** (MANDATORY):
+- Create `use-filter-visibility.test.ts` with comprehensive coverage
+- Test node visibility calculation with various filter combinations
+- Test multi-role node filtering logic and edge cases
+- Test link visibility based on connected nodes states
+- Test filter state changes and real-time updates
+- Test performance with complex filter criteria
 - Mock D3 selections for visibility testing
+- Test accessibility compliance (screen reader support)
+- Test filter persistence and state management
+- Test error handling for invalid filter data
+- Test integration with network expansion features
 
 ---
 
@@ -263,12 +309,18 @@ The current `network-visualizer.tsx` file is 1,499 lines long and handles multip
 - Needs configuration from Task 2
 - Coordinates with tooltip actions
 
-**Tests**:
-- Create `use-modals.test.ts`
-- Test modal state management
-- Test artist selection handling
-- Test collaboration popup logic
-- Mock external link creation
+**Tests** (MANDATORY):
+- Create `use-modals.test.ts` with comprehensive coverage
+- Test modal state management (open, close, toggle)
+- Test artist selection handling and validation
+- Test collaboration popup logic and data flow
+- Test modal stacking and z-index management
+- Test keyboard navigation and ESC key handling
+- Test accessibility compliance (focus management, ARIA)
+- Mock external link creation and navigation
+- Test modal cleanup and memory management
+- Test mobile-specific modal behavior
+- Test error handling for modal data loading
 
 ---
 
@@ -288,11 +340,18 @@ The current `network-visualizer.tsx` file is 1,499 lines long and handles multip
 **Dependencies**: 
 - Uses all hooks and components from Tasks 1-9
 
-**Tests**:
-- Update existing `network-visualizer.test.tsx` if it exists
-- Create integration tests for component coordination
-- Test props interface compatibility
-- Test error handling and edge cases
+**Tests** (MANDATORY):
+- Update/create `network-visualizer.test.tsx` with comprehensive integration testing
+- Create integration tests for component coordination between all hooks
+- Test props interface compatibility and TypeScript validation
+- Test error handling and edge cases across all integrated systems
+- Test complete user workflows (search → visualize → interact → expand)
+- Test performance with real-world data scenarios
+- Test accessibility compliance for the entire component
+- Test responsive behavior across device types
+- Test memory management and cleanup of all sub-systems
+- Test error boundaries and graceful degradation
+- Test data loading states and error recovery
 
 ---
 
@@ -312,11 +371,18 @@ The current `network-visualizer.tsx` file is 1,499 lines long and handles multip
 **Dependencies**: 
 - Uses zoom hook from Task 3
 
-**Tests**:
-- Create `zoom-controls-enhanced.test.tsx`
-- Test zoom button interactions
-- Test accessibility features
-- Test custom event dispatching
+**Tests** (MANDATORY):
+- Create `zoom-controls-enhanced.test.tsx` with comprehensive component testing
+- Test zoom button interactions (click, keyboard, touch)
+- Test accessibility features (ARIA labels, focus management, screen readers)
+- Test custom event dispatching and parent communication
+- Test disabled states and visual feedback
+- Test responsive behavior and mobile optimization
+- Test keyboard shortcuts and hotkeys
+- Test component styling and theming
+- Test prop validation and TypeScript interfaces
+- Test performance with rapid button interactions
+- Test error handling for invalid zoom values
 
 ---
 
@@ -336,11 +402,18 @@ The current `network-visualizer.tsx` file is 1,499 lines long and handles multip
 **Dependencies**: 
 - Uses network data hook from Task 1
 
-**Tests**:
-- Create `network-reset-button.test.tsx`
-- Test button visibility conditions
-- Test reset functionality
-- Test accessibility features
+**Tests** (MANDATORY):
+- Create `network-reset-button.test.tsx` with comprehensive component testing
+- Test button visibility conditions and state management
+- Test reset functionality and network state clearing
+- Test accessibility features (ARIA labels, keyboard navigation)
+- Test button styling and responsive behavior
+- Test disabled states and loading indicators
+- Test error handling for reset failures
+- Test integration with network data hook
+- Test confirmation dialogs and user feedback
+- Test performance and cleanup after reset
+- Test TypeScript interfaces and prop validation
 
 ---
 
@@ -366,28 +439,46 @@ The current `network-visualizer.tsx` file is 1,499 lines long and handles multip
 - Refactor main component to use all hooks
 - Comprehensive integration testing
 
-## Testing Strategy
+## 🧪 Comprehensive Testing Strategy
 
-### Unit Tests
-- Each hook should have comprehensive unit tests
-- Mock external dependencies (APIs, D3, DOM events)
-- Test edge cases and error conditions
-- Aim for >90% code coverage on new hooks
+**MANDATORY POLICY**: No code is merged without corresponding tests. Tests must be written before or during implementation.
 
-### Integration Tests
-- Test hook interactions and data flow
-- Test component rendering with various prop combinations
-- Test responsive behavior and mobile interactions
+### Unit Tests (REQUIRED FOR ALL TASKS)
+- **Each hook/component** must have comprehensive unit tests
+- **Mock external dependencies** (APIs, D3, DOM events, external libraries)
+- **Test edge cases** and error conditions thoroughly
+- **Code coverage target**: >90% for all new/modified code
+- **TypeScript testing**: Validate interfaces, types, and return values
+- **Accessibility testing**: ARIA labels, keyboard navigation, screen readers
 
-### Visual Regression Tests
-- Ensure D3 visualization renders correctly after refactoring
-- Test zoom and pan functionality
-- Test tooltip positioning and appearance
+### Integration Tests (REQUIRED FOR COMPLEX TASKS)
+- **Hook interactions**: Test data flow between multiple hooks
+- **Component coordination**: Test how components work together
+- **Props interface testing**: Validate component APIs and TypeScript contracts
+- **Responsive behavior**: Test mobile vs desktop interactions
+- **User workflow testing**: Complete user journeys (search → visualize → interact)
 
-### Performance Tests
-- Ensure no performance regression in D3 rendering
-- Test with large network datasets
-- Monitor memory usage with frequent interactions
+### Visual Regression Tests (REQUIRED FOR UI COMPONENTS)
+- **D3 visualization rendering**: Ensure correct visual output after refactoring
+- **Zoom and pan functionality**: Test interactive controls
+- **Tooltip positioning**: Test responsive tooltip behavior
+- **Mobile interface**: Test touch interactions and responsive layouts
+- **Accessibility compliance**: Test with screen readers and keyboard navigation
+
+### Performance Tests (REQUIRED FOR CRITICAL PATHS)
+- **No performance regression**: Benchmark before/after refactoring
+- **Large dataset testing**: Test with 1000+ nodes networks
+- **Memory management**: Monitor for leaks with frequent interactions
+- **React DevTools**: Profile component re-renders and state updates
+- **Bundle size impact**: Ensure refactoring doesn't bloat the build
+
+### Test Infrastructure Requirements
+- **Test runner**: Jest/Vitest for unit tests
+- **React testing**: React Testing Library for component tests
+- **Mock frameworks**: MSW for API mocking, jest.mock for modules
+- **Coverage reporting**: Istanbul/c8 for coverage metrics
+- **Accessibility testing**: @testing-library/jest-dom, axe-core
+- **Performance testing**: React profiler, performance.now() benchmarks
 
 ## Risk Mitigation
 
@@ -411,25 +502,39 @@ The current `network-visualizer.tsx` file is 1,499 lines long and handles multip
 - Test thoroughly on mobile devices
 - Maintain gesture responsiveness and accuracy
 
-## Success Criteria
+## ✅ Success Criteria
 
-### Code Quality
-- Each file < 200 lines
-- Clear single responsibility for each hook/component
-- Comprehensive test coverage (>85%)
-- No ESLint warnings or TypeScript errors
+### Code Quality (MANDATORY)
+- **File size**: Each file < 200 lines
+- **Single responsibility**: Clear purpose for each hook/component
+- **Test coverage**: >90% for all new/modified code (MANDATORY)
+- **Zero warnings**: No ESLint warnings or TypeScript errors
+- **Documentation**: Comprehensive JSDoc comments for all public APIs
 
-### Functionality
-- All existing features work identically
-- No performance regression
-- Improved error handling and edge case coverage
+### Testing Quality (MANDATORY)
+- **Runnable tests**: All tests pass in CI/CD pipeline
+- **Comprehensive coverage**: Unit, integration, and performance tests
+- **Mock quality**: Proper mocking of external dependencies
+- **Accessibility testing**: Full compliance with WCAG guidelines
+- **Error scenarios**: All edge cases and error conditions tested
 
-### Maintainability
-- New features can be added to individual hooks
-- Bug fixes can be isolated to specific areas
-- Code is self-documenting with clear interfaces
+### Functionality (MANDATORY)
+- **Feature parity**: All existing features work identically
+- **Performance**: No regression in render times or memory usage
+- **Error handling**: Improved error handling and edge case coverage
+- **Browser compatibility**: Works across all supported browsers
+- **Mobile optimization**: Touch interactions work flawlessly
 
-### Developer Experience
-- Easier to understand individual pieces
-- Faster to locate and fix issues
-- Better debugging with isolated concerns 
+### Maintainability (MANDATORY)
+- **Modularity**: New features can be added to individual hooks
+- **Isolation**: Bug fixes can be isolated to specific areas
+- **Self-documenting**: Code is clear with well-defined interfaces
+- **Type safety**: Complete TypeScript coverage with strict mode
+- **Testability**: Easy to write tests for new features
+
+### Developer Experience (MANDATORY)
+- **Clarity**: Easier to understand individual pieces
+- **Debugging**: Faster to locate and fix issues with isolated concerns
+- **Documentation**: Clear README and inline documentation
+- **IDE support**: Full IntelliSense and auto-completion
+- **Test feedback**: Fast test execution with clear failure messages 
