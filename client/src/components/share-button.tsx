@@ -3,8 +3,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { Share2, Copy, Camera, Download, Facebook, Instagram } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { NetworkData, NetworkNode } from "@/types/network";
 import html2canvas from "html2canvas";
+
+// Interface for artist social media data
+interface ArtistSocialData {
+  artistId: string;
+  name: string;
+  xUsername?: string | null;
+  instagramUsername?: string | null;
+  facebookUsername?: string | null;
+}
 
 // Custom SVG icons for social media platforms
 const XIcon = ({ className }: { className?: string }) => (
@@ -19,26 +29,101 @@ const PinterestIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export default function ShareButton() {
+
+interface ShareButtonProps {
+  artistId?: string | null;
+  networkData?: NetworkData | null;
+}
+
+export default function ShareButton({ artistId, networkData }: ShareButtonProps = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentUrl, setCurrentUrl] = useState("");
   const [isCapturing, setIsCapturing] = useState(false);
   const [snapshotDataUrl, setSnapshotDataUrl] = useState<string | null>(null);
+
+  const [artistXUsername, setArtistXUsername] = useState<string | null>(null);
+  const [artistSocialData, setArtistSocialData] = useState<ArtistSocialData | null>(null);
   const { toast } = useToast();
 
+  // Fetch artist social data when artistId changes
+  useEffect(() => {
+    const fetchArtistSocialData = async () => {
+      if (!artistId) {
+        setArtistXUsername(null);
+        setArtistSocialData(null);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/artist-social/${artistId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setArtistXUsername(data.xUsername);
+          setArtistSocialData({
+            artistId: data.id,
+            name: data.name,
+            xUsername: data.xUsername,
+            instagramUsername: data.instagramUsername,
+            facebookUsername: data.facebookUsername
+          });
+        } else {
+          setArtistXUsername(null);
+          setArtistSocialData(null);
+        }
+      } catch (error) {
+        console.error('Error fetching artist social data:', error);
+        setArtistXUsername(null);
+        setArtistSocialData(null);
+      }
+    };
+
+    fetchArtistSocialData();
+  }, [artistId]);
 
 
   // Platform-specific share functions - direct URL sharing
   const shareToFacebook = () => {
     const url = encodeURIComponent(window.location.href);
-    const text = encodeURIComponent("Check out this artist collaboration network! Discover how your favorite artists are connected.");
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${text}`;
+    let text = "Check out this artist's collaboration network! Explore music connections 👇";
+    
+    // Use Facebook username if available from Supabase
+    if (artistSocialData && artistSocialData.facebookUsername) {
+      text = `Check out @${artistSocialData.facebookUsername}'s artist collaboration network! Explore music connections 👇`;
+    } else if (artistSocialData && artistSocialData.name) {
+      text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇`;
+    } else if (networkData) {
+      // Find main artist from network data as fallback
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+      if (mainArtist) {
+        text = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇`;
+      }
+    }
+    
+    const encodedText = encodeURIComponent(text);
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${encodedText}`;
     window.open(facebookUrl, '_blank', 'width=600,height=400');
   };
   
   const shareToInstagram = () => {
     // Instagram doesn't support direct URL sharing, so we'll copy to clipboard and open Instagram's posting interface
-    const text = `🎵 Artist collaboration network 🎵\n\nDiscover music connections at ${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    let text = `Check out this artist's collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    
+    // Use Instagram username if available from Supabase
+    if (artistSocialData && artistSocialData.instagramUsername) {
+      text = `Check out @${artistSocialData.instagramUsername}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    } else if (artistSocialData && artistSocialData.name) {
+      text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    } else if (networkData) {
+      // Find main artist from network data as fallback
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+      if (mainArtist) {
+        text = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+      }
+    }
     
     navigator.clipboard.writeText(text).then(() => {
       toast({
@@ -48,7 +133,7 @@ export default function ShareButton() {
         duration: 1000,
       });
       
-      // Try to open Instagram's posting interface directly
+      // Try to open Instagram app's camera/posting interface
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       if (isMobile) {
@@ -102,7 +187,16 @@ export default function ShareButton() {
   };
   
   const shareToX = () => {
-    const text = encodeURIComponent(`Check out this artist collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+
+    let text;
+    if (artistXUsername) {
+      // Use artist's X username if available
+      text = encodeURIComponent(`Check out @${artistXUsername}'s collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+    } else {
+      // Fallback to generic message
+      text = encodeURIComponent(`Check out this artist collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+    }
+
     const url = encodeURIComponent(window.location.href);
     const twitterUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
     window.open(twitterUrl, '_blank', 'width=600,height=400');
@@ -110,9 +204,24 @@ export default function ShareButton() {
   
   const shareToPinterest = () => {
     const url = encodeURIComponent(window.location.href);
-    const description = encodeURIComponent("Artist Collaboration Network - Discover how your favorite artists are connected! Explore music connections and collaborations.");
+    let description = "Check out this artist's collaboration network! Explore music connections 👇";
+    
+    // Add artist information if available (Pinterest doesn't have specific usernames)
+    if (artistSocialData && artistSocialData.name) {
+      description = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇`;
+    } else if (networkData) {
+      // Find main artist from network data as fallback
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+      if (mainArtist) {
+        description = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇`;
+      }
+    }
+    
+    const encodedDescription = encodeURIComponent(description);
     // Pinterest doesn't support data URLs, so we'll share without the image
-    const pinterestUrl = `https://pinterest.com/pin/create/button/?url=${url}&description=${description}`;
+    const pinterestUrl = `https://pinterest.com/pin/create/button/?url=${url}&description=${encodedDescription}`;
     window.open(pinterestUrl, '_blank', 'width=600,height=400');
   };
 
@@ -271,8 +380,6 @@ export default function ShareButton() {
       const minSize = 400 * highScale;
       const squareSize = Math.max(minSize, Math.max(networkWidth, networkHeight));
       
-      console.log(`🔳 SQUARE DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}, squareSize=${squareSize}`);
-      
       // Center the square crop around the network center
       const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
       const networkCenterY = (networkBounds.minY + networkBounds.maxY) / 2;
@@ -294,8 +401,6 @@ export default function ShareButton() {
       watermarkedCanvas.width = squareSize;
       watermarkedCanvas.height = squareSize;
       
-      console.log(`🔳 CANVAS DEBUG: width=${watermarkedCanvas.width}, height=${watermarkedCanvas.height}, isSquare=${watermarkedCanvas.width === watermarkedCanvas.height}`);
-
       // Fill with black background
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, squareSize, squareSize);
@@ -349,8 +454,6 @@ export default function ShareButton() {
             
             // Convert to high-quality PNG (1.0 = maximum quality)
             const dataUrl = watermarkedCanvas.toDataURL('image/png', 1.0);
-            
-            console.log(`🔳 HIGH-RES DEBUG: Canvas ${watermarkedCanvas.width}x${watermarkedCanvas.height}, Scale: ${highScale}x, DataURL length: ${dataUrl.length}`);
             
             setIsCapturing(false);
             resolve(dataUrl);
@@ -441,7 +544,8 @@ export default function ShareButton() {
                 <Button
                   size="icon"
                   variant="secondary"
-                  className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
+                  className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+                  style={{ borderColor: '#b427b4' }}
                   onClick={handleShareClick}
                   disabled={isCapturing}
                 >

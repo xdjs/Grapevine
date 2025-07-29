@@ -200,20 +200,6 @@ class MusicBrainzService {
           let relationType = this.mapRelationType(relation.type);
           
           if (relationType && !processedArtists.has(relation.artist.name)) {
-            // Reclassify known songwriter-producers as songwriters
-            const collaboratorNameLower = relation.artist.name.toLowerCase();
-            const knownSongwriters = [
-              'jack antonoff', 'max martin', 'aaron dessner', 'finneas',
-              'benny blanco', 'oscar holter', 'greg kurstin', 'ludwig göransson', 
-              'shellback', 'ali payami', 'patrik berger', 'sia', 'ed sheeran',
-              'ryan tedder', 'charlie puth', 'julia michaels', 'justin tranter'
-            ];
-            
-            if (knownSongwriters.some(songwriter => collaboratorNameLower.includes(songwriter))) {
-              relationType = 'songwriter';
-              console.log(`✨ [DEBUG] Reclassified "${relation.artist.name}" as songwriter`);
-            }
-            
             collaboratingArtists.push({
               name: relation.artist.name,
               type: relationType,
@@ -288,20 +274,6 @@ class MusicBrainzService {
               if (!processedArtists.has(collaboratorName)) {
                 let relationType = this.mapRelationType(relation.type);
                 if (relationType) {
-                  // Reclassify known songwriter-producers as songwriters
-                  const collaboratorNameLower = collaboratorName.toLowerCase();
-                  const knownSongwriters = [
-                    'jack antonoff', 'max martin', 'aaron dessner', 'finneas',
-                    'benny blanco', 'oscar holter', 'greg kurstin', 'ludwig göransson', 
-                    'shellback', 'ali payami', 'patrik berger', 'sia', 'ed sheeran',
-                    'ryan tedder', 'charlie puth', 'julia michaels', 'justin tranter'
-                  ];
-                  
-                  if (knownSongwriters.some(songwriter => collaboratorNameLower.includes(songwriter))) {
-                    relationType = 'songwriter';
-                    console.log(`✨ [DEBUG] Reclassified "${collaboratorName}" as songwriter`);
-                  }
-                  
                   collaboratingArtists.push({
                     name: collaboratorName,
                     type: relationType,

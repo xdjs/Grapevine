@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { NetworkData, NetworkNode } from "@/types/network";
 import {
   Plus,
   Minus,
@@ -22,6 +23,15 @@ import html2canvas from "html2canvas";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+// Interface for artist social media data
+interface ArtistSocialData {
+  artistId: string;
+  name: string;
+  xUsername?: string | null;
+  instagramUsername?: string | null;
+  facebookUsername?: string | null;
+}
+
 // Custom SVG icons for social media platforms
 const XIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -40,6 +50,9 @@ interface MobileControlsProps {
   onZoomOut: () => void;
   onZoomReset: () => void;
   onClearAll: () => void;
+
+  artistId?: string | null;
+
 }
 
 export default function MobileControls({
@@ -47,6 +60,9 @@ export default function MobileControls({
   onZoomOut,
   onZoomReset,
   onClearAll,
+
+  artistId,
+
 }: MobileControlsProps) {
   const [showControls, setShowControls] = useState(false); // existing zoom / clear panel
   const [showMenu, setShowMenu] = useState(false); // new three-dot options menu
@@ -55,22 +71,83 @@ export default function MobileControls({
   const [currentUrl, setCurrentUrl] = useState("");
   const [isCapturing, setIsCapturing] = useState(false);
   const [snapshotDataUrl, setSnapshotDataUrl] = useState<string | null>(null);
+
+  const [artistXUsername, setArtistXUsername] = useState<string | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  // Fetch artist X username when artistId changes
+  useEffect(() => {
+    const fetchArtistXUsername = async () => {
+      if (!artistId) {
+        setArtistXUsername(null);
+
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/artist-social/${artistId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setArtistXUsername(data.xUsername);
+        } else {
+          setArtistXUsername(null);
+        }
+      } catch (error) {
+        console.error('Error fetching artist X username:', error);
+        setArtistXUsername(null);
+      }
+    };
+
+    fetchArtistXUsername();
+  }, [artistId]);
+
 
   if (!isMobile) return null;
 
   // Platform-specific share functions - direct URL sharing
   const shareToFacebook = () => {
     const url = encodeURIComponent(window.location.href);
-    const text = encodeURIComponent("Check out this artist collaboration network! Discover how your favorite artists are connected.");
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${text}`;
+    let text = "Check out this artist's collaboration network! Explore music connections 👇";
+    
+    // Use Facebook username if available from Supabase
+    if (artistSocialData && artistSocialData.facebookUsername) {
+      text = `Check out @${artistSocialData.facebookUsername}'s artist collaboration network! Explore music connections 👇`;
+    } else if (artistSocialData && artistSocialData.name) {
+      text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇`;
+    } else if (networkData) {
+      // Find main artist from network data as fallback
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+      if (mainArtist) {
+        text = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇`;
+      }
+    }
+    
+    const encodedText = encodeURIComponent(text);
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${encodedText}`;
     window.open(facebookUrl, '_blank', 'width=600,height=400');
   };
   
   const shareToInstagram = () => {
     // Instagram doesn't support direct URL sharing, so we'll copy to clipboard and open Instagram's posting interface
-    const text = `🎵 Artist collaboration network 🎵\n\nDiscover music connections at ${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    let text = `Check out this artist's collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    
+    // Use Instagram username if available from Supabase
+    if (artistSocialData && artistSocialData.instagramUsername) {
+      text = `Check out @${artistSocialData.instagramUsername}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    } else if (artistSocialData && artistSocialData.name) {
+      text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    } else if (networkData) {
+      // Find main artist from network data as fallback
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+      if (mainArtist) {
+        text = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+      }
+    }
     
     navigator.clipboard.writeText(text).then(() => {
       toast({
@@ -134,17 +211,41 @@ export default function MobileControls({
   };
   
   const shareToX = () => {
-    const text = encodeURIComponent(`Check out this artist collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+
+    let text;
+    if (artistXUsername) {
+      // Use artist's X username if available
+      text = encodeURIComponent(`Check out @${artistXUsername}'s collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+    } else {
+      // Fallback to generic message
+      text = encodeURIComponent(`Check out this artist collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+    }
+
     const url = encodeURIComponent(window.location.href);
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodedText}&url=${url}`;
     window.open(twitterUrl, '_blank', 'width=600,height=400');
   };
   
   const shareToPinterest = () => {
     const url = encodeURIComponent(window.location.href);
-    const description = encodeURIComponent("Artist Collaboration Network - Discover how your favorite artists are connected! Explore music connections and collaborations.");
+    let description = "Check out this artist's collaboration network! Explore music connections 👇";
+    
+    // Add artist information if available (Pinterest doesn't have specific usernames)
+    if (artistSocialData && artistSocialData.name) {
+      description = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇`;
+    } else if (networkData) {
+      // Find main artist from network data as fallback
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+      if (mainArtist) {
+        description = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇`;
+      }
+    }
+    
+    const encodedDescription = encodeURIComponent(description);
     // Pinterest doesn't support data URLs, so we'll share without the image
-    const pinterestUrl = `https://pinterest.com/pin/create/button/?url=${url}&description=${description}`;
+    const pinterestUrl = `https://pinterest.com/pin/create/button/?url=${url}&description=${encodedDescription}`;
     window.open(pinterestUrl, '_blank', 'width=600,height=400');
   };
 
@@ -472,7 +573,8 @@ export default function MobileControls({
       {!showMenu && (
         <Button
           onClick={() => setShowMenu(true)}
-          className="fixed bottom-6 sm:bottom-4 right-4 z-40 w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg"
+          className="fixed bottom-6 sm:bottom-4 right-4 z-40 w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg border-2"
+          style={{ borderColor: '#b427b4' }}
           size="icon"
           title="Options"
         >
@@ -487,7 +589,8 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+            style={{ borderColor: '#b427b4' }}
             title="Share"
             onClick={handleShareClick}
             disabled={isCapturing}
@@ -503,7 +606,8 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+            style={{ borderColor: '#b427b4' }}
             title="Settings"
             onClick={() => {
               setShowControls(true);
@@ -517,7 +621,8 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+            style={{ borderColor: '#b427b4' }}
             title="Help"
             onClick={() => {
               setShowHelp(true);
@@ -531,7 +636,8 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="destructive"
-            className="w-12 h-12 bg-red-900/90 backdrop-blur hover:bg-red-800 border border-red-700 rounded-full shadow-lg"
+            className="w-12 h-12 bg-red-900/90 backdrop-blur hover:bg-red-800 border-2 rounded-full shadow-lg"
+            style={{ borderColor: '#b427b4' }}
             title="Close Menu"
             onClick={() => setShowMenu(false)}
           >
