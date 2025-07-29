@@ -92,6 +92,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const isExpansion = req.query.expand === 'true';
   console.log(`🎯 [Vercel] Network request for ${req.query.artistName} - Expansion mode: ${isExpansion}`);
   console.log(`🎯 [Vercel] Query parameters:`, req.query);
+  console.log(`🎯 [Vercel] expand parameter value: "${req.query.expand}"`);
+  console.log(`🎯 [Vercel] isExpansion boolean: ${isExpansion}`);
 
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
@@ -468,16 +470,25 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
             continue;
           }
           
-          collaborators.push(collaborator);
-          allPeople.add(collaborator.name);
+          // In expansion mode, include ALL collaborators (not just producers/songwriters)
+          // In initial mode, only include producers/songwriters
+          const primaryRole = collaborator.type || 'artist';
+          const shouldInclude = isExpansion ? true : (primaryRole === 'producer' || primaryRole === 'songwriter');
           
-          // In expansion mode, include branching artists for full network
-          if (isExpansion) {
-            for (const branchingArtist of collaborator.topCollaborators || []) {
-              if (branchingArtist !== correctArtistName && !isFakeCollaborator(branchingArtist)) {
-                allPeople.add(branchingArtist);
+          if (shouldInclude) {
+            collaborators.push(collaborator);
+            allPeople.add(collaborator.name);
+            
+            // In expansion mode, include branching artists for full network
+            if (isExpansion) {
+              for (const branchingArtist of collaborator.topCollaborators || []) {
+                if (branchingArtist !== correctArtistName && !isFakeCollaborator(branchingArtist)) {
+                  allPeople.add(branchingArtist);
+                }
               }
             }
+          } else {
+            console.log(`🚫 [Vercel] Filtering out non-producer/songwriter collaborator: "${collaborator.name}" (role: ${primaryRole})`);
           }
         }
       }
@@ -659,6 +670,7 @@ Guidelines:
         }
 
         // In expansion mode, create branching artists (second-degree connections)
+        console.log(`🔍 [Vercel] Checking branching artists for ${collaborator.name}: isExpansion=${isExpansion}, hasTopCollaborators=${!!collaborator.topCollaborators}, topCollaboratorsLength=${collaborator.topCollaborators?.length || 0}`);
         if (isExpansion && collaborator.topCollaborators && collaborator.topCollaborators.length > 0) {
           console.log(`🔗 [Vercel] Creating branching artists for ${collaborator.name} in expansion mode`);
           
@@ -715,6 +727,10 @@ Guidelines:
 
       // DISABLED: No caching to ensure fresh data generation
       console.log(`🔄 [Vercel] Skipping cache for ${correctArtistName} - caching disabled`);
+
+      // Debug: Log all nodes being created
+      console.log(`📊 [Vercel] Final network nodes:`, nodes.map(n => `${n.name} (${n.type}, size: ${n.size})`));
+      console.log(`🔗 [Vercel] Final network links:`, links.map(l => `${l.source} -> ${l.target}`));
 
       await client.end();
       console.log(`✅ [Vercel] Generated network with ${nodes.length} nodes for ${artistName}`);

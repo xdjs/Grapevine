@@ -143,134 +143,117 @@ export default function NetworkVisualizer({
     console.log(`🔗 [Expand] Loading state set to true for: ${nodeName}`);
     
     try {
-      // Fetch the full network for this collaborator using dedicated expansion endpoint
-      // Use artist ID if available, otherwise fall back to name
-      let expandUrl;
-      if (nodeId) {
-        expandUrl = `/api/expand-network-by-id/${nodeId}`;
-        console.log(`🔗 [Expand] Fetching expansion network by ID: ${expandUrl}`);
-      } else {
-        expandUrl = `/api/expand-network/${encodeURIComponent(nodeName)}`;
-        console.log(`🔗 [Expand] Fetching expansion network by name: ${expandUrl}`);
+      // Find the clicked node in the current data to get its collaborations
+      const baseNodes = fullNetworkData ? fullNetworkData.nodes : data.nodes;
+      const clickedNode = baseNodes.find(node => node.name === nodeName);
+      
+      if (!clickedNode) {
+        console.error(`❌ [Expand] Could not find node "${nodeName}" in current network`);
+        return;
       }
       
-      // Add a small delay to show loading state
-      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log(`🔗 [Expand] Found clicked node:`, clickedNode);
+      console.log(`🔗 [Expand] Collaborations data:`, clickedNode.collaborations);
       
-      const response = await fetch(expandUrl);
-      console.log(`🔗 [Expand] Response status:`, response.status);
-      console.log(`🔗 [Expand] Response ok:`, response.ok);
-      
-      if (response.ok) {
-        const collaboratorNetwork = await response.json();
-        console.log(`🔗 [Expand] Received collaborator network:`, {
-          nodesCount: collaboratorNetwork.nodes?.length || 0,
-          linksCount: collaboratorNetwork.links?.length || 0,
-          hasNodes: !!collaboratorNetwork.nodes,
-          hasLinks: !!collaboratorNetwork.links
-        });
-        console.log(`🔗 [Expand] Collaborator network nodes:`, collaboratorNetwork.nodes?.map(n => `${n.name} (${n.type})`));
-        console.log(`🔗 [Expand] Collaborator network links:`, collaboratorNetwork.links?.map(l => `${l.source} -> ${l.target}`));
-        console.log(`🔗 [Expand] Original network nodes:`, data.nodes.map(n => `${n.name} (${n.type})`));
-        console.log(`🔗 [Expand] Original network links:`, data.links.map(l => `${l.source} -> ${l.target}`));
+      // Check if the node has collaborations data
+      if (!clickedNode.collaborations || clickedNode.collaborations.length === 0) {
+        console.log(`⚠️ [Expand] No collaborations data found for "${nodeName}", trying API fallback`);
         
-        // Validate that we received valid network data
-        if (!collaboratorNetwork.nodes || !Array.isArray(collaboratorNetwork.nodes)) {
-          console.error(`❌ [Expand] Invalid network data received - no nodes array`);
-          return;
+        // Fallback to API call if no local collaborations data
+        let expandUrl;
+        if (nodeId) {
+          expandUrl = `/api/expand-network-by-id/${nodeId}`;
+          console.log(`🔗 [Expand] Fetching expansion network by ID: ${expandUrl}`);
+        } else {
+          expandUrl = `/api/expand-network/${encodeURIComponent(nodeName)}`;
+          console.log(`🔗 [Expand] Fetching expansion network by name: ${expandUrl}`);
         }
         
-        if (!collaboratorNetwork.links || !Array.isArray(collaboratorNetwork.links)) {
-          console.error(`❌ [Expand] Invalid network data received - no links array`);
-          return;
-        }
+        // Add a small delay to show loading state
+        await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Merge the collaborator's network with the existing network
-        // Use current fullNetworkData as base if available, otherwise use original data
-        const baseNodes = fullNetworkData ? fullNetworkData.nodes : data.nodes;
-        const baseLinks = fullNetworkData ? fullNetworkData.links : data.links;
+        const response = await fetch(expandUrl);
+        console.log(`🔗 [Expand] Response status:`, response.status);
+        console.log(`🔗 [Expand] Response ok:`, response.ok);
         
-        const mergedNodes = [...baseNodes];
-        const mergedLinks = [...baseLinks];
-        
-        // Add new nodes from collaborator's network (avoiding duplicates)
-        const existingNodeIds = new Set(baseNodes.map(n => n.id));
-        collaboratorNetwork.nodes.forEach(collaboratorNode => {
-          if (!existingNodeIds.has(collaboratorNode.id)) {
-            mergedNodes.push(collaboratorNode);
-            existingNodeIds.add(collaboratorNode.id);
+        if (response.ok) {
+          const collaboratorNetwork = await response.json();
+          console.log(`🔗 [Expand] Received collaborator network from API:`, {
+            nodesCount: collaboratorNetwork.nodes?.length || 0,
+            linksCount: collaboratorNetwork.links?.length || 0,
+            hasNodes: !!collaboratorNetwork.nodes,
+            hasLinks: !!collaboratorNetwork.links
+          });
+          
+          // Validate that we received valid network data
+          if (!collaboratorNetwork.nodes || !Array.isArray(collaboratorNetwork.nodes)) {
+            console.error(`❌ [Expand] Invalid network data received - no nodes array`);
+            return;
           }
-        });
+          
+          if (!collaboratorNetwork.links || !Array.isArray(collaboratorNetwork.links)) {
+            console.error(`❌ [Expand] Invalid network data received - no links array`);
+            return;
+          }
+          
+          // Process API response
+          await processExpansionData(collaboratorNetwork);
+        } else {
+          console.error(`❌ [Expand] Failed to fetch network for ${nodeName} - status: ${response.status}`);
+          const errorText = await response.text();
+          console.error(`❌ [Expand] Error response:`, errorText);
+          
+          // Try to parse error response for more specific message
+          let errorMessage = `Failed to expand ${nodeName}'s network.`;
+          try {
+            const errorData = JSON.parse(errorText);
+            if (errorData.message) {
+              errorMessage = errorData.message;
+            }
+          } catch (parseError) {
+            console.error(`❌ [Expand] Could not parse error response:`, parseError);
+          }
+          
+          // Show user-friendly error message
+          alert(errorMessage);
+        }
+      } else {
+        // Use local collaborations data to create expansion network
+        console.log(`🔗 [Expand] Using local collaborations data for "${nodeName}"`);
         
-        // Add new links from collaborator's network (avoiding duplicates)
-        const existingLinkIds = new Set(baseLinks.map(link => {
-          const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-          const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-          return `${sourceId}-${targetId}`;
+        // Create nodes for the branching artists (topCollaborators)
+        const branchingNodes = clickedNode.collaborations.map(collaboratorName => ({
+          id: collaboratorName,
+          name: collaboratorName,
+          type: 'artist' as const,
+          types: ['artist'],
+          size: 15, // Smaller size for second-degree nodes
+          artistId: null,
+          collaborations: []
         }));
         
-        collaboratorNetwork.links.forEach(collaboratorLink => {
-          const sourceId = typeof collaboratorLink.source === 'string' ? collaboratorLink.source : collaboratorLink.source.id;
-          const targetId = typeof collaboratorLink.target === 'string' ? collaboratorLink.target : collaboratorLink.target.id;
-          const linkId = `${sourceId}-${targetId}`;
-          
-          if (!existingLinkIds.has(linkId)) {
-            mergedLinks.push(collaboratorLink);
-            existingLinkIds.add(linkId);
-          }
-        });
+        // Create links from the clicked node to each branching artist
+        const branchingLinks = clickedNode.collaborations.map(collaboratorName => ({
+          source: nodeName,
+          target: collaboratorName
+        }));
         
-        // Create merged network data
-        const mergedNetworkData = {
-          nodes: mergedNodes,
-          links: mergedLinks
+        const collaboratorNetwork = {
+          nodes: branchingNodes,
+          links: branchingLinks
         };
         
-        console.log(`🔗 [Expand] Merged network data:`, {
-          totalNodes: mergedNodes.length,
-          totalLinks: mergedLinks.length,
-          originalNodes: data.nodes.length,
-          originalLinks: data.links.length,
-          addedNodes: mergedNodes.length - data.nodes.length,
-          addedLinks: mergedLinks.length - data.links.length
+        console.log(`🔗 [Expand] Created expansion network from local data:`, {
+          nodesCount: collaboratorNetwork.nodes.length,
+          linksCount: collaboratorNetwork.links.length
         });
+        console.log(`🔗 [Expand] Branching nodes:`, collaboratorNetwork.nodes.map(n => `${n.name} (${n.type})`));
+        console.log(`🔗 [Expand] Branching links:`, collaboratorNetwork.links.map(l => `${l.source} -> ${l.target}`));
         
-        setFullNetworkData(mergedNetworkData);
-        
-        // Add this node to expanded set
-        setExpandedNodes(prev => {
-          const newSet = new Set([...prev, nodeName]);
-          console.log(`🔗 [Expand] Updated expandedNodes:`, Array.from(newSet));
-          return newSet;
-        });
-        
-        // Set persistence key for this expansion session
-        const mainArtist = mainArtistNode?.name || 'unknown';
-        setPersistenceKey(`${mainArtist}-expansion-${Date.now()}`);
-        
-        // Persist the expanded networks
-        setTimeout(() => persistExpandedNetworks(), 100);
-        
-        console.log(`✅ [Expand] Successfully expanded network for ${nodeName} - added ${collaboratorNetwork.nodes.length} nodes and ${collaboratorNetwork.links.length} links`);
-      } else {
-        console.error(`❌ [Expand] Failed to fetch network for ${nodeName} - status: ${response.status}`);
-        const errorText = await response.text();
-        console.error(`❌ [Expand] Error response:`, errorText);
-        
-        // Try to parse error response for more specific message
-        let errorMessage = `Failed to expand ${nodeName}'s network.`;
-        try {
-          const errorData = JSON.parse(errorText);
-          if (errorData.message) {
-            errorMessage = errorData.message;
-          }
-        } catch (parseError) {
-          console.error(`❌ [Expand] Could not parse error response:`, parseError);
-        }
-        
-        // Show user-friendly error message
-        alert(errorMessage);
+        // Process the expansion data
+        await processExpansionData(collaboratorNetwork);
       }
+        
     } catch (error) {
       console.error(`❌ [Expand] Error expanding network for ${nodeName}:`, error);
       
@@ -282,6 +265,86 @@ export default function NetworkVisualizer({
       setIsExpandingNetwork(false);
       setExpandingArtistName("");
     }
+  };
+
+  // Helper function to process expansion data
+  const processExpansionData = async (collaboratorNetwork: any) => {
+    console.log(`🔗 [Expand] Processing expansion data:`, {
+      nodesCount: collaboratorNetwork.nodes?.length || 0,
+      linksCount: collaboratorNetwork.links?.length || 0
+    });
+    console.log(`🔗 [Expand] Collaborator network nodes:`, collaboratorNetwork.nodes?.map(n => `${n.name} (${n.type})`));
+    console.log(`🔗 [Expand] Collaborator network links:`, collaboratorNetwork.links?.map(l => `${l.source} -> ${l.target}`));
+    console.log(`🔗 [Expand] Original network nodes:`, data.nodes.map(n => `${n.name} (${n.type})`));
+    console.log(`🔗 [Expand] Original network links:`, data.links.map(l => `${l.source} -> ${l.target}`));
+    
+    // Merge the collaborator's network with the existing network
+    // Use current fullNetworkData as base if available, otherwise use original data
+    const baseNodes = fullNetworkData ? fullNetworkData.nodes : data.nodes;
+    const baseLinks = fullNetworkData ? fullNetworkData.links : data.links;
+    
+    const mergedNodes = [...baseNodes];
+    const mergedLinks = [...baseLinks];
+    
+    // Add new nodes from collaborator's network (avoiding duplicates)
+    const existingNodeIds = new Set(baseNodes.map(n => n.id));
+    collaboratorNetwork.nodes.forEach(collaboratorNode => {
+      if (!existingNodeIds.has(collaboratorNode.id)) {
+        mergedNodes.push(collaboratorNode);
+        existingNodeIds.add(collaboratorNode.id);
+      }
+    });
+    
+    // Add new links from collaborator's network (avoiding duplicates)
+    const existingLinkIds = new Set(baseLinks.map(link => {
+      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+      return `${sourceId}-${targetId}`;
+    }));
+    
+    collaboratorNetwork.links.forEach(collaboratorLink => {
+      const sourceId = typeof collaboratorLink.source === 'string' ? collaboratorLink.source : collaboratorLink.source.id;
+      const targetId = typeof collaboratorLink.target === 'string' ? collaboratorLink.target : collaboratorLink.target.id;
+      const linkId = `${sourceId}-${targetId}`;
+      
+      if (!existingLinkIds.has(linkId)) {
+        mergedLinks.push(collaboratorLink);
+        existingLinkIds.add(linkId);
+      }
+    });
+    
+    // Create merged network data
+    const mergedNetworkData = {
+      nodes: mergedNodes,
+      links: mergedLinks
+    };
+    
+    console.log(`🔗 [Expand] Merged network data:`, {
+      totalNodes: mergedNodes.length,
+      totalLinks: mergedLinks.length,
+      originalNodes: data.nodes.length,
+      originalLinks: data.links.length,
+      addedNodes: mergedNodes.length - data.nodes.length,
+      addedLinks: mergedLinks.length - data.links.length
+    });
+    
+    setFullNetworkData(mergedNetworkData);
+    
+    // Add this node to expanded set
+    setExpandedNodes(prev => {
+      const newSet = new Set([...prev, nodeName]);
+      console.log(`🔗 [Expand] Updated expandedNodes:`, Array.from(newSet));
+      return newSet;
+    });
+    
+    // Set persistence key for this expansion session
+    const mainArtist = mainArtistNode?.name || 'unknown';
+    setPersistenceKey(`${mainArtist}-expansion-${Date.now()}`);
+    
+    // Persist the expanded networks
+    setTimeout(() => persistExpandedNetworks(), 100);
+    
+    console.log(`✅ [Expand] Successfully expanded network for ${nodeName} - added ${collaboratorNetwork.nodes.length} nodes and ${collaboratorNetwork.links.length} links`);
   };
 
   // Function to collapse a node's network
