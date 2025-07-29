@@ -14,11 +14,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log(`🖼️ [Profile] Fetching profile picture for: ${artistName}`);
 
   let profileImageUrl = null;
+  let debugInfo = {
+    spotifyConfigured: false,
+    spotifyAttempted: false,
+    spotifySuccess: false,
+    musicBrainzAttempted: false,
+    musicBrainzSuccess: false,
+    error: null as string | null
+  };
   
   // Method 1: Try Spotify API (if properly configured)
   try {
     const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
     const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
+    
+    console.log(`🖼️ [Debug] Spotify Client ID exists: ${!!SPOTIFY_CLIENT_ID}`);
+    console.log(`🖼️ [Debug] Spotify Client Secret exists: ${!!SPOTIFY_CLIENT_SECRET}`);
     
     // Check if we have real Spotify credentials (not placeholders)
     if (SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET && 
@@ -26,6 +37,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         !SPOTIFY_CLIENT_ID.includes('your_') &&
         !SPOTIFY_CLIENT_SECRET.includes('placeholder') && 
         !SPOTIFY_CLIENT_SECRET.includes('your_')) {
+      
+      debugInfo.spotifyConfigured = true;
+      debugInfo.spotifyAttempted = true;
+      console.log(`🖼️ [Debug] Spotify credentials are properly configured`);
       
       // Get access token
       const authString = Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64');
@@ -58,20 +73,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (artists.length > 0 && artists[0].images && artists[0].images.length > 0) {
             // Use the smallest image for better performance (usually the last one)
             profileImageUrl = artists[0].images[artists[0].images.length - 1].url;
+            debugInfo.spotifySuccess = true;
             console.log(`🖼️✅ [Profile] Found Spotify profile image for ${artistName}`);
+          } else {
+            console.log(`🖼️⭕ [Profile] No Spotify images found for ${artistName}`);
           }
+        } else {
+          console.log(`🖼️❌ [Profile] Spotify search failed: ${searchResponse.status}`);
         }
+      } else {
+        console.log(`🖼️❌ [Profile] Spotify token request failed: ${tokenResponse.status}`);
       }
     } else {
-      console.log(`🖼️⚠️ [Profile] Spotify credentials not properly configured`);
+      console.log(`🖼️⚠️ [Profile] Spotify credentials not properly configured - missing or placeholder values`);
+      debugInfo.error = 'Spotify credentials missing or contain placeholder values';
     }
   } catch (spotifyError) {
-    console.warn(`🖼️❌ [Profile] Spotify API failed for ${artistName}:`, spotifyError instanceof Error ? spotifyError.message : 'Unknown error');
+    const errorMessage = spotifyError instanceof Error ? spotifyError.message : 'Unknown error';
+    console.warn(`🖼️❌ [Profile] Spotify API failed for ${artistName}:`, errorMessage);
+    debugInfo.error = `Spotify error: ${errorMessage}`;
   }
   
   // Method 2: Fallback to MusicBrainz Cover Art Archive
   if (!profileImageUrl) {
     try {
+      debugInfo.musicBrainzAttempted = true;
       console.log(`🖼️🔄 [Profile] Trying MusicBrainz fallback for ${artistName}`);
       const mbResponse = await fetch(
         `https://musicbrainz.org/ws/2/artist/?query=artist:"${encodeURIComponent(artistName)}"&fmt=json&limit=1`
@@ -94,13 +120,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const caaData = await caaResponse.json() as { images: Array<{ image: string, thumbnails: { small: string } }> };
             if (caaData.images && caaData.images.length > 0) {
               profileImageUrl = caaData.images[0].thumbnails?.small || caaData.images[0].image;
+              debugInfo.musicBrainzSuccess = true;
               console.log(`🖼️✅ [Profile] Found MusicBrainz profile image for ${artistName}`);
             }
           }
         }
       }
     } catch (mbError) {
-      console.warn(`🖼️⚠️ [Profile] MusicBrainz fallback failed for ${artistName}:`, mbError instanceof Error ? mbError.message : 'Unknown error');
+      const errorMessage = mbError instanceof Error ? mbError.message : 'Unknown error';
+      console.warn(`🖼️⚠️ [Profile] MusicBrainz fallback failed for ${artistName}:`, errorMessage);
+      if (!debugInfo.error) {
+        debugInfo.error = `MusicBrainz error: ${errorMessage}`;
+      }
     }
   }
   
@@ -109,14 +140,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.json({ 
       artistName,
       imageUrl: profileImageUrl,
-      success: true 
+      success: true,
+      debug: debugInfo
     });
   } else {
     console.log(`🖼️⭕ [Profile] No profile image found for ${artistName}`);
     res.json({ 
       artistName,
       imageUrl: null,
-      success: true 
+      success: true,
+      debug: debugInfo
     });
   }
 } 

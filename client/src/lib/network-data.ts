@@ -1,6 +1,6 @@
 import { apiRequest } from "./queryClient";
 import { NetworkData, NetworkResponse, NoCollaboratorsResponse } from "../types/network";
-import { fetchMainArtistProfilePictures } from "./profile-pictures";
+import { fetchAllArtistProfilePictures } from "./profile-pictures";
 
 export async function fetchNetworkData(artistName: string, allowHallucinations?: boolean): Promise<NetworkResponse> {
   try {
@@ -41,11 +41,11 @@ export async function fetchNetworkData(artistName: string, allowHallucinations?:
     
     console.log(`✅ [Frontend] Received network data with ${data.nodes?.length || 0} nodes`);
     
-    // If we have network data with nodes, fetch profile pictures for main artists
+    // If we have network data with nodes, fetch profile pictures for all artist nodes
     if (data && 'nodes' in data && data.nodes && data.nodes.length > 0) {
-      console.log(`🖼️ [Frontend] Fetching profile pictures for main artists...`);
+      console.log(`🖼️ [Frontend] Fetching profile pictures for all artist nodes...`);
       try {
-        const dataWithProfilePictures = await fetchMainArtistProfilePictures(data);
+        const dataWithProfilePictures = await fetchAllArtistProfilePictures(data);
         console.log(`🖼️✅ [Frontend] Profile pictures fetched successfully`);
         return dataWithProfilePictures;
       } catch (profileError) {
@@ -100,11 +100,11 @@ export async function fetchNetworkDataById(artistId: string, allowHallucinations
     
     console.log(`✅ [Frontend] Received network data with ${data.nodes?.length || 0} nodes for artist ID: ${artistId}`);
     
-    // If we have network data with nodes, fetch profile pictures for main artists
+    // If we have network data with nodes, fetch profile pictures for all artist nodes
     if (data && 'nodes' in data && data.nodes && data.nodes.length > 0) {
-      console.log(`🖼️ [Frontend] Fetching profile pictures for main artists...`);
+      console.log(`🖼️ [Frontend] Fetching profile pictures for all artist nodes...`);
       try {
-        const dataWithProfilePictures = await fetchMainArtistProfilePictures(data);
+        const dataWithProfilePictures = await fetchAllArtistProfilePictures(data);
         console.log(`🖼️✅ [Frontend] Profile pictures fetched successfully`);
         return dataWithProfilePictures;
       } catch (profileError) {

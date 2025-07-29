@@ -505,9 +505,9 @@ export default function NetworkVisualizer({
           })
           .attr("stroke-width", 4);
 
-        // Add profile picture if available (for main artist)
+        // Add profile picture if available (for any artist node)
         if (d.imageUrl) {
-          console.log(`🖼️ [D3] Rendering profile image for ${d.name}: ${d.imageUrl}`);
+          console.log(`🖼️ [D3] Rendering profile image for ${d.name} (size: ${d.size}): ${d.imageUrl}`);
           
           // Create a circular clipping path using D3
           const clipId = `clip-${d.id.replace(/[^a-zA-Z0-9]/g, '')}`;
@@ -522,25 +522,28 @@ export default function NetworkVisualizer({
           svg.select("defs").select(`#${clipId}`).remove();
           
           // Create new clipPath with properly centered circle
+          // Adjust clipping radius based on node size for better visual balance
+          const clipRadius = d.size >= 25 ? d.size - 4 : d.size - 3;
           svg.select("defs").append("clipPath")
             .attr("id", clipId)
             .append("circle")
             .attr("cx", 0)
             .attr("cy", 0)
-            .attr("r", d.size - 4);
+            .attr("r", clipRadius);
 
           // Add the profile image with error handling
+          const imageSize = d.size >= 25 ? d.size - 4 : d.size - 3;
           group.append("image")
             .attr("href", d.imageUrl)
-            .attr("x", -(d.size - 4))
-            .attr("y", -(d.size - 4))
-            .attr("width", (d.size - 4) * 2)
-            .attr("height", (d.size - 4) * 2)
+            .attr("x", -imageSize)
+            .attr("y", -imageSize)
+            .attr("width", imageSize * 2)
+            .attr("height", imageSize * 2)
             .attr("clip-path", `url(#${clipId})`)
             .attr("preserveAspectRatio", "xMidYMid slice")
             .style("pointer-events", "none") // Prevent image from interfering with node events
             .on("load", function() {
-              console.log(`🖼️✅ [D3] Image loaded successfully for ${d.name}`);
+              console.log(`🖼️✅ [D3] Image loaded successfully for ${d.name} (size: ${d.size})`);
             })
             .on("error", function() {
               console.warn(`🖼️❌ [D3] Image failed to load for ${d.name}: ${d.imageUrl}`);
@@ -584,7 +587,7 @@ export default function NetworkVisualizer({
 
         // Add profile picture if available (for main artist with multiple roles)
         if (d.imageUrl) {
-          console.log(`🖼️ [D3] Rendering multi-role profile image for ${d.name}: ${d.imageUrl}`);
+          console.log(`🖼️ [D3] Rendering multi-role profile image for ${d.name} (size: ${d.size}): ${d.imageUrl}`);
           
           // Create a circular clipping path using D3
           const clipId = `clip-multi-${d.id.replace(/[^a-zA-Z0-9]/g, '')}`;
@@ -599,25 +602,28 @@ export default function NetworkVisualizer({
           svg.select("defs").select(`#${clipId}`).remove();
           
           // Create new clipPath with properly centered circle (smaller for multi-role)
+          // Adjust clipping radius based on node size, accounting for the outer role rings
+          const clipRadius = d.size >= 25 ? d.size - 8 : d.size - 6;
           svg.select("defs").append("clipPath")
             .attr("id", clipId)
             .append("circle")
             .attr("cx", 0)
             .attr("cy", 0)
-            .attr("r", d.size - 8); // Even smaller for multi-role nodes
+            .attr("r", clipRadius);
 
           // Add the profile image with error handling
+          const imageSize = d.size >= 25 ? d.size - 8 : d.size - 6;
           group.append("image")
             .attr("href", d.imageUrl)
-            .attr("x", -(d.size - 8))
-            .attr("y", -(d.size - 8))
-            .attr("width", (d.size - 8) * 2)
-            .attr("height", (d.size - 8) * 2)
+            .attr("x", -imageSize)
+            .attr("y", -imageSize)
+            .attr("width", imageSize * 2)
+            .attr("height", imageSize * 2)
             .attr("clip-path", `url(#${clipId})`)
             .attr("preserveAspectRatio", "xMidYMid slice")
             .style("pointer-events", "none") // Prevent image from interfering with node events
             .on("load", function() {
-              console.log(`🖼️✅ [D3] Multi-role image loaded successfully for ${d.name}`);
+              console.log(`🖼️✅ [D3] Multi-role image loaded successfully for ${d.name} (size: ${d.size})`);
             })
             .on("error", function() {
               console.warn(`🖼️❌ [D3] Multi-role image failed to load for ${d.name}: ${d.imageUrl}`);
@@ -665,12 +671,29 @@ export default function NetworkVisualizer({
       .attr("dy", (d) => {
         // If node has a profile picture, position text below the border
         if (d.imageUrl) {
-          return `${d.size + 15}px`; // Position below the node border
+          // Adjust spacing based on node size for better visual balance
+          const spacing = d.size >= 25 ? 15 : d.size >= 20 ? 12 : 10;
+          return `${d.size + spacing}px`; // Position below the node border
         }
         return "0.35em"; // Default center positioning
       })
-      .attr("font-size", (d) => d.type === 'artist' ? "14px" : "11px")
-      .attr("font-weight", (d) => d.type === 'artist' ? "600" : "500")
+      .attr("font-size", (d) => {
+        // Scale font size based on node type and size
+        if (d.type === 'artist' || (d.types && d.types.includes('artist'))) {
+          // Artist nodes: larger font for larger nodes
+          if (d.size >= 25) return "14px";      // Main artists
+          if (d.size >= 20) return "12px";      // Medium artists  
+          return "11px";                        // Smaller artists
+        }
+        return "10px"; // Non-artist nodes
+      })
+      .attr("font-weight", (d) => {
+        // Bold for artists, normal for others
+        if (d.type === 'artist' || (d.types && d.types.includes('artist'))) {
+          return d.size >= 25 ? "600" : "500";  // Extra bold for main artists
+        }
+        return "400"; // Normal weight for non-artists
+      })
       .attr("fill", "white")
       .attr("pointer-events", "none")
       .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.8)")
