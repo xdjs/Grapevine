@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import { useNetworkData } from "@/hooks/use-network-data";
+import { useConfig } from "@/hooks/use-config";
 import ArtistSelectionModal from "./artist-selection-modal";
 import CollaborationDetailsPopup from "./collaboration-details-popup";
 
@@ -28,7 +29,9 @@ export default function NetworkVisualizer({
   const [currentZoom, setCurrentZoom] = useState(1);
   const [showArtistModal, setShowArtistModal] = useState(false);
   const [selectedArtistName, setSelectedArtistName] = useState("");
-  const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("");
+  
+  // Configuration management hook
+  const { musicNerdBaseUrl, getFreshConfig } = useConfig();
   
   // Collaboration details popup state
   const [showCollaborationPopup, setShowCollaborationPopup] = useState(false);
@@ -60,36 +63,6 @@ export default function NetworkVisualizer({
       console.log(`📊 Displaying first-degree network with ${visibleNodes.length} nodes and ${visibleLinks.length} links`);
     }
   }, [fullNetworkData, visibleNodes, visibleLinks]);
-
-  // Fetch configuration on component mount
-  useEffect(() => {
-    const fetchConfig = async () => {
-      try {
-        console.log('🔧 [Config] Fetching config from /api/config');
-        const response = await fetch('/api/config');
-        console.log('🔧 [Config] Response status:', response.status);
-        console.log('🔧 [Config] Response ok:', response.ok);
-        
-        if (response.ok) {
-          const config = await response.json();
-          console.log('🔧 [Config] Received config:', config);
-          if (config.musicNerdBaseUrl) {
-            setMusicNerdBaseUrl(config.musicNerdBaseUrl);
-            console.log(`🔧 [Config] MusicNerd base URL set to: ${config.musicNerdBaseUrl}`);
-          } else {
-            console.error('🔧 [Config] No musicNerdBaseUrl in config response');
-          }
-        } else {
-          const errorText = await response.text();
-          console.error('🔧 [Config] Error response:', errorText);
-        }
-      } catch (error) {
-        console.error('Error fetching config:', error);
-      }
-    };
-    
-    fetchConfig();
-  }, []);
 
   useEffect(() => {
     if (!svgRef.current || !finalDisplayData || !visible) return;
@@ -1015,26 +988,9 @@ export default function NetworkVisualizer({
         console.log(`🎵 [Frontend] artistId provided (${artistId}), skipping lookup and going directly to page`);
       }
       
-      // Always fetch the current base URL to ensure we have the latest configuration
-      let baseUrl;
-      try {
-        console.log('🔧 [Config] Fetching current base URL from /api/config...');
-        const configResponse = await fetch('/api/config');
-        if (configResponse.ok) {
-          const config = await configResponse.json();
-          baseUrl = config.musicNerdBaseUrl;
-          console.log(`🔧 [Config] Retrieved base URL: ${baseUrl}`);
-          
-          // Update state for consistency
-          if (baseUrl !== musicNerdBaseUrl) {
-            setMusicNerdBaseUrl(baseUrl);
-          }
-        } else {
-          console.error('🔧 [Config] Failed to fetch config, status:', configResponse.status);
-        }
-      } catch (error) {
-        console.error('🔧 [Config] Error fetching config:', error);
-      }
+      // Get the current base URL using the config hook
+      const freshConfig = await getFreshConfig();
+      const baseUrl = freshConfig?.musicNerdBaseUrl || musicNerdBaseUrl;
       
       if (!baseUrl) {
         console.error(`🎵 Cannot open MusicNerd profile for "${artistName}": Base URL not configured`);
