@@ -804,8 +804,9 @@ export default function NetworkVisualizer({
             node.x = width / 2;
             node.y = height / 2;
           } else {
-            node.x = centerX + (Math.random() - 0.5) * 100;
-            node.y = centerY + (Math.random() - 0.5) * 100;
+            // Position other nodes closer to the center with smaller random offset
+            node.x = centerX + (Math.random() - 0.5) * 50; // Reduced random offset
+            node.y = centerY + (Math.random() - 0.5) * 50; // Reduced random offset
           }
         }
       });
@@ -813,22 +814,38 @@ export default function NetworkVisualizer({
 
     // Create boundary force to keep nodes within viewport
     const boundaryForce = () => {
-      const margin = 30; // Reduced margin for tighter bounds
+      const margin = 50; // Increased margin for better bounds
       const container = svgRef.current?.parentElement;
       const currentWidth = container ? container.clientWidth : width;
       const currentHeight = container ? container.clientHeight : height;
       
       for (const node of finalDisplayData.nodes) {
-        // Ensure nodes stay well within bounds
-        if (node.x! < margin) node.x = margin;
-        if (node.x! > currentWidth - margin) node.x = currentWidth - margin;
-        if (node.y! < margin) node.y = margin;
-        if (node.y! > currentHeight - margin) node.y = currentHeight - margin;
+        if (!node.x || !node.y) continue;
+        
+        // Ensure nodes stay well within bounds with stronger constraints
+        if (node.x < margin) {
+          node.x = margin;
+          node.vx = 0; // Stop velocity
+        }
+        if (node.x > currentWidth - margin) {
+          node.x = currentWidth - margin;
+          node.vx = 0; // Stop velocity
+        }
+        if (node.y < margin) {
+          node.y = margin;
+          node.vy = 0; // Stop velocity
+        }
+        if (node.y > currentHeight - margin) {
+          node.y = currentHeight - margin;
+          node.vy = 0; // Stop velocity
+        }
         
         // Additional safety check - if somehow a node is outside, bring it back
-        if (node.x! < 0 || node.x! > currentWidth || node.y! < 0 || node.y! > currentHeight) {
-          node.x = Math.max(margin, Math.min(currentWidth - margin, node.x!));
-          node.y = Math.max(margin, Math.min(currentHeight - margin, node.y!));
+        if (node.x < 0 || node.x > currentWidth || node.y < 0 || node.y > currentHeight) {
+          node.x = Math.max(margin, Math.min(currentWidth - margin, node.x));
+          node.y = Math.max(margin, Math.min(currentHeight - margin, node.y));
+          node.vx = 0; // Stop velocity
+          node.vy = 0; // Stop velocity
         }
       }
     };
@@ -841,15 +858,19 @@ export default function NetworkVisualizer({
         d3
           .forceLink<NetworkNode, NetworkLink>(validLinks)
           .id((d) => d.id)
-          .distance(80)
+          .distance(60) // Reduced distance
       )
-      .force("charge", d3.forceManyBody().strength(-150))
-      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
+      .force("charge", d3.forceManyBody().strength(-100)) // Reduced charge strength
+      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 15))
       .force("boundary", boundaryForce)
-      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
-      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.1 : 0));
+      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.05 : 0.01)) // Weaker centering
+      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.05 : 0.01)); // Weaker centering
 
     simulationRef.current = simulation;
+    
+    // Add damping to slow down the simulation and prevent nodes from flying away
+    simulation.alphaDecay(0.02); // Slower decay
+    simulation.velocityDecay(0.4); // Higher damping
 
     // Add resize listener to handle orientation changes
     const handleResize = () => {
