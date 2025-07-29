@@ -775,6 +775,9 @@ export default function NetworkVisualizer({
 
     // Create nodes with multi-role support
     console.log(`🎨 [D3 Render] Creating ${finalDisplayData.nodes.length} node elements`);
+    console.log(`🎨 [D3 Render] SVG element:`, svgRef.current);
+    console.log(`🎨 [D3 Render] Network group:`, networkGroup.node());
+    
     const nodeElements = networkGroup
       .selectAll(".node")
       .data(finalDisplayData.nodes)
@@ -782,6 +785,8 @@ export default function NetworkVisualizer({
       .append("g")
       .attr("class", (d) => `node-group network-node node-${d.type}`)
       .style("cursor", "pointer");
+    
+    console.log(`🎨 [D3 Render] Node elements created:`, nodeElements.size());
 
     // Add circles for each node - single color for single role, multi-colored for multiple roles
     nodeElements.each(function(d) {
@@ -863,9 +868,15 @@ export default function NetworkVisualizer({
           .attr("cy", -d.size + 2);
       }
     })
+      .on("mouseover", function(event, d) {
+        console.log(`🖱️ [Mouseover] Node hovered: ${d.name} (${d.type})`);
+      })
       .on("click", function(event, d) {
         console.log(`🖱️ [Click] Node clicked: ${d.name} (${d.type})`);
+        console.log(`🖱️ [Click] Event details:`, event);
+        console.log(`🖱️ [Click] This element:`, this);
         event.stopPropagation();
+        event.preventDefault();
 
         // Reset previous node highlighting
         resetNodeHighlight();
@@ -975,6 +986,8 @@ export default function NetworkVisualizer({
       .style("max-width", "300px")
       .style("box-shadow", "0 4px 8px rgba(0, 0, 0, 0.3)")
       .style("border", "1px solid rgba(255, 255, 255, 0.2)");
+    
+    console.log(`🎨 [D3 Render] Tooltip created:`, tooltip.node());
 
     function showTooltip(event: MouseEvent, d: NetworkNode) {
       const roles = d.types || [d.type];
@@ -1428,11 +1441,14 @@ export default function NetworkVisualizer({
     }
     function dragstarted(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
       console.log(`🖱️ [Drag] Drag started for ${d.name}`);
-      // Prevent event bubbling to avoid interfering with zoom behavior
-      event.sourceEvent.stopPropagation();
-      if (!event.active) simulation.alphaTarget(0.3).restart();
-      d.fx = d.x;
-      d.fy = d.y;
+      // Only start drag if there's significant movement
+      if (event.sourceEvent.type === 'mousedown' || event.sourceEvent.type === 'touchstart') {
+        // Prevent event bubbling to avoid interfering with zoom behavior
+        event.sourceEvent.stopPropagation();
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      }
     }
 
     function dragged(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {

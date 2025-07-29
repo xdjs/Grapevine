@@ -623,6 +623,7 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
     console.log(`✅ [DEBUG] Generated network for "${artistName}" with ${networkData.nodes.length} nodes and ${networkData.links.length} links`);
     console.log(`📊 [DEBUG] Nodes:`, networkData.nodes.map(n => `${n.name} (${n.type})`));
     console.log(`🔗 [DEBUG] Links:`, networkData.links.map(l => `${l.source} -> ${l.target}`));
+    console.log(`🔄 [DEBUG] NO CACHING - Fresh data generated every time`);
     
     // Convert SafeNetworkData to NetworkData
     const convertedData: NetworkData = {
