@@ -365,13 +365,15 @@ export default function NetworkVisualizer({
     console.log(`📊 [State] fullNetworkData exists: ${!!fullNetworkData}`);
     console.log(`📊 [State] expandedNodes count: ${expandedNodes.size}`);
     console.log(`📊 [State] expandedNodes:`, Array.from(expandedNodes));
+    console.log(`📊 [State] Data nodes count: ${data?.nodes?.length || 0}`);
+    console.log(`📊 [State] Final display nodes count: ${finalDisplayData.nodes.length}`);
     
     if (fullNetworkData) {
       console.log(`📊 Displaying expanded network with ${fullNetworkData.nodes.length} nodes and ${fullNetworkData.links.length} links`);
     } else {
       console.log(`📊 Displaying first-degree network with ${getVisibleNodes().length} nodes and ${getVisibleLinks().length} links`);
     }
-  }, [fullNetworkData, expandedNodes]);
+  }, [fullNetworkData, expandedNodes, data, finalDisplayData]);
 
   // Persist expanded networks whenever they change
   useEffect(() => {
@@ -388,15 +390,23 @@ export default function NetworkVisualizer({
         node.size === 30 && (node.type === 'artist' || (node.types && node.types.includes('artist')))
       );
       
-      if (mainArtist && mainArtist.name !== persistenceKey.split('-')[0]) {
-        console.log(`🔄 [Artist Change] New artist detected: ${mainArtist.name}, clearing previous persistence`);
-        // Clear all expanded state for new artist
-        setExpandedNodes(new Set());
-        setFullNetworkData(null);
-        setPersistenceKey('');
-        setIsInitialized(false);
-        localStorage.removeItem('grapevine-expanded-networks');
-        console.log(`🔄 [Artist Change] Cleared persistence for new artist`);
+      if (mainArtist) {
+        const currentArtistName = mainArtist.name;
+        const savedArtistName = persistenceKey.split('-')[0];
+        
+        // Only clear if we have a different artist AND we have a saved artist
+        if (savedArtistName && savedArtistName !== currentArtistName) {
+          console.log(`🔄 [Artist Change] New artist detected: ${currentArtistName}, clearing previous persistence for ${savedArtistName}`);
+          // Clear all expanded state for new artist
+          setExpandedNodes(new Set());
+          setFullNetworkData(null);
+          setPersistenceKey('');
+          setIsInitialized(false);
+          localStorage.removeItem('grapevine-expanded-networks');
+          console.log(`🔄 [Artist Change] Cleared persistence for new artist`);
+        } else if (!savedArtistName) {
+          console.log(`🔄 [Artist Change] First time loading artist: ${currentArtistName}`);
+        }
       }
     }
   }, [data, persistenceKey]);
@@ -405,6 +415,7 @@ export default function NetworkVisualizer({
   useEffect(() => {
     if (data && data.nodes && data.nodes.length > 0 && !isInitialized) {
       console.log(`🔄 [Mount] Data available, attempting to restore expanded networks`);
+      console.log(`🔄 [Mount] Data nodes: ${data.nodes.length}, Main artist: ${mainArtistNode?.name || 'not found'}`);
       const restored = restoreExpandedNetworks();
       if (restored) {
         console.log(`🔄 [Mount] Successfully restored expanded networks`);
@@ -415,7 +426,7 @@ export default function NetworkVisualizer({
     } else if (!data || !data.nodes || data.nodes.length === 0) {
       console.log(`🔄 [Mount] No data available yet, skipping restoration`);
     }
-  }, [data, restoreExpandedNetworks, isInitialized]);
+  }, [data, restoreExpandedNetworks, isInitialized, mainArtistNode]);
   
   // Ensure expanded networks persist across component re-renders
   useEffect(() => {
