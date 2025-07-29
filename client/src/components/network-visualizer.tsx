@@ -143,9 +143,9 @@ export default function NetworkVisualizer({
     console.log(`🔗 [Expand] Loading state set to true for: ${nodeName}`);
     
     try {
-      // Fetch the full network for this collaborator
-      console.log(`🔗 [Expand] Fetching network from: /api/network/${encodeURIComponent(nodeName)}`);
-      const response = await fetch(`/api/network/${encodeURIComponent(nodeName)}`);
+      // Fetch the full network for this collaborator (with expansion mode)
+      console.log(`🔗 [Expand] Fetching network from: /api/network/${encodeURIComponent(nodeName)}?expand=true`);
+      const response = await fetch(`/api/network/${encodeURIComponent(nodeName)}?expand=true`);
       console.log(`🔗 [Expand] Response status:`, response.status);
       console.log(`🔗 [Expand] Response ok:`, response.ok);
       

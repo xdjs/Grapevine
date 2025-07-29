@@ -37,6 +37,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
+  // Check if this is an expansion request (for showing full network)
+  const isExpansion = req.query.expand === 'true';
+  console.log(`🎯 [Vercel] Network request for artist ID ${req.query.artistId} - Expansion mode: ${isExpansion}`);
+
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
@@ -492,9 +496,54 @@ Guidelines:
           });
         }
 
-        // REMOVED: Branching artists creation during initial generation
-        // Only first-degree collaborators should be shown initially
-        // Second-degree connections will be added when users expand specific nodes
+        // In expansion mode, create branching artists (second-degree connections)
+        if (isExpansion && collaborator.topCollaborators && collaborator.topCollaborators.length > 0) {
+          console.log(`🔗 [Vercel] Creating branching artists for ${collaborator.name} in expansion mode`);
+          
+          for (const branchingArtist of collaborator.topCollaborators) {
+            if (branchingArtist !== artist.name && !isFakeCollaborator(branchingArtist)) {
+              // Check if we already have a node for this branching artist
+              let branchingNode = nodeMap.get(branchingArtist);
+              
+              if (!branchingNode) {
+                // Create new node for branching artist
+                const branchingRoles = ['artist']; // Default to artist for branching nodes
+                branchingNode = {
+                  id: branchingArtist,
+                  name: branchingArtist,
+                  type: branchingRoles[0],
+                  types: branchingRoles,
+                  color: '#FF0ACF', // Artist color
+                  size: 15, // Even smaller size for second-degree nodes
+                  artistId: null,
+                  collaborations: []
+                };
+                
+                // Look up MusicNerd ID for branching artist
+                const branchingQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
+                const branchingResult = await client.query(branchingQuery, [branchingArtist]);
+                if (branchingResult.rows.length > 0) {
+                  branchingNode.artistId = branchingResult.rows[0].id;
+                }
+                
+                nodeMap.set(branchingArtist, branchingNode);
+              }
+              
+              // Create link between collaborator and branching artist
+              const existingBranchingLink = links.find(link => 
+                (link.source === collaborator.name && link.target === branchingArtist) ||
+                (link.source === branchingArtist && link.target === collaborator.name)
+              );
+              
+              if (!existingBranchingLink) {
+                links.push({
+                  source: collaborator.name,
+                  target: branchingArtist
+                });
+              }
+            }
+          }
+        }
       }
 
       // Convert nodeMap to nodes array

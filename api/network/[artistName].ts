@@ -88,6 +88,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
+  // Check if this is an expansion request (for showing full network)
+  const isExpansion = req.query.expand === 'true';
+  console.log(`🎯 [Vercel] Network request for ${req.query.artistName} - Expansion mode: ${isExpansion}`);
+
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
@@ -441,8 +445,15 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
               type: primaryRole,
               topCollaborators: person.topCollaborators || []
             });
-            // REMOVED: Branching artists collection for role detection
-            // We don't want any outer circle nodes in initial generation
+            
+            // In expansion mode, include branching artists for full network
+            if (isExpansion) {
+              for (const branchingArtist of person.topCollaborators || []) {
+                if (branchingArtist !== correctArtistName && !isFakeCollaborator(branchingArtist)) {
+                  allPeople.add(branchingArtist);
+                }
+              }
+            }
           }
         }
       } else if (collaborationData.artists) {
@@ -456,8 +467,15 @@ Investigate thoroughly for multiple roles on ${correctArtistName}, whether they 
           
           collaborators.push(collaborator);
           allPeople.add(collaborator.name);
-          // REMOVED: Branching artists collection for role detection
-          // We don't want any outer circle nodes in initial generation
+          
+          // In expansion mode, include branching artists for full network
+          if (isExpansion) {
+            for (const branchingArtist of collaborator.topCollaborators || []) {
+              if (branchingArtist !== correctArtistName && !isFakeCollaborator(branchingArtist)) {
+                allPeople.add(branchingArtist);
+              }
+            }
+          }
         }
       }
       
@@ -637,9 +655,54 @@ Guidelines:
           });
         }
 
-        // REMOVED: Branching artists creation during initial generation
-        // Only first-degree collaborators should be shown initially
-        // Second-degree connections will be added when users expand specific nodes
+        // In expansion mode, create branching artists (second-degree connections)
+        if (isExpansion && collaborator.topCollaborators && collaborator.topCollaborators.length > 0) {
+          console.log(`🔗 [Vercel] Creating branching artists for ${collaborator.name} in expansion mode`);
+          
+          for (const branchingArtist of collaborator.topCollaborators) {
+            if (branchingArtist !== correctArtistName && !isFakeCollaborator(branchingArtist)) {
+              // Check if we already have a node for this branching artist
+              let branchingNode = nodeMap.get(branchingArtist);
+              
+              if (!branchingNode) {
+                // Create new node for branching artist
+                const enhancedRoles = getOptimizedRoles(branchingArtist, 'artist');
+                branchingNode = {
+                  id: branchingArtist,
+                  name: branchingArtist,
+                  type: enhancedRoles[0],
+                  types: enhancedRoles,
+                  color: enhancedRoles.includes('artist') ? '#FF0ACF' : '#355367',
+                  size: 15, // Even smaller size for second-degree nodes
+                  artistId: null,
+                  collaborations: []
+                };
+                
+                // Look up MusicNerd ID for branching artist
+                const branchingMatch = await findArtistInDatabase(client, branchingArtist);
+                if (branchingMatch) {
+                  branchingNode.artistId = branchingMatch.id;
+                  branchingNode.name = branchingMatch.name;
+                }
+                
+                nodeMap.set(branchingArtist, branchingNode);
+              }
+              
+              // Create link between collaborator and branching artist
+              const existingBranchingLink = links.find(link => 
+                (link.source === collaborator.name && link.target === branchingArtist) ||
+                (link.source === branchingArtist && link.target === collaborator.name)
+              );
+              
+              if (!existingBranchingLink) {
+                links.push({
+                  source: collaborator.name,
+                  target: branchingArtist
+                });
+              }
+            }
+          }
+        }
       }
 
       // Convert nodeMap to nodes array
