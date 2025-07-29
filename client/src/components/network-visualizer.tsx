@@ -138,25 +138,21 @@ export default function NetworkVisualizer({
     const nodes = fullNetworkData ? fullNetworkData.nodes : data.nodes;
     const links = fullNetworkData ? fullNetworkData.links : data.links;
     
-    console.log(`🔗 [VisibleNodes] Using ${fullNetworkData ? 'fullNetworkData' : 'original data'}`);
-    console.log(`🔗 [VisibleNodes] Total nodes available:`, nodes.length);
-    console.log(`🔗 [VisibleNodes] Main artist node:`, mainArtistNode?.name || 'not found');
-    console.log(`🔗 [VisibleNodes] Expanded nodes:`, Array.from(expandedNodes));
+    // If no data, return empty array
+    if (!nodes || nodes.length === 0) {
+      return [];
+    }
     
     // If no main artist node found, return all nodes
     if (!mainArtistNode) {
-      console.log(`🔗 [VisibleNodes] No main artist node found, returning all nodes`);
       return nodes;
     }
     
     const firstDegreeIds = getFirstDegreeCollaborators();
-    console.log(`🔗 [VisibleNodes] First degree collaborators:`, Array.from(firstDegreeIds));
-    
     const visibleIds = new Set<string>();
     
     // Always include main artist
     visibleIds.add(mainArtistNode.id);
-    console.log(`🔗 [VisibleNodes] Added main artist: ${mainArtistNode.id}`);
     
     // Include first-degree collaborators
     firstDegreeIds.forEach(id => visibleIds.add(id));
@@ -164,7 +160,6 @@ export default function NetworkVisualizer({
     // Include expanded nodes and their connections
     expandedNodes.forEach(expandedNodeId => {
       visibleIds.add(expandedNodeId);
-      console.log(`🔗 [VisibleNodes] Added expanded node: ${expandedNodeId}`);
       
       // Add all nodes connected to this expanded node
       links.forEach(link => {
@@ -179,11 +174,7 @@ export default function NetworkVisualizer({
       });
     });
     
-    const visibleNodes = nodes.filter(node => visibleIds.has(node.id));
-    console.log(`🔗 [VisibleNodes] Returning ${visibleNodes.length} visible nodes out of ${nodes.length} total`);
-    console.log(`🔗 [VisibleNodes] Visible node IDs:`, Array.from(visibleIds));
-    
-    return visibleNodes;
+    return nodes.filter(node => visibleIds.has(node.id));
   };
 
   // Get visible links based on visible nodes
@@ -339,23 +330,19 @@ export default function NetworkVisualizer({
 
   // Always use filtered data based on expanded nodes, but use full network data as base when available
   const finalDisplayData = {
-    nodes: getVisibleNodes(),
-    links: getVisibleLinks()
+    nodes: data?.nodes || [],
+    links: data?.links || []
   };
   
-  // Fallback: if no nodes are visible, use original data
-  if (finalDisplayData.nodes.length === 0 && data && data.nodes.length > 0) {
-    console.log(`⚠️ [Fallback] No visible nodes found, using original data`);
-    finalDisplayData.nodes = data.nodes;
-    finalDisplayData.links = data.links;
-  }
-  
-  // Final safety check: ensure we always have nodes to display
-  if (finalDisplayData.nodes.length === 0) {
-    console.error(`❌ [Error] No nodes to display! Data nodes: ${data?.nodes?.length || 0}, Final nodes: ${finalDisplayData.nodes.length}`);
-    // Force return of original data as last resort
-    finalDisplayData.nodes = data?.nodes || [];
-    finalDisplayData.links = data?.links || [];
+  // Only apply filtering if we have valid data
+  if (data && data.nodes && data.nodes.length > 0) {
+    const visibleNodes = getVisibleNodes();
+    const visibleLinks = getVisibleLinks();
+    
+    if (visibleNodes.length > 0) {
+      finalDisplayData.nodes = visibleNodes;
+      finalDisplayData.links = visibleLinks;
+    }
   }
   
 
