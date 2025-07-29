@@ -476,7 +476,17 @@ export default function NetworkVisualizer({
   }, []);
 
   useEffect(() => {
-    if (!svgRef.current || !finalDisplayData || !visible) return;
+    console.log(`🎨 [D3 Render] Starting render check:`);
+    console.log(`🎨 [D3 Render] svgRef.current:`, !!svgRef.current);
+    console.log(`🎨 [D3 Render] finalDisplayData:`, !!finalDisplayData);
+    console.log(`🎨 [D3 Render] visible:`, visible);
+    console.log(`🎨 [D3 Render] finalDisplayData nodes:`, finalDisplayData?.nodes?.length || 0);
+    console.log(`🎨 [D3 Render] finalDisplayData links:`, finalDisplayData?.links?.length || 0);
+    
+    if (!svgRef.current || !finalDisplayData || !visible) {
+      console.log(`🎨 [D3 Render] Skipping render - missing required data`);
+      return;
+    }
 
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
@@ -845,6 +855,10 @@ export default function NetworkVisualizer({
     };
 
     // Create simulation with centering force for main artist
+    console.log(`🎨 [D3 Render] Creating simulation with ${finalDisplayData.nodes.length} nodes and ${validLinks.length} links`);
+    console.log(`🎨 [D3 Render] Main artist node:`, mainArtistNode?.name || 'not found');
+    console.log(`🎨 [D3 Render] Container dimensions: ${width}x${height}`);
+    
     const simulation = d3
       .forceSimulation<NetworkNode>(finalDisplayData.nodes)
       .force(
@@ -861,6 +875,7 @@ export default function NetworkVisualizer({
       .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.1 : 0));
 
     simulationRef.current = simulation;
+    console.log(`🎨 [D3 Render] Simulation created successfully`);
 
     // Add resize listener to handle orientation changes
     const handleResize = () => {
@@ -882,6 +897,7 @@ export default function NetworkVisualizer({
     window.addEventListener('orientationchange', handleResize);
 
     // Create links
+    console.log(`🎨 [D3 Render] Creating ${validLinks.length} link elements`);
     const linkElements = networkGroup
       .selectAll(".link")
       .data(validLinks)
@@ -891,6 +907,7 @@ export default function NetworkVisualizer({
       .attr("stroke-width", 2);
 
     // Create nodes with multi-role support
+    console.log(`🎨 [D3 Render] Creating ${finalDisplayData.nodes.length} node elements`);
     const nodeElements = networkGroup
       .selectAll(".node")
       .data(finalDisplayData.nodes)
