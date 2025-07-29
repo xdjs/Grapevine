@@ -143,6 +143,10 @@ export default function NetworkVisualizer({
     console.log(`🔗 [VisibleNodes] Main artist node:`, mainArtistNode?.name || 'not found');
     console.log(`🔗 [VisibleNodes] Expanded nodes:`, Array.from(expandedNodes));
     
+    // TEMPORARY FIX: Return all nodes to bypass filtering issues
+    console.log(`🔗 [VisibleNodes] TEMPORARY FIX: Returning all nodes to bypass filtering`);
+    return nodes;
+    
     // If no main artist node found, return all nodes
     if (!mainArtistNode) {
       console.log(`🔗 [VisibleNodes] No main artist node found, returning all nodes`);
@@ -188,8 +192,13 @@ export default function NetworkVisualizer({
 
   // Get visible links based on visible nodes
   const getVisibleLinks = () => {
-    const visibleNodeIds = new Set(getVisibleNodes().map(node => node.id));
     const links = fullNetworkData ? fullNetworkData.links : data.links;
+    
+    // TEMPORARY FIX: Return all links to bypass filtering issues
+    console.log(`🔗 [VisibleLinks] TEMPORARY FIX: Returning all links to bypass filtering`);
+    return links;
+    
+    const visibleNodeIds = new Set(getVisibleNodes().map(node => node.id));
     
     return links.filter(link => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
