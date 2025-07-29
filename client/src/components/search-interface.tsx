@@ -343,6 +343,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
   }, [loadSearchHistory]);
 
   const handleArtistSelect = async (artist: ArtistOption) => {
+    console.log(`🔍 [SearchInterface] handleArtistSelect called for:`, artist.name);
     setSearchQuery(artist.name);
     setShowDropdown(false);
     setArtistOptions([]);
@@ -357,11 +358,19 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         ? await fetchNetworkDataById(artist.artistId)
         : await fetchNetworkData(artist.name.trim());
       
+      console.log(`🔍 [SearchInterface] Received data:`, {
+        hasData: !!data,
+        nodes: data?.nodes?.length || 0,
+        links: data?.links?.length || 0,
+        isNoCollaborators: isNoCollaboratorsResponse(data)
+      });
+      
       // Get the artist ID for URL updating
       const finalArtistId = artist.artistId || artist.id;
       
       // Handle the response (might be network data or no-collaborators response)
       if (isNoCollaboratorsResponse(data)) {
+        console.log(`🔍 [SearchInterface] No collaborators response, showing popup`);
         // Show popup for no collaborators
         setPendingArtistInfo({
           name: data.artistName,
@@ -370,6 +379,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         });
         setShowNoCollaboratorsPopup(true);
       } else {
+        console.log(`🔍 [SearchInterface] Normal network data, calling onNetworkData`);
         // Normal network data - pass to parent with explicit artist ID
         onNetworkData(data, finalArtistId);
         
@@ -385,6 +395,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
         saveToSearchHistory(artist.name, finalArtistId);
       }
     } catch (error) {
+      console.error(`🔍 [SearchInterface] Error in handleArtistSelect:`, error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to fetch network data",

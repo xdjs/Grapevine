@@ -31,10 +31,19 @@ export default function ArtistNetwork() {
   const isMobile = useIsMobile();
 
   const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
+    console.log(`🎯 [Artist Network] handleNetworkData called with:`, {
+      dataNodes: data?.nodes?.length || 0,
+      dataLinks: data?.links?.length || 0,
+      artistId: artistId,
+      hasData: !!data
+    });
+    
     setNetworkData(data);
     // Extract the artist ID from the network data
     const finalArtistId = artistId || data.nodes.find(node => node.size === 30)?.artistId || null;
     setCurrentArtistId(finalArtistId);
+    
+    console.log(`🎯 [Artist Network] Set network data and artist ID:`, finalArtistId);
   }, []);
 
   // Navigate back to home
@@ -177,6 +186,25 @@ export default function ArtistNetwork() {
           />
         </div>
       )}
+      
+      {/* Debug info */}
+      <div style={{
+        position: 'fixed',
+        top: '10px',
+        right: '10px',
+        background: 'rgba(0,0,0,0.8)',
+        color: 'white',
+        padding: '10px',
+        borderRadius: '5px',
+        fontSize: '12px',
+        zIndex: 1000
+      }}>
+        <div>Network Data: {networkData ? 'Yes' : 'No'}</div>
+        <div>Nodes: {networkData?.nodes?.length || 0}</div>
+        <div>Links: {networkData?.links?.length || 0}</div>
+        <div>Loading: {isLoading ? 'Yes' : 'No'}</div>
+        <div>Visible: {!isLoading ? 'Yes' : 'No'}</div>
+      </div>
       
 
 
