@@ -394,50 +394,9 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
           target: collaborator.name,
         });
 
-        // CREATE BRANCHING NODES for topCollaborators to ensure EVERY node gets multi-role detection
-        if (topCollaborators && topCollaborators.length > 0) {
-          const maxBranching = 3;
-          const branchingCount = Math.min(topCollaborators.length, maxBranching);
-          
-          for (let i = 0; i < branchingCount; i++) {
-            const branchingArtistName = topCollaborators[i];
-            
-            // Skip if it's the main artist or already exists
-            if (branchingArtistName === artistName || nodes.some(n => n.name === branchingArtistName)) {
-              continue;
-            }
-            
-            // Get enhanced roles from batch detection, fallback to default
-            const branchingArtistRoles = collaboratorRoleMap.get(branchingArtistName) || ['artist'];
-
-            // Get MusicNerd artist ID for branching artist
-            let branchingArtistMusicNerdId = null;
-            try {
-              branchingArtistMusicNerdId = await musicNerdService.getArtistId(branchingArtistName);
-            } catch (error) {
-              console.log(`Could not fetch MusicNerd ID for branching artist ${branchingArtistName}`);
-            }
-
-            // Create branching artist node with full multi-role detection
-            const branchingArtistNode: NetworkNode = {
-              id: branchingArtistName,
-              name: branchingArtistName,
-              type: branchingArtistRoles[0],
-              types: branchingArtistRoles,
-              size: 16, // Smaller size for branching artists
-              artistId: branchingArtistMusicNerdId,
-            };
-            
-            console.log(`🎭 [MemStorage] Enhanced branching artist "${branchingArtistName}" to roles:`, branchingArtistRoles);
-            nodes.push(branchingArtistNode);
-
-            // Create link from collaborator to branching artist
-            links.push({
-              source: collaborator.name,
-              target: branchingArtistName,
-            });
-          }
-        }
+        // REMOVED: Branching nodes creation during initial generation
+        // Only first-degree collaborators should be shown initially
+        // Second-degree connections will be added when users expand specific nodes
       }
 
       // If no real collaborations found, try Wikipedia

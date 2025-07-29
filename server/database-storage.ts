@@ -426,43 +426,9 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
                   target: collaboratorNode.id,
                 });
 
-                // Add branching connections
-                const maxBranching = 3;
-                const branchingCount = Math.min(collaboratorNode.collaborations?.length || 0, maxBranching);
-                
-                for (let i = 0; i < branchingCount; i++) {
-                  const branchingArtist = collaboratorNode.collaborations![i];
-                  
-                  let branchingNode = nodeMap.get(branchingArtist);
-                  
-                  if (branchingNode) {
-                    // Add artist role if not present
-                    const currentTypes = branchingNode.types || [branchingNode.type];
-                    if (!currentTypes.includes('artist')) {
-                      branchingNode.types = [...currentTypes, 'artist'];
-                      console.log(`🎭 [DEBUG] Added artist role to existing branching node ${branchingArtist}`);
-                    }
-                  } else {
-                    // Create new branching node
-                    const enhancedBranchingRoles = getOptimizedRoles(branchingArtist, 'artist');
-                    
-                    branchingNode = createSafeNetworkNode({
-                      name: branchingArtist,
-                      type: enhancedBranchingRoles[0],
-                      types: enhancedBranchingRoles,
-                      size: 16,
-                    });
-                    
-                    nodeMap.set(branchingArtist, branchingNode);
-                    console.log(`🎭 [DEBUG] Enhanced branching "${branchingArtist}" to roles:`, enhancedBranchingRoles);
-                  }
-                  
-                  // Create link
-                  links.push({
-                    source: collaboratorNode.name,
-                    target: branchingArtist,
-                  });
-                }
+                // REMOVED: Branching connections during initial generation
+                // Only first-degree collaborators should be shown initially
+                // Second-degree connections will be added when users expand specific nodes
               }
             }
 
