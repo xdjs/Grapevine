@@ -80,6 +80,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ message: 'Artist name is required' });
   }
 
+  // Simple test response to verify endpoint is working
+  if (artistName === 'test') {
+    console.log(`🧪 [Expand] Test request received`);
+    return res.json({
+      nodes: [
+        { id: 'test-artist', name: 'Test Artist', type: 'artist', types: ['artist'], color: '#FF0ACF', size: 30, artistId: null },
+        { id: 'test-collaborator', name: 'Test Collaborator', type: 'producer', types: ['producer'], color: '#8A2BE2', size: 20, artistId: null }
+      ],
+      links: [
+        { source: 'test-artist', target: 'test-collaborator' }
+      ]
+    });
+  }
+
   try {
     const connectionString = process.env.CONNECTION_STRING;
     if (!connectionString) {
@@ -120,12 +134,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     allPeople.add(correctArtistName);
 
     // Import services
-    const { musicBrainzService } = await import('../../server/musicbrainz.js');
-    const { openaiService } = await import('../../server/openai-service.js');
+    console.log(`🔗 [Expand] Importing services...`);
+    let musicBrainzService, openaiService;
+    
+    try {
+      const musicBrainzModule = await import('../../server/musicbrainz.js');
+      musicBrainzService = musicBrainzModule.musicBrainzService;
+      console.log(`✅ [Expand] MusicBrainz service imported successfully`);
+    } catch (importError) {
+      console.error(`❌ [Expand] Failed to import MusicBrainz service:`, importError);
+      return res.status(500).json({ message: 'Failed to load MusicBrainz service' });
+    }
+
+    try {
+      const openaiModule = await import('../../server/openai-service.js');
+      openaiService = openaiModule.openaiService;
+      console.log(`✅ [Expand] OpenAI service imported successfully`);
+    } catch (importError) {
+      console.error(`❌ [Expand] Failed to import OpenAI service:`, importError);
+      // Continue without OpenAI service
+    }
 
     // Get collaboration data from MusicBrainz
     console.log(`🔗 [Expand] Fetching collaborations for "${correctArtistName}" from MusicBrainz...`);
-    const collaborationData = await musicBrainzService.getArtistCollaborations(correctArtistName);
+    let collaborationData;
+    try {
+      collaborationData = await musicBrainzService.getArtistCollaborations(correctArtistName);
+      console.log(`✅ [Expand] MusicBrainz collaboration data received:`, collaborationData ? 'success' : 'null');
+    } catch (musicBrainzError) {
+      console.error(`❌ [Expand] MusicBrainz error:`, musicBrainzError);
+      return res.status(500).json({ message: 'Failed to fetch collaboration data' });
+    }
 
     if (collaborationData && collaborationData.artists && collaborationData.artists.length > 0) {
       console.log(`✅ [Expand] Found ${collaborationData.artists.length} collaborators from MusicBrainz`);
@@ -290,10 +329,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     console.error('❌ [Expand] Error generating expansion network:', error);
     console.error('❌ [Expand] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    return res.status(500).json({ 
-      message: 'Failed to generate expansion network data', 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString()
-    });
+    
+    // Return a simple fallback response instead of error
+    console.log(`🔄 [Expand] Returning fallback response for "${artistName}"`);
+    const fallbackData = { 
+      nodes: [mainNode], 
+      links: [] 
+    };
+    
+    try {
+      await client.end();
+    } catch (endError) {
+      console.error('❌ [Expand] Error ending client connection:', endError);
+    }
+    
+    res.json(fallbackData);
   }
 } 

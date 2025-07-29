@@ -153,6 +153,10 @@ export default function NetworkVisualizer({
         expandUrl = `/api/expand-network/${encodeURIComponent(nodeName)}`;
         console.log(`🔗 [Expand] Fetching expansion network by name: ${expandUrl}`);
       }
+      
+      // Add a small delay to show loading state
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       const response = await fetch(expandUrl);
       console.log(`🔗 [Expand] Response status:`, response.status);
       console.log(`🔗 [Expand] Response ok:`, response.ok);
@@ -169,6 +173,17 @@ export default function NetworkVisualizer({
         console.log(`🔗 [Expand] Collaborator network links:`, collaboratorNetwork.links?.map(l => `${l.source} -> ${l.target}`));
         console.log(`🔗 [Expand] Original network nodes:`, data.nodes.map(n => `${n.name} (${n.type})`));
         console.log(`🔗 [Expand] Original network links:`, data.links.map(l => `${l.source} -> ${l.target}`));
+        
+        // Validate that we received valid network data
+        if (!collaboratorNetwork.nodes || !Array.isArray(collaboratorNetwork.nodes)) {
+          console.error(`❌ [Expand] Invalid network data received - no nodes array`);
+          return;
+        }
+        
+        if (!collaboratorNetwork.links || !Array.isArray(collaboratorNetwork.links)) {
+          console.error(`❌ [Expand] Invalid network data received - no links array`);
+          return;
+        }
         
         // Merge the collaborator's network with the existing network
         // Use current fullNetworkData as base if available, otherwise use original data
@@ -241,9 +256,15 @@ export default function NetworkVisualizer({
         console.error(`❌ [Expand] Failed to fetch network for ${nodeName} - status: ${response.status}`);
         const errorText = await response.text();
         console.error(`❌ [Expand] Error response:`, errorText);
+        
+        // Show user-friendly error message
+        alert(`Failed to expand ${nodeName}'s network. Please try again.`);
       }
     } catch (error) {
       console.error(`❌ [Expand] Error expanding network for ${nodeName}:`, error);
+      
+      // Show user-friendly error message
+      alert(`Error expanding ${nodeName}'s network. Please try again.`);
     } finally {
       // Clear loading state
       console.log(`🔗 [Expand] Clearing loading state for: ${nodeName}`);
