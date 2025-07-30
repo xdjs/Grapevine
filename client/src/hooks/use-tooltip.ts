@@ -57,8 +57,7 @@ export interface UseTooltipReturn {
   handleProfileAction: (node: NetworkNode) => Promise<void>;
   handleCollaborationAction: (node: NetworkNode, mainArtist?: NetworkNode) => void;
   
-  // D3 tooltip reference for external use
-  tooltipRef: d3.Selection<HTMLDivElement, unknown, null, undefined> | null;
+  
 }
 
 export function useTooltip({
@@ -73,49 +72,15 @@ export function useTooltip({
   const [highlightedNode, setHighlightedNode] = useState<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
   const [currentNode, setCurrentNode] = useState<NetworkNode | null>(null);
   
-  // D3 tooltip reference
-  const tooltipRef = useRef<d3.Selection<HTMLDivElement, unknown, null, undefined> | null>(null);
-
-  // Initialize D3 tooltip element
-  useEffect(() => {
-    const tooltip = d3
-      .select('body')
-      .append('div')
-      .attr('class', 'network-tooltip')
-      .style('position', 'absolute')
-      .style('opacity', 0)
-      .style('pointer-events', 'none')
-      .style('background', 'rgba(0, 0, 0, 0.9)')
-      .style('color', 'white')
-      .style('border-radius', '8px')
-      .style('padding', '12px')
-      .style('font-family', 'system-ui, -apple-system, sans-serif')
-      .style('font-size', '14px')
-      .style('line-height', '1.4')
-      .style('z-index', '1000')
-      .style('box-shadow', '0 4px 12px rgba(0, 0, 0, 0.3)');
-
-    tooltipRef.current = tooltip;
-
-    // Cleanup on unmount
-    return () => {
-      tooltip.remove();
-    };
-  }, []);
+  // Remove D3 tooltip implementation - using React NetworkTooltip component instead
 
   // Calculate tooltip position with boundary detection
   const calculatePosition = useCallback((event: MouseEvent): TooltipPosition => {
     const isMobile = window.innerWidth <= 768;
-    const tooltipNode = tooltipRef.current?.node() as HTMLElement;
     
-    if (!tooltipNode) {
-      return { x: event.pageX + 10, y: event.pageY - 10 };
-    }
-    
-    // Get tooltip dimensions (need to be visible first to measure)
-    const rect = tooltipNode.getBoundingClientRect();
-    const tooltipWidth = rect.width || 280; // fallback width
-    const tooltipHeight = rect.height || 150; // fallback height
+    // Use standard tooltip dimensions since we're using React component
+    const tooltipWidth = isMobile ? 320 : 380; // matches NetworkTooltip maxWidth
+    const tooltipHeight = isMobile ? 200 : 250; // estimated height
     
     // Get viewport dimensions
     const viewportWidth = window.innerWidth;
@@ -155,18 +120,10 @@ export function useTooltip({
 
   // Core tooltip functions
   const showTooltip = useCallback((event: MouseEvent, node: NetworkNode) => {
-    if (!tooltipRef.current) return;
-
     const position = calculatePosition(event);
     setTooltipPosition(position);
     setIsTooltipVisible(true);
     setCurrentNode(node);
-
-    tooltipRef.current
-      .style('left', position.x + 'px')
-      .style('top', position.y + 'px')
-      .style('opacity', 1)
-      .style('pointer-events', 'auto');
   }, [calculatePosition]);
 
   // Node highlighting functions
@@ -205,38 +162,20 @@ export function useTooltip({
     setIsTooltipVisible(false);
     setCurrentNode(null);
     resetNodeHighlight();
-    
-    if (tooltipRef.current) {
-      tooltipRef.current
-        .style('opacity', 0)
-        .style('pointer-events', 'none');
-    }
   }, [resetNodeHighlight]);
 
   const moveTooltip = useCallback((event: MouseEvent) => {
     const position = calculatePosition(event);
     setTooltipPosition(position);
-    
-    if (tooltipRef.current) {
-      tooltipRef.current
-        .style('left', position.x + 'px')
-        .style('top', position.y + 'px');
-    }
   }, [calculatePosition]);
 
   const positionTooltipNearNode = useCallback((nodeEl: SVGGElement) => {
-    if (!tooltipRef.current) return;
-
     const rect = nodeEl.getBoundingClientRect();
     const pageX = rect.right + 12; // 12px to the right of node
     const pageY = rect.top + window.scrollY - 10; // align vertically
 
     const position = { x: pageX, y: pageY };
     setTooltipPosition(position);
-
-    tooltipRef.current
-      .style('left', pageX + 'px')
-      .style('top', pageY + 'px');
   }, []);
 
   // Action handlers
@@ -455,8 +394,5 @@ export function useTooltip({
     handleExpandAction,
     handleProfileAction,
     handleCollaborationAction,
-    
-    // D3 tooltip reference
-    tooltipRef: tooltipRef.current,
   };
 }

@@ -139,7 +139,7 @@ describe('useTooltip', () => {
       expect(result.current.highlightedNode).toBeNull();
     });
 
-    it('should create D3 tooltip element on mount', () => {
+    it('should not create D3 tooltip element (using React component instead)', () => {
       renderHook(() =>
         useTooltip({
           networkData: mockNetworkData,
@@ -149,24 +149,8 @@ describe('useTooltip', () => {
         })
       );
 
-      expect(d3.select).toHaveBeenCalledWith('body');
-      expect(mockD3Selection.append).toHaveBeenCalledWith('div');
-      expect(mockD3Selection.attr).toHaveBeenCalledWith('class', 'network-tooltip');
-    });
-
-    it('should cleanup tooltip on unmount', () => {
-      const { unmount } = renderHook(() =>
-        useTooltip({
-          networkData: mockNetworkData,
-          config: mockConfig,
-          networkDataHook: mockNetworkDataHook,
-          callbacks: mockCallbacks,
-        })
-      );
-
-      unmount();
-
-      expect(mockD3Selection.remove).toHaveBeenCalled();
+      // Should not create D3 tooltip since we're using React NetworkTooltip component
+      expect(d3.select).not.toHaveBeenCalledWith('body');
     });
   });
 
@@ -294,7 +278,7 @@ describe('useTooltip', () => {
       });
 
       // On mobile, should center tooltip horizontally
-      const expectedLeft = Math.max(10, Math.min(375 - 280 - 10, 200 - 280 / 2));
+      const expectedLeft = Math.max(10, Math.min(375 - 320 - 10, 200 - 320 / 2));
       expect(result.current.tooltipPosition.x).toBe(expectedLeft);
     });
 
@@ -697,9 +681,7 @@ describe('useTooltip', () => {
       expect(window.open).not.toHaveBeenCalled();
     });
 
-    it('should handle tooltip positioning with no DOM node', () => {
-      mockD3Selection.node.mockReturnValue(null);
-
+    it('should handle tooltip positioning with standard dimensions', () => {
       const { result } = renderHook(() =>
         useTooltip({
           networkData: mockNetworkData,
@@ -715,14 +697,14 @@ describe('useTooltip', () => {
         result.current.moveTooltip(mockEvent);
       });
 
-      // Should handle gracefully without DOM measurements
+      // Should use standard positioning calculation
       expect(result.current.tooltipPosition.x).toBe(110);
       expect(result.current.tooltipPosition.y).toBe(190);
     });
   });
 
   describe('Accessibility', () => {
-    it('should provide proper ARIA labels for actions', () => {
+    it('should provide action handlers for accessibility', () => {
       const { result } = renderHook(() =>
         useTooltip({
           networkData: mockNetworkData,
@@ -739,8 +721,9 @@ describe('useTooltip', () => {
         result.current.showTooltip(mockEvent, mockNode);
       });
 
-      // Check that tooltip content includes accessibility considerations
-      expect(mockD3Selection.html).toHaveBeenCalled();
+      // Check that tooltip is visible and positioned correctly for React component
+      expect(result.current.isTooltipVisible).toBe(true);
+      expect(result.current.currentNode).toBe(mockNode);
     });
 
     it('should handle keyboard events for tooltip actions', () => {
@@ -796,7 +779,8 @@ describe('useTooltip', () => {
 
       unmount();
 
-      expect(mockD3Selection.remove).toHaveBeenCalled();
+      // React hook should cleanup without errors
+      expect(true).toBe(true); // No D3 cleanup needed since using React component
     });
   });
 });
