@@ -78,7 +78,6 @@ The current `network-visualizer.tsx` file is 1,499 lines long and handles multip
 - Extract `musicNerdBaseUrl` state and config fetching logic
 - Move config fetching useEffect
 - Provide clean interface for configuration access
-
 **Dependencies**: 
 - None
 
