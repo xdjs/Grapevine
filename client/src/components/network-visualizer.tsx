@@ -211,22 +211,24 @@ export default function NetworkVisualizer({
       // Get the IDs of selected nodes for link filtering
       const selectedNodeIds = new Set(selectedNodes.map(n => n.id));
 
-      // Filter links to only include those connecting to our selected nodes or existing nodes
-      const allRelevantNodeIds = new Set([...existingNodeIds, ...selectedNodeIds]);
+      // Filter links to ONLY include direct connections between the clicked node and newly selected nodes
       const newLinks = nodeNetworkData.links.filter(link => {
         const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
         const targetId = typeof link.target === 'string' ? link.target : link.target.id;
         
-        // Only include links where both nodes are in our relevant set
-        const isRelevantLink = allRelevantNodeIds.has(sourceId) && allRelevantNodeIds.has(targetId);
+        // Only include links that directly connect the clicked node to one of the selected nodes
+        const isDirectConnectionToClicked = (sourceId === nodeId && selectedNodeIds.has(targetId)) || 
+                                           (targetId === nodeId && selectedNodeIds.has(sourceId));
         
         // Skip if link already exists
         const linkId = `${sourceId}-${targetId}`;
         const reverseLinkId = `${targetId}-${sourceId}`;
         const linkExists = existingLinkIds.has(linkId) || existingLinkIds.has(reverseLinkId);
         
-        return isRelevantLink && !linkExists;
+        return isDirectConnectionToClicked && !linkExists;
       });
+
+      console.log(`🔗 Adding ${newLinks.length} direct connections between ${nodeName} and selected collaborators`);
 
       // Mark this node as expanded
       setExpandedNodes(prev => new Set([...prev, nodeId]));
