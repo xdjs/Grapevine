@@ -6,6 +6,7 @@ import { useConfig } from "@/hooks/use-config";
 import { useZoom } from "@/hooks/use-zoom";
 import { useTouchGestures } from "@/hooks/use-touch-gestures";
 import { useTooltip } from "@/hooks/use-tooltip";
+import { useNodeInteractions } from "@/hooks/use-node-interactions";
 import ArtistSelectionModal from "./artist-selection-modal";
 import CollaborationDetailsPopup from "./collaboration-details-popup";
 import NetworkTooltip from "./network-tooltip";
@@ -102,7 +103,12 @@ export default function NetworkVisualizer({
     },
   });
 
-
+  // Node interactions management hook
+  const nodeInteractions = useNodeInteractions({
+    simulationRef,
+    tooltip,
+    visible,
+  });
 
   // Log the current state for debugging
   useEffect(() => {
@@ -362,33 +368,12 @@ export default function NetworkVisualizer({
       }
     })
       .on("click", function(event, d) {
-        event.stopPropagation();
+        // Use the node interactions hook for click handling
+        nodeInteractions.handleNodeClick(event as MouseEvent, d, this);
+      });
 
-        // Reset previous node highlighting
-        tooltip.resetNodeHighlight();
-
-        // Highlight the current node group
-        const currentNode = d3.select(this);
-        currentNode.selectAll("circle, path")
-          .attr("stroke", "white")
-          .attr("stroke-width", 3)
-          .style("stroke-opacity", 1);
-        
-        // Track this node as highlighted
-        tooltip.setHighlightedNode(currentNode);
-
-        // Show tooltip using the new tooltip system
-        tooltip.showTooltip(event as MouseEvent, d);
-        
-        // Collaboration data handling is now managed by the tooltip system
-      })
-      .call(
-        d3
-          .drag<SVGGElement, NetworkNode>()
-          .on("start", dragstarted)
-          .on("drag", dragged)
-          .on("end", dragended)
-      );
+    // Setup drag behavior using the node interactions hook
+    nodeInteractions.setupDragBehavior(nodeElements);
 
     // Add labels for all nodes
     const labelElements = networkGroup
@@ -406,33 +391,7 @@ export default function NetworkVisualizer({
       .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.8)")
       .text((d) => d.name);
 
-    // Tooltip creation and showTooltip function are now handled by the tooltip hook
-
-
-    // Helper functions are now managed by the tooltip hook
-
-    function dragstarted(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
-      // Prevent event bubbling to avoid interfering with zoom behavior
-      event.sourceEvent.stopPropagation();
-      if (!event.active) simulation.alphaTarget(0.3).restart();
-      d.fx = d.x;
-      d.fy = d.y;
-    }
-
-    function dragged(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
-      // Prevent event bubbling to avoid interfering with zoom behavior
-      event.sourceEvent.stopPropagation();
-      d.fx = event.x;
-      d.fy = event.y;
-    }
-
-    function dragended(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
-      // Prevent event bubbling to avoid interfering with zoom behavior
-      event.sourceEvent.stopPropagation();
-      if (!event.active) simulation.alphaTarget(0);
-      d.fx = null;
-      d.fy = null;
-    }
+    // Drag functions are now handled by the node interactions hook
 
     // Update positions on tick
     simulation.on("tick", () => {
