@@ -90,6 +90,13 @@ export default function NetworkVisualizer({
         return;
       }
 
+      // Get the clicked node to determine its role
+      const clickedNode = dataWithPictures?.nodes.find(n => n.id === nodeId);
+      if (!clickedNode || !dataWithPictures) {
+        console.warn(`🔗 Could not find clicked node ${nodeName}`);
+        return;
+      }
+
       // Fetch the network data for the specific node
       let nodeNetworkData: NetworkData;
       if (nodeArtistId) {
@@ -98,34 +105,81 @@ export default function NetworkVisualizer({
         nodeNetworkData = await fetchNetworkData(nodeName);
       }
 
-      if (!nodeNetworkData || !dataWithPictures) {
+      if (!nodeNetworkData) {
         console.warn(`🔗 No network data found for ${nodeName}`);
         return;
       }
+
+      // Determine target roles based on clicked node's role
+      const clickedNodeRoles = clickedNode.types || [clickedNode.type];
+      const isClickedArtist = clickedNodeRoles.includes('artist');
+      
+      let targetRoles: string[];
+      if (isClickedArtist) {
+        // If clicked node is an artist, get their songwriters/producers
+        targetRoles = ['songwriter', 'producer'];
+      } else {
+        // If clicked node is songwriter/producer, get their artist collaborators
+        targetRoles = ['artist'];
+      }
+
+      console.log(`🔗 Clicked node roles: [${clickedNodeRoles.join(', ')}], targeting: [${targetRoles.join(', ')}]`);
+
+      // Filter existing nodes and links to prevent duplicates
+      const existingNodeIds = new Set(dataWithPictures.nodes.map(n => n.id));
+      const existingLinkIds = new Set(dataWithPictures.links.map(l => `${typeof l.source === 'string' ? l.source : l.source.id}-${typeof l.target === 'string' ? l.target : l.target.id}`));
+
+      // Filter new nodes by target roles and exclude duplicates
+      const candidateNodes = nodeNetworkData.nodes.filter(node => {
+        // Skip if node already exists
+        if (existingNodeIds.has(node.id)) return false;
+        
+        // Check if node has any of the target roles
+        const nodeRoles = node.types || [node.type];
+        return nodeRoles.some(role => targetRoles.includes(role));
+      });
+
+      // Limit to 3 nodes, prioritizing by size (larger nodes first, likely more important collaborators)
+      const selectedNodes = candidateNodes
+        .sort((a, b) => b.size - a.size)
+        .slice(0, 3);
+
+      console.log(`🔗 Found ${candidateNodes.length} candidate nodes, selected ${selectedNodes.length}`);
+
+      if (selectedNodes.length === 0) {
+        console.log(`🔗 No new ${targetRoles.join('/')} collaborators found for ${nodeName}`);
+        return;
+      }
+
+      // Get the IDs of selected nodes for link filtering
+      const selectedNodeIds = new Set(selectedNodes.map(n => n.id));
+
+      // Filter links to only include those connecting to our selected nodes or existing nodes
+      const allRelevantNodeIds = new Set([...existingNodeIds, ...selectedNodeIds]);
+      const newLinks = nodeNetworkData.links.filter(link => {
+        const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+        const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+        
+        // Only include links where both nodes are in our relevant set
+        const isRelevantLink = allRelevantNodeIds.has(sourceId) && allRelevantNodeIds.has(targetId);
+        
+        // Skip if link already exists
+        const linkId = `${sourceId}-${targetId}`;
+        const reverseLinkId = `${targetId}-${sourceId}`;
+        const linkExists = existingLinkIds.has(linkId) || existingLinkIds.has(reverseLinkId);
+        
+        return isRelevantLink && !linkExists;
+      });
 
       // Mark this node as expanded
       setExpandedNodes(prev => new Set([...prev, nodeId]));
       setIsExpandedMode(true);
 
-      // Merge the new nodes and links with existing data
-      const existingNodeIds = new Set(dataWithPictures.nodes.map(n => n.id));
-      const existingLinkIds = new Set(dataWithPictures.links.map(l => `${typeof l.source === 'string' ? l.source : l.source.id}-${typeof l.target === 'string' ? l.target : l.target.id}`));
-
-      // Filter out nodes and links that already exist
-      const newNodes = nodeNetworkData.nodes.filter(node => !existingNodeIds.has(node.id));
-      const newLinks = nodeNetworkData.links.filter(link => {
-        const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-        const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-        const linkId = `${sourceId}-${targetId}`;
-        const reverseLinkId = `${targetId}-${sourceId}`;
-        return !existingLinkIds.has(linkId) && !existingLinkIds.has(reverseLinkId);
-      });
-
       // Track what was added for this specific node expansion (use nodeId for tracking)
       setNodeExpansions(prev => {
         const newMap = new Map(prev);
         newMap.set(nodeId, {
-          addedNodes: newNodes,
+          addedNodes: selectedNodes,
           addedLinks: newLinks
         });
         return newMap;
@@ -133,7 +187,7 @@ export default function NetworkVisualizer({
 
       // Create the expanded network data
       const expandedData: NetworkData = {
-        nodes: [...dataWithPictures.nodes, ...newNodes],
+        nodes: [...dataWithPictures.nodes, ...selectedNodes],
         links: [...dataWithPictures.links, ...newLinks]
       };
 
@@ -141,7 +195,8 @@ export default function NetworkVisualizer({
       const updatedData = await ensureArtistProfilePictures(expandedData);
       setDataWithPictures(updatedData);
 
-      console.log(`🔗 Successfully expanded ${nodeName}'s network. Added ${newNodes.length} nodes and ${newLinks.length} links`);
+      const roleDescription = isClickedArtist ? 'songwriter/producer' : 'artist';
+      console.log(`🔗 Successfully expanded ${nodeName}'s network with ${selectedNodes.length} ${roleDescription} collaborators and ${newLinks.length} links`);
     } catch (error) {
       console.error(`🔗 Error expanding network for ${nodeName}:`, error);
     }
