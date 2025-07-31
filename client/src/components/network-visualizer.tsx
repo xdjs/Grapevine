@@ -68,9 +68,10 @@ export default function NetworkVisualizer({
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       
-      if (sourceId === mainArtistNode.name) {
+      // Compare with mainArtistNode.id instead of mainArtistNode.name
+      if (sourceId === mainArtistNode.id) {
         firstDegreeIds.add(targetId);
-      } else if (targetId === mainArtistNode.name) {
+      } else if (targetId === mainArtistNode.id) {
         firstDegreeIds.add(sourceId);
       }
     });
@@ -79,12 +80,12 @@ export default function NetworkVisualizer({
   };
 
   // Function to expand a specific node's network
-  const expandNodeNetwork = async (nodeName: string, nodeArtistId?: string): Promise<void> => {
-    console.log(`🔗 Starting expand network for ${nodeName} (ID: ${nodeArtistId})`);
+  const expandNodeNetwork = async (nodeId: string, nodeName: string, nodeArtistId?: string): Promise<void> => {
+    console.log(`🔗 Starting expand network for ${nodeName} (ID: ${nodeId}, Artist ID: ${nodeArtistId})`);
     
     try {
       // Check if this node is already expanded
-      if (expandedNodes.has(nodeName)) {
+      if (expandedNodes.has(nodeId)) {
         console.log(`🔗 ${nodeName} is already expanded, skipping`);
         return;
       }
@@ -103,7 +104,7 @@ export default function NetworkVisualizer({
       }
 
       // Mark this node as expanded
-      setExpandedNodes(prev => new Set([...prev, nodeName]));
+      setExpandedNodes(prev => new Set([...prev, nodeId]));
       setIsExpandedMode(true);
 
       // Merge the new nodes and links with existing data
@@ -120,10 +121,10 @@ export default function NetworkVisualizer({
         return !existingLinkIds.has(linkId) && !existingLinkIds.has(reverseLinkId);
       });
 
-      // Track what was added for this specific node expansion
+      // Track what was added for this specific node expansion (use nodeId for tracking)
       setNodeExpansions(prev => {
         const newMap = new Map(prev);
-        newMap.set(nodeName, {
+        newMap.set(nodeId, {
           addedNodes: newNodes,
           addedLinks: newLinks
         });
@@ -147,12 +148,16 @@ export default function NetworkVisualizer({
   };
 
   // Function to shrink a specific node's network
-  const shrinkNodeNetwork = (nodeName: string): void => {
-    console.log(`🔗 Starting shrink network for ${nodeName}`);
+  const shrinkNodeNetwork = (nodeId: string): void => {
+    // Find the node to get its name for logging
+    const node = dataWithPictures?.nodes.find(n => n.id === nodeId);
+    const nodeName = node?.name || nodeId;
+    
+    console.log(`🔗 Starting shrink network for ${nodeName} (ID: ${nodeId})`);
     
     try {
       // Get the expansion data for this node
-      const expansion = nodeExpansions.get(nodeName);
+      const expansion = nodeExpansions.get(nodeId);
       if (!expansion || !dataWithPictures) {
         console.warn(`🔗 No expansion data found for ${nodeName}`);
         return;
@@ -187,14 +192,14 @@ export default function NetworkVisualizer({
       // Remove this node from expanded tracking
       setExpandedNodes(prev => {
         const newSet = new Set(prev);
-        newSet.delete(nodeName);
+        newSet.delete(nodeId);
         return newSet;
       });
 
       // Remove the expansion tracking data
       setNodeExpansions(prev => {
         const newMap = new Map(prev);
-        newMap.delete(nodeName);
+        newMap.delete(nodeId);
         return newMap;
       });
 
@@ -1008,10 +1013,10 @@ export default function NetworkVisualizer({
         
         // Check if this is a first-degree collaborator (directly connected to main artist)
         const firstDegreeIds = getFirstDegreeCollaborators();
-        const isFirstDegreeCollaborator = firstDegreeIds.has(d.name);
+        const isFirstDegreeCollaborator = firstDegreeIds.has(d.id);
         
         // Check if this node has been expanded
-        const isNodeExpanded = expandedNodes.has(d.name);
+        const isNodeExpanded = expandedNodes.has(d.id);
         
         // Build expand/shrink network section for first-degree collaborators
         const expandShrinkSection = isFirstDegreeCollaborator && !isMainArtist ? 
@@ -1174,8 +1179,8 @@ export default function NetworkVisualizer({
         e.preventDefault();
         e.stopPropagation();
         
-        console.log(`🔗 Expanding network for ${d.name}`);
-        await expandNodeNetwork(d.name, d.artistId);
+        console.log(`🔗 Expanding network for ${d.name} (ID: ${d.id})`);
+        await expandNodeNetwork(d.id, d.name, d.artistId);
         hideTooltip();
       };
 
@@ -1184,8 +1189,8 @@ export default function NetworkVisualizer({
         e.preventDefault();
         e.stopPropagation();
         
-        console.log(`🔗 Shrinking network for ${d.name}`);
-        shrinkNodeNetwork(d.name);
+        console.log(`🔗 Shrinking network for ${d.name} (ID: ${d.id})`);
+        shrinkNodeNetwork(d.id);
         hideTooltip();
       };
 
