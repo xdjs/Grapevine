@@ -216,7 +216,7 @@ export default function D3NetworkRenderer({
       }
       
       if (roles.length === 1) {
-        // Single role - simple circle
+        // Single role - simple circle with role border
         group.append("circle")
           .attr("r", d.size)
           .attr("fill", "transparent")
@@ -261,6 +261,29 @@ export default function D3NetworkRenderer({
           .attr("fill", "transparent")
           .attr("stroke", "white")
           .attr("stroke-width", 2);
+      }
+
+      // Add profile picture if available
+      if (d.imageUrl) {
+        // Create a clip path for the profile picture
+        const clipId = `clip-${d.id.replace(/[^a-zA-Z0-9]/g, '')}`;
+        
+        // Add clip path definition
+        group.append("defs")
+          .append("clipPath")
+          .attr("id", clipId)
+          .append("circle")
+          .attr("r", d.size - 6); // Slightly smaller than the border
+        
+        // Add the profile picture image
+        group.append("image")
+          .attr("href", d.imageUrl)
+          .attr("x", -(d.size - 6))
+          .attr("y", -(d.size - 6))
+          .attr("width", (d.size - 6) * 2)
+          .attr("height", (d.size - 6) * 2)
+          .attr("clip-path", `url(#${clipId})`)
+          .style("pointer-events", "none");
       }
     })
       .on("click", function(event, d) {
@@ -394,7 +417,10 @@ export default function D3NetworkRenderer({
 
       nodeElements.attr("transform", (d) => `translate(${d.x!}, ${d.y!})`);
 
-      labelElements.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
+      // Position labels underneath the nodes
+      labelElements
+        .attr("x", (d) => d.x!)
+        .attr("y", (d) => d.y! + d.size + 20); // Position below the node with some spacing
     });
 
     // Cleanup function
