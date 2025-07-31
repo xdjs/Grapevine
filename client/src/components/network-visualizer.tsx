@@ -12,6 +12,7 @@ import D3NetworkRenderer from "./d3-network-renderer";
 import ArtistSelectionModal from "./artist-selection-modal";
 import CollaborationDetailsPopup from "./collaboration-details-popup";
 import NetworkTooltip from "./network-tooltip";
+import ZoomControlsEnhanced from "./zoom-controls-enhanced";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -325,7 +326,18 @@ export default function NetworkVisualizer({
             role="img" 
             aria-label="Music collaboration network visualization"
           />
-          
+
+          {/* Enhanced Zoom Controls */}
+          <ZoomControlsEnhanced
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onZoomReset={handleZoomReset}
+            position="top-right"
+            orientation="vertical"
+            theme="dark"
+            ariaLabel="Zoom controls"
+          />
+
           {/* D3 Network Renderer Component */}
           <D3NetworkRenderer
             data={finalDisplayData}
