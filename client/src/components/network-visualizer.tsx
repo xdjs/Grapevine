@@ -10,6 +10,7 @@ import D3NetworkRenderer from "./d3-network-renderer";
 import ArtistSelectionModal from "./artist-selection-modal";
 import CollaborationDetailsPopup from "./collaboration-details-popup";
 import NetworkTooltip from "./network-tooltip";
+import NetworkResetButton from "./network-reset-button";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -195,16 +196,12 @@ export default function NetworkVisualizer({
         mainArtistNode={mainArtistNode}
       />
       
-      {/* Reset button for expanded mode */}
-      {isExpandedMode && (
-        <button
-          onClick={resetToFirstDegree}
-          className="absolute top-4 right-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors duration-200 z-10"
-          style={{ fontSize: '14px', fontWeight: '500' }}
-        >
-          ← Back to {mainArtistNode?.name || 'Main Artist'}
-        </button>
-      )}
+      {/* Network Reset Button */}
+      <NetworkResetButton
+        visible={isExpandedMode}
+        mainArtistNode={mainArtistNode}
+        onReset={resetToFirstDegree}
+      />
       
       <ArtistSelectionModal
         isOpen={showArtistModal}
