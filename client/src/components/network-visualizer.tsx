@@ -4,6 +4,7 @@ import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/netw
 import ArtistSelectionModal from "./artist-selection-modal";
 import { ensureArtistProfilePictures } from "@/lib/profile-pictures";
 import CollaborationDetailsPopup from "./collaboration-details-popup";
+import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -30,6 +31,116 @@ export default function NetworkVisualizer({
   const [selectedArtistName, setSelectedArtistName] = useState("");
   const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("");
   const [dataWithPictures, setDataWithPictures] = useState<NetworkData | null>(null);
+
+  // Add missing state variables for expand network functionality
+  const [isExpandedMode, setIsExpandedMode] = useState(false);
+  const [originalNetworkData, setOriginalNetworkData] = useState<NetworkData | null>(null);
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  
+  // Add missing state variables for collaboration popup
+  const [showCollaborationPopup, setShowCollaborationPopup] = useState(false);
+  const [collaborationArtist, setCollaborationArtist] = useState("");
+  const [collaborationCollaborator, setCollaborationCollaborator] = useState("");
+  const [mainArtistName, setMainArtistName] = useState("");
+
+  // Store the main artist node for easy access
+  const mainArtistNode = dataWithPictures?.nodes.find(node => node.size === 30 && node.type === 'artist') || null;
+
+  // Store original data when first loaded
+  useEffect(() => {
+    if (data && !originalNetworkData && !isExpandedMode) {
+      setOriginalNetworkData(data);
+    }
+  }, [data, originalNetworkData, isExpandedMode]);
+
+  // Function to get first-degree collaborators (directly connected to main artist)
+  const getFirstDegreeCollaborators = (): Set<string> => {
+    if (!dataWithPictures || !mainArtistNode) return new Set();
+    
+    const firstDegreeIds = new Set<string>();
+    dataWithPictures.links.forEach(link => {
+      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+      
+      if (sourceId === mainArtistNode.name) {
+        firstDegreeIds.add(targetId);
+      } else if (targetId === mainArtistNode.name) {
+        firstDegreeIds.add(sourceId);
+      }
+    });
+    
+    return firstDegreeIds;
+  };
+
+  // Function to expand a specific node's network
+  const expandNodeNetwork = async (nodeName: string, nodeArtistId?: string): Promise<void> => {
+    console.log(`🔗 Starting expand network for ${nodeName} (ID: ${nodeArtistId})`);
+    
+    try {
+      // Check if this node is already expanded
+      if (expandedNodes.has(nodeName)) {
+        console.log(`🔗 ${nodeName} is already expanded, skipping`);
+        return;
+      }
+
+      // Fetch the network data for the specific node
+      let nodeNetworkData: NetworkData;
+      if (nodeArtistId) {
+        nodeNetworkData = await fetchNetworkDataById(nodeArtistId);
+      } else {
+        nodeNetworkData = await fetchNetworkData(nodeName);
+      }
+
+      if (!nodeNetworkData || !dataWithPictures) {
+        console.warn(`🔗 No network data found for ${nodeName}`);
+        return;
+      }
+
+      // Mark this node as expanded
+      setExpandedNodes(prev => new Set([...prev, nodeName]));
+      setIsExpandedMode(true);
+
+      // Merge the new nodes and links with existing data
+      const existingNodeIds = new Set(dataWithPictures.nodes.map(n => n.id));
+      const existingLinkIds = new Set(dataWithPictures.links.map(l => `${typeof l.source === 'string' ? l.source : l.source.id}-${typeof l.target === 'string' ? l.target : l.target.id}`));
+
+      // Filter out nodes and links that already exist
+      const newNodes = nodeNetworkData.nodes.filter(node => !existingNodeIds.has(node.id));
+      const newLinks = nodeNetworkData.links.filter(link => {
+        const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+        const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+        const linkId = `${sourceId}-${targetId}`;
+        const reverseLinkId = `${targetId}-${sourceId}`;
+        return !existingLinkIds.has(linkId) && !existingLinkIds.has(reverseLinkId);
+      });
+
+      // Create the expanded network data
+      const expandedData: NetworkData = {
+        nodes: [...dataWithPictures.nodes, ...newNodes],
+        links: [...dataWithPictures.links, ...newLinks]
+      };
+
+      // Update the data with profile pictures
+      const updatedData = await ensureArtistProfilePictures(expandedData);
+      setDataWithPictures(updatedData);
+
+      console.log(`🔗 Successfully expanded ${nodeName}'s network. Added ${newNodes.length} nodes and ${newLinks.length} links`);
+    } catch (error) {
+      console.error(`🔗 Error expanding network for ${nodeName}:`, error);
+    }
+  };
+
+  // Function to reset to first degree collaborators only
+  const resetToFirstDegree = (): void => {
+    console.log(`🔗 Resetting to first degree network`);
+    
+    if (originalNetworkData) {
+      setDataWithPictures(originalNetworkData);
+      setIsExpandedMode(false);
+      setExpandedNodes(new Set());
+      console.log(`🔗 Reset to original network with ${originalNetworkData.nodes.length} nodes`);
+    }
+  };
 
   // Ensure profile pictures are always available when data changes
   useEffect(() => {
@@ -688,30 +799,30 @@ export default function NetworkVisualizer({
         
         // Store collaboration data for the popup (for non-main artists)
         if (!isMainArtist) {
-          const mainArtistName = mainArtistNode?.name || "";
-          setMainArtistName(mainArtistName);
+          const currentMainArtistName = currentMainArtistNode?.name || "";
+          setMainArtistName(currentMainArtistName);
           
           // Check if the clicked node is directly connected to main artist (first layer)
-          const isFirstLayer = displayData.links.some(link => {
+          const isFirstLayer = dataWithPictures?.links.some(link => {
             const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
             const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-            return (sourceId === mainArtistName && targetId === d.name) || 
-                   (sourceId === d.name && targetId === mainArtistName);
+            return (sourceId === currentMainArtistName && targetId === d.name) || 
+                   (sourceId === d.name && targetId === currentMainArtistName);
           });
           
           if (isFirstLayer) {
             // First layer: clicked node is directly connected to main artist
             // Show collaboration between clicked node and main artist
-            setCollaborationArtist(mainArtistName);
+            setCollaborationArtist(currentMainArtistName);
             setCollaborationCollaborator(d.name);
           } else {
             // Second layer: clicked node is not directly connected to main artist
             // Find the first layer node that this second layer node is connected to
-            const directLink = displayData.links.find(link => {
+            const directLink = dataWithPictures?.links.find(link => {
               const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
               const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-              return (sourceId === d.name && targetId !== mainArtistName) || 
-                     (targetId === d.name && sourceId !== mainArtistName);
+              return (sourceId === d.name && targetId !== currentMainArtistName) || 
+                     (targetId === d.name && sourceId !== currentMainArtistName);
             });
             
             if (directLink) {
@@ -724,7 +835,7 @@ export default function NetworkVisualizer({
               setCollaborationCollaborator(d.name);
             } else {
               // Fallback: direct connection to main artist
-              setCollaborationArtist(mainArtistName);
+              setCollaborationArtist(currentMainArtistName);
               setCollaborationCollaborator(d.name);
             }
           }
@@ -808,8 +919,8 @@ export default function NetworkVisualizer({
         const paddingRight = isMobile ? "25px" : "30px";
         const gap = isMobile ? "6px" : "8px";
         // Check if this is the main artist
-        const mainArtistNode = displayData.nodes.find(node => node.size === 30 && node.type === 'artist');
-        const isMainArtist = d === mainArtistNode;
+        const currentMainArtistNode = dataWithPictures?.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const isMainArtist = d === currentMainArtistNode;
         
         // Check if this node is an artist (has artist role)
         const isArtist = roles.includes('artist');
@@ -909,8 +1020,8 @@ export default function NetworkVisualizer({
         e.stopPropagation();
         
         // Check if this is the main artist or a collaborator
-        const mainArtistNode = data.nodes.find(node => node.size === 30 && node.type === 'artist');
-        const isMainArtist = d === mainArtistNode;
+        const collaborationMainArtistNode = dataWithPictures?.nodes.find(node => node.size === 30 && node.type === 'artist');
+        const isMainArtist = d === collaborationMainArtistNode;
         
         if (isMainArtist) {
           // For main artist, show collaboration details with themselves (empty)
@@ -919,29 +1030,29 @@ export default function NetworkVisualizer({
           setCollaborationCollaborator(d.name);
         } else {
           // For collaborators, find the direct connection to determine the relationship
-          const mainArtistName = mainArtistNode?.name || "";
+          const collaborationMainArtistName = collaborationMainArtistNode?.name || "";
           
           // Check if the clicked node is directly connected to main artist (first layer)
-          const isFirstLayer = displayData.links.some(link => {
+          const isFirstLayer = dataWithPictures?.links.some(link => {
             const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
             const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-            return (sourceId === mainArtistName && targetId === d.name) || 
-                   (sourceId === d.name && targetId === mainArtistName);
+            return (sourceId === collaborationMainArtistName && targetId === d.name) || 
+                   (sourceId === d.name && targetId === collaborationMainArtistName);
           });
           
           if (isFirstLayer) {
             // First layer: clicked node is directly connected to main artist
             // Show collaboration between clicked node and main artist
-            setCollaborationArtist(mainArtistName);
+            setCollaborationArtist(collaborationMainArtistName);
             setCollaborationCollaborator(d.name);
           } else {
             // Second layer: clicked node is not directly connected to main artist
             // Find the first layer node that this second layer node is connected to
-            const directLink = displayData.links.find(link => {
+            const directLink = dataWithPictures?.links.find(link => {
               const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
               const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-              return (sourceId === d.name && targetId !== mainArtistName) || 
-                     (targetId === d.name && sourceId !== mainArtistName);
+              return (sourceId === d.name && targetId !== collaborationMainArtistName) || 
+                     (targetId === d.name && sourceId !== collaborationMainArtistName);
             });
             
             if (directLink) {
@@ -954,7 +1065,7 @@ export default function NetworkVisualizer({
               setCollaborationCollaborator(d.name);
             } else {
               // Fallback: direct connection to main artist
-              setCollaborationArtist(mainArtistName);
+              setCollaborationArtist(collaborationMainArtistName);
               setCollaborationCollaborator(d.name);
             }
           }
