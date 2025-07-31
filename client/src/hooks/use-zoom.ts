@@ -13,7 +13,7 @@ interface UseZoomProps {
   onZoomChange: (transform: ZoomTransform) => void;
 }
 
-interface UseZoomReturn {
+export interface UseZoomReturn {
   currentZoom: number;
   handleZoomIn: () => void;
   handleZoomOut: () => void;

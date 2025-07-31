@@ -4,6 +4,7 @@ import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/netw
 import { UseZoomReturn } from "@/hooks/use-zoom";
 import { UseNodeInteractionsReturn } from "@/hooks/use-node-interactions";
 import { UseTooltipReturn } from "@/hooks/use-tooltip";
+import { useFilterVisibility } from "@/hooks/use-filter-visibility";
 
 export interface D3NetworkRendererProps {
   /** Network data to visualize */
@@ -49,27 +50,12 @@ export default function D3NetworkRenderer({
   mainArtistNode,
 }: D3NetworkRendererProps) {
   
-  /**
-   * Helper function to check if a node should be visible based on filter state.
-   * For multi-role nodes, they are visible if ANY of their roles should be shown.
-   */
-  const isNodeVisible = (node: NetworkNode): boolean => {
-    if (node.types && node.types.length > 0) {
-      // Check if any of the node's roles should be visible
-      for (const role of node.types) {
-        if (role === "producer" && filterState.showProducers) return true;
-        if (role === "songwriter" && filterState.showSongwriters) return true;
-        if (role === "artist" && filterState.showArtists) return true;
-      }
-      return false;
-    } else {
-      // Fallback to single type if types array is not available
-      if (node.type === "producer" && !filterState.showProducers) return false;
-      if (node.type === "songwriter" && !filterState.showSongwriters) return false;
-      if (node.type === "artist" && !filterState.showArtists) return false;
-      return true;
-    }
-  };
+  // Use filter visibility management hook
+  const { isNodeVisible } = useFilterVisibility({
+    svgRef,
+    visible,
+    filterState
+  });
 
   /**
    * Find connected components for cluster positioning.
@@ -418,37 +404,6 @@ export default function D3NetworkRenderer({
       window.removeEventListener('orientationchange', handleResize);
     };
   }, [data, visible, mainArtistNode, zoom, nodeInteractions, tooltip, simulationRef, svgRef]);
-
-  // Update visibility based on filter state
-  useEffect(() => {
-    if (!svgRef.current || !visible || !data) return;
-
-    const svg = d3.select(svgRef.current);
-
-    // Hide/show nodes based on filter state
-    svg.selectAll(".node-group").style("display", function () {
-      const d = d3.select(this).datum() as NetworkNode;
-      return isNodeVisible(d) ? null : "none";
-    });
-
-    // Hide/show labels based on filter state
-    svg.selectAll(".label").style("display", function () {
-      const d = d3.select(this).datum() as NetworkNode;
-      return isNodeVisible(d) ? null : "none";
-    });
-
-    // Hide/show links based on whether both connected nodes are visible
-    svg.selectAll(".link").style("display", function () {
-      const d = d3.select(this).datum() as NetworkLink;
-      const source = d.source as NetworkNode;
-      const target = d.target as NetworkNode;
-      
-      const sourceVisible = isNodeVisible(source);
-      const targetVisible = isNodeVisible(target);
-      
-      return sourceVisible && targetVisible ? null : "none";
-    });
-  }, [filterState, visible]);
 
   // This component doesn't render JSX, it only manages D3 DOM manipulation
   return null;
