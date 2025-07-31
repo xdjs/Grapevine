@@ -37,6 +37,12 @@ export default function NetworkVisualizer({
   const [originalNetworkData, setOriginalNetworkData] = useState<NetworkData | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   
+  // Track specific additions per node expansion for shrinking
+  const [nodeExpansions, setNodeExpansions] = useState<Map<string, {
+    addedNodes: NetworkNode[];
+    addedLinks: NetworkLink[];
+  }>>(new Map());
+  
   // Add missing state variables for collaboration popup
   const [showCollaborationPopup, setShowCollaborationPopup] = useState(false);
   const [collaborationArtist, setCollaborationArtist] = useState("");
@@ -114,6 +120,16 @@ export default function NetworkVisualizer({
         return !existingLinkIds.has(linkId) && !existingLinkIds.has(reverseLinkId);
       });
 
+      // Track what was added for this specific node expansion
+      setNodeExpansions(prev => {
+        const newMap = new Map(prev);
+        newMap.set(nodeName, {
+          addedNodes: newNodes,
+          addedLinks: newLinks
+        });
+        return newMap;
+      });
+
       // Create the expanded network data
       const expandedData: NetworkData = {
         nodes: [...dataWithPictures.nodes, ...newNodes],
@@ -130,6 +146,70 @@ export default function NetworkVisualizer({
     }
   };
 
+  // Function to shrink a specific node's network
+  const shrinkNodeNetwork = (nodeName: string): void => {
+    console.log(`🔗 Starting shrink network for ${nodeName}`);
+    
+    try {
+      // Get the expansion data for this node
+      const expansion = nodeExpansions.get(nodeName);
+      if (!expansion || !dataWithPictures) {
+        console.warn(`🔗 No expansion data found for ${nodeName}`);
+        return;
+      }
+
+      // Get IDs of nodes and links to remove
+      const nodeIdsToRemove = new Set(expansion.addedNodes.map(n => n.id));
+      const linkIdsToRemove = new Set(expansion.addedLinks.map(l => {
+        const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+        const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+        return `${sourceId}-${targetId}`;
+      }));
+
+      // Filter out the nodes and links that were added by this expansion
+      const filteredNodes = dataWithPictures.nodes.filter(node => !nodeIdsToRemove.has(node.id));
+      const filteredLinks = dataWithPictures.links.filter(link => {
+        const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+        const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+        const linkId = `${sourceId}-${targetId}`;
+        const reverseLinkId = `${targetId}-${sourceId}`;
+        return !linkIdsToRemove.has(linkId) && !linkIdsToRemove.has(reverseLinkId);
+      });
+
+      // Update the network data
+      const shrunkData: NetworkData = {
+        nodes: filteredNodes,
+        links: filteredLinks
+      };
+
+      setDataWithPictures(shrunkData);
+
+      // Remove this node from expanded tracking
+      setExpandedNodes(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(nodeName);
+        return newSet;
+      });
+
+      // Remove the expansion tracking data
+      setNodeExpansions(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(nodeName);
+        return newMap;
+      });
+
+      // Check if any nodes are still expanded
+      const stillExpanded = expandedNodes.size > 1; // Will be > 1 because we haven't updated expandedNodes yet
+      if (!stillExpanded) {
+        setIsExpandedMode(false);
+      }
+
+      console.log(`🔗 Successfully shrunk ${nodeName}'s network. Removed ${expansion.addedNodes.length} nodes and ${expansion.addedLinks.length} links`);
+    } catch (error) {
+      console.error(`🔗 Error shrinking network for ${nodeName}:`, error);
+    }
+  };
+
   // Function to reset to first degree collaborators only
   const resetToFirstDegree = (): void => {
     console.log(`🔗 Resetting to first degree network`);
@@ -138,6 +218,7 @@ export default function NetworkVisualizer({
       setDataWithPictures(originalNetworkData);
       setIsExpandedMode(false);
       setExpandedNodes(new Set());
+      setNodeExpansions(new Map());
       console.log(`🔗 Reset to original network with ${originalNetworkData.nodes.length} nodes`);
     }
   };
@@ -929,14 +1010,27 @@ export default function NetworkVisualizer({
         const firstDegreeIds = getFirstDegreeCollaborators();
         const isFirstDegreeCollaborator = firstDegreeIds.has(d.name);
         
-        // Build expand network section for first-degree collaborators
-        const expandSection = isFirstDegreeCollaborator && !isMainArtist ? 
-          '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="expand-action">' +
-            '<div class="expand-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer; pointer-events: auto; display:flex; align-items:center; justify-content:center; background:#4CAF50;">' +
-              '<span style="color:white; font-size:16px; font-weight:bold;">+</span>' +
-            '</div>' +
-            '<a href="#" class="popup-action expand-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">Expand ' + d.name + '\'s network</a>' +
-          '</div>' : '';
+        // Check if this node has been expanded
+        const isNodeExpanded = expandedNodes.has(d.name);
+        
+        // Build expand/shrink network section for first-degree collaborators
+        const expandShrinkSection = isFirstDegreeCollaborator && !isMainArtist ? 
+          (isNodeExpanded ? 
+            // Show shrink button if node is expanded
+            '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="shrink-action">' +
+              '<div class="shrink-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer; pointer-events: auto; display:flex; align-items:center; justify-content:center; background:#f44336;">' +
+                '<span style="color:white; font-size:16px; font-weight:bold;">−</span>' +
+              '</div>' +
+              '<a href="#" class="popup-action shrink-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">Shrink ' + d.name + '\'s network</a>' +
+            '</div>' :
+            // Show expand button if node is not expanded
+            '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="expand-action">' +
+              '<div class="expand-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer; pointer-events: auto; display:flex; align-items:center; justify-content:center; background:#4CAF50;">' +
+                '<span style="color:white; font-size:16px; font-weight:bold;">+</span>' +
+              '</div>' +
+              '<a href="#" class="popup-action expand-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">Expand ' + d.name + '\'s network</a>' +
+            '</div>'
+          ) : '';
         
         // Build collaboration details section conditionally
         const collaborationSection = isMainArtist ? '' : 
@@ -962,7 +1056,7 @@ export default function NetworkVisualizer({
               '<img src="' + networkIconPath + '" alt="Network" class="network-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer;" />' +
               '<a href="#" class="popup-action network-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">' + d.name + '\'s network</a>' +
             '</div>' +
-            expandSection +
+            expandShrinkSection +
             musicNerdSection +
             collaborationSection +
           '</div>' +
@@ -1085,12 +1179,28 @@ export default function NetworkVisualizer({
         hideTooltip();
       };
 
+      // Shrink network handler
+      const shrinkHandler = (e: any) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log(`🔗 Shrinking network for ${d.name}`);
+        shrinkNodeNetwork(d.name);
+        hideTooltip();
+      };
+
       // Attach event handlers
       tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
       
-      // Only attach expand handler if expand section exists (first-degree collaborators only)
+      // Attach expand/shrink handlers based on node state (first-degree collaborators only)
       if (isFirstDegreeCollaborator && !isMainArtist) {
-        tooltip.selectAll(".expand-link, .expand-icon, .expand-action").on("click", expandHandler);
+        if (isNodeExpanded) {
+          // Attach shrink handler if node is expanded
+          tooltip.selectAll(".shrink-link, .shrink-icon, .shrink-action").on("click", shrinkHandler);
+        } else {
+          // Attach expand handler if node is not expanded
+          tooltip.selectAll(".expand-link, .expand-icon, .expand-action").on("click", expandHandler);
+        }
       }
       
       // Only attach Music Nerd profile handler if profile section exists (only for artists)
