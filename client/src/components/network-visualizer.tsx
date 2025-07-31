@@ -52,10 +52,67 @@ export default function NetworkVisualizer({
   // Store the main artist node for easy access
   const mainArtistNode = dataWithPictures?.nodes.find(node => node.size === 30 && node.type === 'artist') || null;
 
-  // Store original data when first loaded
+  // Function to filter network data to only show first-degree collaborators
+  const filterToFirstDegreeOnly = (networkData: NetworkData): NetworkData => {
+    if (!networkData.nodes.length) return networkData;
+    
+    // Find the main artist (largest artist node)
+    const mainArtist = networkData.nodes
+      .filter(node => node.type === 'artist' || (node.types && node.types.includes('artist')))
+      .reduce((largest, current) => 
+        !largest || current.size > largest.size ? current : largest, 
+        null as NetworkNode | null
+      );
+    
+    if (!mainArtist) return networkData;
+    
+    console.log(`🔗 Filtering network to show only first-degree collaborators of ${mainArtist.name}`);
+    
+    // Get all nodes directly connected to the main artist
+    const firstDegreeNodeIds = new Set<string>();
+    firstDegreeNodeIds.add(mainArtist.id); // Always include the main artist
+    
+    networkData.links.forEach(link => {
+      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+      
+      if (sourceId === mainArtist.id) {
+        firstDegreeNodeIds.add(targetId);
+      } else if (targetId === mainArtist.id) {
+        firstDegreeNodeIds.add(sourceId);
+      }
+    });
+    
+    // Filter nodes to only include first-degree collaborators
+    const filteredNodes = networkData.nodes.filter(node => firstDegreeNodeIds.has(node.id));
+    
+    // Filter links to only include those between first-degree nodes
+    const filteredLinks = networkData.links.filter(link => {
+      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+      return firstDegreeNodeIds.has(sourceId) && firstDegreeNodeIds.has(targetId);
+    });
+    
+    const originalNodeCount = networkData.nodes.length;
+    const filteredNodeCount = filteredNodes.length;
+    const originalLinkCount = networkData.links.length;
+    const filteredLinkCount = filteredLinks.length;
+    
+    console.log(`🔗 Filtered network: ${originalNodeCount} → ${filteredNodeCount} nodes, ${originalLinkCount} → ${filteredLinkCount} links`);
+    
+    return {
+      nodes: filteredNodes,
+      links: filteredLinks
+    };
+  };
+
+  // Store original data when first loaded (filtered to first-degree only)
   useEffect(() => {
     if (data && !originalNetworkData && !isExpandedMode) {
-      setOriginalNetworkData(data);
+      // Store the filtered first-degree data as the "original" state
+      const firstDegreeData = filterToFirstDegreeOnly(data);
+      setOriginalNetworkData(firstDegreeData);
+      console.log(`🔗 Stored original first-degree network with ${firstDegreeData.nodes.length} nodes`);
     }
   }, [data, originalNetworkData, isExpandedMode]);
 
@@ -271,15 +328,26 @@ export default function NetworkVisualizer({
   };
 
   // Function to reset to first degree collaborators only
-  const resetToFirstDegree = (): void => {
+  const resetToFirstDegree = async (): Promise<void> => {
     console.log(`🔗 Resetting to first degree network`);
     
     if (originalNetworkData) {
-      setDataWithPictures(originalNetworkData);
-      setIsExpandedMode(false);
-      setExpandedNodes(new Set());
-      setNodeExpansions(new Map());
-      console.log(`🔗 Reset to original network with ${originalNetworkData.nodes.length} nodes`);
+      try {
+        // Ensure profile pictures are available for the reset data
+        const updatedOriginalData = await ensureArtistProfilePictures(originalNetworkData);
+        setDataWithPictures(updatedOriginalData);
+        setIsExpandedMode(false);
+        setExpandedNodes(new Set());
+        setNodeExpansions(new Map());
+        console.log(`🔗 Reset to original first-degree network with ${originalNetworkData.nodes.length} nodes`);
+      } catch (error) {
+        console.error(`🔗 Error resetting network:`, error);
+        // Fallback to original data without profile pictures
+        setDataWithPictures(originalNetworkData);
+        setIsExpandedMode(false);
+        setExpandedNodes(new Set());
+        setNodeExpansions(new Map());
+      }
     }
   };
 
@@ -290,21 +358,30 @@ export default function NetworkVisualizer({
       return;
     }
 
-    console.log(`🖼️ [NetworkVisualizer] Ensuring profile pictures for network data...`);
+    console.log(`🖼️ [NetworkVisualizer] Processing network data...`);
     
-    const ensurePictures = async () => {
+    const processData = async () => {
       try {
-        const updatedData = await ensureArtistProfilePictures(data);
+        // First filter to only show first-degree collaborators (unless in expanded mode)
+        let processedData = data;
+        if (!isExpandedMode) {
+          processedData = filterToFirstDegreeOnly(data);
+        }
+        
+        // Then ensure profile pictures are available
+        const updatedData = await ensureArtistProfilePictures(processedData);
         setDataWithPictures(updatedData);
-        console.log(`🖼️ [NetworkVisualizer] Profile pictures ensured and ready for display`);
+        console.log(`🖼️ [NetworkVisualizer] Network data processed and profile pictures ensured`);
       } catch (error) {
-        console.error(`🖼️ [NetworkVisualizer] Error ensuring profile pictures:`, error);
-        setDataWithPictures(data); // Use original data if profile picture fetching fails
+        console.error(`🖼️ [NetworkVisualizer] Error processing network data:`, error);
+        // Use filtered data without profile pictures if profile picture fetching fails
+        const fallbackData = isExpandedMode ? data : filterToFirstDegreeOnly(data);
+        setDataWithPictures(fallbackData);
       }
     };
 
-    ensurePictures();
-  }, [data, visible]);
+    processData();
+  }, [data, visible, isExpandedMode]);
 
   // Fetch configuration on component mount
   useEffect(() => {
@@ -1719,7 +1796,7 @@ export default function NetworkVisualizer({
       {/* Reset button for expanded mode */}
       {isExpandedMode && (
         <button
-          onClick={resetToFirstDegree}
+          onClick={() => resetToFirstDegree()}
           className="absolute top-4 right-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors duration-200 z-10"
           style={{ fontSize: '14px', fontWeight: '500' }}
         >
