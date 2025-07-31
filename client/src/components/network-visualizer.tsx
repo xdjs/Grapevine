@@ -13,6 +13,7 @@ import ArtistSelectionModal from "./artist-selection-modal";
 import CollaborationDetailsPopup from "./collaboration-details-popup";
 import NetworkTooltip from "./network-tooltip";
 import ZoomControlsEnhanced from "./zoom-controls-enhanced";
+import NetworkResetButton from "./network-reset-button";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
