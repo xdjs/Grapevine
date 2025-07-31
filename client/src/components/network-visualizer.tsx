@@ -188,25 +188,47 @@ export default function NetworkVisualizer({
 
       // Filter new nodes by target roles and exclude duplicates
       const candidateNodes = nodeNetworkData.nodes.filter(node => {
-        // Skip if node already exists
+        // Skip if node already exists in our current network
         if (existingNodeIds.has(node.id)) return false;
+        
+        // Skip the clicked node itself (it might be included in fetched data)
+        if (node.id === nodeId) return false;
         
         // Check if node has any of the target roles
         const nodeRoles = node.types || [node.type];
         return nodeRoles.some(role => targetRoles.includes(role));
       });
 
+      // Further filter to only include nodes that are directly connected to the clicked node
+      // This prevents adding nodes that might appear to expand other existing nodes
+      const directlyConnectedCandidates = candidateNodes.filter(candidate => {
+        return nodeNetworkData.links.some(link => {
+          const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+          const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+          
+          // Check if this candidate is directly connected to the clicked node
+          return (sourceId === nodeId && targetId === candidate.id) || 
+                 (targetId === nodeId && sourceId === candidate.id);
+        });
+      });
+
+      console.log(`🔗 Filtered ${candidateNodes.length} candidates to ${directlyConnectedCandidates.length} directly connected to ${nodeName}`);
+
       // Limit to 3 nodes, prioritizing by size (larger nodes first, likely more important collaborators)
-      const selectedNodes = candidateNodes
+      const selectedNodes = directlyConnectedCandidates
         .sort((a, b) => b.size - a.size)
         .slice(0, 3);
 
-      console.log(`🔗 Found ${candidateNodes.length} candidate nodes, selected ${selectedNodes.length}`);
+      console.log(`🔗 Found ${candidateNodes.length} role-filtered candidates, ${directlyConnectedCandidates.length} directly connected, selected ${selectedNodes.length} for ${nodeName}`);
 
       if (selectedNodes.length === 0) {
         console.log(`🔗 No new ${targetRoles.join('/')} collaborators found for ${nodeName}`);
         return;
       }
+
+      // Log which specific nodes are being added
+      const selectedNodeNames = selectedNodes.map(n => n.name).join(', ');
+      console.log(`🔗 Adding collaborators to ${nodeName}: ${selectedNodeNames}`);
 
       // Get the IDs of selected nodes for link filtering
       const selectedNodeIds = new Set(selectedNodes.map(n => n.id));
