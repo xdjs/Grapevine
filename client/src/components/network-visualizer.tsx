@@ -375,37 +375,34 @@ export default function NetworkVisualizer({
     }
   };
 
-  // Ensure profile pictures are always available when data changes
+  // Ensure profile pictures are always available when data changes (but not when expanded mode changes)
   useEffect(() => {
     if (!data || !visible) {
       setDataWithPictures(null);
       return;
     }
 
-    console.log(`🖼️ [NetworkVisualizer] Processing network data...`);
+    console.log(`🖼️ [NetworkVisualizer] Processing initial network data...`);
     
     const processData = async () => {
       try {
-        // First filter to only show first-degree collaborators (unless in expanded mode)
-        let processedData = data;
-        if (!isExpandedMode) {
-          processedData = filterToFirstDegreeOnly(data);
-        }
+        // Only filter to first-degree on initial load, not when expanding
+        const processedData = filterToFirstDegreeOnly(data);
         
         // Then ensure profile pictures are available
         const updatedData = await ensureArtistProfilePictures(processedData);
         setDataWithPictures(updatedData);
-        console.log(`🖼️ [NetworkVisualizer] Network data processed and profile pictures ensured`);
+        console.log(`🖼️ [NetworkVisualizer] Initial network data processed and profile pictures ensured`);
       } catch (error) {
         console.error(`🖼️ [NetworkVisualizer] Error processing network data:`, error);
         // Use filtered data without profile pictures if profile picture fetching fails
-        const fallbackData = isExpandedMode ? data : filterToFirstDegreeOnly(data);
+        const fallbackData = filterToFirstDegreeOnly(data);
         setDataWithPictures(fallbackData);
       }
     };
 
     processData();
-  }, [data, visible, isExpandedMode]);
+  }, [data, visible]); // Removed isExpandedMode dependency
 
   // Fetch configuration on component mount
   useEffect(() => {
