@@ -154,16 +154,51 @@ export default function NetworkVisualizer({
         return;
       }
 
-      // Fetch the network data for the specific node
-      let nodeNetworkData: NetworkData;
-      if (nodeArtistId) {
-        nodeNetworkData = await fetchNetworkDataById(nodeArtistId);
-      } else {
-        nodeNetworkData = await fetchNetworkData(nodeName);
+      // For producers/songwriters, first check if they exist as a main artist
+      let nodeNetworkData: NetworkData | null = null;
+      
+      try {
+        if (nodeArtistId) {
+          nodeNetworkData = await fetchNetworkDataById(nodeArtistId);
+        } else {
+          // First check if this collaborator exists as a main artist
+          console.log(`🔍 Checking if ${nodeName} exists as a main artist...`);
+          
+          try {
+            const response = await fetch(`/api/artist-options/${encodeURIComponent(nodeName)}`);
+            const data = await response.json();
+            
+            if (data.options && data.options.length > 0) {
+              // Found as main artist, try to fetch their network
+              console.log(`✅ ${nodeName} found as main artist, fetching network...`);
+              nodeNetworkData = await fetchNetworkData(nodeName);
+            } else {
+              // Not found as main artist
+              console.log(`❌ ${nodeName} not found as main artist in database`);
+              alert(`${nodeName}'s full network is not available. Only main artists have expandable networks. ${nodeName} appears as a collaborator but doesn't have their own network data in our database.`);
+              return;
+            }
+          } catch (checkError) {
+            console.warn(`🔍 Error checking if ${nodeName} exists as main artist:`, checkError);
+            // Fallback: try to fetch network anyway
+            nodeNetworkData = await fetchNetworkData(nodeName);
+          }
+        }
+      } catch (fetchError) {
+        console.error(`🔗 Error fetching network data for ${nodeName}:`, fetchError);
+        
+        // Show user-friendly message for 404 errors
+        if (fetchError instanceof Error && fetchError.message.includes('404')) {
+          alert(`${nodeName}'s full network is not available. Only main artists have expandable networks. ${nodeName} appears as a collaborator but doesn't have their own network data in our database.`);
+        } else {
+          alert(`Failed to load ${nodeName}'s network. Please try again later.`);
+        }
+        return;
       }
 
       if (!nodeNetworkData) {
         console.warn(`🔗 No network data found for ${nodeName}`);
+        alert(`${nodeName}'s network data is not available at this time.`);
         return;
       }
 
