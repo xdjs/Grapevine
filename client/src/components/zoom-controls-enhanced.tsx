@@ -278,87 +278,97 @@ export const ZoomControlsEnhanced = memo<ZoomControlsEnhancedProps>(({
   return (
     <div
       ref={containerRef}
-      className={containerClass}
-      style={{ borderColor: '#b427b4' }}
+      className={cn(
+        'fixed flex flex-col gap-2 opacity-100 transition-opacity duration-500 z-30',
+        positionClasses[position],
+        containerClassName,
+        className
+      )}
       role="toolbar"
       aria-label={ariaLabel}
       aria-disabled={disabled}
       onKeyDown={handleContainerKeyDown}
       tabIndex={disabled ? -1 : 0}
     >
-      {/* Zoom In Button */}
-      <Button
-        {...buttonProps}
-        onClick={onZoomIn} // <-- direct click handler
-        onMouseDown={handleZoomInStart}
-        onMouseUp={stopContinuousZoom}
-        onMouseLeave={stopContinuousZoom}
-        onTouchStart={handleTouchStart(handleZoomInStart)}
-        onTouchEnd={handleTouchEnd}
-        aria-label="Zoom in (keyboard shortcut: +)"
-        aria-keyshortcuts={enableKeyboardShortcuts ? keyboardShortcuts.zoomIn || '+' : undefined}
-        title={`Zoom In${enableKeyboardShortcuts ? ` (${keyboardShortcuts.zoomIn || '+'})` : ''} - Hold to continuous zoom`}
-        onFocus={() => setFocusedButton('zoom-in')}
-        onBlur={() => setFocusedButton(null)}
-        data-testid="zoom-in-button"
+      {/* Zoom Controls Container */}
+      <div 
+        className="flex flex-col gap-1 sm:gap-2 border-2 rounded-xl p-2"
+        style={{ borderColor: '#b427b4' }}
       >
-        <Plus className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
-      </Button>
-
-      {/* Zoom Out Button */}
-      <Button
-        {...buttonProps}
-        onClick={onZoomOut} // <-- direct click handler
-        onMouseDown={handleZoomOutStart}
-        onMouseUp={stopContinuousZoom}
-        onMouseLeave={stopContinuousZoom}
-        onTouchStart={handleTouchStart(handleZoomOutStart)}
-        onTouchEnd={handleTouchEnd}
-        aria-label="Zoom out (keyboard shortcut: -)"
-        aria-keyshortcuts={enableKeyboardShortcuts ? keyboardShortcuts.zoomOut || '-' : undefined}
-        title={`Zoom Out${enableKeyboardShortcuts ? ` (${keyboardShortcuts.zoomOut || '-'})` : ''} - Hold to continuous zoom`}
-        onFocus={() => setFocusedButton('zoom-out')}
-        onBlur={() => setFocusedButton(null)}
-        data-testid="zoom-out-button"
-      >
-        <Minus className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
-      </Button>
-
-      {/* Zoom Reset Button */}
-      <Button
-        {...buttonProps}
-        onClick={handleZoomReset}
-        aria-label="Reset zoom to default (keyboard shortcut: 0)"
-        aria-keyshortcuts={enableKeyboardShortcuts ? keyboardShortcuts.zoomReset || '0' : undefined}
-        title={`Reset Zoom${enableKeyboardShortcuts ? ` (${keyboardShortcuts.zoomReset || '0'})` : ''}`}
-        onFocus={() => setFocusedButton('zoom-reset')}
-        onBlur={() => setFocusedButton(null)}
-        data-testid="zoom-reset-button"
-      >
-        <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
-      </Button>
-
-      {/* Separator */}
-      {showClearButton && onClearAll && (
-        <div className="w-full h-px bg-gray-700 my-1" role="separator" />
-      )}
-
-      {/* Clear All Button */}
-      {showClearButton && onClearAll && (
+        {/* Zoom In Button */}
         <Button
           {...buttonProps}
-          onClick={handleClearAll}
-          variant="destructive"
-          className={cn(buttonClass, 'bg-red-900/90 hover:bg-red-800 border-red-700')}
-          aria-label="Clear all data (keyboard shortcut: Escape)"
-          aria-keyshortcuts={enableKeyboardShortcuts ? keyboardShortcuts.clearAll || 'Escape' : undefined}
-          title={`Clear All${enableKeyboardShortcuts ? ` (${keyboardShortcuts.clearAll || 'Escape'})` : ''}`}
-          onFocus={() => setFocusedButton('clear-all')}
+          onClick={onZoomIn} // <-- direct click handler
+          onMouseDown={handleZoomInStart}
+          onMouseUp={stopContinuousZoom}
+          onMouseLeave={stopContinuousZoom}
+          onTouchStart={handleTouchStart(handleZoomInStart)}
+          onTouchEnd={handleTouchEnd}
+          aria-label="Zoom in (keyboard shortcut: +)"
+          aria-keyshortcuts={enableKeyboardShortcuts ? keyboardShortcuts.zoomIn || '+' : undefined}
+          title={`Zoom In${enableKeyboardShortcuts ? ` (${keyboardShortcuts.zoomIn || '+'})` : ''} - Hold to continuous zoom`}
+          onFocus={() => setFocusedButton('zoom-in')}
           onBlur={() => setFocusedButton(null)}
-          data-testid="clear-all-button"
+          data-testid="zoom-in-button"
         >
-          <X className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
         </Button>
+
+        {/* Zoom Out Button */}
+        <Button
+          {...buttonProps}
+          onClick={onZoomOut} // <-- direct click handler
+          onMouseDown={handleZoomOutStart}
+          onMouseUp={stopContinuousZoom}
+          onMouseLeave={stopContinuousZoom}
+          onTouchStart={handleTouchStart(handleZoomOutStart)}
+          onTouchEnd={handleTouchEnd}
+          aria-label="Zoom out (keyboard shortcut: -)"
+          aria-keyshortcuts={enableKeyboardShortcuts ? keyboardShortcuts.zoomOut || '-' : undefined}
+          title={`Zoom Out${enableKeyboardShortcuts ? ` (${keyboardShortcuts.zoomOut || '-'})` : ''} - Hold to continuous zoom`}
+          onFocus={() => setFocusedButton('zoom-out')}
+          onBlur={() => setFocusedButton(null)}
+          data-testid="zoom-out-button"
+        >
+          <Minus className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
+        </Button>
+
+        {/* Zoom Reset Button */}
+        <Button
+          {...buttonProps}
+          onClick={handleZoomReset}
+          aria-label="Reset zoom to default (keyboard shortcut: 0)"
+          aria-keyshortcuts={enableKeyboardShortcuts ? keyboardShortcuts.zoomReset || '0' : undefined}
+          title={`Reset Zoom${enableKeyboardShortcuts ? ` (${keyboardShortcuts.zoomReset || '0'})` : ''}`}
+          onFocus={() => setFocusedButton('zoom-reset')}
+          onBlur={() => setFocusedButton(null)}
+          data-testid="zoom-reset-button"
+        >
+          <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
+        </Button>
+      </div>
+
+      {/* Clear All Button Container */}
+      {showClearButton && onClearAll && (
+        <div 
+          className="border-2 rounded-xl p-2"
+          style={{ borderColor: '#b427b4' }}
+        >
+          <Button
+            {...buttonProps}
+            onClick={handleClearAll}
+            variant="destructive"
+            className={cn(buttonClass, 'bg-red-900/90 hover:bg-red-800 border-red-700')}
+            aria-label="Clear all data (keyboard shortcut: Escape)"
+            aria-keyshortcuts={enableKeyboardShortcuts ? keyboardShortcuts.clearAll || 'Escape' : undefined}
+            title={`Clear All${enableKeyboardShortcuts ? ` (${keyboardShortcuts.clearAll || 'Escape'})` : ''}`}
+            onFocus={() => setFocusedButton('clear-all')}
+            onBlur={() => setFocusedButton(null)}
+            data-testid="clear-all-button"
+          >
+            <X className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
+          </Button>
+        </div>
       )}
     </div>
   );

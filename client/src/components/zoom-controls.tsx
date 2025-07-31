@@ -96,7 +96,6 @@ export default function ZoomControls({
       >
         <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
       </Button>
-      <div className="w-full h-px bg-gray-700 my-1"></div>
       <Button
         onClick={onClearAll}
         size="icon"
