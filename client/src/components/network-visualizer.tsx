@@ -6,6 +6,7 @@ import { useZoom } from "@/hooks/use-zoom";
 import { useTouchGestures } from "@/hooks/use-touch-gestures";
 import { useTooltip } from "@/hooks/use-tooltip";
 import { useNodeInteractions } from "@/hooks/use-node-interactions";
+import { useModals } from "@/hooks/use-modals";
 import D3NetworkRenderer from "./d3-network-renderer";
 import ArtistSelectionModal from "./artist-selection-modal";
 import CollaborationDetailsPopup from "./collaboration-details-popup";
@@ -30,11 +31,15 @@ export default function NetworkVisualizer({
 }: NetworkVisualizerProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
-  const [showArtistModal, setShowArtistModal] = useState(false);
-  const [selectedArtistName, setSelectedArtistName] = useState("");
   
   // Configuration management hook
   const { musicNerdBaseUrl, getFreshConfig } = useConfig();
+  
+  // Modal management hook
+  const modals = useModals({
+    musicNerdBaseUrl,
+    onArtistSelection: onArtistNodeClick,
+  });
   
   // Zoom management hook
   const zoom = useZoom({ svgRef, visible, onZoomChange });
@@ -62,12 +67,6 @@ export default function NetworkVisualizer({
       applyPinchZoom(newZoom, focalX, focalY);
     }
   });
-  
-  // Collaboration details popup state
-  const [showCollaborationPopup, setShowCollaborationPopup] = useState(false);
-  const [collaborationArtist, setCollaborationArtist] = useState("");
-  const [collaborationCollaborator, setCollaborationCollaborator] = useState("");
-  const [mainArtistName, setMainArtistName] = useState("");
 
   // Use network data management hook
   const {
@@ -90,16 +89,8 @@ export default function NetworkVisualizer({
     networkDataHook: { finalDisplayData, expandNodeNetwork },
     callbacks: {
       onArtistNodeClick,
-      onShowArtistModal: (artistName: string) => {
-        setSelectedArtistName(artistName);
-        setShowArtistModal(true);
-      },
-      onShowCollaborationPopup: (data: { artist: string; collaborator: string; mainArtistName: string }) => {
-        setCollaborationArtist(data.artist);
-        setCollaborationCollaborator(data.collaborator);
-        setMainArtistName(data.mainArtistName);
-        setShowCollaborationPopup(true);
-      },
+      onShowArtistModal: modals.openArtistModal,
+      onShowCollaborationPopup: modals.openCollaborationPopup,
     },
   });
 
@@ -118,27 +109,6 @@ export default function NetworkVisualizer({
       console.log(`📊 Displaying first-degree network with ${visibleNodes.length} nodes and ${visibleLinks.length} links`);
     }
   }, [fullNetworkData, visibleNodes, visibleLinks]);
-
-  const handleArtistSelection = (artistId: string) => {
-    // Open the specific artist page with the selected ID
-    if (!musicNerdBaseUrl) {
-      console.error('🔧 [Config] MusicNerd base URL not available');
-      return;
-    }
-
-    const musicNerdUrl = `${musicNerdBaseUrl}/artist/${artistId}`;
-
-    console.log(`🎵 Opening selected artist page: ${musicNerdUrl}`);
-    
-    const link = document.createElement('a');
-    link.href = musicNerdUrl;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   // Handle zoom controls with direct function calls
   useEffect(() => {
@@ -207,18 +177,18 @@ export default function NetworkVisualizer({
       )}
       
       <ArtistSelectionModal
-        isOpen={showArtistModal}
-        onClose={() => setShowArtistModal(false)}
-        artistName={selectedArtistName}
-        onSelectArtist={handleArtistSelection}
+        isOpen={modals.showArtistModal}
+        onClose={modals.closeArtistModal}
+        artistName={modals.selectedArtistName}
+        onSelectArtist={modals.handleArtistSelection}
       />
       
       <CollaborationDetailsPopup
-        isOpen={showCollaborationPopup}
-        onClose={() => setShowCollaborationPopup(false)}
-        artistName={collaborationArtist}
-        collaboratorName={collaborationCollaborator}
-        mainArtistName={mainArtistName}
+        isOpen={modals.showCollaborationPopup}
+        onClose={modals.closeCollaborationPopup}
+        artistName={modals.collaborationArtist}
+        collaboratorName={modals.collaborationCollaborator}
+        mainArtistName={modals.mainArtistName}
       />
       
       {/* Network Tooltip - rendered outside D3 SVG but positioned absolutely */}
