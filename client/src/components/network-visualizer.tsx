@@ -26,6 +26,10 @@ export default function NetworkVisualizer({
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  
+  // Track if we have expanded data to prevent unwanted resets
+  const hasExpandedDataRef = useRef<boolean>(false);
+  
   const [currentZoom, setCurrentZoom] = useState(1);
   const [showArtistModal, setShowArtistModal] = useState(false);
   const [selectedArtistName, setSelectedArtistName] = useState("");
@@ -323,6 +327,7 @@ export default function NetworkVisualizer({
       // Mark this node as expanded
       setExpandedNodes(prev => new Set([...prev, nodeId]));
       setIsExpandedMode(true);
+      hasExpandedDataRef.current = true;
 
       // Track what was added for this specific node expansion (use nodeId for tracking)
       setNodeExpansions(prev => {
@@ -411,6 +416,7 @@ export default function NetworkVisualizer({
       const stillExpanded = expandedNodes.size > 1; // Will be > 1 because we haven't updated expandedNodes yet
       if (!stillExpanded) {
         setIsExpandedMode(false);
+        hasExpandedDataRef.current = false;
       }
 
       console.log(`🔗 Successfully shrunk ${nodeName}'s network. Removed ${expansion.addedNodes.length} nodes and ${expansion.addedLinks.length} links`);
@@ -431,6 +437,7 @@ export default function NetworkVisualizer({
         setIsExpandedMode(false);
         setExpandedNodes(new Set());
         setNodeExpansions(new Map());
+        hasExpandedDataRef.current = false;
         console.log(`🔗 Reset to original first-degree network with ${originalNetworkData.nodes.length} nodes`);
       } catch (error) {
         console.error(`🔗 Error resetting network:`, error);
@@ -439,14 +446,21 @@ export default function NetworkVisualizer({
         setIsExpandedMode(false);
         setExpandedNodes(new Set());
         setNodeExpansions(new Map());
+        hasExpandedDataRef.current = false;
       }
     }
   };
 
-  // Ensure profile pictures are always available when data changes (but not when expanded mode changes)
+  // Only process initial data when the original data prop changes (not on visibility changes)
   useEffect(() => {
-    if (!data || !visible) {
+    if (!data) {
       setDataWithPictures(null);
+      return;
+    }
+
+    // Only process if we don't already have expanded data or if this is genuinely new data
+    if ((isExpandedMode || hasExpandedDataRef.current) && dataWithPictures) {
+      console.log(`🖼️ [NetworkVisualizer] Skipping data processing - expanded mode active with existing data`);
       return;
     }
 
@@ -470,7 +484,17 @@ export default function NetworkVisualizer({
     };
 
     processData();
-  }, [data, visible]); // Removed isExpandedMode dependency
+  }, [data]); // Only depend on data, not visibility
+
+  // Separate effect to handle visibility without affecting data
+  useEffect(() => {
+    if (!visible) {
+      // Don't clear data when becoming invisible - just hide the visualization
+      console.log(`🖼️ [NetworkVisualizer] Component hidden, preserving expanded network data`);
+    } else if (dataWithPictures) {
+      console.log(`🖼️ [NetworkVisualizer] Component visible, using preserved network data with ${dataWithPictures.nodes.length} nodes`);
+    }
+  }, [visible, dataWithPictures]);
 
   // Fetch configuration on component mount
   useEffect(() => {
