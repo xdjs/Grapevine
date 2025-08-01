@@ -61,7 +61,7 @@ export default function ZoomControls({
   };
 
   return (
-    <div className="fixed top-16 sm:top-20 right-2 sm:right-6 flex flex-col gap-1 sm:gap-2 opacity-100 transition-opacity duration-500 z-30 border-2 rounded-xl p-2" style={{ borderColor: '#b427b4' }}>
+    <div className="fixed top-16 sm:top-20 right-2 sm:right-6 flex flex-col gap-1 sm:gap-2 opacity-100 transition-opacity duration-500 z-30 rounded-xl p-2">
       <Button
         onMouseDown={handleZoomInStart}
         onMouseUp={stopContinuousZoom}
@@ -96,6 +96,7 @@ export default function ZoomControls({
       >
         <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
       </Button>
+      <div className="w-full h-px bg-gray-700 my-1"></div>
       <Button
         onClick={onClearAll}
         size="icon"

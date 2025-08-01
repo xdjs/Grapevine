@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import SearchInterface from "@/components/search-interface";
 import NetworkVisualizer from "@/components/network-visualizer";
-import ZoomControls from "@/components/zoom-controls";
+
 import FilterControls from "@/components/filter-controls";
 import MobileControls from "@/components/mobile-controls";
 import HelpButton from "@/components/help-button";
@@ -409,6 +409,7 @@ export default function Home() {
             onZoomChange={handleZoomChange}
             onArtistSearch={handleArtistSearch}
             onArtistNodeClick={handleArtistNodeClick}
+            onClearAll={handleClearNetwork}
           />
         </div>
       )}
@@ -419,18 +420,6 @@ export default function Home() {
       {/* Controls - Only show when network is visible */}
       {showNetworkView && (
         <>
-          {/* Desktop Controls */}
-          {!isMobile && (
-            <>
-              <ZoomControls
-                onZoomIn={handleZoomIn}
-                onZoomOut={handleZoomOut}
-                onZoomReset={handleZoomReset}
-                onClearAll={handleClearNetwork}
-              />
-            </>
-          )}
-          
           {/* Mobile Controls */}
           <MobileControls
             onZoomIn={handleZoomIn}
