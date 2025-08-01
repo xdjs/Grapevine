@@ -23,6 +23,7 @@ interface NetworkVisualizerProps {
   onArtistSearch?: (artistName: string) => void;
   onArtistNodeClick?: (artistName: string, artistId?: string) => void;
   onError?: (error: Error) => void;
+  onClearAll?: () => void;
 }
 
 interface ComponentError {
@@ -39,6 +40,7 @@ export default function NetworkVisualizer({
   onArtistSearch,
   onArtistNodeClick,
   onError,
+  onClearAll,
 }: NetworkVisualizerProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
@@ -333,6 +335,8 @@ export default function NetworkVisualizer({
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
             onZoomReset={handleZoomReset}
+            onClearAll={onClearAll}
+            showClearButton={true}
             position="top-right"
             orientation="vertical"
             theme="dark"

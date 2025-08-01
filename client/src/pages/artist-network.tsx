@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import SearchInterface from "@/components/search-interface";
 import NetworkVisualizer from "@/components/network-visualizer";
-import ZoomControls from "@/components/zoom-controls";
+
 import FilterControls from "@/components/filter-controls";
 import MobileControls from "@/components/mobile-controls";
 import LoadingScreen from "@/components/loading-screen";
@@ -174,6 +174,7 @@ export default function ArtistNetwork() {
             onZoomChange={handleZoomChange}
             onArtistSearch={handleArtistSearch}
             onArtistNodeClick={handleArtistNodeClick}
+            onClearAll={handleClearNetwork}
           />
         </div>
       )}
@@ -186,12 +187,6 @@ export default function ArtistNetwork() {
         {/* Desktop Controls */}
         {!isMobile && (
           <>
-            <ZoomControls
-              onZoomIn={handleZoomIn}
-              onZoomOut={handleZoomOut}
-              onZoomReset={handleZoomReset}
-              onClearAll={handleClearNetwork}
-            />
             <FilterControls
               filterState={filterState}
               onFilterChange={setFilterState}
