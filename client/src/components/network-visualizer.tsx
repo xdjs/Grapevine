@@ -136,6 +136,38 @@ export default function NetworkVisualizer({
     return firstDegreeIds;
   };
 
+  // Function to generate AI-powered network for any collaborator (not just main artists)
+  const generateCollaboratorNetwork = async (collaboratorName: string, collaboratorRoles: string[]): Promise<NetworkData | null> => {
+    console.log(`🤖 Generating AI network for ${collaboratorName} with roles: [${collaboratorRoles.join(', ')}]`);
+    
+    try {
+      // Create a direct OpenAI request to generate the collaborator's network
+      const response = await fetch('/api/network/generate-collaborator', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          collaboratorName,
+          collaboratorRoles,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error(`🤖 Failed to generate network for ${collaboratorName}: ${response.status}`);
+        return null;
+      }
+
+      const networkData = await response.json();
+      console.log(`🤖✅ Successfully generated AI network for ${collaboratorName} with ${networkData.nodes?.length || 0} nodes`);
+      
+      return networkData;
+    } catch (error) {
+      console.error(`🤖❌ Error generating AI network for ${collaboratorName}:`, error);
+      return null;
+    }
+  };
+
   // Function to expand a specific node's network
   const expandNodeNetwork = async (nodeId: string, nodeName: string, nodeArtistId?: string): Promise<void> => {
     console.log(`🔗 Starting expand network for ${nodeName} (ID: ${nodeId}, Artist ID: ${nodeArtistId})`);
@@ -154,51 +186,52 @@ export default function NetworkVisualizer({
         return;
       }
 
-      // For producers/songwriters, first check if they exist as a main artist
+      // For any collaborator, try to generate their network using OpenAI
       let nodeNetworkData: NetworkData | null = null;
       
       try {
         if (nodeArtistId) {
+          // If we have an artist ID, use the by-ID endpoint
+          console.log(`🔍 Fetching network for ${nodeName} using artist ID: ${nodeArtistId}`);
           nodeNetworkData = await fetchNetworkDataById(nodeArtistId);
         } else {
-          // First check if this collaborator exists as a main artist
-          console.log(`🔍 Checking if ${nodeName} exists as a main artist...`);
+          // For any collaborator (artist, producer, songwriter), try to generate their network
+          console.log(`🔍 Generating AI-powered network for ${nodeName}...`);
           
           try {
+            // First check if they exist as a main artist (preferred method)
             const response = await fetch(`/api/artist-options/${encodeURIComponent(nodeName)}`);
             const data = await response.json();
             
             if (data.options && data.options.length > 0) {
-              // Found as main artist, try to fetch their network
-              console.log(`✅ ${nodeName} found as main artist, fetching network...`);
+              // Found as main artist - use official network endpoint
+              console.log(`✅ ${nodeName} found as main artist, fetching official network...`);
               nodeNetworkData = await fetchNetworkData(nodeName);
             } else {
-              // Not found as main artist
-              console.log(`❌ ${nodeName} not found as main artist in database`);
-              alert(`${nodeName}'s full network is not available. Only main artists have expandable networks. ${nodeName} appears as a collaborator but doesn't have their own network data in our database.`);
-              return;
+              // Not a main artist - generate network using direct OpenAI call
+              console.log(`🤖 ${nodeName} not in main database, generating collaborator network using AI...`);
+              nodeNetworkData = await generateCollaboratorNetwork(nodeName, clickedNodeRoles);
             }
           } catch (checkError) {
-            console.warn(`🔍 Error checking if ${nodeName} exists as main artist:`, checkError);
-            // Fallback: try to fetch network anyway
-            nodeNetworkData = await fetchNetworkData(nodeName);
+            console.warn(`🔍 Error during ${nodeName} network generation:`, checkError);
+            // Fallback: try direct network fetch
+            try {
+              nodeNetworkData = await fetchNetworkData(nodeName);
+            } catch (fallbackError) {
+              console.log(`🤖 Fallback failed, generating AI network for ${nodeName}...`);
+              nodeNetworkData = await generateCollaboratorNetwork(nodeName, clickedNodeRoles);
+            }
           }
         }
       } catch (fetchError) {
-        console.error(`🔗 Error fetching network data for ${nodeName}:`, fetchError);
-        
-        // Show user-friendly message for 404 errors
-        if (fetchError instanceof Error && fetchError.message.includes('404')) {
-          alert(`${nodeName}'s full network is not available. Only main artists have expandable networks. ${nodeName} appears as a collaborator but doesn't have their own network data in our database.`);
-        } else {
-          alert(`Failed to load ${nodeName}'s network. Please try again later.`);
-        }
+        console.error(`🔗 Error generating network data for ${nodeName}:`, fetchError);
+        alert(`Failed to generate ${nodeName}'s network. Please try again later.`);
         return;
       }
 
       if (!nodeNetworkData) {
-        console.warn(`🔗 No network data found for ${nodeName}`);
-        alert(`${nodeName}'s network data is not available at this time.`);
+        console.warn(`🔗 No network data could be generated for ${nodeName}`);
+        alert(`Unable to generate ${nodeName}'s network at this time.`);
         return;
       }
 
