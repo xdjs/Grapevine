@@ -1130,7 +1130,7 @@ export default function NetworkVisualizer({
         
         // Store collaboration data for the popup (for non-main artists)
         if (!isMainArtist) {
-          const currentMainArtistName = currentMainArtistNode?.name || "";
+          const currentMainArtistName = mainArtistNode?.name || "";
           setMainArtistName(currentMainArtistName);
           
           // Check if the clicked node is directly connected to main artist (first layer)
