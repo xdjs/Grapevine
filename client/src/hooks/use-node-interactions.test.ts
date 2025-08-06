@@ -356,7 +356,7 @@ describe('useNodeInteractions', () => {
       expect(mockTooltip.showTooltip).not.toHaveBeenCalled();
     });
 
-    it('should highlight node correctly on click', () => {
+    it('should highlight single role node correctly on click (turns white)', () => {
       const { result } = renderHook(() =>
         useNodeInteractions({
           simulationRef: mockSimulationRef,
@@ -365,16 +365,70 @@ describe('useNodeInteractions', () => {
         })
       );
 
+      const singleRoleNode: NetworkNode = {
+        ...sampleNode,
+        type: 'artist',
+        // No types array, so it's a single role node
+      };
+
       const mockEvent = { stopPropagation: vi.fn() } as any;
 
       act(() => {
-        result.current.handleNodeClick(mockEvent, sampleNode, sampleNodeElement);
+        result.current.handleNodeClick(mockEvent, singleRoleNode, sampleNodeElement);
       });
 
-      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle, path");
+      // For single role nodes, should select circles and turn them white
+      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle");
+      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("fill", "white");
       expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke", "white");
-      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke-width", 3);
+      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke-width", 4);
       expect(mockD3Selection.selectAll().style).toHaveBeenCalledWith("stroke-opacity", 1);
+    });
+
+    it('should highlight multi-role node correctly on click (thicker white border)', () => {
+      const { result } = renderHook(() =>
+        useNodeInteractions({
+          simulationRef: mockSimulationRef,
+          tooltip: mockTooltip,
+          visible: true,
+        })
+      );
+
+      const multiRoleNode: NetworkNode = {
+        ...sampleNode,
+        type: 'artist',
+        types: ['artist', 'producer'], // Multiple roles
+      };
+
+      // Create separate mocks for path and circle selections
+      const mockPathSelection = {
+        attr: vi.fn().mockReturnThis(),
+      };
+      const mockCircleSelection = {
+        attr: vi.fn().mockReturnThis(),
+      };
+
+      // Mock selectAll to return different selections based on the selector
+      mockD3Selection.selectAll = vi.fn().mockImplementation((selector) => {
+        if (selector === 'path') return mockPathSelection;
+        if (selector === 'circle') return mockCircleSelection;
+        return mockD3Selection;
+      });
+
+      const mockEvent = { stopPropagation: vi.fn() } as any;
+
+      act(() => {
+        result.current.handleNodeClick(mockEvent, multiRoleNode, sampleNodeElement);
+      });
+
+      // For multi-role nodes, should select paths and circles separately with thicker borders
+      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("path");
+      expect(mockPathSelection.attr).toHaveBeenCalledWith("stroke", "white");
+      expect(mockPathSelection.attr).toHaveBeenCalledWith("stroke-width", 4);
+      
+      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle");
+      expect(mockCircleSelection.attr).toHaveBeenCalledWith("stroke", "white");
+      expect(mockCircleSelection.attr).toHaveBeenCalledWith("stroke-width", 5);
     });
   });
 

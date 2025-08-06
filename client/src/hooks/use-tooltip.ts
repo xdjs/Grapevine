@@ -132,27 +132,10 @@ export function useTooltip({
       const nodeData = highlightedNode.datum() as NetworkNode;
       const roles = nodeData.types || [nodeData.type];
       
-      // Reset to original styling
-      if (roles.length === 1) {
-        // Single role - reset to original stroke color and width
-        highlightedNode.selectAll('circle')
-          .attr('stroke', () => {
-            if (roles[0] === 'artist') return '#FF0ACF';       // Magenta Pink
-            if (roles[0] === 'producer') return '#AE53FF';     // Bright Purple  
-            if (roles[0] === 'songwriter') return '#67D1F8';   // Light Blue
-            return '#355367';  // Police Blue
-          })
-          .attr('stroke-width', 4);
-      } else {
-        // Multiple roles - reset path strokes and inner circle
-        highlightedNode.selectAll('path')
-          .attr('stroke', 'white')
-          .attr('stroke-width', 1);
-        
-        highlightedNode.selectAll('circle')
-          .attr('stroke', 'white')
-          .attr('stroke-width', 2);
-      }
+      // Reset to original styling by removing highlight classes
+      highlightedNode
+        .classed("node-highlighted-single", false)
+        .classed("node-highlighted-multi", false);
       
       setHighlightedNode(null);
     }

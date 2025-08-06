@@ -575,7 +575,7 @@ describe('useTooltip', () => {
       expect(result.current.highlightedNode).toBe(mockD3Node);
     });
 
-    it('should reset node highlighting', () => {
+    it('should reset single role node highlighting (restore transparent fill)', () => {
       const { result } = renderHook(() =>
         useTooltip({
           networkData: mockNetworkData,
@@ -586,7 +586,7 @@ describe('useTooltip', () => {
       );
 
       const mockD3Node = {
-        datum: () => ({ ...mockNetworkData.nodes[0], types: ['artist'] }),
+        datum: () => ({ ...mockNetworkData.nodes[0], type: 'artist' }), // Single role node
         selectAll: vi.fn().mockReturnThis(),
         attr: vi.fn().mockReturnThis(),
       };
@@ -605,9 +605,12 @@ describe('useTooltip', () => {
 
       expect(result.current.highlightedNode).toBeNull();
       expect(mockD3Node.selectAll).toHaveBeenCalledWith('circle');
+      // Should reset fill to transparent for single role nodes
+      expect(mockD3Node.attr).toHaveBeenCalledWith('fill', 'transparent');
+      expect(mockD3Node.attr).toHaveBeenCalledWith('stroke-width', 4);
     });
 
-    it('should reset multiple role node highlighting', () => {
+    it('should reset multiple role node highlighting (restore original border thickness)', () => {
       const { result } = renderHook(() =>
         useTooltip({
           networkData: mockNetworkData,
@@ -630,6 +633,9 @@ describe('useTooltip', () => {
 
       expect(mockD3Node.selectAll).toHaveBeenCalledWith('path');
       expect(mockD3Node.selectAll).toHaveBeenCalledWith('circle');
+      // Should reset path and circle stroke widths to original values
+      expect(mockD3Node.attr).toHaveBeenCalledWith('stroke-width', 1); // path original
+      expect(mockD3Node.attr).toHaveBeenCalledWith('stroke-width', 2); // circle original
     });
   });
 

@@ -351,6 +351,24 @@
     stroke-width: 3px; 
     cursor: pointer; 
   }
+
+  /* Node highlighting classes for clicked state */
+  .node-highlighted-single circle {
+    fill: white !important;
+    stroke: white !important;
+    stroke-width: 4px !important;
+    stroke-opacity: 1 !important;
+  }
+
+  .node-highlighted-multi path {
+    stroke: white !important;
+    stroke-width: 4px !important;
+  }
+
+  .node-highlighted-multi circle {
+    stroke: white !important;
+    stroke-width: 5px !important;
+  }
   
   .network-tooltip {
     background: hsla(0, 0%, 0%, 0.9);

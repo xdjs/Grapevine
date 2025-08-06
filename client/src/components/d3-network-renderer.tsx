@@ -264,6 +264,10 @@ export default function D3NetworkRenderer({
       }
     })
       .on("click", function(event, d) {
+        console.log(`🎭 [D3Renderer] Node click detected in D3:`, d.name);
+        console.log(`🎭 [D3Renderer] Event:`, event);
+        console.log(`🎭 [D3Renderer] This element:`, this);
+        
         // Use the node interactions hook for click handling
         nodeInteractions.handleNodeClick(event as MouseEvent, d, this);
       });
