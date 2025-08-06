@@ -129,11 +129,38 @@ export function useTooltip({
   // Node highlighting functions
   const resetNodeHighlight = useCallback(() => {
     if (highlightedNode) {
-      // Reset to original styling by removing highlight classes
-      highlightedNode
-        .classed("node-highlighted-single", false)
-        .classed("node-highlighted-multi", false);
+      console.log(`🎯 Resetting node highlight`);
       
+      const nodeData = highlightedNode.datum() as NetworkNode;
+      const roles = nodeData.types || [nodeData.type];
+      
+      // Reset transform
+      highlightedNode.style("transform", null);
+      
+      if (roles.length === 1) {
+        // Single role - reset to original colors
+        highlightedNode.selectAll("circle")
+          .style("fill", "transparent")
+          .style("stroke", () => {
+            if (roles[0] === 'artist') return '#FF0ACF';
+            if (roles[0] === 'producer') return '#AE53FF';
+            if (roles[0] === 'songwriter') return '#67D1F8';
+            return '#355367';
+          })
+          .style("stroke-width", "4px")
+          .style("stroke-opacity", null);
+      } else {
+        // Multiple roles - reset to original styling
+        highlightedNode.selectAll("path")
+          .style("stroke", "white")
+          .style("stroke-width", "1px");
+          
+        highlightedNode.selectAll("circle")
+          .style("stroke", "white")
+          .style("stroke-width", "2px");
+      }
+      
+      console.log(`🎯 Node highlight reset complete`);
       setHighlightedNode(null);
     }
   }, [highlightedNode]);

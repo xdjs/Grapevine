@@ -127,25 +127,41 @@ export function useNodeInteractions({
         const currentNodeSelection = d3.select(nodeElement);
         const roles = node.types || [node.type];
         
-        // Remove any existing highlight classes
-        currentNodeSelection
-          .classed("node-highlighted-single", false)
-          .classed("node-highlighted-multi", false);
-        
+        // Apply highlighting using direct style manipulation for reliable results
         if (roles.length === 1) {
           // Single role - turn node completely white
-          currentNodeSelection.classed("node-highlighted-single", true);
-          console.log(`🎯 Applied single role highlighting to "${node.name}"`);
-          console.log(`🎯 Node classes after highlight:`, currentNodeSelection.attr("class"));
+          console.log(`🎯 Applying single role highlighting with direct styles`);
+          
+          // Apply styles directly to circle elements
+          currentNodeSelection.selectAll("circle")
+            .style("fill", "white")
+            .style("stroke", "white") 
+            .style("stroke-width", "8px")
+            .style("stroke-opacity", "1");
+            
+          // Also scale the entire node group for visibility
+          currentNodeSelection.style("transform", "scale(1.3)");
+          
         } else {
-          // Multiple roles - thicker white border  
-          currentNodeSelection.classed("node-highlighted-multi", true);
-          console.log(`🎯 Applied multi-role highlighting to "${node.name}" with roles: [${roles.join(', ')}]`);
-          console.log(`🎯 Node classes after highlight:`, currentNodeSelection.attr("class"));
+          // Multiple roles - thicker white border
+          console.log(`🎯 Applying multi-role highlighting with direct styles`);
+          
+          // Apply styles to path elements (arc segments)
+          currentNodeSelection.selectAll("path")
+            .style("stroke", "white")
+            .style("stroke-width", "8px");
+            
+          // Apply styles to circle elements (inner circle)
+          currentNodeSelection.selectAll("circle")
+            .style("stroke", "white")
+            .style("stroke-width", "10px");
+            
+          // Scale the entire node group
+          currentNodeSelection.style("transform", "scale(1.3)");
         }
         
-        // Debug: log the actual DOM element
-        console.log(`🎯 DOM element:`, currentNodeSelection.node());
+        console.log(`🎯 Direct styles applied to "${node.name}"`);
+        console.log(`🎯 Node transform:`, currentNodeSelection.style("transform"));
         
         // Track this node as highlighted
         tooltip.setHighlightedNode(currentNodeSelection);
