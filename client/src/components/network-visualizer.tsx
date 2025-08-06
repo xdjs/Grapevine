@@ -401,9 +401,27 @@ export default function NetworkVisualizer({
         return newMap;
       });
 
-      // Create the expanded network data
+      // Preserve existing node positions to prevent jittering
+      const existingPositions = new Map<string, {x: number, y: number}>();
+      if (simulationRef.current) {
+        simulationRef.current.nodes().forEach(node => {
+          if (node.x !== undefined && node.y !== undefined) {
+            existingPositions.set(node.id, { x: node.x, y: node.y });
+          }
+        });
+      }
+
+      // Create the expanded network data with preserved positions
+      const nodesWithPositions = [...dataWithPictures.nodes, ...selectedNodes].map(node => {
+        const existingPos = existingPositions.get(node.id);
+        if (existingPos) {
+          return { ...node, x: existingPos.x, y: existingPos.y };
+        }
+        return node;
+      });
+
       const expandedData: NetworkData = {
-        nodes: [...dataWithPictures.nodes, ...selectedNodes],
+        nodes: nodesWithPositions,
         links: [...dataWithPictures.links, ...newLinks]
       };
 
@@ -988,7 +1006,7 @@ export default function NetworkVisualizer({
       }
     };
 
-    // Create simulation with centering force for main artist
+    // Create simulation with more stable forces to prevent jittering
     const simulation = d3
       .forceSimulation<NetworkNode>(networkData.nodes)
       .force(
@@ -997,12 +1015,16 @@ export default function NetworkVisualizer({
           .forceLink<NetworkNode, NetworkLink>(validLinks)
           .id((d) => d.id)
           .distance(80)
+          .strength(0.5) // Reduce link strength for stability
       )
-      .force("charge", d3.forceManyBody().strength(-150))
-      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
+      .force("charge", d3.forceManyBody().strength(-100)) // Reduce repulsion force
+      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 8)) // Slightly tighter collision
       .force("boundary", boundaryForce)
-      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
-      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.1 : 0));
+      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.05 : 0)) // Weaker centering
+      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.05 : 0)) // Weaker centering
+      .alpha(0.3) // Start with lower energy
+      .alphaDecay(0.05) // Slower decay for smoother settling
+      .velocityDecay(0.7); // Increase friction to reduce jittering
 
     simulationRef.current = simulation;
 
@@ -1013,11 +1035,11 @@ export default function NetworkVisualizer({
         const newWidth = container ? container.clientWidth : window.innerWidth;
         const newHeight = container ? container.clientHeight : window.innerHeight;
         
-        // Update simulation forces with new dimensions
+        // Update simulation forces with new dimensions (gentler restart)
         simulationRef.current
-          .force("centerX", d3.forceX(newWidth / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
-          .force("centerY", d3.forceY(newHeight / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
-          .alpha(0.3) // Restart simulation
+          .force("centerX", d3.forceX(newWidth / 2).strength((d) => d === mainArtistNode ? 0.05 : 0))
+          .force("centerY", d3.forceY(newHeight / 2).strength((d) => d === mainArtistNode ? 0.05 : 0))
+          .alpha(0.1) // Much gentler restart to prevent jittering
           .restart();
       }
     };
@@ -1760,7 +1782,7 @@ export default function NetworkVisualizer({
     function dragstarted(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
       // Prevent event bubbling to avoid interfering with zoom behavior
       event.sourceEvent.stopPropagation();
-      if (!event.active) simulation.alphaTarget(0.3).restart();
+      if (!event.active) simulation.alphaTarget(0.1).restart(); // Gentler drag restart
       d.fx = d.x;
       d.fy = d.y;
     }
