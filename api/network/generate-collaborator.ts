@@ -217,6 +217,29 @@ Guidelines:
     
   } catch (error) {
     console.error('❌ [Generate-Collaborator] Error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    
+    // Provide more specific error messages
+    let errorMessage = 'Internal server error';
+    let statusCode = 500;
+    
+    if (error instanceof Error) {
+      if (error.message.includes('API key')) {
+        errorMessage = 'OpenAI API configuration error';
+        statusCode = 503;
+      } else if (error.message.includes('rate limit') || error.message.includes('quota')) {
+        errorMessage = 'AI service temporarily unavailable due to rate limits';
+        statusCode = 503;
+      } else if (error.message.includes('network') || error.message.includes('fetch')) {
+        errorMessage = 'Network connection error to AI service';
+        statusCode = 502;
+      } else {
+        errorMessage = `AI generation error: ${error.message}`;
+      }
+    }
+    
+    res.status(statusCode).json({ 
+      message: errorMessage,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 } 

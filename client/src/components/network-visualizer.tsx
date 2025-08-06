@@ -228,8 +228,9 @@ export default function NetworkVisualizer({
   };
 
   // Function to generate AI-powered network for any collaborator (not just main artists)
-  const generateCollaboratorNetwork = async (collaboratorName: string, collaboratorRoles: string[]): Promise<NetworkData | null> => {
-    console.log(`🤖 Generating AI network for ${collaboratorName} with roles: [${collaboratorRoles.join(', ')}]`);
+  const generateCollaboratorNetwork = async (collaboratorName: string, collaboratorRoles: string[], retryCount = 0): Promise<NetworkData | null> => {
+    const maxRetries = 2;
+    console.log(`🤖 Generating AI network for ${collaboratorName} with roles: [${collaboratorRoles.join(', ')}]${retryCount > 0 ? ` (retry ${retryCount})` : ''}`);
     
     try {
       // Create a direct OpenAI request to generate the collaborator's network
@@ -245,7 +246,16 @@ export default function NetworkVisualizer({
       });
 
       if (!response.ok) {
-        console.error(`🤖 Failed to generate network for ${collaboratorName}: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`🤖 Failed to generate network for ${collaboratorName}: ${response.status} - ${errorText}`);
+        
+        // Retry on server errors (5xx) but not client errors (4xx)
+        if (response.status >= 500 && retryCount < maxRetries) {
+          console.log(`🤖 Retrying network generation for ${collaboratorName} (attempt ${retryCount + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Progressive delay
+          return generateCollaboratorNetwork(collaboratorName, collaboratorRoles, retryCount + 1);
+        }
+        
         return null;
       }
 
@@ -255,6 +265,14 @@ export default function NetworkVisualizer({
       return networkData;
     } catch (error) {
       console.error(`🤖❌ Error generating AI network for ${collaboratorName}:`, error);
+      
+      // Retry on network errors
+      if (retryCount < maxRetries && (error instanceof Error && error.message.includes('fetch'))) {
+        console.log(`🤖 Retrying network generation for ${collaboratorName} due to network error (attempt ${retryCount + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Progressive delay
+        return generateCollaboratorNetwork(collaboratorName, collaboratorRoles, retryCount + 1);
+      }
+      
       return null;
     }
   };
@@ -324,7 +342,20 @@ export default function NetworkVisualizer({
         }
       } catch (fetchError) {
         console.error(`🔗 Error generating network data for ${nodeName}:`, fetchError);
-        alert(`Failed to generate ${nodeName}'s network. Please try again later.`);
+        
+        // Provide more specific error message
+        let errorMessage = `Failed to generate ${nodeName}'s network. `;
+        if (fetchError instanceof Error) {
+          if (fetchError.message.includes('fetch')) {
+            errorMessage += `Network connection issue. Please check your internet connection and try again.`;
+          } else {
+            errorMessage += `Error: ${fetchError.message}`;
+          }
+        } else {
+          errorMessage += `Please try again later.`;
+        }
+        
+        alert(errorMessage);
         return;
       }
 
