@@ -352,6 +352,24 @@
     cursor: pointer; 
   }
   
+  /* Node highlighting styles - higher specificity */
+  .node-highlighted,
+  circle.node-highlighted,
+  path.node-highlighted {
+    fill: white !important;
+  }
+  
+  .node-highlighted-thick,
+  circle.node-highlighted-thick,
+  path.node-highlighted-thick {
+    stroke-width: 4px !important;
+  }
+  
+  .path-highlighted-thick,
+  path.path-highlighted-thick {
+    stroke-width: 3px !important;
+  }
+  
   .network-tooltip {
     background: hsla(0, 0%, 0%, 0.9);
     border: 1px solid hsl(240, 3.7%, 15.9%);

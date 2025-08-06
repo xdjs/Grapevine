@@ -144,47 +144,39 @@ export function useNodeInteractions({
           const circleSelection = currentNodeSelection.selectAll("circle");
           console.log(`🎯 Circle selection size:`, circleSelection.size());
           
+          // Apply highlighting CSS class with !important
+          circleSelection.classed("node-highlighted", true);
+            
+          // Debug - check computed styles
           circleSelection.each(function() {
             const element = this as SVGCircleElement;
-            console.log(`🎯 Before - fill:`, element.getAttribute('fill'), `stroke:`, element.getAttribute('stroke'));
-            console.log(`🎯 Before - style.fill:`, element.style.fill);
-            
-            // Try both attribute and style
-            element.setAttribute('fill', 'white');
-            element.style.fill = 'white';
-            
-            console.log(`🎯 After - fill:`, element.getAttribute('fill'), `stroke:`, element.getAttribute('stroke'));
-            console.log(`🎯 After - style.fill:`, element.style.fill);
+            const computedStyle = window.getComputedStyle(element);
+            console.log(`🎯 Element classes:`, element.className.baseVal);
+            console.log(`🎯 Computed fill:`, computedStyle.fill);
+            console.log(`🎯 Computed stroke:`, computedStyle.stroke);
           });
-          
-          // Also try the D3 ways
-          circleSelection
-            .attr("fill", "white")
-            .style("fill", "white");
         } else {
           // Multi-role node - thicken the white border of path elements
           console.log(`🎯 Highlighting multi-role node: ${node.name} - thickening borders`);
           const pathSelection = currentNodeSelection.selectAll("path");
-          pathSelection
-            .attr("stroke-width", 3)
-            .style("stroke-width", "3px");
+          pathSelection.classed("path-highlighted-thick", true);
           
           // Also thicken the inner circle border
           const circleSelection = currentNodeSelection.selectAll("circle");
-          circleSelection
-            .attr("stroke-width", 4)
-            .style("stroke-width", "4px");
+          circleSelection.classed("node-highlighted-thick", true);
           
-          // Log the changes
+          // Debug computed styles
           pathSelection.each(function() {
             const element = this as SVGElement;
-            console.log(`🎯 Path stroke-width attr:`, element.getAttribute('stroke-width'));
-            console.log(`🎯 Path stroke-width style:`, element.style.strokeWidth);
+            const computedStyle = window.getComputedStyle(element);
+            console.log(`🎯 Path classes:`, element.className.baseVal);
+            console.log(`🎯 Path computed stroke-width:`, computedStyle.strokeWidth);
           });
           circleSelection.each(function() {
             const element = this as SVGElement;
-            console.log(`🎯 Circle stroke-width attr:`, element.getAttribute('stroke-width'));
-            console.log(`🎯 Circle stroke-width style:`, element.style.strokeWidth);
+            const computedStyle = window.getComputedStyle(element);
+            console.log(`🎯 Circle classes:`, element.className.baseVal);
+            console.log(`🎯 Circle computed stroke-width:`, computedStyle.strokeWidth);
           });
         }
         

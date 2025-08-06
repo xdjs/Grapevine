@@ -134,27 +134,18 @@ export function useTooltip({
       
       console.log(`🎯 RESETTING node highlight: ${nodeData.name} - ${roles.length} roles`);
       
-      // Reset to original styling
+      // Reset to original styling by removing highlighting classes
       if (roles.length === 1) {
-        // Single role - reset circle fill to transparent and stroke to original color
+        // Single role - remove highlighting class
         highlightedNode.selectAll('circle')
-          .attr('fill', 'transparent')
-          .attr('stroke', () => {
-            if (roles[0] === 'artist') return '#FF0ACF';       // Magenta Pink
-            if (roles[0] === 'producer') return '#AE53FF';     // Bright Purple  
-            if (roles[0] === 'songwriter') return '#67D1F8';   // Light Blue
-            return '#355367';  // Police Blue
-          })
-          .attr('stroke-width', 4);
+          .classed('node-highlighted', false);
       } else {
-        // Multiple roles - reset path strokes and inner circle to original thickness
+        // Multiple roles - remove highlighting classes
         highlightedNode.selectAll('path')
-          .attr('stroke', 'white')
-          .attr('stroke-width', 1);
+          .classed('path-highlighted-thick', false);
         
         highlightedNode.selectAll('circle')
-          .attr('stroke', 'white')
-          .attr('stroke-width', 2);
+          .classed('node-highlighted-thick', false);
       }
       
       setHighlightedNode(null);
