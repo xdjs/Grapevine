@@ -60,18 +60,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Generate network using OpenAI
-    let OpenAI;
-    try {
-      OpenAI = (await import('openai')).default;
-    } catch (importError) {
-      console.error('❌ [Generate-Collaborator] Failed to import OpenAI:', importError);
-      return res.status(503).json({ 
-        error: 'OpenAI module import failed',
-        message: 'AI service temporarily unavailable'
-      });
-    }
-    
+    // Generate network using OpenAI - simplified import
+    const OpenAI = (await import('openai')).default;
     const openai = new OpenAI({
       apiKey: OPENAI_API_KEY,
     });
@@ -104,30 +94,21 @@ Guidelines:
 - Include their top 3 collaborating artists
 - If ${collaboratorName} has limited collaboration data, include similar professionals they might work with`;
 
-    let completion;
-    try {
-      completion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: "You are a music industry database expert. Provide accurate collaboration data for music professionals."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.2,
-        max_tokens: 1500,
-      });
-    } catch (openaiError) {
-      console.error('❌ [Generate-Collaborator] OpenAI API call failed:', openaiError);
-      return res.status(503).json({ 
-        error: 'OpenAI API call failed',
-        message: `Failed to generate AI response: ${openaiError instanceof Error ? openaiError.message : 'Unknown error'}`
-      });
-    }
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are a music industry database expert. Provide accurate collaboration data for music professionals."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.2,
+      max_tokens: 1500,
+    });
 
     const openaiContent = completion?.choices?.[0]?.message?.content;
     
@@ -237,28 +218,14 @@ Guidelines:
   } catch (error) {
     console.error('❌ [Generate-Collaborator] Error:', error);
     
-    // Provide more specific error messages
-    let errorMessage = 'Internal server error';
-    let statusCode = 500;
-    
-    if (error instanceof Error) {
-      if (error.message.includes('API key')) {
-        errorMessage = 'OpenAI API configuration error';
-        statusCode = 503;
-      } else if (error.message.includes('rate limit') || error.message.includes('quota')) {
-        errorMessage = 'AI service temporarily unavailable due to rate limits';
-        statusCode = 503;
-      } else if (error.message.includes('network') || error.message.includes('fetch')) {
-        errorMessage = 'Network connection error to AI service';
-        statusCode = 502;
-      } else {
-        errorMessage = `AI generation error: ${error.message}`;
-      }
-    }
+    // Simplified error handling
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const isApiError = errorMessage.includes('API key') || errorMessage.includes('rate limit');
+    const statusCode = isApiError ? 503 : 500;
     
     res.status(statusCode).json({ 
-      message: errorMessage,
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: 'Failed to generate network collaboration data',
+      error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
     });
   }
 } 
