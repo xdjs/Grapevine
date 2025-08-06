@@ -129,8 +129,6 @@ export function useTooltip({
   // Node highlighting functions
   const resetNodeHighlight = useCallback(() => {
     if (highlightedNode) {
-      console.log(`🎯 Resetting node highlight`);
-      
       const nodeData = highlightedNode.datum() as NetworkNode;
       const roles = nodeData.types || [nodeData.type];
       
@@ -157,7 +155,6 @@ export function useTooltip({
           .style("stroke-width", "2px");  // Back to original 2px
       }
       
-      console.log(`🎯 Node highlight reset complete`);
       setHighlightedNode(null);
     }
   }, [highlightedNode]);

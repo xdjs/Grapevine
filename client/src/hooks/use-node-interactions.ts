@@ -110,15 +110,9 @@ export function useNodeInteractions({
   const handleNodeClick = useCallback(
     (event: MouseEvent, node: NetworkNode, nodeElement: SVGGElement) => {
       try {
-        console.log(`🎯 NODE CLICK DETECTED: "${node.name}"`);
         event.stopPropagation();
         
-        if (!visible) {
-          console.log(`🎯 Component not visible, skipping highlight`);
-          return;
-        }
-        
-        console.log(`🎯 Processing click for visible component`);
+        if (!visible) return;
         
         // Reset previous node highlighting
         tooltip.resetNodeHighlight();
@@ -129,10 +123,7 @@ export function useNodeInteractions({
         
         // Apply highlighting using direct style manipulation for reliable results
         if (roles.length === 1) {
-          // Single role - turn node completely white (no size change)
-          console.log(`🎯 Applying single role highlighting with direct styles`);
-          
-          // Apply styles directly to circle elements - turn completely white
+          // Single role - turn node completely white
           currentNodeSelection.selectAll("circle")
             .style("fill", "white")
             .style("stroke", "white") 
@@ -140,22 +131,15 @@ export function useNodeInteractions({
             .style("stroke-opacity", "1");
           
         } else {
-          // Multiple roles - thicker white border (no size change)
-          console.log(`🎯 Applying multi-role highlighting with direct styles`);
-          
-          // Apply styles to path elements (arc segments) - thicker white border
+          // Multiple roles - thicker white border
           currentNodeSelection.selectAll("path")
             .style("stroke", "white")
             .style("stroke-width", "4px");  // Increased from 1px to 4px
             
-          // Apply styles to circle elements (inner circle) - thicker white border
           currentNodeSelection.selectAll("circle")
             .style("stroke", "white")
             .style("stroke-width", "5px");  // Increased from 2px to 5px
         }
-        
-        console.log(`🎯 Direct styles applied to "${node.name}"`);
-        console.log(`🎯 Node transform:`, currentNodeSelection.style("transform"));
         
         // Track this node as highlighted
         tooltip.setHighlightedNode(currentNodeSelection);
