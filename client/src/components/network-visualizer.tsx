@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import ArtistSelectionModal from "./artist-selection-modal";
@@ -17,6 +17,14 @@ interface NetworkVisualizerProps {
   onZoomChange: (transform: { k: number; x: number; y: number }) => void;
   onArtistSearch?: (artistName: string) => void;
   onArtistNodeClick?: (artistName: string, artistId?: string) => void;
+  onError?: (error: Error) => void;
+  onClearAll?: () => void;
+}
+
+interface ComponentError {
+  message: string;
+  details?: string;
+  retryable: boolean;
 }
 
 export default function NetworkVisualizer({
@@ -26,6 +34,8 @@ export default function NetworkVisualizer({
   onZoomChange,
   onArtistSearch,
   onArtistNodeClick,
+  onError,
+  onClearAll,
 }: NetworkVisualizerProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
@@ -33,6 +43,11 @@ export default function NetworkVisualizer({
   
   // Track if we have expanded data to prevent unwanted resets
   const hasExpandedDataRef = useRef<boolean>(false);
+  
+  // Component error state
+  const [componentError, setComponentError] = useState<ComponentError | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
   
   const [currentZoom, setCurrentZoom] = useState(1);
   const [showArtistModal, setShowArtistModal] = useState(false);
@@ -63,6 +78,35 @@ export default function NetworkVisualizer({
 
   // Store the main artist node for easy access
   const mainArtistNode = dataWithPictures?.nodes.find(node => node.size === 30 && node.type === 'artist') || null;
+
+  // Error handling and retry logic
+  const handleError = useCallback((error: Error, context: string) => {
+    console.error(`❌ [NetworkVisualizer] Error in ${context}:`, error);
+    
+    const componentError: ComponentError = {
+      message: `Error in ${context}: ${error.message}`,
+      details: error.stack,
+      retryable: retryCount < maxRetries
+    };
+    
+    setComponentError(componentError);
+    onError?.(error);
+  }, [retryCount, onError]);
+
+  const handleRetry = useCallback(async () => {
+    if (retryCount >= maxRetries) {
+      console.warn(`⚠️ [NetworkVisualizer] Maximum retry attempts (${maxRetries}) reached`);
+      return;
+    }
+    
+    setRetryCount(prev => prev + 1);
+    setComponentError(null);
+  }, [retryCount]);
+
+  const clearError = useCallback(() => {
+    setComponentError(null);
+    setRetryCount(0);
+  }, []);
 
   // Function to filter network data to only show first-degree collaborators
   const filterToFirstDegreeOnly = (networkData: NetworkData): NetworkData => {
@@ -187,8 +231,6 @@ export default function NetworkVisualizer({
     // Set loading state
     setIsExpandingNetwork(true);
     setExpandingNodeName(nodeName);
-    
-
     
     try {
       // Check if this node is already expanded
@@ -369,6 +411,7 @@ export default function NetworkVisualizer({
       console.log(`🔗 Successfully expanded ${nodeName}'s network with ${selectedNodes.length} ${roleDescription} collaborators and ${newLinks.length} links`);
     } catch (error) {
       console.error(`🔗 Error expanding network for ${nodeName}:`, error);
+      handleError(error as Error, `expanding ${nodeName}'s network`);
     } finally {
       // Clear loading state
       setIsExpandingNetwork(false);
@@ -1921,24 +1964,96 @@ export default function NetworkVisualizer({
     return true;
   }
 
+  // Error state component  
+  const ErrorState = ({ error }: { error: ComponentError }) => (
+    <div 
+      className="flex items-center justify-center w-full h-full"
+      data-testid="error-state"
+    >
+      <div className="text-center max-w-md mx-auto p-6">
+        <div className="text-red-500 text-6xl mb-4">⚠️</div>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          Network Visualization Error
+        </h3>
+        <p className="text-gray-600 dark:text-gray-400 mb-4">
+          {error.message}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2 justify-center">
+          {error.retryable && (
+            <button
+              onClick={handleRetry}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200"
+              data-testid="retry-button"
+            >
+              Retry ({maxRetries - retryCount} attempts left)
+            </button>
+          )}
+          <button
+            onClick={clearError}
+            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200"
+            data-testid="dismiss-error-button"
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div
       className={`network-container transition-opacity duration-700 w-full h-full ${
         visible ? "opacity-100" : "opacity-0"
       }`}
+      data-testid="network-container"
     >
-      <svg ref={svgRef} className="w-full h-full" />
-      
-      {/* Reset button for expanded mode */}
-      {isExpandedMode && (
-        <button
-          onClick={() => resetToFirstDegree()}
-          className="absolute top-4 right-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors duration-200 z-10"
-          style={{ fontSize: '14px', fontWeight: '500' }}
-        >
-          ← Back to {mainArtistNode?.name || 'Main Artist'}
-        </button>
-      )}
+      {/* Show error state if there's a component error */}
+      {componentError ? (
+        <ErrorState error={componentError} />
+      ) : (
+        <>
+          <svg 
+            ref={svgRef} 
+            className="w-full h-full" 
+            role="img" 
+            aria-label="Music collaboration network visualization"
+          />
+          
+          {/* Reset button for expanded mode */}
+          {isExpandedMode && (
+            <button
+              onClick={() => {
+                try {
+                  resetToFirstDegree();
+                } catch (error) {
+                  handleError(error as Error, 'reset to first degree');
+                }
+              }}
+              className="absolute top-4 right-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors duration-200 z-10"
+              style={{ fontSize: '14px', fontWeight: '500' }}
+              data-testid="reset-button"
+            >
+              ← Back to {mainArtistNode?.name || 'Main Artist'}
+            </button>
+          )}
+
+          {/* Clear All button */}
+          {onClearAll && (
+            <button
+              onClick={() => {
+                try {
+                  onClearAll();
+                } catch (error) {
+                  handleError(error as Error, 'clear all');
+                }
+              }}
+              className="absolute top-4 left-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors duration-200 z-10"
+              style={{ fontSize: '14px', fontWeight: '500' }}
+              data-testid="clear-all-button"
+            >
+              Clear All
+            </button>
+          )}
       
       <ArtistSelectionModal
         isOpen={showArtistModal}
@@ -2004,6 +2119,8 @@ export default function NetworkVisualizer({
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );
