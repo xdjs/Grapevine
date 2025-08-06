@@ -57,59 +57,72 @@ export default function NetworkVisualizer({
   // Loading state for network expansion
   const [isExpandingNetwork, setIsExpandingNetwork] = useState(false);
   const [expandingNodeName, setExpandingNodeName] = useState("");
-  
-  // Storage key for persistence across sessions
-  const getStorageKey = (artistName: string) => `grapevine_expanded_${artistName}`;
-  
-  // Save expanded state to localStorage
-  const saveExpandedState = (artistName: string) => {
-    if (!mainArtistNode || !dataWithPictures) return;
-    
-    try {
-      const expandedState = {
-        expandedNodes: Array.from(expandedNodes),
-        nodeExpansions: Array.from(nodeExpansions.entries()).map(([key, value]) => [key, {
-          addedNodes: value.addedNodes,
-          addedLinks: value.addedLinks
-        }]),
-        networkData: dataWithPictures,
-        originalData: originalNetworkData,
-        isExpandedMode: isExpandedMode,
-        timestamp: Date.now()
-      };
-      
-      localStorage.setItem(getStorageKey(artistName), JSON.stringify(expandedState));
-      console.log(`💾 Saved expanded state for ${artistName}`);
-    } catch (error) {
-      console.error('❌ Failed to save expanded state:', error);
-    }
-  };
-  
-  // Load expanded state from localStorage
-  const loadExpandedState = (artistName: string) => {
-    try {
-      const stored = localStorage.getItem(getStorageKey(artistName));
-      if (!stored) return null;
-      
-      const expandedState = JSON.parse(stored);
-      
-      // Check if data is not too old (24 hours)
-      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-      if (Date.now() - expandedState.timestamp > maxAge) {
-        localStorage.removeItem(getStorageKey(artistName));
-        return null;
-      }
-      
-      console.log(`💾 Loaded expanded state for ${artistName}`);
-      return expandedState;
-    } catch (error) {
-      console.error('❌ Failed to load expanded state:', error);
-      return null;
-    }
-  };
 
   // Store the main artist node for easy access
   const mainArtistNode = dataWithPictures?.nodes.find(node => node.size === 30 && node.type === 'artist') || null;
+  
+  // Generate a unique key for this artist's expanded network state
+  const getStorageKey = (artistName: string) => `grapevine_expanded_${artistName}`;
+  const getCurrentArtistName = () => mainArtistNode?.name || data?.nodes?.find(n => n.size === 30)?.name || 'unknown';
+  
+  // Save expanded network state to localStorage
+  const saveExpandedState = () => {
+    try {
+      const artistName = getCurrentArtistName();
+      const stateToSave = {
+        isExpandedMode,
+        expandedNodes: Array.from(expandedNodes),
+        nodeExpansions: Array.from(nodeExpansions.entries()).map(([key, value]) => [
+          key,
+          {
+            addedNodes: value.addedNodes,
+            addedLinks: value.addedLinks
+          }
+        ]),
+        dataWithPictures,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(getStorageKey(artistName), JSON.stringify(stateToSave));
+      console.log(`💾 Saved expanded state for ${artistName}`);
+    } catch (error) {
+      console.error('Failed to save expanded state:', error);
+    }
+  };
+  
+  // Load expanded network state from localStorage
+  const loadExpandedState = () => {
+    try {
+      const artistName = getCurrentArtistName();
+      const savedState = localStorage.getItem(getStorageKey(artistName));
+      if (savedState) {
+        const parsed = JSON.parse(savedState);
+        // Only load if the save is recent (within 7 days)
+        const oneWeek = 7 * 24 * 60 * 60 * 1000;
+        if (Date.now() - parsed.timestamp < oneWeek) {
+          console.log(`💾 Loading expanded state for ${artistName}`);
+          return parsed;
+        } else {
+          // Clean up old state
+          localStorage.removeItem(getStorageKey(artistName));
+          console.log(`💾 Cleaned up old state for ${artistName}`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load expanded state:', error);
+    }
+    return null;
+  };
+  
+  // Clear expanded state from localStorage
+  const clearExpandedState = () => {
+    try {
+      const artistName = getCurrentArtistName();
+      localStorage.removeItem(getStorageKey(artistName));
+      console.log(`💾 Cleared expanded state for ${artistName}`);
+    } catch (error) {
+      console.error('Failed to clear expanded state:', error);
+    }
+  };
 
   // Function to filter network data to only show first-degree collaborators
   const filterToFirstDegreeOnly = (networkData: NetworkData): NetworkData => {
@@ -172,57 +185,46 @@ export default function NetworkVisualizer({
       const firstDegreeData = filterToFirstDegreeOnly(data);
       setOriginalNetworkData(firstDegreeData);
       console.log(`🔗 Stored original first-degree network with ${firstDegreeData.nodes.length} nodes`);
-      
-      // Try to load any existing expanded state
-      const artistName = firstDegreeData.nodes.find(node => node.size === 30 && node.type === 'artist')?.name;
-      if (artistName) {
-        const savedState = loadExpandedState(artistName);
-        if (savedState) {
-          console.log(`💾 Restoring expanded state for ${artistName}`);
-          setExpandedNodes(new Set(savedState.expandedNodes));
-          setNodeExpansions(new Map(savedState.nodeExpansions.map(([key, value]: [string, any]) => [key, value])));
-          setIsExpandedMode(savedState.isExpandedMode);
-          // Use saved network data if available and valid
-          if (savedState.networkData && savedState.networkData.nodes.length > firstDegreeData.nodes.length) {
-            setDataWithPictures(savedState.networkData);
-          }
-        }
-      }
     }
   }, [data, originalNetworkData, isExpandedMode]);
-  
-  // Auto-save expanded state whenever it changes
+
+  // Load expanded state when component mounts or when data changes
   useEffect(() => {
-    if (mainArtistNode && isExpandedMode && expandedNodes.size > 0) {
-      saveExpandedState(mainArtistNode.name);
+    if (data && originalNetworkData && !hasExpandedDataRef.current) {
+      const savedState = loadExpandedState();
+      if (savedState && savedState.dataWithPictures && savedState.expandedNodes.length > 0) {
+        console.log(`💾 Restoring expanded state with ${savedState.expandedNodes.length} expanded nodes`);
+        
+        // Restore the expanded state
+        setIsExpandedMode(savedState.isExpandedMode);
+        setExpandedNodes(new Set(savedState.expandedNodes));
+        
+        // Restore node expansions Map
+        const restoredExpansions = new Map();
+        savedState.nodeExpansions.forEach(([key, value]) => {
+          restoredExpansions.set(key, value);
+        });
+        setNodeExpansions(restoredExpansions);
+        
+        // Restore the expanded network data
+        setDataWithPictures(savedState.dataWithPictures);
+        hasExpandedDataRef.current = true;
+        
+        console.log(`💾 Successfully restored expanded network for ${getCurrentArtistName()}`);
+      }
     }
-  }, [expandedNodes, nodeExpansions, isExpandedMode, dataWithPictures]);
-  
-  // Handle page visibility changes to ensure state persists when switching tabs
+  }, [data, originalNetworkData]);
+
+  // Save expanded state whenever critical state changes
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && mainArtistNode && isExpandedMode) {
-        // Save state immediately when user is about to leave
-        saveExpandedState(mainArtistNode.name);
-        console.log(`💾 Auto-saved state before tab switch for ${mainArtistNode.name}`);
-      }
-    };
-    
-    const handleBeforeUnload = () => {
-      if (mainArtistNode && isExpandedMode) {
-        // Save state before page unload
-        saveExpandedState(mainArtistNode.name);
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [mainArtistNode, isExpandedMode]);
+    if (isExpandedMode && expandedNodes.size > 0 && dataWithPictures) {
+      // Debounce saves to avoid excessive localStorage writes
+      const timeoutId = setTimeout(() => {
+        saveExpandedState();
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isExpandedMode, expandedNodes, nodeExpansions, dataWithPictures]);
 
   // Function to get first-degree collaborators (directly connected to main artist)
   const getFirstDegreeCollaborators = (): Set<string> => {
@@ -463,6 +465,9 @@ export default function NetworkVisualizer({
 
       const roleDescription = isClickedArtist ? 'songwriter/producer' : 'artist';
       console.log(`🔗 Successfully expanded ${nodeName}'s network with ${selectedNodes.length} ${roleDescription} collaborators and ${newLinks.length} links`);
+      
+      // Save the expanded state to localStorage
+      setTimeout(() => saveExpandedState(), 100); // Small delay to ensure state is updated
     } catch (error) {
       console.error(`🔗 Error expanding network for ${nodeName}:`, error);
     } finally {
@@ -533,6 +538,11 @@ export default function NetworkVisualizer({
       if (!stillExpanded) {
         setIsExpandedMode(false);
         hasExpandedDataRef.current = false;
+        // Clear localStorage when no expansions remain
+        clearExpandedState();
+      } else {
+        // Save the updated state to localStorage
+        setTimeout(() => saveExpandedState(), 100); // Small delay to ensure state is updated
       }
 
       console.log(`🔗 Successfully shrunk ${nodeName}'s network. Removed ${expansion.addedNodes.length} nodes and ${expansion.addedLinks.length} links`);
@@ -554,17 +564,8 @@ export default function NetworkVisualizer({
         setExpandedNodes(new Set());
         setNodeExpansions(new Map());
         hasExpandedDataRef.current = false;
-        
-        // Clear saved state from localStorage
-        if (mainArtistNode) {
-          try {
-            localStorage.removeItem(getStorageKey(mainArtistNode.name));
-            console.log(`💾 Cleared saved state for ${mainArtistNode.name}`);
-          } catch (error) {
-            console.error('❌ Failed to clear saved state:', error);
-          }
-        }
-        
+        // Clear localStorage when resetting
+        clearExpandedState();
         console.log(`🔗 Reset to original first-degree network with ${originalNetworkData.nodes.length} nodes`);
       } catch (error) {
         console.error(`🔗 Error resetting network:`, error);
@@ -574,16 +575,8 @@ export default function NetworkVisualizer({
         setExpandedNodes(new Set());
         setNodeExpansions(new Map());
         hasExpandedDataRef.current = false;
-        
-        // Clear saved state from localStorage (fallback case)
-        if (mainArtistNode) {
-          try {
-            localStorage.removeItem(getStorageKey(mainArtistNode.name));
-            console.log(`💾 Cleared saved state for ${mainArtistNode.name} (fallback)`);
-          } catch (error) {
-            console.error('❌ Failed to clear saved state (fallback):', error);
-          }
-        }
+        // Clear localStorage on error too
+        clearExpandedState();
       }
     }
   };
@@ -626,12 +619,42 @@ export default function NetworkVisualizer({
   // Separate effect to handle visibility without affecting data
   useEffect(() => {
     if (!visible) {
-      // Don't clear data when becoming invisible - just hide the visualization
+      // Save state when becoming invisible (user might be switching tabs)
+      if (isExpandedMode && expandedNodes.size > 0) {
+        saveExpandedState();
+      }
       console.log(`🖼️ [NetworkVisualizer] Component hidden, preserving expanded network data`);
     } else if (dataWithPictures) {
       console.log(`🖼️ [NetworkVisualizer] Component visible, using preserved network data with ${dataWithPictures.nodes.length} nodes`);
     }
   }, [visible, dataWithPictures]);
+
+  // Add page visibility change listener for tab switching
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && isExpandedMode && expandedNodes.size > 0) {
+        // User is switching tabs or minimizing window - save state
+        saveExpandedState();
+        console.log(`💾 Saved expanded state due to tab switch/minimize`);
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      // User is closing/refreshing page - save state
+      if (isExpandedMode && expandedNodes.size > 0) {
+        saveExpandedState();
+        console.log(`💾 Saved expanded state due to page unload`);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isExpandedMode, expandedNodes]);
 
   // Fetch configuration on component mount
   useEffect(() => {
