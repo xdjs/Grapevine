@@ -178,42 +178,41 @@ export default function NetworkVisualizer({
     };
   };
 
-  // Store original data when first loaded (filtered to first-degree only)
+  // Load expanded state after initial data processing completes
   useEffect(() => {
-    if (data && !originalNetworkData && !isExpandedMode) {
-      // Store the filtered first-degree data as the "original" state
-      const firstDegreeData = filterToFirstDegreeOnly(data);
-      setOriginalNetworkData(firstDegreeData);
-      console.log(`🔗 Stored original first-degree network with ${firstDegreeData.nodes.length} nodes`);
-    }
-  }, [data, originalNetworkData, isExpandedMode]);
-
-  // Load expanded state when component mounts or when data changes
-  useEffect(() => {
-    if (data && originalNetworkData && !hasExpandedDataRef.current) {
+    if (data && originalNetworkData && dataWithPictures && !hasExpandedDataRef.current) {
+      const currentArtistName = getCurrentArtistName();
       const savedState = loadExpandedState();
+      
+      // Only restore if the saved state is for the same artist
       if (savedState && savedState.dataWithPictures && savedState.expandedNodes.length > 0) {
-        console.log(`💾 Restoring expanded state with ${savedState.expandedNodes.length} expanded nodes`);
+        const savedArtistName = savedState.dataWithPictures.nodes?.find(n => n.size === 30)?.name;
         
-        // Restore the expanded state
-        setIsExpandedMode(savedState.isExpandedMode);
-        setExpandedNodes(new Set(savedState.expandedNodes));
-        
-        // Restore node expansions Map
-        const restoredExpansions = new Map();
-        savedState.nodeExpansions.forEach(([key, value]) => {
-          restoredExpansions.set(key, value);
-        });
-        setNodeExpansions(restoredExpansions);
-        
-        // Restore the expanded network data
-        setDataWithPictures(savedState.dataWithPictures);
-        hasExpandedDataRef.current = true;
-        
-        console.log(`💾 Successfully restored expanded network for ${getCurrentArtistName()}`);
+        if (savedArtistName === currentArtistName) {
+          console.log(`💾 Restoring expanded state for ${currentArtistName} with ${savedState.expandedNodes.length} expanded nodes`);
+          
+          // Restore the expanded state
+          setIsExpandedMode(savedState.isExpandedMode);
+          setExpandedNodes(new Set(savedState.expandedNodes));
+          
+          // Restore node expansions Map
+          const restoredExpansions = new Map();
+          savedState.nodeExpansions.forEach(([key, value]) => {
+            restoredExpansions.set(key, value);
+          });
+          setNodeExpansions(restoredExpansions);
+          
+          // Restore the expanded network data
+          setDataWithPictures(savedState.dataWithPictures);
+          hasExpandedDataRef.current = true;
+          
+          console.log(`💾 Successfully restored expanded network for ${currentArtistName}`);
+        } else {
+          console.log(`💾 Saved state is for different artist (${savedArtistName}), not restoring`);
+        }
       }
     }
-  }, [data, originalNetworkData]);
+  }, [data, originalNetworkData, dataWithPictures]);
 
   // Save expanded state whenever critical state changes
   useEffect(() => {
@@ -581,39 +580,58 @@ export default function NetworkVisualizer({
     }
   };
 
-  // Only process initial data when the original data prop changes (not on visibility changes)
+  // Process initial data when data prop changes
   useEffect(() => {
     if (!data) {
       setDataWithPictures(null);
+      setOriginalNetworkData(null);
+      setIsExpandedMode(false);
+      setExpandedNodes(new Set());
+      setNodeExpansions(new Map());
+      hasExpandedDataRef.current = false;
+      console.log(`🖼️ [NetworkVisualizer] Cleared all data - no network data provided`);
       return;
     }
 
-    // Only process if we don't already have expanded data or if this is genuinely new data
-    if ((isExpandedMode || hasExpandedDataRef.current) && dataWithPictures) {
-      console.log(`🖼️ [NetworkVisualizer] Skipping data processing - expanded mode active with existing data`);
-      return;
-    }
-
-    console.log(`🖼️ [NetworkVisualizer] Processing initial network data...`);
+    // Get the current artist name to check if this is a new artist
+    const newArtistName = data.nodes?.find(n => n.size === 30)?.name;
+    const currentArtistName = dataWithPictures?.nodes?.find(n => n.size === 30)?.name;
     
-    const processData = async () => {
-      try {
-        // Only filter to first-degree on initial load, not when expanding
-        const processedData = filterToFirstDegreeOnly(data);
-        
-        // Then ensure profile pictures are available
-        const updatedData = await ensureArtistProfilePictures(processedData);
-        setDataWithPictures(updatedData);
-        console.log(`🖼️ [NetworkVisualizer] Initial network data processed and profile pictures ensured`);
-      } catch (error) {
-        console.error(`🖼️ [NetworkVisualizer] Error processing network data:`, error);
-        // Use filtered data without profile pictures if profile picture fetching fails
-        const fallbackData = filterToFirstDegreeOnly(data);
-        setDataWithPictures(fallbackData);
-      }
-    };
+    // If this is a different artist or we have no existing data, reset everything
+    if (!dataWithPictures || newArtistName !== currentArtistName) {
+      console.log(`🖼️ [NetworkVisualizer] Processing data for ${newArtistName || 'unknown artist'}`);
+      
+      // Reset all expanded state for new artist
+      setIsExpandedMode(false);
+      setExpandedNodes(new Set());
+      setNodeExpansions(new Map());
+      hasExpandedDataRef.current = false;
+      
+      const processData = async () => {
+        try {
+          // Filter to first-degree only for initial load
+          const processedData = filterToFirstDegreeOnly(data);
+          
+          // Store this as the original data before profile pictures
+          setOriginalNetworkData(processedData);
+          
+          // Then ensure profile pictures are available
+          const updatedData = await ensureArtistProfilePictures(processedData);
+          setDataWithPictures(updatedData);
+          console.log(`🖼️ [NetworkVisualizer] Initial network data processed for ${newArtistName} with ${updatedData.nodes.length} nodes`);
+        } catch (error) {
+          console.error(`🖼️ [NetworkVisualizer] Error processing network data:`, error);
+          // Use filtered data without profile pictures if profile picture fetching fails
+          const fallbackData = filterToFirstDegreeOnly(data);
+          setOriginalNetworkData(fallbackData);
+          setDataWithPictures(fallbackData);
+        }
+      };
 
-    processData();
+      processData();
+    } else {
+      console.log(`🖼️ [NetworkVisualizer] Same artist (${currentArtistName}), keeping existing data`);
+    }
   }, [data]); // Only depend on data, not visibility
 
   // Separate effect to handle visibility without affecting data
@@ -2060,6 +2078,9 @@ export default function NetworkVisualizer({
     return true;
   }
 
+  // Debug logging for render
+  console.log(`🔍 [NetworkVisualizer] Render: visible=${visible}, dataWithPictures=${!!dataWithPictures}, nodes=${dataWithPictures?.nodes?.length || 0}`);
+
   return (
     <div
       className={`network-container transition-opacity duration-700 w-full h-full ${
@@ -2067,6 +2088,15 @@ export default function NetworkVisualizer({
       }`}
     >
       <svg ref={svgRef} className="w-full h-full" />
+      
+      {/* Debug info overlay */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white text-xs p-2 rounded">
+          <div>Visible: {visible ? 'true' : 'false'}</div>
+          <div>Data: {dataWithPictures ? `${dataWithPictures.nodes.length} nodes` : 'null'}</div>
+          <div>Expanded: {isExpandedMode ? 'true' : 'false'}</div>
+        </div>
+      )}
       
       {/* Reset button for expanded mode */}
       {isExpandedMode && (
