@@ -132,6 +132,8 @@ export function useTooltip({
       const nodeData = highlightedNode.datum() as NetworkNode;
       const roles = nodeData.types || [nodeData.type];
       
+      console.log(`🎯 RESETTING node highlight: ${nodeData.name} - ${roles.length} roles`);
+      
       // Reset to original styling
       if (roles.length === 1) {
         // Single role - reset circle fill to transparent and stroke to original color

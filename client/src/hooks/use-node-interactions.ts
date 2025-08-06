@@ -123,10 +123,12 @@ export function useNodeInteractions({
         
         if (roles.length === 1) {
           // Single role node - turn the circle fill white
+          console.log(`🎯 Highlighting single-role node: ${node.name} - setting fill to white`);
           currentNodeSelection.selectAll("circle")
             .attr("fill", "white");
         } else {
           // Multi-role node - thicken the white border of path elements
+          console.log(`🎯 Highlighting multi-role node: ${node.name} - thickening borders`);
           currentNodeSelection.selectAll("path")
             .attr("stroke-width", 3);
           
@@ -136,10 +138,25 @@ export function useNodeInteractions({
         }
         
         // Track this node as highlighted
+        console.log(`🎯 Setting highlighted node:`, currentNodeSelection);
         tooltip.setHighlightedNode(currentNodeSelection);
         
         // Show tooltip using the tooltip system
         tooltip.showTooltip(event, node);
+        
+        // Debug: Check the highlighting state immediately after
+        setTimeout(() => {
+          const circleNodes = currentNodeSelection.selectAll("circle").nodes() as SVGCircleElement[];
+          const pathNodes = currentNodeSelection.selectAll("path").nodes() as SVGPathElement[];
+          
+          console.log(`🎯 Node highlighting check after 100ms:`, {
+            nodeElement: nodeElement,
+            circleElements: circleNodes,
+            circleFills: circleNodes.map(el => el?.getAttribute('fill')),
+            pathElements: pathNodes,
+            pathStrokeWidths: pathNodes.map(el => el?.getAttribute('stroke-width'))
+          });
+        }, 100);
         
         console.log(`🎯 Node clicked: ${node.name} (${node.type}) - roles: [${roles.join(', ')}]`);
       } catch (error) {
