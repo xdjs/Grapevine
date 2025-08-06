@@ -277,8 +277,10 @@ export default function D3NetworkRenderer({
         elements.each(function(data, i) {
           const element = d3.select(this);
           console.log(`🎯 Element ${i}: ${this.tagName}, current stroke: ${element.attr("stroke")}, current stroke-width: ${element.attr("stroke-width")}`);
-          element.attr("stroke", "white").attr("stroke-width", 3);
+          // Use .style() instead of .attr() to override CSS
+          element.style("stroke", "white").style("stroke-width", "3px");
           console.log(`🎯 Element ${i} after change: stroke: ${element.attr("stroke")}, stroke-width: ${element.attr("stroke-width")}`);
+          console.log(`🎯 Element ${i} style applied: stroke: ${element.style("stroke")}, stroke-width: ${element.style("stroke-width")}`);
         });
         
         // Track this node as highlighted
