@@ -122,20 +122,21 @@ export function useNodeInteractions({
         const roles = node.types || [node.type];
         
         // Debug: Check the actual DOM structure
-        console.log(`🎯 Node DOM structure:`, {
-          nodeElement: nodeElement,
-          nodeName: nodeElement.tagName,
-          children: Array.from(nodeElement.children).map(child => ({
-            tagName: child.tagName,
-            classes: child.className,
-            attributes: Array.from(child.attributes).map(attr => `${attr.name}="${attr.value}"`).join(' ')
-          })),
-          allCircles: currentNodeSelection.selectAll("*").nodes().filter(el => el.tagName.toLowerCase() === 'circle'),
-          allPaths: currentNodeSelection.selectAll("*").nodes().filter(el => el.tagName.toLowerCase() === 'path'),
-          d3CircleSelection: currentNodeSelection.selectAll("circle").nodes(),
-          d3CircleSelectionUpper: currentNodeSelection.selectAll("CIRCLE").nodes(),
-          actualTagNames: currentNodeSelection.selectAll("*").nodes().map(el => el.tagName)
+        console.log(`🎯 Node element tag:`, nodeElement.tagName);
+        console.log(`🎯 Node children count:`, nodeElement.children.length);
+        
+        Array.from(nodeElement.children).forEach((child, index) => {
+          console.log(`🎯 Child ${index}:`, child.tagName, child.className);
         });
+        
+        const allElements = currentNodeSelection.selectAll("*").nodes();
+        console.log(`🎯 All descendant elements:`, allElements.length);
+        allElements.forEach((el, index) => {
+          console.log(`🎯 Element ${index}:`, el.tagName);
+        });
+        
+        console.log(`🎯 D3 circle selection (lowercase):`, currentNodeSelection.selectAll("circle").size());
+        console.log(`🎯 D3 circle selection (uppercase):`, currentNodeSelection.selectAll("CIRCLE").size());
         
         if (roles.length === 1) {
           // Single role node - turn the circle fill white
