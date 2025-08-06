@@ -105,50 +105,13 @@ export function useNodeInteractions({
 
   /**
    * Handles node click events and coordinates with the tooltip system.
-   * Manages highlighting and tooltip display with proper selection mechanism.
+   * Note: Click handling is now done directly in D3NetworkRenderer for better control.
    */
   const handleNodeClick = useCallback(
     (event: MouseEvent, node: NetworkNode, nodeElement: SVGGElement) => {
-      try {
-        event.stopPropagation();
-        
-        if (!visible) return;
-        
-        // Reset any previously highlighted node to original colors
-        tooltip.resetNodeHighlight();
-        
-        // Apply white stroke selection to the clicked node
-        const currentNodeSelection = d3.select(nodeElement);
-        const roles = node.types || [node.type];
-        
-        if (roles.length === 1) {
-          // Single role - apply white stroke to circle using style for higher specificity
-          currentNodeSelection.selectAll("circle")
-            .style("stroke", "white")
-            .style("stroke-width", "3px");
-        } else {
-          // Multi-role - apply white stroke to both paths and inner circle using style for higher specificity
-          currentNodeSelection.selectAll("path")
-            .style("stroke", "white")
-            .style("stroke-width", "3px");
-          currentNodeSelection.selectAll("circle")
-            .style("stroke", "white")
-            .style("stroke-width", "3px");
-        }
-        
-        // Track this node as highlighted for future reset
-        tooltip.setHighlightedNode(currentNodeSelection);
-        
-        // Show tooltip using the tooltip system
-        tooltip.showTooltip(event, node);
-        
-        console.log(`🎯 Node clicked: ${node.name} (${node.type}) - White selection applied`);
-      } catch (error) {
-        console.error('🎯 Error handling node click:', error);
-        // Continue execution - don't let errors break the interaction
-      }
+      console.log(`🎯 Node click delegated to D3 renderer for: ${node.name}`);
     },
-    [tooltip, visible]
+    [visible]
   );
 
   /**

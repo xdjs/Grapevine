@@ -134,21 +134,26 @@ export function useTooltip({
       
       console.log(`🎨 Resetting highlight for node: ${nodeData.name} with roles: [${roles.join(', ')}]`);
       
-      // Reset to original styling based on node type using style for higher specificity
+      // Reset to original styling based on node type
       if (roles.length === 1) {
-        // Single role - reset to original stroke color and width, clear inline styles
+        // Single role - reset to original stroke color and width
         highlightedNode.selectAll('circle')
-          .style('stroke', null)  // Remove inline style to allow CSS to take over
-          .style('stroke-width', null);
+          .attr('stroke', () => {
+            if (roles[0] === 'artist') return '#FF0ACF';       // Magenta Pink
+            if (roles[0] === 'producer') return '#AE53FF';     // Bright Purple  
+            if (roles[0] === 'songwriter') return '#67D1F8';   // Light Blue
+            return '#355367';  // Police Blue
+          })
+          .attr('stroke-width', 4);
       } else {
-        // Multiple roles - reset path strokes and inner circle, clear inline styles
+        // Multiple roles - reset path strokes and inner circle to white
         highlightedNode.selectAll('path')
-          .style('stroke', null)  // Remove inline style to allow CSS to take over
-          .style('stroke-width', null);
+          .attr('stroke', 'white')
+          .attr('stroke-width', 1);
         
         highlightedNode.selectAll('circle')
-          .style('stroke', null)  // Remove inline style to allow CSS to take over
-          .style('stroke-width', null);
+          .attr('stroke', 'white')
+          .attr('stroke-width', 2);
       }
       
       console.log(`🎨 Node ${nodeData.name} reset to original colors`);

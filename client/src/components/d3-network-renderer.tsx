@@ -264,8 +264,24 @@ export default function D3NetworkRenderer({
       }
     })
       .on("click", function(event, d) {
-        // Use the node interactions hook for click handling
-        nodeInteractions.handleNodeClick(event as MouseEvent, d, this);
+        event.stopPropagation();
+        
+        // First, reset any previously highlighted node
+        tooltip.resetNodeHighlight();
+
+        // Highlight the current node group
+        const currentNode = d3.select(this);
+        currentNode.selectAll("circle, path")
+          .attr("stroke", "white")
+          .attr("stroke-width", 3);
+        
+        // Track this node as highlighted
+        tooltip.setHighlightedNode(currentNode);
+        
+        // Show tooltip
+        tooltip.showTooltip(event as MouseEvent, d);
+        
+        console.log(`🎯 Node clicked: ${d.name} (${d.type}) - White selection applied`);
       });
 
     // Setup drag behavior using the node interactions hook
