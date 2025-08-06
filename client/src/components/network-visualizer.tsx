@@ -185,6 +185,8 @@ export default function NetworkVisualizer({
     setIsExpandingNetwork(true);
     setExpandingNodeName(nodeName);
     
+
+    
     try {
       // Check if this node is already expanded
       if (expandedNodes.has(nodeId)) {
@@ -1439,9 +1441,11 @@ export default function NetworkVisualizer({
         e.preventDefault();
         e.stopPropagation();
         
+        // Close tooltip immediately when expansion starts
+        hideTooltip();
+        
         console.log(`🔗 Expanding network for ${d.name} (ID: ${d.id})`);
         await expandNodeNetwork(d.id, d.name, d.artistId);
-        hideTooltip();
       };
 
       // Shrink network handler
