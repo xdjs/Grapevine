@@ -14,6 +14,7 @@ import CollaborationDetailsPopup from "./collaboration-details-popup";
 import NetworkTooltip from "./network-tooltip";
 import ZoomControlsEnhanced from "./zoom-controls-enhanced";
 import NetworkResetButton from "./network-reset-button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -44,6 +45,7 @@ export default function NetworkVisualizer({
 }: NetworkVisualizerProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
+  const isMobile = useIsMobile();
   
   // Component error and loading state
   const [componentError, setComponentError] = useState<ComponentError | null>(null);
@@ -330,18 +332,20 @@ export default function NetworkVisualizer({
             aria-label="Music collaboration network visualization"
           />
 
-          {/* Enhanced Zoom Controls */}
-          <ZoomControlsEnhanced
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onZoomReset={handleZoomReset}
-            onClearAll={onClearAll}
-            showClearButton={true}
-            position="top-right"
-            orientation="vertical"
-            theme="dark"
-            ariaLabel="Zoom controls"
-          />
+          {/* Enhanced Zoom Controls - Hidden on mobile */}
+          {!isMobile && (
+            <ZoomControlsEnhanced
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+              onZoomReset={handleZoomReset}
+              onClearAll={onClearAll}
+              showClearButton={true}
+              position="top-right"
+              orientation="vertical"
+              theme="dark"
+              ariaLabel="Zoom controls"
+            />
+          )}
 
           {/* D3 Network Renderer Component */}
           <D3NetworkRenderer
