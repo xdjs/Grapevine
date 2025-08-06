@@ -133,7 +133,7 @@ export default function NetworkVisualizer({
 
   // Save expanded state to localStorage whenever it changes
   useEffect(() => {
-    if (!mainArtistNode || expandedNodes.size === 0) return;
+    if (!mainArtistNode || expandedNodes.size === 0 || !dataWithPictures) return;
     
     try {
       const storageKey = getStorageKey();
@@ -148,16 +148,22 @@ export default function NetworkVisualizer({
         timestamp: Date.now()
       };
       
-      localStorage.setItem(storageKey, JSON.stringify(expandedState));
-      console.log(`💾 Saved expanded state for ${mainArtistNode.name}:`, expandedState);
+      // Only save if we have valid expansion data
+      if (expandedState.nodeExpansions.length > 0) {
+        localStorage.setItem(storageKey, JSON.stringify(expandedState));
+        console.log(`💾 Saved expanded state for ${mainArtistNode.name}:`, expandedState);
+      }
     } catch (error) {
       console.error('💾 Failed to save expanded state:', error);
     }
-  }, [expandedNodes, nodeExpansions, isExpandedMode, mainArtistNode]);
+  }, [expandedNodes, nodeExpansions, isExpandedMode, mainArtistNode, dataWithPictures]);
 
   // Restore expanded state from localStorage when component mounts
   useEffect(() => {
-    if (!mainArtistNode || !originalNetworkData) return;
+    if (!mainArtistNode || !originalNetworkData || !dataWithPictures) return;
+    
+    // Only restore if we haven't already restored and aren't currently in expanded mode
+    if (isExpandedMode || hasExpandedDataRef.current) return;
     
     try {
       const storageKey = getStorageKey();
@@ -166,6 +172,12 @@ export default function NetworkVisualizer({
       if (savedState) {
         const expandedState = JSON.parse(savedState);
         console.log(`🔄 Restoring expanded state for ${mainArtistNode.name}:`, expandedState);
+        
+        // Only restore if we have actual expanded data
+        if (expandedState.expandedNodes.length === 0) {
+          console.log(`🔄 No expanded nodes to restore, skipping`);
+          return;
+        }
         
         // Restore expanded nodes
         setExpandedNodes(new Set(expandedState.expandedNodes));
@@ -197,12 +209,16 @@ export default function NetworkVisualizer({
         ensureArtistProfilePictures(rebuiltData).then(updatedData => {
           setDataWithPictures(updatedData);
           console.log(`🔄 Restored expanded network with ${updatedData.nodes.length} nodes and ${updatedData.links.length} links`);
+        }).catch(error => {
+          console.error('🔄 Failed to restore profile pictures, using data without pictures:', error);
+          setDataWithPictures(rebuiltData);
         });
       }
     } catch (error) {
       console.error('🔄 Failed to restore expanded state:', error);
+      // Don't break the component if restore fails
     }
-  }, [mainArtistNode, originalNetworkData]);
+  }, [mainArtistNode, originalNetworkData, dataWithPictures]);
 
   // Function to get first-degree collaborators (directly connected to main artist)
   const getFirstDegreeCollaborators = (): Set<string> => {
@@ -445,6 +461,17 @@ export default function NetworkVisualizer({
       console.log(`🔗 Successfully expanded ${nodeName}'s network with ${selectedNodes.length} ${roleDescription} collaborators and ${newLinks.length} links`);
     } catch (error) {
       console.error(`🔗 Error expanding network for ${nodeName}:`, error);
+      
+      // Don't change the network state on error - keep existing expanded state
+      // Remove this node from the "expanding" state since it failed
+      setExpandedNodes(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(nodeId); // Remove the node that failed to expand
+        return newSet;
+      });
+      
+      // Alert user about the error
+      alert(`Failed to expand ${nodeName}'s network. The existing network will remain unchanged.`);
     } finally {
       // Clear loading state
       setIsExpandingNetwork(false);
@@ -646,6 +673,8 @@ export default function NetworkVisualizer({
     const networkData = dataWithPictures;
     if (!svgRef.current || !networkData || !visible) return;
 
+    console.log(`🎨 [D3] Rendering network with ${networkData.nodes.length} nodes and ${networkData.links.length} links`);
+
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
     
@@ -653,7 +682,7 @@ export default function NetworkVisualizer({
     const width = container ? container.clientWidth : window.innerWidth;
     const height = container ? container.clientHeight : window.innerHeight;
 
-    // Clear existing content
+    // Clear existing content and rebuild
     svg.selectAll("*").remove();
 
     // Filter out links where either node doesn't exist or is isolated
