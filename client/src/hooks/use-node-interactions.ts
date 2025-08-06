@@ -129,35 +129,29 @@ export function useNodeInteractions({
         
         // Apply highlighting using direct style manipulation for reliable results
         if (roles.length === 1) {
-          // Single role - turn node completely white
+          // Single role - turn node completely white (no size change)
           console.log(`🎯 Applying single role highlighting with direct styles`);
           
-          // Apply styles directly to circle elements
+          // Apply styles directly to circle elements - turn completely white
           currentNodeSelection.selectAll("circle")
             .style("fill", "white")
             .style("stroke", "white") 
-            .style("stroke-width", "8px")
+            .style("stroke-width", "4px")
             .style("stroke-opacity", "1");
-            
-          // Also scale the entire node group for visibility
-          currentNodeSelection.style("transform", "scale(1.3)");
           
         } else {
-          // Multiple roles - thicker white border
+          // Multiple roles - thicker white border (no size change)
           console.log(`🎯 Applying multi-role highlighting with direct styles`);
           
-          // Apply styles to path elements (arc segments)
+          // Apply styles to path elements (arc segments) - thicker white border
           currentNodeSelection.selectAll("path")
             .style("stroke", "white")
-            .style("stroke-width", "8px");
+            .style("stroke-width", "4px");  // Increased from 1px to 4px
             
-          // Apply styles to circle elements (inner circle)
+          // Apply styles to circle elements (inner circle) - thicker white border
           currentNodeSelection.selectAll("circle")
             .style("stroke", "white")
-            .style("stroke-width", "10px");
-            
-          // Scale the entire node group
-          currentNodeSelection.style("transform", "scale(1.3)");
+            .style("stroke-width", "5px");  // Increased from 2px to 5px
         }
         
         console.log(`🎯 Direct styles applied to "${node.name}"`);

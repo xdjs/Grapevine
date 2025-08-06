@@ -134,30 +134,27 @@ export function useTooltip({
       const nodeData = highlightedNode.datum() as NetworkNode;
       const roles = nodeData.types || [nodeData.type];
       
-      // Reset transform
-      highlightedNode.style("transform", null);
-      
       if (roles.length === 1) {
-        // Single role - reset to original colors
+        // Single role - reset to original transparent fill and role-specific colors
         highlightedNode.selectAll("circle")
           .style("fill", "transparent")
           .style("stroke", () => {
-            if (roles[0] === 'artist') return '#FF0ACF';
-            if (roles[0] === 'producer') return '#AE53FF';
-            if (roles[0] === 'songwriter') return '#67D1F8';
-            return '#355367';
+            if (roles[0] === 'artist') return '#FF0ACF';       // Magenta Pink
+            if (roles[0] === 'producer') return '#AE53FF';     // Bright Purple
+            if (roles[0] === 'songwriter') return '#67D1F8';   // Light Blue
+            return '#355367';  // Police Blue
           })
           .style("stroke-width", "4px")
           .style("stroke-opacity", null);
       } else {
-        // Multiple roles - reset to original styling
+        // Multiple roles - reset to original border thickness
         highlightedNode.selectAll("path")
           .style("stroke", "white")
-          .style("stroke-width", "1px");
+          .style("stroke-width", "1px");  // Back to original 1px
           
         highlightedNode.selectAll("circle")
           .style("stroke", "white")
-          .style("stroke-width", "2px");
+          .style("stroke-width", "2px");  // Back to original 2px
       }
       
       console.log(`🎯 Node highlight reset complete`);
