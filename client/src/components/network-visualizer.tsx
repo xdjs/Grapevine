@@ -37,6 +37,40 @@ export default function NetworkVisualizer({
   const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("");
   const [dataWithPictures, setDataWithPictures] = useState<NetworkData | null>(null);
 
+  // Helper functions for localStorage persistence
+  const getStorageKey = (artistName: string) => `grapevine_expanded_${artistName}`;
+  
+  const loadExpandedState = (artistName: string) => {
+    try {
+      const stored = localStorage.getItem(getStorageKey(artistName));
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return {
+          expandedNodes: new Set(parsed.expandedNodes || []),
+          nodeExpansions: new Map(Object.entries(parsed.nodeExpansions || {})),
+          dataWithPictures: parsed.dataWithPictures || null
+        };
+      }
+    } catch (error) {
+      console.warn('Failed to load expanded state from localStorage:', error);
+    }
+    return null;
+  };
+  
+  const saveExpandedState = (artistName: string, expandedNodes: Set<string>, nodeExpansions: Map<string, any>, dataWithPictures: NetworkData | null) => {
+    try {
+      const toSave = {
+        expandedNodes: Array.from(expandedNodes),
+        nodeExpansions: Object.fromEntries(nodeExpansions),
+        dataWithPictures,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(getStorageKey(artistName), JSON.stringify(toSave));
+    } catch (error) {
+      console.warn('Failed to save expanded state to localStorage:', error);
+    }
+  };
+
   // Add missing state variables for expand network functionality
   const [isExpandedMode, setIsExpandedMode] = useState(false);
   const [originalNetworkData, setOriginalNetworkData] = useState<NetworkData | null>(null);
@@ -124,6 +158,21 @@ export default function NetworkVisualizer({
       console.log(`🔗 Stored original first-degree network with ${firstDegreeData.nodes.length} nodes`);
     }
   }, [data, originalNetworkData, isExpandedMode]);
+
+  // Load expanded state from localStorage when main artist changes
+  useEffect(() => {
+    if (mainArtistNode && originalNetworkData) {
+      const savedState = loadExpandedState(mainArtistNode.name);
+      if (savedState && savedState.dataWithPictures) {
+        console.log(`🔗 Restoring expanded state for ${mainArtistNode.name} from localStorage`);
+        setExpandedNodes(savedState.expandedNodes);
+        setNodeExpansions(savedState.nodeExpansions);
+        setDataWithPictures(savedState.dataWithPictures);
+        setIsExpandedMode(savedState.expandedNodes.size > 0);
+        hasExpandedDataRef.current = savedState.expandedNodes.size > 0;
+      }
+    }
+  }, [mainArtistNode, originalNetworkData]);
 
   // Function to get first-degree collaborators (directly connected to main artist)
   const getFirstDegreeCollaborators = (): Set<string> => {
@@ -364,6 +413,12 @@ export default function NetworkVisualizer({
 
       const roleDescription = isClickedArtist ? 'songwriter/producer' : 'artist';
       console.log(`🔗 Successfully expanded ${nodeName}'s network with ${selectedNodes.length} ${roleDescription} collaborators and ${newLinks.length} links`);
+      
+      // Save expanded state to localStorage (use the updated values, not the state which may be stale)
+      if (mainArtistNode) {
+        const newExpandedNodes = new Set([...expandedNodes, nodeId]);
+        saveExpandedState(mainArtistNode.name, newExpandedNodes, nodeExpansions, updatedData);
+      }
     } catch (error) {
       console.error(`🔗 Error expanding network for ${nodeName}:`, error);
     } finally {
@@ -437,6 +492,15 @@ export default function NetworkVisualizer({
       }
 
       console.log(`🔗 Successfully shrunk ${nodeName}'s network. Removed ${expansion.addedNodes.length} nodes and ${expansion.addedLinks.length} links`);
+      
+      // Save updated state to localStorage (use the updated values, not the state which may be stale)
+      if (mainArtistNode) {
+        const newExpandedNodes = new Set(expandedNodes);
+        newExpandedNodes.delete(nodeId);
+        const newNodeExpansions = new Map(nodeExpansions);
+        newNodeExpansions.delete(nodeId);
+        saveExpandedState(mainArtistNode.name, newExpandedNodes, newNodeExpansions, shrunkData);
+      }
     } catch (error) {
       console.error(`🔗 Error shrinking network for ${nodeName}:`, error);
     }
@@ -456,6 +520,11 @@ export default function NetworkVisualizer({
         setNodeExpansions(new Map());
         hasExpandedDataRef.current = false;
         console.log(`🔗 Reset to original first-degree network with ${originalNetworkData.nodes.length} nodes`);
+        
+        // Clear localStorage for this artist
+        if (mainArtistNode) {
+          localStorage.removeItem(getStorageKey(mainArtistNode.name));
+        }
       } catch (error) {
         console.error(`🔗 Error resetting network:`, error);
         // Fallback to original data without profile pictures
@@ -464,6 +533,11 @@ export default function NetworkVisualizer({
         setExpandedNodes(new Set());
         setNodeExpansions(new Map());
         hasExpandedDataRef.current = false;
+        
+        // Clear localStorage for this artist
+        if (mainArtistNode) {
+          localStorage.removeItem(getStorageKey(mainArtistNode.name));
+        }
       }
     }
   };
