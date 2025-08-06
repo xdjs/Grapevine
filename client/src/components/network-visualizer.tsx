@@ -6,6 +6,9 @@ import { ensureArtistProfilePictures } from "@/lib/profile-pictures";
 import CollaborationDetailsPopup from "./collaboration-details-popup";
 import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
 import { Loader2, Network, Brain, Users } from "lucide-react";
+import NetworkTooltip from "./network-tooltip";
+import ZoomControlsEnhanced from "./zoom-controls-enhanced";
+import NetworkResetButton from "./network-reset-button";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
