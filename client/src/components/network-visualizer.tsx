@@ -52,6 +52,10 @@ export default function NetworkVisualizer({
   const [collaborationArtist, setCollaborationArtist] = useState("");
   const [collaborationCollaborator, setCollaborationCollaborator] = useState("");
   const [mainArtistName, setMainArtistName] = useState("");
+  
+  // Loading state for network expansion
+  const [isExpandingNetwork, setIsExpandingNetwork] = useState(false);
+  const [expandingNodeName, setExpandingNodeName] = useState("");
 
   // Store the main artist node for easy access
   const mainArtistNode = dataWithPictures?.nodes.find(node => node.size === 30 && node.type === 'artist') || null;
@@ -176,10 +180,16 @@ export default function NetworkVisualizer({
   const expandNodeNetwork = async (nodeId: string, nodeName: string, nodeArtistId?: string): Promise<void> => {
     console.log(`🔗 Starting expand network for ${nodeName} (ID: ${nodeId}, Artist ID: ${nodeArtistId})`);
     
+    // Set loading state
+    setIsExpandingNetwork(true);
+    setExpandingNodeName(nodeName);
+    
     try {
       // Check if this node is already expanded
       if (expandedNodes.has(nodeId)) {
         console.log(`🔗 ${nodeName} is already expanded, skipping`);
+        setIsExpandingNetwork(false);
+        setExpandingNodeName("");
         return;
       }
 
@@ -353,6 +363,10 @@ export default function NetworkVisualizer({
       console.log(`🔗 Successfully expanded ${nodeName}'s network with ${selectedNodes.length} ${roleDescription} collaborators and ${newLinks.length} links`);
     } catch (error) {
       console.error(`🔗 Error expanding network for ${nodeName}:`, error);
+    } finally {
+      // Clear loading state
+      setIsExpandingNetwork(false);
+      setExpandingNodeName("");
     }
   };
 
@@ -1931,6 +1945,26 @@ export default function NetworkVisualizer({
         collaboratorName={collaborationCollaborator}
         mainArtistName={mainArtistName}
       />
+
+      {/* Loading screen for network expansion */}
+      {isExpandingNetwork && (
+        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-md mx-4 text-center shadow-2xl">
+            <div className="flex items-center justify-center mb-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Expanding Network
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Discovering collaborators for <span className="font-medium text-blue-600">{expandingNodeName}</span>...
+            </p>
+            <div className="text-sm text-gray-500">
+              Using AI to generate music industry connections
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
