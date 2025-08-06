@@ -373,8 +373,8 @@ describe('useNodeInteractions', () => {
       });
 
       expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle");
-      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke", "white");
-      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke-width", 3);
+      expect(mockD3Selection.selectAll().style).toHaveBeenCalledWith("stroke", "white");
+      expect(mockD3Selection.selectAll().style).toHaveBeenCalledWith("stroke-width", "3px");
     });
 
     it('should highlight multi-role node correctly on click', () => {
@@ -394,8 +394,8 @@ describe('useNodeInteractions', () => {
       });
 
       expect(mockD3Selection.selectAll).toHaveBeenCalledWith("path");
-      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke", "white");
-      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke-width", 3);
+      expect(mockD3Selection.selectAll().style).toHaveBeenCalledWith("stroke", "white");
+      expect(mockD3Selection.selectAll().style).toHaveBeenCalledWith("stroke-width", "3px");
       expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle");
     });
   });
@@ -720,8 +720,8 @@ describe('useNodeInteractions', () => {
       
       // Verify white stroke was applied to circles for single-role nodes
       expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle");
-      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke", "white");
-      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke-width", 3);
+      expect(mockD3Selection.selectAll().style).toHaveBeenCalledWith("stroke", "white");
+      expect(mockD3Selection.selectAll().style).toHaveBeenCalledWith("stroke-width", "3px");
       
       // Verify node was tracked as highlighted
       expect(mockTooltip.setHighlightedNode).toHaveBeenCalledWith(mockD3Selection);
@@ -756,8 +756,8 @@ describe('useNodeInteractions', () => {
       // Verify white stroke was applied to both paths and circles for multi-role nodes
       expect(mockD3Selection.selectAll).toHaveBeenCalledWith("path");
       expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle");
-      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke", "white");
-      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke-width", 3);
+      expect(mockD3Selection.selectAll().style).toHaveBeenCalledWith("stroke", "white");
+      expect(mockD3Selection.selectAll().style).toHaveBeenCalledWith("stroke-width", "3px");
       
       // Verify node was tracked as highlighted
       expect(mockTooltip.setHighlightedNode).toHaveBeenCalledWith(mockD3Selection);

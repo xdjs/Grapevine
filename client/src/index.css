@@ -326,19 +326,19 @@
   .node-artist { 
     fill: var(--artist-color);
     stroke: var(--artist-color);
-    stroke-width: 3px;
+    stroke-width: 4px;
   }
   
   .node-producer { 
     fill: var(--producer-color);
     stroke: var(--producer-color);
-    stroke-width: 3px;
+    stroke-width: 4px;
   }
   
   .node-songwriter { 
     fill: var(--songwriter-color);
     stroke: var(--songwriter-color);
-    stroke-width: 3px;
+    stroke-width: 4px;
   }
   
   .network-link { 
@@ -347,8 +347,6 @@
   }
   
   .network-node:hover { 
-    stroke: hsl(0, 0%, 100%); 
-    stroke-width: 3px; 
     cursor: pointer; 
   }
   
@@ -424,7 +422,7 @@
     }
     
     .node-artist, .node-producer, .node-songwriter {
-      stroke-width: 2px;
+      stroke-width: 3px;
     }
     
     .network-node {

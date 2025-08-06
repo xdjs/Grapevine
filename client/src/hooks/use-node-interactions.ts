@@ -122,18 +122,18 @@ export function useNodeInteractions({
         const roles = node.types || [node.type];
         
         if (roles.length === 1) {
-          // Single role - apply white stroke to circle
+          // Single role - apply white stroke to circle using style for higher specificity
           currentNodeSelection.selectAll("circle")
-            .attr("stroke", "white")
-            .attr("stroke-width", 3);
+            .style("stroke", "white")
+            .style("stroke-width", "3px");
         } else {
-          // Multi-role - apply white stroke to both paths and inner circle
+          // Multi-role - apply white stroke to both paths and inner circle using style for higher specificity
           currentNodeSelection.selectAll("path")
-            .attr("stroke", "white")
-            .attr("stroke-width", 3);
+            .style("stroke", "white")
+            .style("stroke-width", "3px");
           currentNodeSelection.selectAll("circle")
-            .attr("stroke", "white")
-            .attr("stroke-width", 3);
+            .style("stroke", "white")
+            .style("stroke-width", "3px");
         }
         
         // Track this node as highlighted for future reset
