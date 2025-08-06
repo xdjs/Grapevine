@@ -1280,8 +1280,8 @@ export default function NetworkVisualizer({
         // Check if this node has been expanded
         const isNodeExpanded = expandedNodes.has(d.id);
         
-        // Build expand/shrink network section for first-degree collaborators
-        const expandShrinkSection = isFirstDegreeCollaborator && !isMainArtist ? 
+        // Build expand/shrink network section for any collaborator (not just first-degree)
+        const expandShrinkSection = !isMainArtist ? 
           (isNodeExpanded ? 
             // Show shrink button if node is expanded
             '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="shrink-action">' +
@@ -1461,8 +1461,8 @@ export default function NetworkVisualizer({
       // Attach event handlers
       tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
       
-      // Attach expand/shrink handlers based on node state (first-degree collaborators only)
-      if (isFirstDegreeCollaborator && !isMainArtist) {
+      // Attach expand/shrink handlers based on node state (any collaborator except main artist)
+      if (!isMainArtist) {
         if (isNodeExpanded) {
           // Attach shrink handler if node is expanded
           tooltip.selectAll(".shrink-link, .shrink-icon, .shrink-action").on("click", shrinkHandler);
