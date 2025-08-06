@@ -141,17 +141,35 @@ export function useNodeInteractions({
         if (roles.length === 1) {
           // Single role node - turn the circle fill white
           console.log(`🎯 Highlighting single-role node: ${node.name} - setting fill to white`);
-          currentNodeSelection.selectAll("circle")
-            .attr("fill", "white");
+          const circleSelection = currentNodeSelection.selectAll("circle");
+          console.log(`🎯 Circle selection size:`, circleSelection.size());
+          
+          circleSelection.each(function() {
+            const element = this as SVGCircleElement;
+            console.log(`🎯 Before - fill:`, element.getAttribute('fill'), `stroke:`, element.getAttribute('stroke'));
+            element.setAttribute('fill', 'white');
+            console.log(`🎯 After - fill:`, element.getAttribute('fill'), `stroke:`, element.getAttribute('stroke'));
+          });
+          
+          // Also try the D3 way as backup
+          circleSelection.attr("fill", "white");
         } else {
           // Multi-role node - thicken the white border of path elements
           console.log(`🎯 Highlighting multi-role node: ${node.name} - thickening borders`);
-          currentNodeSelection.selectAll("path")
-            .attr("stroke-width", 3);
+          const pathSelection = currentNodeSelection.selectAll("path");
+          pathSelection.attr("stroke-width", 3);
           
           // Also thicken the inner circle border
-          currentNodeSelection.selectAll("circle")
-            .attr("stroke-width", 4);
+          const circleSelection = currentNodeSelection.selectAll("circle");
+          circleSelection.attr("stroke-width", 4);
+          
+          // Log the changes
+          pathSelection.each(function() {
+            console.log(`🎯 Path stroke-width:`, (this as SVGElement).getAttribute('stroke-width'));
+          });
+          circleSelection.each(function() {
+            console.log(`🎯 Circle stroke-width:`, (this as SVGElement).getAttribute('stroke-width'));
+          });
         }
         
         // Track this node as highlighted
