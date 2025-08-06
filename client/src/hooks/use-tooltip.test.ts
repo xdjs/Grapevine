@@ -575,7 +575,7 @@ describe('useTooltip', () => {
       expect(result.current.highlightedNode).toBe(mockD3Node);
     });
 
-    it('should reset node highlighting', () => {
+    it('should reset single-role node highlighting', () => {
       const { result } = renderHook(() =>
         useTooltip({
           networkData: mockNetworkData,
@@ -605,6 +605,10 @@ describe('useTooltip', () => {
 
       expect(result.current.highlightedNode).toBeNull();
       expect(mockD3Node.selectAll).toHaveBeenCalledWith('circle');
+      
+      // Verify that single-role reset sets fill to transparent and proper stroke
+      expect(mockD3Node.attr).toHaveBeenCalledWith('fill', 'transparent');
+      expect(mockD3Node.attr).toHaveBeenCalledWith('stroke-width', 4);
     });
 
     it('should reset multiple role node highlighting', () => {
@@ -623,13 +627,98 @@ describe('useTooltip', () => {
         attr: vi.fn().mockReturnThis(),
       };
 
+      // Set highlighted node
       act(() => {
         result.current.setHighlightedNode(mockD3Node as any);
+      });
+
+      expect(result.current.highlightedNode).toBe(mockD3Node);
+
+      // Reset highlighting
+      act(() => {
         result.current.resetNodeHighlight();
       });
 
+      expect(result.current.highlightedNode).toBeNull();
       expect(mockD3Node.selectAll).toHaveBeenCalledWith('path');
       expect(mockD3Node.selectAll).toHaveBeenCalledWith('circle');
+      
+      // Verify that multi-role reset sets proper stroke widths
+      expect(mockD3Node.attr).toHaveBeenCalledWith('stroke', 'white');
+      expect(mockD3Node.attr).toHaveBeenCalledWith('stroke-width', 1); // paths
+      expect(mockD3Node.attr).toHaveBeenCalledWith('stroke-width', 2); // inner circle
+    });
+
+    it('should apply correct role colors when resetting single-role nodes', () => {
+      const { result } = renderHook(() =>
+        useTooltip({
+          networkData: mockNetworkData,
+          config: mockConfig,
+          networkDataHook: mockNetworkDataHook,
+          callbacks: mockCallbacks,
+        })
+      );
+
+      // Test artist role color
+      const artistNode = {
+        datum: () => ({ ...mockNetworkData.nodes[0], types: ['artist'] }),
+        selectAll: vi.fn().mockReturnThis(),
+        attr: vi.fn((attr: string, value: any) => {
+          if (typeof value === 'function') {
+            // Call the function to test role color logic
+            const color = value();
+            if (attr === 'stroke') {
+              expect(color).toBe('#FF0ACF'); // Magenta Pink for artist
+            }
+          }
+          return artistNode;
+        }),
+      };
+
+      act(() => {
+        result.current.setHighlightedNode(artistNode as any);
+        result.current.resetNodeHighlight();
+      });
+
+      // Test producer role color
+      const producerNode = {
+        datum: () => ({ ...mockNetworkData.nodes[0], types: ['producer'] }),
+        selectAll: vi.fn().mockReturnThis(),
+        attr: vi.fn((attr: string, value: any) => {
+          if (typeof value === 'function') {
+            const color = value();
+            if (attr === 'stroke') {
+              expect(color).toBe('#AE53FF'); // Bright Purple for producer
+            }
+          }
+          return producerNode;
+        }),
+      };
+
+      act(() => {
+        result.current.setHighlightedNode(producerNode as any);
+        result.current.resetNodeHighlight();
+      });
+
+      // Test songwriter role color
+      const songwriterNode = {
+        datum: () => ({ ...mockNetworkData.nodes[0], types: ['songwriter'] }),
+        selectAll: vi.fn().mockReturnThis(),
+        attr: vi.fn((attr: string, value: any) => {
+          if (typeof value === 'function') {
+            const color = value();
+            if (attr === 'stroke') {
+              expect(color).toBe('#67D1F8'); // Light Blue for songwriter
+            }
+          }
+          return songwriterNode;
+        }),
+      };
+
+      act(() => {
+        result.current.setHighlightedNode(songwriterNode as any);
+        result.current.resetNodeHighlight();
+      });
     });
   });
 

@@ -356,7 +356,7 @@ describe('useNodeInteractions', () => {
       expect(mockTooltip.showTooltip).not.toHaveBeenCalled();
     });
 
-    it('should highlight node correctly on click', () => {
+    it('should highlight single-role node correctly on click', () => {
       const { result } = renderHook(() =>
         useNodeInteractions({
           simulationRef: mockSimulationRef,
@@ -365,16 +365,77 @@ describe('useNodeInteractions', () => {
         })
       );
 
+      const singleRoleNode = {
+        ...sampleNode,
+        type: 'artist',
+        types: ['artist'], // Single role
+      };
+
       const mockEvent = { stopPropagation: vi.fn() } as any;
 
       act(() => {
-        result.current.handleNodeClick(mockEvent, sampleNode, sampleNodeElement);
+        result.current.handleNodeClick(mockEvent, singleRoleNode, sampleNodeElement);
       });
 
-      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle, path");
-      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke", "white");
+      // For single-role nodes, only circles should be filled white
+      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle");
+      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("fill", "white");
+    });
+
+    it('should highlight multi-role node correctly on click', () => {
+      const { result } = renderHook(() =>
+        useNodeInteractions({
+          simulationRef: mockSimulationRef,
+          tooltip: mockTooltip,
+          visible: true,
+        })
+      );
+
+      const multiRoleNode = {
+        ...sampleNode,
+        type: 'artist',
+        types: ['artist', 'producer'], // Multi-role
+      };
+
+      const mockEvent = { stopPropagation: vi.fn() } as any;
+
+      act(() => {
+        result.current.handleNodeClick(mockEvent, multiRoleNode, sampleNodeElement);
+      });
+
+      // For multi-role nodes, path stroke-width should be thickened
+      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("path");
       expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke-width", 3);
-      expect(mockD3Selection.selectAll().style).toHaveBeenCalledWith("stroke-opacity", 1);
+      
+      // And inner circle stroke should also be thickened
+      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle");
+      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke-width", 4);
+    });
+
+    it('should fallback to single role when types array is not provided', () => {
+      const { result } = renderHook(() =>
+        useNodeInteractions({
+          simulationRef: mockSimulationRef,
+          tooltip: mockTooltip,
+          visible: true,
+        })
+      );
+
+      const nodeWithoutTypes = {
+        ...sampleNode,
+        type: 'producer',
+        // No types array provided, should use single role logic
+      };
+
+      const mockEvent = { stopPropagation: vi.fn() } as any;
+
+      act(() => {
+        result.current.handleNodeClick(mockEvent, nodeWithoutTypes, sampleNodeElement);
+      });
+
+      // Should use single-role highlighting logic
+      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle");
+      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("fill", "white");
     });
   });
 

@@ -119,10 +119,21 @@ export function useNodeInteractions({
         
         // Highlight the current node group
         const currentNodeSelection = d3.select(nodeElement);
-        currentNodeSelection.selectAll("circle, path")
-          .attr("stroke", "white")
-          .attr("stroke-width", 3)
-          .style("stroke-opacity", 1);
+        const roles = node.types || [node.type];
+        
+        if (roles.length === 1) {
+          // Single role node - turn the circle fill white
+          currentNodeSelection.selectAll("circle")
+            .attr("fill", "white");
+        } else {
+          // Multi-role node - thicken the white border of path elements
+          currentNodeSelection.selectAll("path")
+            .attr("stroke-width", 3);
+          
+          // Also thicken the inner circle border
+          currentNodeSelection.selectAll("circle")
+            .attr("stroke-width", 4);
+        }
         
         // Track this node as highlighted
         tooltip.setHighlightedNode(currentNodeSelection);
@@ -130,7 +141,7 @@ export function useNodeInteractions({
         // Show tooltip using the tooltip system
         tooltip.showTooltip(event, node);
         
-        console.log(`🎯 Node clicked: ${node.name} (${node.type})`);
+        console.log(`🎯 Node clicked: ${node.name} (${node.type}) - roles: [${roles.join(', ')}]`);
       } catch (error) {
         console.error('🎯 Error handling node click:', error);
         // Continue execution - don't let errors break the interaction
