@@ -61,7 +61,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Generate network using OpenAI
-    const OpenAI = (await import('openai')).default;
+    let OpenAI;
+    try {
+      OpenAI = (await import('openai')).default;
+    } catch (importError) {
+      console.error('❌ [Generate-Collaborator] Failed to import OpenAI:', importError);
+      return res.status(503).json({ 
+        error: 'OpenAI module import failed',
+        message: 'AI service temporarily unavailable'
+      });
+    }
+    
     const openai = new OpenAI({
       apiKey: OPENAI_API_KEY,
     });
@@ -94,23 +104,32 @@ Guidelines:
 - Include their top 3 collaborating artists
 - If ${collaboratorName} has limited collaboration data, include similar professionals they might work with`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are a music industry database expert. Provide accurate collaboration data for music professionals."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.2,
-      max_tokens: 1500,
-    });
+    let completion;
+    try {
+      completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "You are a music industry database expert. Provide accurate collaboration data for music professionals."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 1500,
+      });
+    } catch (openaiError) {
+      console.error('❌ [Generate-Collaborator] OpenAI API call failed:', openaiError);
+      return res.status(503).json({ 
+        error: 'OpenAI API call failed',
+        message: `Failed to generate AI response: ${openaiError instanceof Error ? openaiError.message : 'Unknown error'}`
+      });
+    }
 
-    const openaiContent = completion.choices[0]?.message?.content;
+    const openaiContent = completion?.choices?.[0]?.message?.content;
     
     if (!openaiContent) {
       return res.status(503).json({ 
@@ -157,10 +176,10 @@ Guidelines:
     nodeMap.set(collaboratorName, mainNode);
 
     // Add collaborators from OpenAI response
-    if (collaborationData.collaborators) {
+    if (collaborationData?.collaborators && Array.isArray(collaborationData.collaborators)) {
       for (const person of collaborationData.collaborators) {
-        // Skip the main collaborator if included
-        if (person.name === collaboratorName) continue;
+        // Skip invalid entries or the main collaborator if included
+        if (!person || !person.name || typeof person.name !== 'string' || person.name === collaboratorName) continue;
 
         // Create collaborator node
         const collaboratorNode: NetworkNode = {
@@ -181,9 +200,9 @@ Guidelines:
         });
 
         // Add some of their top collaborators for richer network
-        if (person.topCollaborators) {
+        if (person.topCollaborators && Array.isArray(person.topCollaborators)) {
           for (const topCollab of person.topCollaborators.slice(0, 2)) { // Limit to 2 per person
-            if (topCollab !== collaboratorName && !nodeMap.has(topCollab)) {
+            if (typeof topCollab === 'string' && topCollab !== collaboratorName && !nodeMap.has(topCollab)) {
               const topCollabNode: NetworkNode = {
                 id: topCollab,
                 name: topCollab,
