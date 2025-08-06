@@ -271,9 +271,15 @@ export default function D3NetworkRenderer({
 
         // Highlight the current node group
         const currentNode = d3.select(this);
-        currentNode.selectAll("circle, path")
-          .attr("stroke", "white")
-          .attr("stroke-width", 3);
+        const elements = currentNode.selectAll("circle, path");
+        console.log(`🎯 Found ${elements.size()} elements (circles/paths) to highlight for ${d.name}`);
+        
+        elements.each(function(data, i) {
+          const element = d3.select(this);
+          console.log(`🎯 Element ${i}: ${this.tagName}, current stroke: ${element.attr("stroke")}, current stroke-width: ${element.attr("stroke-width")}`);
+          element.attr("stroke", "white").attr("stroke-width", 3);
+          console.log(`🎯 Element ${i} after change: stroke: ${element.attr("stroke")}, stroke-width: ${element.attr("stroke-width")}`);
+        });
         
         // Track this node as highlighted
         tooltip.setHighlightedNode(currentNode);
