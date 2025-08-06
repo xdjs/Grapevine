@@ -37,40 +37,6 @@ export default function NetworkVisualizer({
   const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("");
   const [dataWithPictures, setDataWithPictures] = useState<NetworkData | null>(null);
 
-  // Helper functions for localStorage persistence
-  const getStorageKey = (artistName: string) => `grapevine_expanded_${artistName}`;
-  
-  const loadExpandedState = (artistName: string) => {
-    try {
-      const stored = localStorage.getItem(getStorageKey(artistName));
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return {
-          expandedNodes: new Set(parsed.expandedNodes || []),
-          nodeExpansions: new Map(Object.entries(parsed.nodeExpansions || {})),
-          dataWithPictures: parsed.dataWithPictures || null
-        };
-      }
-    } catch (error) {
-      console.warn('Failed to load expanded state from localStorage:', error);
-    }
-    return null;
-  };
-  
-  const saveExpandedState = (artistName: string, expandedNodes: Set<string>, nodeExpansions: Map<string, any>, dataWithPictures: NetworkData | null) => {
-    try {
-      const toSave = {
-        expandedNodes: Array.from(expandedNodes),
-        nodeExpansions: Object.fromEntries(nodeExpansions),
-        dataWithPictures,
-        timestamp: Date.now()
-      };
-      localStorage.setItem(getStorageKey(artistName), JSON.stringify(toSave));
-    } catch (error) {
-      console.warn('Failed to save expanded state to localStorage:', error);
-    }
-  };
-
   // Add missing state variables for expand network functionality
   const [isExpandedMode, setIsExpandedMode] = useState(false);
   const [originalNetworkData, setOriginalNetworkData] = useState<NetworkData | null>(null);
@@ -91,6 +57,12 @@ export default function NetworkVisualizer({
   // Loading state for network expansion
   const [isExpandingNetwork, setIsExpandingNetwork] = useState(false);
   const [expandingNodeName, setExpandingNodeName] = useState("");
+
+  // Generate a unique key for this artist's network state
+  const getStorageKey = () => {
+    const mainArtist = mainArtistNode?.name || 'unknown';
+    return `grapevine_expanded_network_${mainArtist}`;
+  };
 
   // Store the main artist node for easy access
   const mainArtistNode = dataWithPictures?.nodes.find(node => node.size === 30 && node.type === 'artist') || null;
@@ -159,18 +131,76 @@ export default function NetworkVisualizer({
     }
   }, [data, originalNetworkData, isExpandedMode]);
 
-  // Load expanded state from localStorage when main artist changes
+  // Save expanded state to localStorage whenever it changes
   useEffect(() => {
-    if (mainArtistNode && originalNetworkData) {
-      const savedState = loadExpandedState(mainArtistNode.name);
-      if (savedState && savedState.dataWithPictures) {
-        console.log(`🔗 Restoring expanded state for ${mainArtistNode.name} from localStorage`);
-        setExpandedNodes(savedState.expandedNodes);
-        setNodeExpansions(savedState.nodeExpansions);
-        setDataWithPictures(savedState.dataWithPictures);
-        setIsExpandedMode(savedState.expandedNodes.size > 0);
-        hasExpandedDataRef.current = savedState.expandedNodes.size > 0;
+    if (!mainArtistNode || expandedNodes.size === 0) return;
+    
+    try {
+      const storageKey = getStorageKey();
+      const expandedState = {
+        expandedNodes: Array.from(expandedNodes),
+        nodeExpansions: Array.from(nodeExpansions.entries()).map(([key, value]) => ({
+          nodeId: key,
+          addedNodes: value.addedNodes,
+          addedLinks: value.addedLinks
+        })),
+        isExpandedMode,
+        timestamp: Date.now()
+      };
+      
+      localStorage.setItem(storageKey, JSON.stringify(expandedState));
+      console.log(`💾 Saved expanded state for ${mainArtistNode.name}:`, expandedState);
+    } catch (error) {
+      console.error('💾 Failed to save expanded state:', error);
+    }
+  }, [expandedNodes, nodeExpansions, isExpandedMode, mainArtistNode]);
+
+  // Restore expanded state from localStorage when component mounts
+  useEffect(() => {
+    if (!mainArtistNode || !originalNetworkData) return;
+    
+    try {
+      const storageKey = getStorageKey();
+      const savedState = localStorage.getItem(storageKey);
+      
+      if (savedState) {
+        const expandedState = JSON.parse(savedState);
+        console.log(`🔄 Restoring expanded state for ${mainArtistNode.name}:`, expandedState);
+        
+        // Restore expanded nodes
+        setExpandedNodes(new Set(expandedState.expandedNodes));
+        
+        // Restore node expansions
+        const restoredExpansions = new Map();
+        expandedState.nodeExpansions.forEach((expansion: any) => {
+          restoredExpansions.set(expansion.nodeId, {
+            addedNodes: expansion.addedNodes,
+            addedLinks: expansion.addedLinks
+          });
+        });
+        setNodeExpansions(restoredExpansions);
+        
+        // Restore expanded mode
+        setIsExpandedMode(expandedState.isExpandedMode);
+        hasExpandedDataRef.current = expandedState.isExpandedMode;
+        
+        // Reconstruct the expanded network data
+        let rebuiltData = { ...originalNetworkData };
+        
+        // Add all expanded nodes and links back
+        expandedState.nodeExpansions.forEach((expansion: any) => {
+          rebuiltData.nodes = [...rebuiltData.nodes, ...expansion.addedNodes];
+          rebuiltData.links = [...rebuiltData.links, ...expansion.addedLinks];
+        });
+        
+        // Ensure profile pictures are added
+        ensureArtistProfilePictures(rebuiltData).then(updatedData => {
+          setDataWithPictures(updatedData);
+          console.log(`🔄 Restored expanded network with ${updatedData.nodes.length} nodes and ${updatedData.links.length} links`);
+        });
       }
+    } catch (error) {
+      console.error('🔄 Failed to restore expanded state:', error);
     }
   }, [mainArtistNode, originalNetworkData]);
 
@@ -401,27 +431,9 @@ export default function NetworkVisualizer({
         return newMap;
       });
 
-      // Preserve existing node positions to prevent jittering
-      const existingPositions = new Map<string, {x: number, y: number}>();
-      if (simulationRef.current) {
-        simulationRef.current.nodes().forEach(node => {
-          if (node.x !== undefined && node.y !== undefined) {
-            existingPositions.set(node.id, { x: node.x, y: node.y });
-          }
-        });
-      }
-
-      // Create the expanded network data with preserved positions
-      const nodesWithPositions = [...dataWithPictures.nodes, ...selectedNodes].map(node => {
-        const existingPos = existingPositions.get(node.id);
-        if (existingPos) {
-          return { ...node, x: existingPos.x, y: existingPos.y };
-        }
-        return node;
-      });
-
+      // Create the expanded network data
       const expandedData: NetworkData = {
-        nodes: nodesWithPositions,
+        nodes: [...dataWithPictures.nodes, ...selectedNodes],
         links: [...dataWithPictures.links, ...newLinks]
       };
 
@@ -431,12 +443,6 @@ export default function NetworkVisualizer({
 
       const roleDescription = isClickedArtist ? 'songwriter/producer' : 'artist';
       console.log(`🔗 Successfully expanded ${nodeName}'s network with ${selectedNodes.length} ${roleDescription} collaborators and ${newLinks.length} links`);
-      
-      // Save expanded state to localStorage (use the updated values, not the state which may be stale)
-      if (mainArtistNode) {
-        const newExpandedNodes = new Set([...expandedNodes, nodeId]);
-        saveExpandedState(mainArtistNode.name, newExpandedNodes, nodeExpansions, updatedData);
-      }
     } catch (error) {
       console.error(`🔗 Error expanding network for ${nodeName}:`, error);
     } finally {
@@ -510,15 +516,6 @@ export default function NetworkVisualizer({
       }
 
       console.log(`🔗 Successfully shrunk ${nodeName}'s network. Removed ${expansion.addedNodes.length} nodes and ${expansion.addedLinks.length} links`);
-      
-      // Save updated state to localStorage (use the updated values, not the state which may be stale)
-      if (mainArtistNode) {
-        const newExpandedNodes = new Set(expandedNodes);
-        newExpandedNodes.delete(nodeId);
-        const newNodeExpansions = new Map(nodeExpansions);
-        newNodeExpansions.delete(nodeId);
-        saveExpandedState(mainArtistNode.name, newExpandedNodes, newNodeExpansions, shrunkData);
-      }
     } catch (error) {
       console.error(`🔗 Error shrinking network for ${nodeName}:`, error);
     }
@@ -537,12 +534,17 @@ export default function NetworkVisualizer({
         setExpandedNodes(new Set());
         setNodeExpansions(new Map());
         hasExpandedDataRef.current = false;
-        console.log(`🔗 Reset to original first-degree network with ${originalNetworkData.nodes.length} nodes`);
         
-        // Clear localStorage for this artist
-        if (mainArtistNode) {
-          localStorage.removeItem(getStorageKey(mainArtistNode.name));
+        // Clear saved state from localStorage
+        try {
+          const storageKey = getStorageKey();
+          localStorage.removeItem(storageKey);
+          console.log(`💾 Cleared saved expanded state for ${mainArtistNode?.name}`);
+        } catch (error) {
+          console.error('💾 Failed to clear saved state:', error);
         }
+        
+        console.log(`🔗 Reset to original first-degree network with ${originalNetworkData.nodes.length} nodes`);
       } catch (error) {
         console.error(`🔗 Error resetting network:`, error);
         // Fallback to original data without profile pictures
@@ -552,9 +554,13 @@ export default function NetworkVisualizer({
         setNodeExpansions(new Map());
         hasExpandedDataRef.current = false;
         
-        // Clear localStorage for this artist
-        if (mainArtistNode) {
-          localStorage.removeItem(getStorageKey(mainArtistNode.name));
+        // Clear saved state from localStorage (fallback case)
+        try {
+          const storageKey = getStorageKey();
+          localStorage.removeItem(storageKey);
+          console.log(`💾 Cleared saved expanded state (fallback)`);
+        } catch (error) {
+          console.error('💾 Failed to clear saved state (fallback):', error);
         }
       }
     }
@@ -1006,39 +1012,23 @@ export default function NetworkVisualizer({
       }
     };
 
-    // Update or create simulation to prevent destroying drag state
-    let simulation = simulationRef.current;
-    
-    if (!simulation) {
-      // Create new simulation only if none exists
-      simulation = d3
-        .forceSimulation<NetworkNode>(networkData.nodes)
-        .force(
-          "link",
-          d3
-            .forceLink<NetworkNode, NetworkLink>(validLinks)
-            .id((d) => d.id)
-            .distance(80)
-            .strength(0.5) // Reduce link strength for stability
-        )
-        .force("charge", d3.forceManyBody().strength(-100)) // Reduce repulsion force
-        .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 8)) // Slightly tighter collision
-        .force("boundary", boundaryForce)
-        .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.05 : 0)) // Weaker centering
-        .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.05 : 0)) // Weaker centering
-        .alpha(0.3) // Start with lower energy
-        .alphaDecay(0.05) // Slower decay for smoother settling
-        .velocityDecay(0.7); // Increase friction to reduce jittering
+    // Create simulation with centering force for main artist
+    const simulation = d3
+      .forceSimulation<NetworkNode>(networkData.nodes)
+      .force(
+        "link",
+        d3
+          .forceLink<NetworkNode, NetworkLink>(validLinks)
+          .id((d) => d.id)
+          .distance(80)
+      )
+      .force("charge", d3.forceManyBody().strength(-150))
+      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
+      .force("boundary", boundaryForce)
+      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
+      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.1 : 0));
 
-      simulationRef.current = simulation;
-    } else {
-      // Update existing simulation with new nodes and links
-      simulation
-        .nodes(networkData.nodes)
-        .force("link", d3.forceLink<NetworkNode, NetworkLink>(validLinks).id((d) => d.id).distance(80).strength(0.5))
-        .alpha(0.1) // Gentle restart for updates
-        .restart();
-    }
+    simulationRef.current = simulation;
 
     // Add resize listener to handle orientation changes
     const handleResize = () => {
@@ -1047,11 +1037,11 @@ export default function NetworkVisualizer({
         const newWidth = container ? container.clientWidth : window.innerWidth;
         const newHeight = container ? container.clientHeight : window.innerHeight;
         
-        // Update simulation forces with new dimensions (gentler restart)
+        // Update simulation forces with new dimensions
         simulationRef.current
-          .force("centerX", d3.forceX(newWidth / 2).strength((d) => d === mainArtistNode ? 0.05 : 0))
-          .force("centerY", d3.forceY(newHeight / 2).strength((d) => d === mainArtistNode ? 0.05 : 0))
-          .alpha(0.1) // Much gentler restart to prevent jittering
+          .force("centerX", d3.forceX(newWidth / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
+          .force("centerY", d3.forceY(newHeight / 2).strength((d) => d === mainArtistNode ? 0.1 : 0))
+          .alpha(0.3) // Restart simulation
           .restart();
       }
     };
@@ -1059,36 +1049,26 @@ export default function NetworkVisualizer({
     window.addEventListener('resize', handleResize);
     window.addEventListener('orientationchange', handleResize);
 
-    // Update links using enter/update/exit pattern
-    const linkSelection = networkGroup
+    // Create links
+    const linkElements = networkGroup
       .selectAll(".link")
-      .data(validLinks, (d: any) => `${d.source.id || d.source}-${d.target.id || d.target}`);
-    
-    linkSelection.exit().remove();
-    
-    const linkElements = linkSelection
+      .data(validLinks)
       .enter()
       .append("line")
       .attr("class", "link network-link")
-      .attr("stroke-width", 2)
-      .merge(linkSelection as any);
+      .attr("stroke-width", 2);
 
-    // Update nodes using enter/update/exit pattern
-    const nodeSelection = networkGroup
-      .selectAll(".node-group")
-      .data(networkData.nodes, (d: any) => d.id);
-    
-    nodeSelection.exit().remove();
-    
-    const nodeElements = nodeSelection
+    // Create nodes with multi-role support
+    const nodeElements = networkGroup
+      .selectAll(".node")
+      .data(networkData.nodes)
       .enter()
       .append("g")
       .attr("class", (d) => `node-group network-node node-${d.type}`)
-      .style("cursor", "pointer")
-      .merge(nodeSelection as any);
+      .style("cursor", "pointer");
 
-    // Add circles for each NEW node only - single color for single role, multi-colored for multiple roles
-    nodeSelection.enter().each(function(d) {
+    // Add circles for each node - single color for single role, multi-colored for multiple roles
+    nodeElements.each(function(d) {
       const group = d3.select(this);
       const roles = d.types || [d.type];
       
@@ -1238,10 +1218,8 @@ export default function NetworkVisualizer({
             });
         }
       }
-    });
-
-    // Apply click and drag behaviors to ALL nodes (new and existing)
-    nodeElements.on("click", function(event, d) {
+    })
+      .on("click", function(event, d) {
         event.stopPropagation();
 
         // Reset previous node highlighting
@@ -1308,25 +1286,19 @@ export default function NetworkVisualizer({
             }
           }
         }
-      });
+      })
+      .call(
+        d3
+          .drag<SVGGElement, NetworkNode>()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended)
+      );
 
-    // Apply drag behavior to ALL nodes (new and existing)
-    nodeElements.call(
-      d3
-        .drag<SVGGElement, NetworkNode>()
-        .on("start", dragstarted)
-        .on("drag", dragged)
-        .on("end", dragended)
-    );
-
-    // Update labels using enter/update/exit pattern
-    const labelSelection = networkGroup
+    // Add labels for all nodes
+    const labelElements = networkGroup
       .selectAll(".label")
-      .data(networkData.nodes, (d: any) => d.id);
-    
-    labelSelection.exit().remove();
-    
-    const labelElements = labelSelection
+      .data(networkData.nodes)
       .enter()
       .append("text")
       .attr("class", "label")
@@ -1360,8 +1332,7 @@ export default function NetworkVisualizer({
       .attr("fill", "white")
       .attr("pointer-events", "none")
       .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.8)")
-      .text((d) => d.name)
-      .merge(labelSelection as any);
+      .text((d) => d.name);
 
     // Create tooltip
     const tooltip = d3
@@ -1418,11 +1389,11 @@ export default function NetworkVisualizer({
               '<a href="#" class="popup-action shrink-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">Shrink ' + d.name + '\'s network</a>' +
             '</div>' :
             // Show expand button if node is not expanded
-            '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="expand-action">' +
-              '<div class="expand-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer; pointer-events: auto; display:flex; align-items:center; justify-content:center; background:#4CAF50;">' +
-                '<span style="color:white; font-size:16px; font-weight:bold;">+</span>' +
-              '</div>' +
-              '<a href="#" class="popup-action expand-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">Expand ' + d.name + '\'s network</a>' +
+          '<div style="display:flex; align-items:center; gap:' + gap + '; cursor:pointer;" class="expand-action">' +
+            '<div class="expand-icon" style="width:' + iconSize + 'px;height:' + iconSize + 'px;border-radius:50%; cursor:pointer; pointer-events: auto; display:flex; align-items:center; justify-content:center; background:#4CAF50;">' +
+              '<span style="color:white; font-size:16px; font-weight:bold;">+</span>' +
+            '</div>' +
+            '<a href="#" class="popup-action expand-link" style="font-size:' + linkFontSize + '; font-style:italic; text-decoration:underline; cursor:pointer; white-space:nowrap;">Expand ' + d.name + '\'s network</a>' +
             '</div>'
           ) : '';
         
@@ -1595,7 +1566,7 @@ export default function NetworkVisualizer({
           tooltip.selectAll(".shrink-link, .shrink-icon, .shrink-action").on("click", shrinkHandler);
         } else {
           // Attach expand handler if node is not expanded
-          tooltip.selectAll(".expand-link, .expand-icon, .expand-action").on("click", expandHandler);
+        tooltip.selectAll(".expand-link, .expand-icon, .expand-action").on("click", expandHandler);
         }
       }
       
@@ -1813,7 +1784,7 @@ export default function NetworkVisualizer({
     function dragstarted(event: d3.D3DragEvent<SVGGElement, NetworkNode, unknown>, d: NetworkNode) {
       // Prevent event bubbling to avoid interfering with zoom behavior
       event.sourceEvent.stopPropagation();
-      if (!event.active) simulation.alphaTarget(0.1).restart(); // Gentler drag restart
+      if (!event.active) simulation.alphaTarget(0.3).restart();
       d.fx = d.x;
       d.fy = d.y;
     }
