@@ -1,5 +1,5 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, Mock, beforeAll, afterAll } from 'vitest';
 import * as d3 from 'd3';
 import { useTooltip } from './use-tooltip';
 import { NetworkNode, NetworkData } from '@/types/network';
@@ -43,10 +43,27 @@ Object.defineProperty(navigator, 'clipboard', {
 // Mock window.open
 global.window.open = vi.fn();
 
+// Setup DOM container for React Testing Library
+
 // Mock alert
 global.alert = vi.fn();
 
 describe('useTooltip', () => {
+  // Store original DOM methods to restore them when tests mock them
+  const originalAppendChild = document.body.appendChild;
+  const originalRemoveChild = document.body.removeChild;
+  
+  beforeEach(() => {
+    // Ensure DOM methods are not mocked for React Testing Library
+    document.body.appendChild = originalAppendChild;
+    document.body.removeChild = originalRemoveChild;
+  });
+  
+  afterEach(() => {
+    // Clean up any test-specific DOM changes
+    document.body.innerHTML = '';
+  });
+
   const mockD3Selection = {
     append: vi.fn().mockReturnThis(),
     attr: vi.fn().mockReturnThis(),
@@ -491,10 +508,24 @@ describe('useTooltip', () => {
     });
 
     it('should handle popup blocking with fallback link click', async () => {
-      // Mock window.open to return null (blocked)
+      // Store original methods
+      const originalCreateElement = document.createElement;
+      const originalAppendChild = document.body.appendChild;
+      const originalRemoveChild = document.body.removeChild;
+
+      // Create the hook BEFORE mocking
+      const { result } = renderHook(() =>
+        useTooltip({
+          networkData: mockNetworkData,
+          config: mockConfig,
+          networkDataHook: mockNetworkDataHook,
+          callbacks: mockCallbacks,
+        })
+      );
+
+      // Now mock after React Testing Library setup is complete
       (window.open as Mock).mockReturnValueOnce(null);
 
-      // Mock createElement and click
       const mockElement = {
         href: '',
         target: '',
@@ -505,15 +536,6 @@ describe('useTooltip', () => {
       document.body.appendChild = vi.fn();
       document.body.removeChild = vi.fn();
 
-      const { result } = renderHook(() =>
-        useTooltip({
-          networkData: mockNetworkData,
-          config: mockConfig,
-          networkDataHook: mockNetworkDataHook,
-          callbacks: mockCallbacks,
-        })
-      );
-
       const mockNode = mockNetworkData.nodes[0];
 
       await act(async () => {
@@ -521,6 +543,11 @@ describe('useTooltip', () => {
       });
 
       expect(mockElement.click).toHaveBeenCalled();
+
+      // Restore original methods
+      document.createElement = originalCreateElement;
+      document.body.appendChild = originalAppendChild;
+      document.body.removeChild = originalRemoveChild;
     });
 
     it('should handle clipboard fallback on error', async () => {
@@ -771,6 +798,18 @@ describe('useTooltip', () => {
     });
 
     it('should handle tooltip positioning with standard dimensions', () => {
+      // Ensure desktop dimensions for this test
+      Object.defineProperty(window, 'innerWidth', { 
+        writable: true, 
+        configurable: true, 
+        value: 1024 
+      });
+      Object.defineProperty(window, 'innerHeight', { 
+        writable: true, 
+        configurable: true, 
+        value: 768 
+      });
+
       const { result } = renderHook(() =>
         useTooltip({
           networkData: mockNetworkData,
@@ -834,6 +873,18 @@ describe('useTooltip', () => {
 
   describe('Performance', () => {
     it('should handle rapid tooltip updates efficiently', () => {
+      // Ensure desktop dimensions for this test
+      Object.defineProperty(window, 'innerWidth', { 
+        writable: true, 
+        configurable: true, 
+        value: 1024 
+      });
+      Object.defineProperty(window, 'innerHeight', { 
+        writable: true, 
+        configurable: true, 
+        value: 768 
+      });
+
       const { result } = renderHook(() =>
         useTooltip({
           networkData: mockNetworkData,
@@ -852,8 +903,10 @@ describe('useTooltip', () => {
       }
 
       // Should handle without errors
-      expect(result.current.tooltipPosition.x).toBe(1000);
-      expect(result.current.tooltipPosition.y).toBe(495);
+      // Final position: pageX=990, pageY=495
+      // With boundary check: 990 + 380 > 1024 - 10, so positioned left: 990 - 380 - 10 = 600
+      expect(result.current.tooltipPosition.x).toBe(600);
+      expect(result.current.tooltipPosition.y).toBe(485); // pageY 495 - 10 = 485
     });
 
     it('should cleanup properly to prevent memory leaks', () => {

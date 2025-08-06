@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 
 // Mock window.matchMedia for responsive hooks
 Object.defineProperty(window, 'matchMedia', {
@@ -33,4 +34,13 @@ HTMLElement.prototype.getBoundingClientRect = vi.fn(() => ({
   x: 0,
   y: 0,
   toJSON: vi.fn(),
-})); 
+}));
+
+// Ensure proper JSDOM setup for React Testing Library
+Object.defineProperty(global, 'IS_REACT_ACT_ENVIRONMENT', {
+  writable: true,
+  value: true,
+});
+
+// Mock alert for tests
+global.alert = vi.fn(); 
