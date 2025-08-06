@@ -1006,27 +1006,39 @@ export default function NetworkVisualizer({
       }
     };
 
-    // Create simulation with more stable forces to prevent jittering
-    const simulation = d3
-      .forceSimulation<NetworkNode>(networkData.nodes)
-      .force(
-        "link",
-        d3
-          .forceLink<NetworkNode, NetworkLink>(validLinks)
-          .id((d) => d.id)
-          .distance(80)
-          .strength(0.5) // Reduce link strength for stability
-      )
-      .force("charge", d3.forceManyBody().strength(-100)) // Reduce repulsion force
-      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 8)) // Slightly tighter collision
-      .force("boundary", boundaryForce)
-      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.05 : 0)) // Weaker centering
-      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.05 : 0)) // Weaker centering
-      .alpha(0.3) // Start with lower energy
-      .alphaDecay(0.05) // Slower decay for smoother settling
-      .velocityDecay(0.7); // Increase friction to reduce jittering
+    // Update or create simulation to prevent destroying drag state
+    let simulation = simulationRef.current;
+    
+    if (!simulation) {
+      // Create new simulation only if none exists
+      simulation = d3
+        .forceSimulation<NetworkNode>(networkData.nodes)
+        .force(
+          "link",
+          d3
+            .forceLink<NetworkNode, NetworkLink>(validLinks)
+            .id((d) => d.id)
+            .distance(80)
+            .strength(0.5) // Reduce link strength for stability
+        )
+        .force("charge", d3.forceManyBody().strength(-100)) // Reduce repulsion force
+        .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 8)) // Slightly tighter collision
+        .force("boundary", boundaryForce)
+        .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtistNode ? 0.05 : 0)) // Weaker centering
+        .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtistNode ? 0.05 : 0)) // Weaker centering
+        .alpha(0.3) // Start with lower energy
+        .alphaDecay(0.05) // Slower decay for smoother settling
+        .velocityDecay(0.7); // Increase friction to reduce jittering
 
-    simulationRef.current = simulation;
+      simulationRef.current = simulation;
+    } else {
+      // Update existing simulation with new nodes and links
+      simulation
+        .nodes(networkData.nodes)
+        .force("link", d3.forceLink<NetworkNode, NetworkLink>(validLinks).id((d) => d.id).distance(80).strength(0.5))
+        .alpha(0.1) // Gentle restart for updates
+        .restart();
+    }
 
     // Add resize listener to handle orientation changes
     const handleResize = () => {
@@ -1047,26 +1059,36 @@ export default function NetworkVisualizer({
     window.addEventListener('resize', handleResize);
     window.addEventListener('orientationchange', handleResize);
 
-    // Create links
-    const linkElements = networkGroup
+    // Update links using enter/update/exit pattern
+    const linkSelection = networkGroup
       .selectAll(".link")
-      .data(validLinks)
+      .data(validLinks, (d: any) => `${d.source.id || d.source}-${d.target.id || d.target}`);
+    
+    linkSelection.exit().remove();
+    
+    const linkElements = linkSelection
       .enter()
       .append("line")
       .attr("class", "link network-link")
-      .attr("stroke-width", 2);
+      .attr("stroke-width", 2)
+      .merge(linkSelection as any);
 
-    // Create nodes with multi-role support
-    const nodeElements = networkGroup
-      .selectAll(".node")
-      .data(networkData.nodes)
+    // Update nodes using enter/update/exit pattern
+    const nodeSelection = networkGroup
+      .selectAll(".node-group")
+      .data(networkData.nodes, (d: any) => d.id);
+    
+    nodeSelection.exit().remove();
+    
+    const nodeElements = nodeSelection
       .enter()
       .append("g")
       .attr("class", (d) => `node-group network-node node-${d.type}`)
-      .style("cursor", "pointer");
+      .style("cursor", "pointer")
+      .merge(nodeSelection as any);
 
-    // Add circles for each node - single color for single role, multi-colored for multiple roles
-    nodeElements.each(function(d) {
+    // Add circles for each NEW node only - single color for single role, multi-colored for multiple roles
+    nodeSelection.enter().each(function(d) {
       const group = d3.select(this);
       const roles = d.types || [d.type];
       
@@ -1216,8 +1238,10 @@ export default function NetworkVisualizer({
             });
         }
       }
-    })
-      .on("click", function(event, d) {
+    });
+
+    // Apply click and drag behaviors to ALL nodes (new and existing)
+    nodeElements.on("click", function(event, d) {
         event.stopPropagation();
 
         // Reset previous node highlighting
@@ -1284,19 +1308,25 @@ export default function NetworkVisualizer({
             }
           }
         }
-      })
-      .call(
-        d3
-          .drag<SVGGElement, NetworkNode>()
-          .on("start", dragstarted)
-          .on("drag", dragged)
-          .on("end", dragended)
-      );
+      });
 
-    // Add labels for all nodes
-    const labelElements = networkGroup
+    // Apply drag behavior to ALL nodes (new and existing)
+    nodeElements.call(
+      d3
+        .drag<SVGGElement, NetworkNode>()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended)
+    );
+
+    // Update labels using enter/update/exit pattern
+    const labelSelection = networkGroup
       .selectAll(".label")
-      .data(networkData.nodes)
+      .data(networkData.nodes, (d: any) => d.id);
+    
+    labelSelection.exit().remove();
+    
+    const labelElements = labelSelection
       .enter()
       .append("text")
       .attr("class", "label")
@@ -1330,7 +1360,8 @@ export default function NetworkVisualizer({
       .attr("fill", "white")
       .attr("pointer-events", "none")
       .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.8)")
-      .text((d) => d.name);
+      .text((d) => d.name)
+      .merge(labelSelection as any);
 
     // Create tooltip
     const tooltip = d3
