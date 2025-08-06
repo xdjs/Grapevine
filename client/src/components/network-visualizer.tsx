@@ -6,9 +6,6 @@ import { ensureArtistProfilePictures } from "@/lib/profile-pictures";
 import CollaborationDetailsPopup from "./collaboration-details-popup";
 import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
 import { Loader2, Network, Brain, Users } from "lucide-react";
-import NetworkTooltip from "./network-tooltip";
-import ZoomControlsEnhanced from "./zoom-controls-enhanced";
-import NetworkResetButton from "./network-reset-button";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -17,8 +14,6 @@ interface NetworkVisualizerProps {
   onZoomChange: (transform: { k: number; x: number; y: number }) => void;
   onArtistSearch?: (artistName: string) => void;
   onArtistNodeClick?: (artistName: string, artistId?: string) => void;
-  onError?: (error: Error) => void;
-  onClearAll?: () => void;
 }
 
 interface ComponentError {
@@ -34,8 +29,6 @@ export default function NetworkVisualizer({
   onZoomChange,
   onArtistSearch,
   onArtistNodeClick,
-  onError,
-  onClearAll,
 }: NetworkVisualizerProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
@@ -90,8 +83,7 @@ export default function NetworkVisualizer({
     };
     
     setComponentError(componentError);
-    onError?.(error);
-  }, [retryCount, onError]);
+  }, [retryCount]);
 
   const handleRetry = useCallback(async () => {
     if (retryCount >= maxRetries) {
@@ -2037,23 +2029,7 @@ export default function NetworkVisualizer({
             </button>
           )}
 
-          {/* Clear All button */}
-          {onClearAll && (
-            <button
-              onClick={() => {
-                try {
-                  onClearAll();
-                } catch (error) {
-                  handleError(error as Error, 'clear all');
-                }
-              }}
-              className="absolute top-4 left-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors duration-200 z-10"
-              style={{ fontSize: '14px', fontWeight: '500' }}
-              data-testid="clear-all-button"
-            >
-              Clear All
-            </button>
-          )}
+
       
       <ArtistSelectionModal
         isOpen={showArtistModal}
