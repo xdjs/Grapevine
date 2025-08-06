@@ -27,7 +27,7 @@ interface NetworkData {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS headers
+  // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -42,10 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Extract request data
-    const requestBody = req.body as CollaboratorRequest;
-    const collaboratorName = requestBody.collaboratorName;
-    const collaboratorRoles = requestBody.collaboratorRoles;
+    const { collaboratorName, collaboratorRoles }: CollaboratorRequest = req.body;
     
     if (!collaboratorName || !collaboratorRoles) {
       return res.status(400).json({ message: 'Collaborator name and roles are required' });
@@ -53,9 +50,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log(`🤖 [Generate-Collaborator] Generating network for: ${collaboratorName} with roles: [${collaboratorRoles.join(', ')}]`);
     
-    // Check OpenAI API key
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
+    const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+    
+    if (!OPENAI_API_KEY) {
       console.error(`❌ [Generate-Collaborator] OpenAI API key not configured`);
       return res.status(503).json({ 
         error: 'OpenAI API key not configured',
@@ -63,16 +60,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Import and initialize OpenAI
+    // Generate network using OpenAI
     const OpenAI = (await import('openai')).default;
-    const openaiClient = new OpenAI({ apiKey });
+    const openai = new OpenAI({
+      apiKey: OPENAI_API_KEY,
+    });
 
-    // Determine role description
+    // Create role-specific prompt
     const roleDescription = collaboratorRoles.includes('artist') ? 'artist' : 
                            collaboratorRoles.includes('producer') ? 'producer' : 'songwriter';
     
-    // Create prompt
-    const promptText = `Generate a music industry collaboration network for ${collaboratorName}, who is known as a ${roleDescription}. 
+    const prompt = `Generate a music industry collaboration network for ${collaboratorName}, who is known as a ${roleDescription}. 
 
 Provide a list of artists, producers, and songwriters who have worked with ${collaboratorName}. Focus on real collaborations from the music industry.
 
@@ -96,8 +94,7 @@ Guidelines:
 - Include their top 3 collaborating artists
 - If ${collaboratorName} has limited collaboration data, include similar professionals they might work with`;
 
-    // Call OpenAI
-    const completion = await openaiClient.chat.completions.create({
+    const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
@@ -106,14 +103,14 @@ Guidelines:
         },
         {
           role: "user",
-          content: promptText
+          content: prompt
         }
       ],
       temperature: 0.2,
       max_tokens: 1500,
     });
 
-    const openaiContent = completion?.choices?.[0]?.message?.content;
+    const openaiContent = completion.choices[0]?.message?.content;
     
     if (!openaiContent) {
       return res.status(503).json({ 
@@ -136,7 +133,7 @@ Guidelines:
     let collaborationData;
     try {
       collaborationData = JSON.parse(jsonContent);
-    } catch (parseError) {
+    } catch {
       return res.status(503).json({ 
         error: 'Failed to parse OpenAI response',
         message: 'OpenAI returned invalid JSON format'
@@ -145,7 +142,7 @@ Guidelines:
 
     // Build network data structure
     const nodeMap = new Map<string, NetworkNode>();
-    const linksList: NetworkLink[] = [];
+    const links: NetworkLink[] = [];
 
     // Add the main collaborator node
     const mainNode: NetworkNode = {
@@ -153,19 +150,17 @@ Guidelines:
       name: collaboratorName,
       type: collaboratorRoles[0],
       types: collaboratorRoles,
-      size: 25,
+      size: 25, // Slightly smaller than main artists but larger than sub-collaborators
       artistId: null,
       imageUrl: null
     };
     nodeMap.set(collaboratorName, mainNode);
 
     // Add collaborators from OpenAI response
-    if (collaborationData?.collaborators && Array.isArray(collaborationData.collaborators)) {
+    if (collaborationData.collaborators) {
       for (const person of collaborationData.collaborators) {
-        // Skip invalid entries or the main collaborator if included
-        if (!person || !person.name || typeof person.name !== 'string' || person.name === collaboratorName) {
-          continue;
-        }
+        // Skip the main collaborator if included
+        if (person.name === collaboratorName) continue;
 
         // Create collaborator node
         const collaboratorNode: NetworkNode = {
@@ -180,15 +175,15 @@ Guidelines:
         nodeMap.set(person.name, collaboratorNode);
 
         // Create link between main collaborator and this person
-        linksList.push({
+        links.push({
           source: collaboratorName,
           target: person.name
         });
 
         // Add some of their top collaborators for richer network
-        if (person.topCollaborators && Array.isArray(person.topCollaborators)) {
-          for (const topCollab of person.topCollaborators.slice(0, 2)) {
-            if (typeof topCollab === 'string' && topCollab !== collaboratorName && !nodeMap.has(topCollab)) {
+        if (person.topCollaborators) {
+          for (const topCollab of person.topCollaborators.slice(0, 2)) { // Limit to 2 per person
+            if (topCollab !== collaboratorName && !nodeMap.has(topCollab)) {
               const topCollabNode: NetworkNode = {
                 id: topCollab,
                 name: topCollab,
@@ -201,7 +196,7 @@ Guidelines:
               nodeMap.set(topCollab, topCollabNode);
 
               // Link to the intermediate collaborator
-              linksList.push({
+              links.push({
                 source: person.name,
                 target: topCollab
               });
@@ -213,7 +208,7 @@ Guidelines:
 
     const networkData: NetworkData = {
       nodes: Array.from(nodeMap.values()),
-      links: linksList
+      links: links
     };
 
     console.log(`🤖✅ [Generate-Collaborator] Generated network for ${collaboratorName} with ${networkData.nodes.length} nodes and ${networkData.links.length} links`);
@@ -222,10 +217,6 @@ Guidelines:
     
   } catch (error) {
     console.error('❌ [Generate-Collaborator] Error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    res.status(500).json({ 
-      message: 'Failed to generate network collaboration data',
-      error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
-    });
+    res.status(500).json({ message: 'Internal server error' });
   }
 } 

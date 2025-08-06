@@ -57,68 +57,54 @@ export default function NetworkVisualizer({
   // Loading state for network expansion
   const [isExpandingNetwork, setIsExpandingNetwork] = useState(false);
   const [expandingNodeName, setExpandingNodeName] = useState("");
-
-  // Generate a unique key for localStorage based on the main artist
-  const getStorageKey = () => {
-    const mainArtist = mainArtistNode?.name || data?.nodes?.find(n => n.size === 30)?.name || 'unknown';
-    return `grapevine-expanded-network-${mainArtist.toLowerCase().replace(/\s+/g, '-')}`;
-  };
-
-  // Save expanded network state to localStorage
-  const saveExpandedState = () => {
+  
+  // Storage key for persistence across sessions
+  const getStorageKey = (artistName: string) => `grapevine_expanded_${artistName}`;
+  
+  // Save expanded state to localStorage
+  const saveExpandedState = (artistName: string) => {
+    if (!mainArtistNode || !dataWithPictures) return;
+    
     try {
-      if (!dataWithPictures) return;
-      
-      const storageKey = getStorageKey();
       const expandedState = {
-        dataWithPictures,
-        isExpandedMode,
         expandedNodes: Array.from(expandedNodes),
-        nodeExpansions: Array.from(nodeExpansions.entries()).map(([key, value]) => [key, value]),
+        nodeExpansions: Array.from(nodeExpansions.entries()).map(([key, value]) => [key, {
+          addedNodes: value.addedNodes,
+          addedLinks: value.addedLinks
+        }]),
+        networkData: dataWithPictures,
+        originalData: originalNetworkData,
+        isExpandedMode: isExpandedMode,
         timestamp: Date.now()
       };
       
-      localStorage.setItem(storageKey, JSON.stringify(expandedState));
-      console.log(`💾 Saved expanded network state for ${mainArtistNode?.name || 'unknown artist'}`);
+      localStorage.setItem(getStorageKey(artistName), JSON.stringify(expandedState));
+      console.log(`💾 Saved expanded state for ${artistName}`);
     } catch (error) {
-      console.error('Error saving expanded state:', error);
+      console.error('❌ Failed to save expanded state:', error);
     }
   };
-
-  // Restore expanded network state from localStorage
-  const restoreExpandedState = (): boolean => {
+  
+  // Load expanded state from localStorage
+  const loadExpandedState = (artistName: string) => {
     try {
-      const storageKey = getStorageKey();
-      const savedState = localStorage.getItem(storageKey);
+      const stored = localStorage.getItem(getStorageKey(artistName));
+      if (!stored) return null;
       
-      if (!savedState) return false;
+      const expandedState = JSON.parse(stored);
       
-      const expandedState = JSON.parse(savedState);
-      
-      // Check if saved state is recent (within 24 hours)
-      const isRecent = Date.now() - expandedState.timestamp < 24 * 60 * 60 * 1000;
-      if (!isRecent) {
-        localStorage.removeItem(storageKey);
-        return false;
+      // Check if data is not too old (24 hours)
+      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+      if (Date.now() - expandedState.timestamp > maxAge) {
+        localStorage.removeItem(getStorageKey(artistName));
+        return null;
       }
       
-      // Restore the expanded state
-      setDataWithPictures(expandedState.dataWithPictures);
-      setIsExpandedMode(expandedState.isExpandedMode);
-      setExpandedNodes(new Set(expandedState.expandedNodes));
-      
-      // Restore node expansions map
-      const restoredMap = new Map();
-      expandedState.nodeExpansions.forEach(([key, value]: [string, any]) => {
-        restoredMap.set(key, value);
-      });
-      setNodeExpansions(restoredMap);
-      
-      console.log(`🔄 Restored expanded network state for ${mainArtistNode?.name || 'unknown artist'} with ${expandedState.expandedNodes.length} expanded nodes`);
-      return true;
+      console.log(`💾 Loaded expanded state for ${artistName}`);
+      return expandedState;
     } catch (error) {
-      console.error('Error restoring expanded state:', error);
-      return false;
+      console.error('❌ Failed to load expanded state:', error);
+      return null;
     }
   };
 
@@ -186,26 +172,57 @@ export default function NetworkVisualizer({
       const firstDegreeData = filterToFirstDegreeOnly(data);
       setOriginalNetworkData(firstDegreeData);
       console.log(`🔗 Stored original first-degree network with ${firstDegreeData.nodes.length} nodes`);
-    }
-  }, [data, originalNetworkData, isExpandedMode]);
-
-  // Restore expanded state when component mounts or data changes
-  useEffect(() => {
-    if (data && originalNetworkData && !hasExpandedDataRef.current) {
-      const restored = restoreExpandedState();
-      if (restored) {
-        hasExpandedDataRef.current = true;
-        console.log(`🔄 Successfully restored expanded network from localStorage`);
+      
+      // Try to load any existing expanded state
+      const artistName = firstDegreeData.nodes.find(node => node.size === 30 && node.type === 'artist')?.name;
+      if (artistName) {
+        const savedState = loadExpandedState(artistName);
+        if (savedState) {
+          console.log(`💾 Restoring expanded state for ${artistName}`);
+          setExpandedNodes(new Set(savedState.expandedNodes));
+          setNodeExpansions(new Map(savedState.nodeExpansions.map(([key, value]: [string, any]) => [key, value])));
+          setIsExpandedMode(savedState.isExpandedMode);
+          // Use saved network data if available and valid
+          if (savedState.networkData && savedState.networkData.nodes.length > firstDegreeData.nodes.length) {
+            setDataWithPictures(savedState.networkData);
+          }
+        }
       }
     }
-  }, [data, originalNetworkData]);
-
-  // Save expanded state whenever it changes
+  }, [data, originalNetworkData, isExpandedMode]);
+  
+  // Auto-save expanded state whenever it changes
   useEffect(() => {
-    if (isExpandedMode && dataWithPictures && expandedNodes.size > 0) {
-      saveExpandedState();
+    if (mainArtistNode && isExpandedMode && expandedNodes.size > 0) {
+      saveExpandedState(mainArtistNode.name);
     }
-  }, [dataWithPictures, isExpandedMode, expandedNodes, nodeExpansions]);
+  }, [expandedNodes, nodeExpansions, isExpandedMode, dataWithPictures]);
+  
+  // Handle page visibility changes to ensure state persists when switching tabs
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && mainArtistNode && isExpandedMode) {
+        // Save state immediately when user is about to leave
+        saveExpandedState(mainArtistNode.name);
+        console.log(`💾 Auto-saved state before tab switch for ${mainArtistNode.name}`);
+      }
+    };
+    
+    const handleBeforeUnload = () => {
+      if (mainArtistNode && isExpandedMode) {
+        // Save state before page unload
+        saveExpandedState(mainArtistNode.name);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [mainArtistNode, isExpandedMode]);
 
   // Function to get first-degree collaborators (directly connected to main artist)
   const getFirstDegreeCollaborators = (): Set<string> => {
@@ -228,9 +245,8 @@ export default function NetworkVisualizer({
   };
 
   // Function to generate AI-powered network for any collaborator (not just main artists)
-  const generateCollaboratorNetwork = async (collaboratorName: string, collaboratorRoles: string[], retryCount = 0): Promise<NetworkData | null> => {
-    const maxRetries = 2;
-    console.log(`🤖 Generating AI network for ${collaboratorName} with roles: [${collaboratorRoles.join(', ')}]${retryCount > 0 ? ` (retry ${retryCount})` : ''}`);
+  const generateCollaboratorNetwork = async (collaboratorName: string, collaboratorRoles: string[]): Promise<NetworkData | null> => {
+    console.log(`🤖 Generating AI network for ${collaboratorName} with roles: [${collaboratorRoles.join(', ')}]`);
     
     try {
       // Create a direct OpenAI request to generate the collaborator's network
@@ -246,16 +262,7 @@ export default function NetworkVisualizer({
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`🤖 Failed to generate network for ${collaboratorName}: ${response.status} - ${errorText}`);
-        
-        // Retry on server errors (5xx) but not client errors (4xx)
-        if (response.status >= 500 && retryCount < maxRetries) {
-          console.log(`🤖 Retrying network generation for ${collaboratorName} (attempt ${retryCount + 1}/${maxRetries})`);
-          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Progressive delay
-          return generateCollaboratorNetwork(collaboratorName, collaboratorRoles, retryCount + 1);
-        }
-        
+        console.error(`🤖 Failed to generate network for ${collaboratorName}: ${response.status}`);
         return null;
       }
 
@@ -265,14 +272,6 @@ export default function NetworkVisualizer({
       return networkData;
     } catch (error) {
       console.error(`🤖❌ Error generating AI network for ${collaboratorName}:`, error);
-      
-      // Retry on network errors
-      if (retryCount < maxRetries && (error instanceof Error && error.message.includes('fetch'))) {
-        console.log(`🤖 Retrying network generation for ${collaboratorName} due to network error (attempt ${retryCount + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Progressive delay
-        return generateCollaboratorNetwork(collaboratorName, collaboratorRoles, retryCount + 1);
-      }
-      
       return null;
     }
   };
@@ -342,20 +341,7 @@ export default function NetworkVisualizer({
         }
       } catch (fetchError) {
         console.error(`🔗 Error generating network data for ${nodeName}:`, fetchError);
-        
-        // Provide more specific error message
-        let errorMessage = `Failed to generate ${nodeName}'s network. `;
-        if (fetchError instanceof Error) {
-          if (fetchError.message.includes('fetch')) {
-            errorMessage += `Network connection issue. Please check your internet connection and try again.`;
-          } else {
-            errorMessage += `Error: ${fetchError.message}`;
-          }
-        } else {
-          errorMessage += `Please try again later.`;
-        }
-        
-        alert(errorMessage);
+        alert(`Failed to generate ${nodeName}'s network. Please try again later.`);
         return;
       }
 
@@ -547,15 +533,6 @@ export default function NetworkVisualizer({
       if (!stillExpanded) {
         setIsExpandedMode(false);
         hasExpandedDataRef.current = false;
-        
-        // Clear localStorage when no more expansions exist
-        try {
-          const storageKey = getStorageKey();
-          localStorage.removeItem(storageKey);
-          console.log(`🗑️ Cleared localStorage - no more expanded nodes`);
-        } catch (error) {
-          console.error('Error clearing localStorage on shrink:', error);
-        }
       }
 
       console.log(`🔗 Successfully shrunk ${nodeName}'s network. Removed ${expansion.addedNodes.length} nodes and ${expansion.addedLinks.length} links`);
@@ -578,13 +555,14 @@ export default function NetworkVisualizer({
         setNodeExpansions(new Map());
         hasExpandedDataRef.current = false;
         
-        // Clear localStorage when resetting
-        try {
-          const storageKey = getStorageKey();
-          localStorage.removeItem(storageKey);
-          console.log(`🗑️ Cleared localStorage for ${mainArtistNode?.name || 'unknown artist'}`);
-        } catch (error) {
-          console.error('Error clearing localStorage:', error);
+        // Clear saved state from localStorage
+        if (mainArtistNode) {
+          try {
+            localStorage.removeItem(getStorageKey(mainArtistNode.name));
+            console.log(`💾 Cleared saved state for ${mainArtistNode.name}`);
+          } catch (error) {
+            console.error('❌ Failed to clear saved state:', error);
+          }
         }
         
         console.log(`🔗 Reset to original first-degree network with ${originalNetworkData.nodes.length} nodes`);
@@ -597,13 +575,14 @@ export default function NetworkVisualizer({
         setNodeExpansions(new Map());
         hasExpandedDataRef.current = false;
         
-        // Clear localStorage when resetting (fallback case)
-        try {
-          const storageKey = getStorageKey();
-          localStorage.removeItem(storageKey);
-          console.log(`🗑️ Cleared localStorage for ${mainArtistNode?.name || 'unknown artist'} (fallback)`);
-        } catch (error) {
-          console.error('Error clearing localStorage (fallback):', error);
+        // Clear saved state from localStorage (fallback case)
+        if (mainArtistNode) {
+          try {
+            localStorage.removeItem(getStorageKey(mainArtistNode.name));
+            console.log(`💾 Cleared saved state for ${mainArtistNode.name} (fallback)`);
+          } catch (error) {
+            console.error('❌ Failed to clear saved state (fallback):', error);
+          }
         }
       }
     }
