@@ -60,69 +60,6 @@ export default function NetworkVisualizer({
 
   // Store the main artist node for easy access
   const mainArtistNode = dataWithPictures?.nodes.find(node => node.size === 30 && node.type === 'artist') || null;
-  
-  // Generate a unique key for this artist's expanded network state
-  const getStorageKey = (artistName: string) => `grapevine_expanded_${artistName}`;
-  const getCurrentArtistName = () => mainArtistNode?.name || data?.nodes?.find(n => n.size === 30)?.name || 'unknown';
-  
-  // Save expanded network state to localStorage
-  const saveExpandedState = () => {
-    try {
-      const artistName = getCurrentArtistName();
-      const stateToSave = {
-        isExpandedMode,
-        expandedNodes: Array.from(expandedNodes),
-        nodeExpansions: Array.from(nodeExpansions.entries()).map(([key, value]) => [
-          key,
-          {
-            addedNodes: value.addedNodes,
-            addedLinks: value.addedLinks
-          }
-        ]),
-        dataWithPictures,
-        timestamp: Date.now()
-      };
-      localStorage.setItem(getStorageKey(artistName), JSON.stringify(stateToSave));
-      console.log(`💾 Saved expanded state for ${artistName}`);
-    } catch (error) {
-      console.error('Failed to save expanded state:', error);
-    }
-  };
-  
-  // Load expanded network state from localStorage
-  const loadExpandedState = () => {
-    try {
-      const artistName = getCurrentArtistName();
-      const savedState = localStorage.getItem(getStorageKey(artistName));
-      if (savedState) {
-        const parsed = JSON.parse(savedState);
-        // Only load if the save is recent (within 7 days)
-        const oneWeek = 7 * 24 * 60 * 60 * 1000;
-        if (Date.now() - parsed.timestamp < oneWeek) {
-          console.log(`💾 Loading expanded state for ${artistName}`);
-          return parsed;
-        } else {
-          // Clean up old state
-          localStorage.removeItem(getStorageKey(artistName));
-          console.log(`💾 Cleaned up old state for ${artistName}`);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load expanded state:', error);
-    }
-    return null;
-  };
-  
-  // Clear expanded state from localStorage
-  const clearExpandedState = () => {
-    try {
-      const artistName = getCurrentArtistName();
-      localStorage.removeItem(getStorageKey(artistName));
-      console.log(`💾 Cleared expanded state for ${artistName}`);
-    } catch (error) {
-      console.error('Failed to clear expanded state:', error);
-    }
-  };
 
   // Function to filter network data to only show first-degree collaborators
   const filterToFirstDegreeOnly = (networkData: NetworkData): NetworkData => {
@@ -178,52 +115,15 @@ export default function NetworkVisualizer({
     };
   };
 
-  // Load expanded state after initial data processing completes
+  // Store original data when first loaded (filtered to first-degree only)
   useEffect(() => {
-    if (data && originalNetworkData && dataWithPictures && !hasExpandedDataRef.current) {
-      const currentArtistName = getCurrentArtistName();
-      const savedState = loadExpandedState();
-      
-      // Only restore if the saved state is for the same artist
-      if (savedState && savedState.dataWithPictures && savedState.expandedNodes.length > 0) {
-        const savedArtistName = savedState.dataWithPictures.nodes?.find(n => n.size === 30)?.name;
-        
-        if (savedArtistName === currentArtistName) {
-          console.log(`💾 Restoring expanded state for ${currentArtistName} with ${savedState.expandedNodes.length} expanded nodes`);
-          
-          // Restore the expanded state
-          setIsExpandedMode(savedState.isExpandedMode);
-          setExpandedNodes(new Set(savedState.expandedNodes));
-          
-          // Restore node expansions Map
-          const restoredExpansions = new Map();
-          savedState.nodeExpansions.forEach(([key, value]) => {
-            restoredExpansions.set(key, value);
-          });
-          setNodeExpansions(restoredExpansions);
-          
-          // Restore the expanded network data
-          setDataWithPictures(savedState.dataWithPictures);
-          hasExpandedDataRef.current = true;
-          
-          console.log(`💾 Successfully restored expanded network for ${currentArtistName}`);
-        } else {
-          console.log(`💾 Saved state is for different artist (${savedArtistName}), not restoring`);
-        }
-      }
+    if (data && !originalNetworkData && !isExpandedMode) {
+      // Store the filtered first-degree data as the "original" state
+      const firstDegreeData = filterToFirstDegreeOnly(data);
+      setOriginalNetworkData(firstDegreeData);
+      console.log(`🔗 Stored original first-degree network with ${firstDegreeData.nodes.length} nodes`);
     }
-  }, [data, originalNetworkData, dataWithPictures]);
-
-  // Save expanded state whenever critical state changes
-  useEffect(() => {
-    if (isExpandedMode && expandedNodes.size > 0 && dataWithPictures) {
-      // Debounce saves to avoid excessive localStorage writes
-      const timeoutId = setTimeout(() => {
-        saveExpandedState();
-      }, 500);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [isExpandedMode, expandedNodes, nodeExpansions, dataWithPictures]);
+  }, [data, originalNetworkData, isExpandedMode]);
 
   // Function to get first-degree collaborators (directly connected to main artist)
   const getFirstDegreeCollaborators = (): Set<string> => {
@@ -464,9 +364,6 @@ export default function NetworkVisualizer({
 
       const roleDescription = isClickedArtist ? 'songwriter/producer' : 'artist';
       console.log(`🔗 Successfully expanded ${nodeName}'s network with ${selectedNodes.length} ${roleDescription} collaborators and ${newLinks.length} links`);
-      
-      // Save the expanded state to localStorage
-      setTimeout(() => saveExpandedState(), 100); // Small delay to ensure state is updated
     } catch (error) {
       console.error(`🔗 Error expanding network for ${nodeName}:`, error);
     } finally {
@@ -537,11 +434,6 @@ export default function NetworkVisualizer({
       if (!stillExpanded) {
         setIsExpandedMode(false);
         hasExpandedDataRef.current = false;
-        // Clear localStorage when no expansions remain
-        clearExpandedState();
-      } else {
-        // Save the updated state to localStorage
-        setTimeout(() => saveExpandedState(), 100); // Small delay to ensure state is updated
       }
 
       console.log(`🔗 Successfully shrunk ${nodeName}'s network. Removed ${expansion.addedNodes.length} nodes and ${expansion.addedLinks.length} links`);
@@ -563,8 +455,6 @@ export default function NetworkVisualizer({
         setExpandedNodes(new Set());
         setNodeExpansions(new Map());
         hasExpandedDataRef.current = false;
-        // Clear localStorage when resetting
-        clearExpandedState();
         console.log(`🔗 Reset to original first-degree network with ${originalNetworkData.nodes.length} nodes`);
       } catch (error) {
         console.error(`🔗 Error resetting network:`, error);
@@ -574,105 +464,54 @@ export default function NetworkVisualizer({
         setExpandedNodes(new Set());
         setNodeExpansions(new Map());
         hasExpandedDataRef.current = false;
-        // Clear localStorage on error too
-        clearExpandedState();
       }
     }
   };
 
-  // Process initial data when data prop changes
+  // Only process initial data when the original data prop changes (not on visibility changes)
   useEffect(() => {
     if (!data) {
       setDataWithPictures(null);
-      setOriginalNetworkData(null);
-      setIsExpandedMode(false);
-      setExpandedNodes(new Set());
-      setNodeExpansions(new Map());
-      hasExpandedDataRef.current = false;
-      console.log(`🖼️ [NetworkVisualizer] Cleared all data - no network data provided`);
       return;
     }
 
-    // Get the current artist name to check if this is a new artist
-    const newArtistName = data.nodes?.find(n => n.size === 30)?.name;
-    const currentArtistName = dataWithPictures?.nodes?.find(n => n.size === 30)?.name;
-    
-    // If this is a different artist or we have no existing data, reset everything
-    if (!dataWithPictures || newArtistName !== currentArtistName) {
-      console.log(`🖼️ [NetworkVisualizer] Processing data for ${newArtistName || 'unknown artist'}`);
-      
-      // Reset all expanded state for new artist
-      setIsExpandedMode(false);
-      setExpandedNodes(new Set());
-      setNodeExpansions(new Map());
-      hasExpandedDataRef.current = false;
-      
-      const processData = async () => {
-        try {
-          // Filter to first-degree only for initial load
-          const processedData = filterToFirstDegreeOnly(data);
-          
-          // Store this as the original data before profile pictures
-          setOriginalNetworkData(processedData);
-          
-          // Then ensure profile pictures are available
-          const updatedData = await ensureArtistProfilePictures(processedData);
-          setDataWithPictures(updatedData);
-          console.log(`🖼️ [NetworkVisualizer] Initial network data processed for ${newArtistName} with ${updatedData.nodes.length} nodes`);
-        } catch (error) {
-          console.error(`🖼️ [NetworkVisualizer] Error processing network data:`, error);
-          // Use filtered data without profile pictures if profile picture fetching fails
-          const fallbackData = filterToFirstDegreeOnly(data);
-          setOriginalNetworkData(fallbackData);
-          setDataWithPictures(fallbackData);
-        }
-      };
-
-      processData();
-    } else {
-      console.log(`🖼️ [NetworkVisualizer] Same artist (${currentArtistName}), keeping existing data`);
+    // Only process if we don't already have expanded data or if this is genuinely new data
+    if ((isExpandedMode || hasExpandedDataRef.current) && dataWithPictures) {
+      console.log(`🖼️ [NetworkVisualizer] Skipping data processing - expanded mode active with existing data`);
+      return;
     }
+
+    console.log(`🖼️ [NetworkVisualizer] Processing initial network data...`);
+    
+    const processData = async () => {
+      try {
+        // Only filter to first-degree on initial load, not when expanding
+        const processedData = filterToFirstDegreeOnly(data);
+        
+        // Then ensure profile pictures are available
+        const updatedData = await ensureArtistProfilePictures(processedData);
+        setDataWithPictures(updatedData);
+        console.log(`🖼️ [NetworkVisualizer] Initial network data processed and profile pictures ensured`);
+      } catch (error) {
+        console.error(`🖼️ [NetworkVisualizer] Error processing network data:`, error);
+        // Use filtered data without profile pictures if profile picture fetching fails
+        const fallbackData = filterToFirstDegreeOnly(data);
+        setDataWithPictures(fallbackData);
+      }
+    };
+
+    processData();
   }, [data]); // Only depend on data, not visibility
 
   // Separate effect to handle visibility without affecting data
   useEffect(() => {
     if (!visible) {
-      // Save state when becoming invisible (user might be switching tabs)
-      if (isExpandedMode && expandedNodes.size > 0) {
-        saveExpandedState();
-      }
+      // Don't clear data when becoming invisible - just hide the visualization
       console.log(`🖼️ [NetworkVisualizer] Component hidden, preserving expanded network data`);
     } else if (dataWithPictures) {
       console.log(`🖼️ [NetworkVisualizer] Component visible, using preserved network data with ${dataWithPictures.nodes.length} nodes`);
     }
   }, [visible, dataWithPictures]);
-
-  // Add page visibility change listener for tab switching
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden && isExpandedMode && expandedNodes.size > 0) {
-        // User is switching tabs or minimizing window - save state
-        saveExpandedState();
-        console.log(`💾 Saved expanded state due to tab switch/minimize`);
-      }
-    };
-
-    const handleBeforeUnload = () => {
-      // User is closing/refreshing page - save state
-      if (isExpandedMode && expandedNodes.size > 0) {
-        saveExpandedState();
-        console.log(`💾 Saved expanded state due to page unload`);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [isExpandedMode, expandedNodes]);
 
   // Fetch configuration on component mount
   useEffect(() => {
@@ -1435,13 +1274,14 @@ export default function NetworkVisualizer({
         const isArtist = roles.includes('artist');
         
         // Check if this is a first-degree collaborator (directly connected to main artist)
+        // Note: This is now only used for display purposes, not for expansion restrictions
         const firstDegreeIds = getFirstDegreeCollaborators();
         const isFirstDegreeCollaborator = firstDegreeIds.has(d.id);
         
         // Check if this node has been expanded
         const isNodeExpanded = expandedNodes.has(d.id);
         
-        // Build expand/shrink network section for any collaborator (not just first-degree)
+        // Build expand/shrink network section for ANY collaborator (not just first-degree)
         const expandShrinkSection = !isMainArtist ? 
           (isNodeExpanded ? 
             // Show shrink button if node is expanded
@@ -1622,7 +1462,7 @@ export default function NetworkVisualizer({
       // Attach event handlers
       tooltip.selectAll(".network-link, .network-icon, .network-action").on("click", networkHandler);
       
-      // Attach expand/shrink handlers based on node state (any collaborator except main artist)
+      // Attach expand/shrink handlers for ANY collaborator (not just first-degree)
       if (!isMainArtist) {
         if (isNodeExpanded) {
           // Attach shrink handler if node is expanded
@@ -2078,9 +1918,6 @@ export default function NetworkVisualizer({
     return true;
   }
 
-  // Debug logging for render
-  console.log(`🔍 [NetworkVisualizer] Render: visible=${visible}, dataWithPictures=${!!dataWithPictures}, nodes=${dataWithPictures?.nodes?.length || 0}`);
-
   return (
     <div
       className={`network-container transition-opacity duration-700 w-full h-full ${
@@ -2088,15 +1925,6 @@ export default function NetworkVisualizer({
       }`}
     >
       <svg ref={svgRef} className="w-full h-full" />
-      
-      {/* Debug info overlay */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white text-xs p-2 rounded">
-          <div>Visible: {visible ? 'true' : 'false'}</div>
-          <div>Data: {dataWithPictures ? `${dataWithPictures.nodes.length} nodes` : 'null'}</div>
-          <div>Expanded: {isExpandedMode ? 'true' : 'false'}</div>
-        </div>
-      )}
       
       {/* Reset button for expanded mode */}
       {isExpandedMode && (
