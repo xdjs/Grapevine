@@ -5,6 +5,7 @@ import ArtistSelectionModal from "./artist-selection-modal";
 import { ensureArtistProfilePictures } from "@/lib/profile-pictures";
 import CollaborationDetailsPopup from "./collaboration-details-popup";
 import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
+import { Loader2, Network, Brain, Users } from "lucide-react";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -1948,19 +1949,50 @@ export default function NetworkVisualizer({
 
       {/* Loading screen for network expansion */}
       {isExpandingNetwork && (
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-md mx-4 text-center shadow-2xl">
-            <div className="flex items-center justify-center mb-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 p-4">
+          <div className="bg-black/90 rounded-xl p-6 sm:p-8 flex flex-col items-center space-y-4 sm:space-y-6 max-w-sm sm:max-w-md border border-pink-500/20 shadow-2xl">
+            {/* Main Loading Spinner */}
+            <div className="relative">
+              <Loader2 className="h-12 w-12 sm:h-16 sm:w-16 animate-spin text-pink-500" />
+              <div className="absolute inset-0 rounded-full border-2 border-pink-500/30 animate-pulse"></div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Expanding Network
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Discovering collaborators for <span className="font-medium text-blue-600">{expandingNodeName}</span>...
-            </p>
-            <div className="text-sm text-gray-500">
-              Using AI to generate music industry connections
+
+            {/* Loading Text */}
+            <div className="text-center space-y-2">
+              <h3 className="text-lg sm:text-xl font-semibold text-white">
+                Expanding Network
+              </h3>
+              <p className="text-sm sm:text-base text-gray-300">
+                Discovering collaborators for <span className="font-medium text-pink-400">{expandingNodeName}</span>...
+              </p>
+            </div>
+
+            {/* Progress Indicators */}
+            <div className="flex items-center justify-center space-x-4 text-xs text-gray-400">
+              <div className="flex items-center space-x-1">
+                <Brain className="h-3 w-3 text-pink-500" />
+                <span>AI Analysis</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Network className="h-3 w-3 text-pink-500" />
+                <span>Connections</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Users className="h-3 w-3 text-pink-500" />
+                <span>Collaborators</span>
+              </div>
+            </div>
+
+            {/* Animated Dots */}
+            <div className="flex space-x-1">
+              <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            </div>
+
+            {/* Additional Info */}
+            <div className="text-xs text-gray-500 text-center max-w-xs">
+              Using AI to generate authentic music industry connections
             </div>
           </div>
         </div>
