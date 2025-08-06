@@ -352,22 +352,31 @@
     cursor: pointer; 
   }
 
-  /* Node highlighting classes for clicked state */
-  .node-highlighted-single circle {
+  /* Node highlighting styles - maximum specificity */
+  svg .node-group.network-node.node-highlighted-single circle {
     fill: white !important;
     stroke: white !important;
-    stroke-width: 4px !important;
+    stroke-width: 8px !important;
     stroke-opacity: 1 !important;
   }
 
-  .node-highlighted-multi path {
+  svg .node-group.network-node.node-highlighted-multi path {
     stroke: white !important;
-    stroke-width: 4px !important;
+    stroke-width: 8px !important;
   }
 
-  .node-highlighted-multi circle {
+  svg .node-group.network-node.node-highlighted-multi circle {
     stroke: white !important;
-    stroke-width: 5px !important;
+    stroke-width: 10px !important;
+  }
+
+  /* Test highlighting - very obvious visual change */
+  svg .node-group.network-node.node-highlighted-single {
+    transform: scale(1.2) !important;
+  }
+
+  svg .node-group.network-node.node-highlighted-multi {
+    transform: scale(1.2) !important;
   }
   
   .network-tooltip {

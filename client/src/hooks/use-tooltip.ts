@@ -129,9 +129,6 @@ export function useTooltip({
   // Node highlighting functions
   const resetNodeHighlight = useCallback(() => {
     if (highlightedNode) {
-      const nodeData = highlightedNode.datum() as NetworkNode;
-      const roles = nodeData.types || [nodeData.type];
-      
       // Reset to original styling by removing highlight classes
       highlightedNode
         .classed("node-highlighted-single", false)

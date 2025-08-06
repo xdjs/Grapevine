@@ -110,18 +110,15 @@ export function useNodeInteractions({
   const handleNodeClick = useCallback(
     (event: MouseEvent, node: NetworkNode, nodeElement: SVGGElement) => {
       try {
-        console.log(`🎯 *** NODE CLICK EVENT FIRED ***`);
-        console.log(`🎯 Event:`, event);
-        console.log(`🎯 Node:`, node);
-        console.log(`🎯 Element:`, nodeElement);
-        console.log(`🎯 Visible:`, visible);
-        
+        console.log(`🎯 NODE CLICK DETECTED: "${node.name}"`);
         event.stopPropagation();
         
         if (!visible) {
-          console.log(`🎯 Not visible, returning early`);
+          console.log(`🎯 Component not visible, skipping highlight`);
           return;
         }
+        
+        console.log(`🎯 Processing click for visible component`);
         
         // Reset previous node highlighting
         tooltip.resetNodeHighlight();
@@ -130,68 +127,25 @@ export function useNodeInteractions({
         const currentNodeSelection = d3.select(nodeElement);
         const roles = node.types || [node.type];
         
-        console.log(`🎯 Highlighting node "${node.name}" with roles: [${roles.join(', ')}]`);
-        console.log(`🎯 Node element:`, nodeElement);
-        console.log(`🎯 D3 selection:`, currentNodeSelection);
+        // Remove any existing highlight classes
+        currentNodeSelection
+          .classed("node-highlighted-single", false)
+          .classed("node-highlighted-multi", false);
         
         if (roles.length === 1) {
           // Single role - turn node completely white
-          console.log(`🎯 Applying single role highlighting (white fill)`);
-          const circleSelection = currentNodeSelection.selectAll("circle");
-          console.log(`🎯 Circle selection:`, circleSelection);
-          console.log(`🎯 Circle count:`, circleSelection.size());
-          
-          // Add CSS class for highlighting
           currentNodeSelection.classed("node-highlighted-single", true);
-          console.log(`🎯 Added class "node-highlighted-single" to node`);
-          console.log(`🎯 Node classes after highlight:`, nodeElement.className.baseVal);
-          
-          // FALLBACK: Also apply direct styles to ensure visibility
-          circleSelection
-            .style("fill", "white")
-            .style("stroke", "white") 
-            .style("stroke-width", "6px")  // Make it even thicker so it's obvious
-            .style("opacity", "1");
-            
-          console.log(`🎯 Applied fallback direct styles to circles`);
-          
-          // Also verify the element in DOM
-          setTimeout(() => {
-            console.log(`🎯 DOM element after 100ms:`, nodeElement);
-            console.log(`🎯 DOM classes:`, nodeElement.classList);
-            console.log(`🎯 Applied styles:`, window.getComputedStyle(nodeElement));
-          }, 100);
-          
+          console.log(`🎯 Applied single role highlighting to "${node.name}"`);
+          console.log(`🎯 Node classes after highlight:`, currentNodeSelection.attr("class"));
         } else {
-          // Multiple roles - thicker white border
-          console.log(`🎯 Applying multi-role highlighting (thicker borders)`);
-          const pathSelection = currentNodeSelection.selectAll("path");
-          const circleSelection = currentNodeSelection.selectAll("circle");
-          console.log(`🎯 Path selection count:`, pathSelection.size());
-          console.log(`🎯 Circle selection count:`, circleSelection.size());
-          
-          // Add CSS class for highlighting
+          // Multiple roles - thicker white border  
           currentNodeSelection.classed("node-highlighted-multi", true);
-          console.log(`🎯 Added class "node-highlighted-multi" to node`);
-          console.log(`🎯 Node classes after highlight:`, nodeElement.className.baseVal);
-          
-          // FALLBACK: Also apply direct styles to ensure visibility
-          pathSelection
-            .style("stroke", "white")
-            .style("stroke-width", "8px");  // Make it very thick so it's obvious
-            
-          circleSelection  
-            .style("stroke", "white")
-            .style("stroke-width", "10px");  // Make it very thick so it's obvious
-            
-          console.log(`🎯 Applied fallback direct styles to paths and circles`);
-          
-          // Also verify the element in DOM
-          setTimeout(() => {
-            console.log(`🎯 DOM element after 100ms:`, nodeElement);
-            console.log(`🎯 DOM classes:`, nodeElement.classList);
-          }, 100);
+          console.log(`🎯 Applied multi-role highlighting to "${node.name}" with roles: [${roles.join(', ')}]`);
+          console.log(`🎯 Node classes after highlight:`, currentNodeSelection.attr("class"));
         }
+        
+        // Debug: log the actual DOM element
+        console.log(`🎯 DOM element:`, currentNodeSelection.node());
         
         // Track this node as highlighted
         tooltip.setHighlightedNode(currentNodeSelection);
