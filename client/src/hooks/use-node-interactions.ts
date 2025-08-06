@@ -121,6 +121,19 @@ export function useNodeInteractions({
         const currentNodeSelection = d3.select(nodeElement);
         const roles = node.types || [node.type];
         
+        // Debug: Check the actual DOM structure
+        console.log(`🎯 Node DOM structure:`, {
+          nodeElement: nodeElement,
+          nodeName: nodeElement.tagName,
+          children: Array.from(nodeElement.children).map(child => ({
+            tagName: child.tagName,
+            classes: child.className,
+            attributes: Array.from(child.attributes).map(attr => `${attr.name}="${attr.value}"`).join(' ')
+          })),
+          allCircles: currentNodeSelection.selectAll("*").nodes().filter(el => el.tagName === 'circle'),
+          allPaths: currentNodeSelection.selectAll("*").nodes().filter(el => el.tagName === 'path')
+        });
+        
         if (roles.length === 1) {
           // Single role node - turn the circle fill white
           console.log(`🎯 Highlighting single-role node: ${node.name} - setting fill to white`);
