@@ -58,10 +58,68 @@ export default function NetworkVisualizer({
   const [isExpandingNetwork, setIsExpandingNetwork] = useState(false);
   const [expandingNodeName, setExpandingNodeName] = useState("");
 
-  // Generate a unique key for this artist's network state
+  // Generate a unique key for localStorage based on the main artist
   const getStorageKey = () => {
-    const mainArtist = mainArtistNode?.name || 'unknown';
-    return `grapevine_expanded_network_${mainArtist}`;
+    const mainArtist = mainArtistNode?.name || data?.nodes?.find(n => n.size === 30)?.name || 'unknown';
+    return `grapevine-expanded-network-${mainArtist.toLowerCase().replace(/\s+/g, '-')}`;
+  };
+
+  // Save expanded network state to localStorage
+  const saveExpandedState = () => {
+    try {
+      if (!dataWithPictures) return;
+      
+      const storageKey = getStorageKey();
+      const expandedState = {
+        dataWithPictures,
+        isExpandedMode,
+        expandedNodes: Array.from(expandedNodes),
+        nodeExpansions: Array.from(nodeExpansions.entries()).map(([key, value]) => [key, value]),
+        timestamp: Date.now()
+      };
+      
+      localStorage.setItem(storageKey, JSON.stringify(expandedState));
+      console.log(`💾 Saved expanded network state for ${mainArtistNode?.name || 'unknown artist'}`);
+    } catch (error) {
+      console.error('Error saving expanded state:', error);
+    }
+  };
+
+  // Restore expanded network state from localStorage
+  const restoreExpandedState = (): boolean => {
+    try {
+      const storageKey = getStorageKey();
+      const savedState = localStorage.getItem(storageKey);
+      
+      if (!savedState) return false;
+      
+      const expandedState = JSON.parse(savedState);
+      
+      // Check if saved state is recent (within 24 hours)
+      const isRecent = Date.now() - expandedState.timestamp < 24 * 60 * 60 * 1000;
+      if (!isRecent) {
+        localStorage.removeItem(storageKey);
+        return false;
+      }
+      
+      // Restore the expanded state
+      setDataWithPictures(expandedState.dataWithPictures);
+      setIsExpandedMode(expandedState.isExpandedMode);
+      setExpandedNodes(new Set(expandedState.expandedNodes));
+      
+      // Restore node expansions map
+      const restoredMap = new Map();
+      expandedState.nodeExpansions.forEach(([key, value]: [string, any]) => {
+        restoredMap.set(key, value);
+      });
+      setNodeExpansions(restoredMap);
+      
+      console.log(`🔄 Restored expanded network state for ${mainArtistNode?.name || 'unknown artist'} with ${expandedState.expandedNodes.length} expanded nodes`);
+      return true;
+    } catch (error) {
+      console.error('Error restoring expanded state:', error);
+      return false;
+    }
   };
 
   // Store the main artist node for easy access
@@ -131,94 +189,23 @@ export default function NetworkVisualizer({
     }
   }, [data, originalNetworkData, isExpandedMode]);
 
-  // Save expanded state to localStorage whenever it changes
+  // Restore expanded state when component mounts or data changes
   useEffect(() => {
-    if (!mainArtistNode || expandedNodes.size === 0 || !dataWithPictures) return;
-    
-    try {
-      const storageKey = getStorageKey();
-      const expandedState = {
-        expandedNodes: Array.from(expandedNodes),
-        nodeExpansions: Array.from(nodeExpansions.entries()).map(([key, value]) => ({
-          nodeId: key,
-          addedNodes: value.addedNodes,
-          addedLinks: value.addedLinks
-        })),
-        isExpandedMode,
-        timestamp: Date.now()
-      };
-      
-      // Only save if we have valid expansion data
-      if (expandedState.nodeExpansions.length > 0) {
-        localStorage.setItem(storageKey, JSON.stringify(expandedState));
-        console.log(`💾 Saved expanded state for ${mainArtistNode.name}:`, expandedState);
+    if (data && originalNetworkData && !hasExpandedDataRef.current) {
+      const restored = restoreExpandedState();
+      if (restored) {
+        hasExpandedDataRef.current = true;
+        console.log(`🔄 Successfully restored expanded network from localStorage`);
       }
-    } catch (error) {
-      console.error('💾 Failed to save expanded state:', error);
     }
-  }, [expandedNodes, nodeExpansions, isExpandedMode, mainArtistNode, dataWithPictures]);
+  }, [data, originalNetworkData]);
 
-  // Restore expanded state from localStorage when component mounts
+  // Save expanded state whenever it changes
   useEffect(() => {
-    if (!mainArtistNode || !originalNetworkData || !dataWithPictures) return;
-    
-    // Only restore if we haven't already restored and aren't currently in expanded mode
-    if (isExpandedMode || hasExpandedDataRef.current) return;
-    
-    try {
-      const storageKey = getStorageKey();
-      const savedState = localStorage.getItem(storageKey);
-      
-      if (savedState) {
-        const expandedState = JSON.parse(savedState);
-        console.log(`🔄 Restoring expanded state for ${mainArtistNode.name}:`, expandedState);
-        
-        // Only restore if we have actual expanded data
-        if (expandedState.expandedNodes.length === 0) {
-          console.log(`🔄 No expanded nodes to restore, skipping`);
-          return;
-        }
-        
-        // Restore expanded nodes
-        setExpandedNodes(new Set(expandedState.expandedNodes));
-        
-        // Restore node expansions
-        const restoredExpansions = new Map();
-        expandedState.nodeExpansions.forEach((expansion: any) => {
-          restoredExpansions.set(expansion.nodeId, {
-            addedNodes: expansion.addedNodes,
-            addedLinks: expansion.addedLinks
-          });
-        });
-        setNodeExpansions(restoredExpansions);
-        
-        // Restore expanded mode
-        setIsExpandedMode(expandedState.isExpandedMode);
-        hasExpandedDataRef.current = expandedState.isExpandedMode;
-        
-        // Reconstruct the expanded network data
-        let rebuiltData = { ...originalNetworkData };
-        
-        // Add all expanded nodes and links back
-        expandedState.nodeExpansions.forEach((expansion: any) => {
-          rebuiltData.nodes = [...rebuiltData.nodes, ...expansion.addedNodes];
-          rebuiltData.links = [...rebuiltData.links, ...expansion.addedLinks];
-        });
-        
-        // Ensure profile pictures are added
-        ensureArtistProfilePictures(rebuiltData).then(updatedData => {
-          setDataWithPictures(updatedData);
-          console.log(`🔄 Restored expanded network with ${updatedData.nodes.length} nodes and ${updatedData.links.length} links`);
-        }).catch(error => {
-          console.error('🔄 Failed to restore profile pictures, using data without pictures:', error);
-          setDataWithPictures(rebuiltData);
-        });
-      }
-    } catch (error) {
-      console.error('🔄 Failed to restore expanded state:', error);
-      // Don't break the component if restore fails
+    if (isExpandedMode && dataWithPictures && expandedNodes.size > 0) {
+      saveExpandedState();
     }
-  }, [mainArtistNode, originalNetworkData, dataWithPictures]);
+  }, [dataWithPictures, isExpandedMode, expandedNodes, nodeExpansions]);
 
   // Function to get first-degree collaborators (directly connected to main artist)
   const getFirstDegreeCollaborators = (): Set<string> => {
@@ -461,17 +448,6 @@ export default function NetworkVisualizer({
       console.log(`🔗 Successfully expanded ${nodeName}'s network with ${selectedNodes.length} ${roleDescription} collaborators and ${newLinks.length} links`);
     } catch (error) {
       console.error(`🔗 Error expanding network for ${nodeName}:`, error);
-      
-      // Don't change the network state on error - keep existing expanded state
-      // Remove this node from the "expanding" state since it failed
-      setExpandedNodes(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(nodeId); // Remove the node that failed to expand
-        return newSet;
-      });
-      
-      // Alert user about the error
-      alert(`Failed to expand ${nodeName}'s network. The existing network will remain unchanged.`);
     } finally {
       // Clear loading state
       setIsExpandingNetwork(false);
@@ -540,6 +516,15 @@ export default function NetworkVisualizer({
       if (!stillExpanded) {
         setIsExpandedMode(false);
         hasExpandedDataRef.current = false;
+        
+        // Clear localStorage when no more expansions exist
+        try {
+          const storageKey = getStorageKey();
+          localStorage.removeItem(storageKey);
+          console.log(`🗑️ Cleared localStorage - no more expanded nodes`);
+        } catch (error) {
+          console.error('Error clearing localStorage on shrink:', error);
+        }
       }
 
       console.log(`🔗 Successfully shrunk ${nodeName}'s network. Removed ${expansion.addedNodes.length} nodes and ${expansion.addedLinks.length} links`);
@@ -562,13 +547,13 @@ export default function NetworkVisualizer({
         setNodeExpansions(new Map());
         hasExpandedDataRef.current = false;
         
-        // Clear saved state from localStorage
+        // Clear localStorage when resetting
         try {
           const storageKey = getStorageKey();
           localStorage.removeItem(storageKey);
-          console.log(`💾 Cleared saved expanded state for ${mainArtistNode?.name}`);
+          console.log(`🗑️ Cleared localStorage for ${mainArtistNode?.name || 'unknown artist'}`);
         } catch (error) {
-          console.error('💾 Failed to clear saved state:', error);
+          console.error('Error clearing localStorage:', error);
         }
         
         console.log(`🔗 Reset to original first-degree network with ${originalNetworkData.nodes.length} nodes`);
@@ -581,13 +566,13 @@ export default function NetworkVisualizer({
         setNodeExpansions(new Map());
         hasExpandedDataRef.current = false;
         
-        // Clear saved state from localStorage (fallback case)
+        // Clear localStorage when resetting (fallback case)
         try {
           const storageKey = getStorageKey();
           localStorage.removeItem(storageKey);
-          console.log(`💾 Cleared saved expanded state (fallback)`);
+          console.log(`🗑️ Cleared localStorage for ${mainArtistNode?.name || 'unknown artist'} (fallback)`);
         } catch (error) {
-          console.error('💾 Failed to clear saved state (fallback):', error);
+          console.error('Error clearing localStorage (fallback):', error);
         }
       }
     }
@@ -673,8 +658,6 @@ export default function NetworkVisualizer({
     const networkData = dataWithPictures;
     if (!svgRef.current || !networkData || !visible) return;
 
-    console.log(`🎨 [D3] Rendering network with ${networkData.nodes.length} nodes and ${networkData.links.length} links`);
-
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
     
@@ -682,7 +665,7 @@ export default function NetworkVisualizer({
     const width = container ? container.clientWidth : window.innerWidth;
     const height = container ? container.clientHeight : window.innerHeight;
 
-    // Clear existing content and rebuild
+    // Clear existing content
     svg.selectAll("*").remove();
 
     // Filter out links where either node doesn't exist or is isolated
