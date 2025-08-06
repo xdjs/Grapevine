@@ -356,7 +356,7 @@ describe('useNodeInteractions', () => {
       expect(mockTooltip.showTooltip).not.toHaveBeenCalled();
     });
 
-    it('should highlight node correctly on click', () => {
+    it('should highlight single-role node correctly on click', () => {
       const { result } = renderHook(() =>
         useNodeInteractions({
           simulationRef: mockSimulationRef,
@@ -366,15 +366,37 @@ describe('useNodeInteractions', () => {
       );
 
       const mockEvent = { stopPropagation: vi.fn() } as any;
+      const singleRoleNode = { ...sampleNode, type: 'artist', types: undefined };
 
       act(() => {
-        result.current.handleNodeClick(mockEvent, sampleNode, sampleNodeElement);
+        result.current.handleNodeClick(mockEvent, singleRoleNode, sampleNodeElement);
       });
 
-      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle, path");
+      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle");
       expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke", "white");
       expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke-width", 3);
-      expect(mockD3Selection.selectAll().style).toHaveBeenCalledWith("stroke-opacity", 1);
+    });
+
+    it('should highlight multi-role node correctly on click', () => {
+      const { result } = renderHook(() =>
+        useNodeInteractions({
+          simulationRef: mockSimulationRef,
+          tooltip: mockTooltip,
+          visible: true,
+        })
+      );
+
+      const mockEvent = { stopPropagation: vi.fn() } as any;
+      const multiRoleNode = { ...sampleNode, type: 'artist', types: ['artist', 'producer'] };
+
+      act(() => {
+        result.current.handleNodeClick(mockEvent, multiRoleNode, sampleNodeElement);
+      });
+
+      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("path");
+      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke", "white");
+      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke-width", 3);
+      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle");
     });
   });
 
@@ -673,6 +695,146 @@ describe('useNodeInteractions', () => {
     });
   });
 
+  describe('click selection mechanism', () => {
+    it('should properly implement white stroke selection for single-role nodes', () => {
+      const { result } = renderHook(() =>
+        useNodeInteractions({
+          simulationRef: mockSimulationRef,
+          tooltip: mockTooltip,
+          visible: true,
+        })
+      );
+
+      const mockEvent = { stopPropagation: vi.fn() } as any;
+      const artistNode = { ...sampleNode, type: 'artist' };
+
+      act(() => {
+        result.current.handleNodeClick(mockEvent, artistNode, sampleNodeElement);
+      });
+
+      // Verify reset was called first
+      expect(mockTooltip.resetNodeHighlight).toHaveBeenCalled();
+      
+      // Verify D3 selection was created
+      expect(d3.select).toHaveBeenCalledWith(sampleNodeElement);
+      
+      // Verify white stroke was applied to circles for single-role nodes
+      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle");
+      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke", "white");
+      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke-width", 3);
+      
+      // Verify node was tracked as highlighted
+      expect(mockTooltip.setHighlightedNode).toHaveBeenCalledWith(mockD3Selection);
+      
+      // Verify tooltip was shown
+      expect(mockTooltip.showTooltip).toHaveBeenCalledWith(mockEvent, artistNode);
+    });
+
+    it('should properly implement white stroke selection for multi-role nodes', () => {
+      const { result } = renderHook(() =>
+        useNodeInteractions({
+          simulationRef: mockSimulationRef,
+          tooltip: mockTooltip,
+          visible: true,
+        })
+      );
+
+      const mockEvent = { stopPropagation: vi.fn() } as any;
+      const multiRoleNode = { 
+        ...sampleNode, 
+        type: 'artist', 
+        types: ['artist', 'producer', 'songwriter'] 
+      };
+
+      act(() => {
+        result.current.handleNodeClick(mockEvent, multiRoleNode, sampleNodeElement);
+      });
+
+      // Verify reset was called first
+      expect(mockTooltip.resetNodeHighlight).toHaveBeenCalled();
+      
+      // Verify white stroke was applied to both paths and circles for multi-role nodes
+      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("path");
+      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle");
+      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke", "white");
+      expect(mockD3Selection.selectAll().attr).toHaveBeenCalledWith("stroke-width", 3);
+      
+      // Verify node was tracked as highlighted
+      expect(mockTooltip.setHighlightedNode).toHaveBeenCalledWith(mockD3Selection);
+      
+      // Verify tooltip was shown
+      expect(mockTooltip.showTooltip).toHaveBeenCalledWith(mockEvent, multiRoleNode);
+    });
+
+    it('should reset previous selection when clicking a different node', () => {
+      const { result } = renderHook(() =>
+        useNodeInteractions({
+          simulationRef: mockSimulationRef,
+          tooltip: mockTooltip,
+          visible: true,
+        })
+      );
+
+      const mockEvent = { stopPropagation: vi.fn() } as any;
+      const firstNode = { ...sampleNode, id: 'node-1', name: 'First Artist' };
+      const secondNode = { ...sampleNode, id: 'node-2', name: 'Second Artist' };
+
+      // Click first node
+      act(() => {
+        result.current.handleNodeClick(mockEvent, firstNode, sampleNodeElement);
+      });
+
+      // Reset mock call count for the second click
+      vi.clearAllMocks();
+
+      // Click second node - should reset previous selection
+      act(() => {
+        result.current.handleNodeClick(mockEvent, secondNode, sampleNodeElement);
+      });
+
+      // Verify that resetNodeHighlight was called to clear previous selection
+      expect(mockTooltip.resetNodeHighlight).toHaveBeenCalled();
+      
+      // Verify new selection was applied
+      expect(mockTooltip.setHighlightedNode).toHaveBeenCalledWith(mockD3Selection);
+      expect(mockTooltip.showTooltip).toHaveBeenCalledWith(mockEvent, secondNode);
+    });
+
+    it('should handle clicks with proper role detection', () => {
+      const { result } = renderHook(() =>
+        useNodeInteractions({
+          simulationRef: mockSimulationRef,
+          tooltip: mockTooltip,
+          visible: true,
+        })
+      );
+
+      const mockEvent = { stopPropagation: vi.fn() } as any;
+      
+      // Test with undefined types (should default to single type)
+      const nodeWithoutTypes = { ...sampleNode, types: undefined };
+      
+      act(() => {
+        result.current.handleNodeClick(mockEvent, nodeWithoutTypes, sampleNodeElement);
+      });
+
+      // Should treat as single-role node
+      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle");
+      
+      vi.clearAllMocks();
+      
+      // Test with explicit single type array
+      const nodeWithSingleType = { ...sampleNode, types: ['producer'] };
+      
+      act(() => {
+        result.current.handleNodeClick(mockEvent, nodeWithSingleType, sampleNodeElement);
+      });
+
+      // Should still treat as single-role node
+      expect(mockD3Selection.selectAll).toHaveBeenCalledWith("circle");
+    });
+  });
+
   describe('console logging', () => {
     it('should log drag start events', () => {
       const { result } = renderHook(() =>
@@ -736,7 +898,7 @@ describe('useNodeInteractions', () => {
       });
 
       expect(mockConsole.log).toHaveBeenCalledWith(
-        expect.stringContaining('🎯 Node clicked: Test Artist (artist)')
+        expect.stringContaining('🎯 Node clicked: Test Artist (artist) - White selection applied')
       );
     });
   });

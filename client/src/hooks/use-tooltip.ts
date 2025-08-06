@@ -132,7 +132,9 @@ export function useTooltip({
       const nodeData = highlightedNode.datum() as NetworkNode;
       const roles = nodeData.types || [nodeData.type];
       
-      // Reset to original styling
+      console.log(`🎨 Resetting highlight for node: ${nodeData.name} with roles: [${roles.join(', ')}]`);
+      
+      // Reset to original styling based on node type
       if (roles.length === 1) {
         // Single role - reset to original stroke color and width
         highlightedNode.selectAll('circle')
@@ -144,7 +146,7 @@ export function useTooltip({
           })
           .attr('stroke-width', 4);
       } else {
-        // Multiple roles - reset path strokes and inner circle
+        // Multiple roles - reset path strokes to white and inner circle to white
         highlightedNode.selectAll('path')
           .attr('stroke', 'white')
           .attr('stroke-width', 1);
@@ -154,6 +156,7 @@ export function useTooltip({
           .attr('stroke-width', 2);
       }
       
+      console.log(`🎨 Node ${nodeData.name} reset to original colors`);
       setHighlightedNode(null);
     }
   }, [highlightedNode]);

@@ -346,6 +346,7 @@ export default function D3NetworkRenderer({
     svg.on("click", function(event) {
       // Only trigger if clicking on the background (not on a node)
       if (event.target === this || event.target.tagName === 'svg') {
+        console.log('🖱️ Background clicked - hiding tooltip and resetting node selection');
         tooltip.hideTooltip();
       }
     });

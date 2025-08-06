@@ -631,6 +631,144 @@ describe('useTooltip', () => {
       expect(mockD3Node.selectAll).toHaveBeenCalledWith('path');
       expect(mockD3Node.selectAll).toHaveBeenCalledWith('circle');
     });
+
+    it('should reset single-role node highlighting with correct color restoration', () => {
+      const consoleSpy = vi.spyOn(console, 'log');
+      
+      const { result } = renderHook(() =>
+        useTooltip({
+          networkData: mockNetworkData,
+          config: mockConfig,
+          networkDataHook: mockNetworkDataHook,
+          callbacks: mockCallbacks,
+        })
+      );
+
+      const mockD3Node = {
+        datum: () => ({ ...mockNetworkData.nodes[0], types: ['artist'] }),
+        selectAll: vi.fn().mockReturnValue({
+          attr: vi.fn().mockReturnThis(),
+        }),
+      };
+
+      act(() => {
+        result.current.setHighlightedNode(mockD3Node as any);
+        result.current.resetNodeHighlight();
+      });
+
+      // Check that console logging includes enhanced logging
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('🎨 Resetting highlight for node: Test Artist with roles: [artist]')
+      );
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('🎨 Node Test Artist reset to original colors')
+      );
+
+      // Verify that the stroke color was restored to artist color (magenta pink)
+      expect(mockD3Node.selectAll().attr).toHaveBeenCalledWith('stroke', expect.any(Function));
+      expect(mockD3Node.selectAll().attr).toHaveBeenCalledWith('stroke-width', 4);
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should reset producer node highlighting with correct color', () => {
+      const { result } = renderHook(() =>
+        useTooltip({
+          networkData: mockNetworkData,
+          config: mockConfig,
+          networkDataHook: mockNetworkDataHook,
+          callbacks: mockCallbacks,
+        })
+      );
+
+      const producerNode = { ...mockNetworkData.nodes[1], types: ['producer'] };
+      const mockD3Node = {
+        datum: () => producerNode,
+        selectAll: vi.fn().mockReturnValue({
+          attr: vi.fn().mockReturnThis(),
+        }),
+      };
+
+      act(() => {
+        result.current.setHighlightedNode(mockD3Node as any);
+        result.current.resetNodeHighlight();
+      });
+
+      // Verify producer color restoration logic
+      const colorFunction = mockD3Node.selectAll().attr.mock.calls.find(
+        call => call[0] === 'stroke' && typeof call[1] === 'function'
+      )?.[1];
+
+      if (colorFunction) {
+        expect(colorFunction()).toBe('#AE53FF'); // Bright Purple for producer
+      }
+    });
+
+    it('should reset songwriter node highlighting with correct color', () => {
+      const { result } = renderHook(() =>
+        useTooltip({
+          networkData: mockNetworkData,
+          config: mockConfig,
+          networkDataHook: mockNetworkDataHook,
+          callbacks: mockCallbacks,
+        })
+      );
+
+      const songwriterNode = { ...mockNetworkData.nodes[0], types: ['songwriter'] };
+      const mockD3Node = {
+        datum: () => songwriterNode,
+        selectAll: vi.fn().mockReturnValue({
+          attr: vi.fn().mockReturnThis(),
+        }),
+      };
+
+      act(() => {
+        result.current.setHighlightedNode(mockD3Node as any);
+        result.current.resetNodeHighlight();
+      });
+
+      // Verify songwriter color restoration logic
+      const colorFunction = mockD3Node.selectAll().attr.mock.calls.find(
+        call => call[0] === 'stroke' && typeof call[1] === 'function'
+      )?.[1];
+
+      if (colorFunction) {
+        expect(colorFunction()).toBe('#67D1F8'); // Light Blue for songwriter
+      }
+    });
+
+    it('should handle unknown role types with fallback color', () => {
+      const { result } = renderHook(() =>
+        useTooltip({
+          networkData: mockNetworkData,
+          config: mockConfig,
+          networkDataHook: mockNetworkDataHook,
+          callbacks: mockCallbacks,
+        })
+      );
+
+      const unknownRoleNode = { ...mockNetworkData.nodes[0], types: ['unknown-role'] };
+      const mockD3Node = {
+        datum: () => unknownRoleNode,
+        selectAll: vi.fn().mockReturnValue({
+          attr: vi.fn().mockReturnThis(),
+        }),
+      };
+
+      act(() => {
+        result.current.setHighlightedNode(mockD3Node as any);
+        result.current.resetNodeHighlight();
+      });
+
+      // Verify fallback color (Police Blue)
+      const colorFunction = mockD3Node.selectAll().attr.mock.calls.find(
+        call => call[0] === 'stroke' && typeof call[1] === 'function'
+      )?.[1];
+
+      if (colorFunction) {
+        expect(colorFunction()).toBe('#355367'); // Police Blue fallback
+      }
+    });
   });
 
   describe('Error Handling', () => {

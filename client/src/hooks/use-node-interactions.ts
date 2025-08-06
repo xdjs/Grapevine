@@ -105,7 +105,7 @@ export function useNodeInteractions({
 
   /**
    * Handles node click events and coordinates with the tooltip system.
-   * Manages highlighting and tooltip display.
+   * Manages highlighting and tooltip display with proper selection mechanism.
    */
   const handleNodeClick = useCallback(
     (event: MouseEvent, node: NetworkNode, nodeElement: SVGGElement) => {
@@ -114,23 +114,35 @@ export function useNodeInteractions({
         
         if (!visible) return;
         
-        // Reset previous node highlighting
+        // Reset any previously highlighted node to original colors
         tooltip.resetNodeHighlight();
         
-        // Highlight the current node group
+        // Apply white stroke selection to the clicked node
         const currentNodeSelection = d3.select(nodeElement);
-        currentNodeSelection.selectAll("circle, path")
-          .attr("stroke", "white")
-          .attr("stroke-width", 3)
-          .style("stroke-opacity", 1);
+        const roles = node.types || [node.type];
         
-        // Track this node as highlighted
+        if (roles.length === 1) {
+          // Single role - apply white stroke to circle
+          currentNodeSelection.selectAll("circle")
+            .attr("stroke", "white")
+            .attr("stroke-width", 3);
+        } else {
+          // Multi-role - apply white stroke to both paths and inner circle
+          currentNodeSelection.selectAll("path")
+            .attr("stroke", "white")
+            .attr("stroke-width", 3);
+          currentNodeSelection.selectAll("circle")
+            .attr("stroke", "white")
+            .attr("stroke-width", 3);
+        }
+        
+        // Track this node as highlighted for future reset
         tooltip.setHighlightedNode(currentNodeSelection);
         
         // Show tooltip using the tooltip system
         tooltip.showTooltip(event, node);
         
-        console.log(`🎯 Node clicked: ${node.name} (${node.type})`);
+        console.log(`🎯 Node clicked: ${node.name} (${node.type}) - White selection applied`);
       } catch (error) {
         console.error('🎯 Error handling node click:', error);
         // Continue execution - don't let errors break the interaction
