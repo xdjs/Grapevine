@@ -130,8 +130,11 @@ export function useNodeInteractions({
             classes: child.className,
             attributes: Array.from(child.attributes).map(attr => `${attr.name}="${attr.value}"`).join(' ')
           })),
-          allCircles: currentNodeSelection.selectAll("*").nodes().filter(el => el.tagName === 'circle'),
-          allPaths: currentNodeSelection.selectAll("*").nodes().filter(el => el.tagName === 'path')
+          allCircles: currentNodeSelection.selectAll("*").nodes().filter(el => el.tagName.toLowerCase() === 'circle'),
+          allPaths: currentNodeSelection.selectAll("*").nodes().filter(el => el.tagName.toLowerCase() === 'path'),
+          d3CircleSelection: currentNodeSelection.selectAll("circle").nodes(),
+          d3CircleSelectionUpper: currentNodeSelection.selectAll("CIRCLE").nodes(),
+          actualTagNames: currentNodeSelection.selectAll("*").nodes().map(el => el.tagName)
         });
         
         if (roles.length === 1) {
