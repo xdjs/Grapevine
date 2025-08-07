@@ -7,7 +7,9 @@ const SPOTIFY_SEARCH_CONFIG = {
   HIGH_CONFIDENCE_THRESHOLD: 80,   // Score to stop searching early
   MAX_RESULTS_PER_STRATEGY: 5,     // Results to fetch per search strategy
   ENABLE_DETAILED_LOGGING: true,   // Enable detailed search logging
-  MARKET: 'US'                     // Spotify market for search
+  MARKET: 'US',                    // Default Spotify market for search
+  VALIDATE_URLS: true,             // Enable URL validation
+  FALLBACK_MARKETS: ['US', 'GB', 'CA', 'AU', 'DE', 'FR'] // Markets to try if main market fails
 };
 
 interface CollaborationDetails {
@@ -328,15 +330,30 @@ Guidelines:
                   
                   // Validate and score each result
                   for (const item of items) {
-                    const score = validateSpotifyMatch(item, project, artistName, collaboratorName);
-                    
-                    if (SPOTIFY_SEARCH_CONFIG.ENABLE_DETAILED_LOGGING) {
-                      console.log(`🎯 [Collaboration] "${item.name}" by ${getArtistNames(item)} - Score: ${score}`);
+                    // Skip items that are not playable (when market is specified)
+                    if (item.is_playable === false) {
+                      if (SPOTIFY_SEARCH_CONFIG.ENABLE_DETAILED_LOGGING) {
+                        console.log(`⏭️ [Collaboration] Skipping "${item.name}" - not playable in ${SPOTIFY_SEARCH_CONFIG.MARKET}`);
+                      }
+                      continue;
                     }
                     
-                    if (score > bestScore && score >= SPOTIFY_SEARCH_CONFIG.MIN_CONFIDENCE_SCORE) {
+                    const score = validateSpotifyMatch(item, project, artistName, collaboratorName);
+                    
+                    // Bonus for tracks that are explicitly marked as playable
+                    let finalScore = score;
+                    if (item.is_playable === true) {
+                      finalScore += 5; // Small bonus for confirmed playable tracks
+                    }
+                    
+                    if (SPOTIFY_SEARCH_CONFIG.ENABLE_DETAILED_LOGGING) {
+                      const playableStatus = item.is_playable === true ? '✅' : item.is_playable === false ? '❌' : '❓';
+                      console.log(`🎯 [Collaboration] "${item.name}" by ${getArtistNames(item)} - Score: ${finalScore} ${playableStatus}`);
+                    }
+                    
+                    if (finalScore > bestScore && finalScore >= SPOTIFY_SEARCH_CONFIG.MIN_CONFIDENCE_SCORE) {
                       bestMatch = item;
-                      bestScore = score;
+                      bestScore = finalScore;
                     }
                   }
 
@@ -352,10 +369,31 @@ Guidelines:
                 }
               }
 
-              // Apply the best match if found
+              // Apply the best match if found and validate URL
               if (bestMatch && bestScore >= SPOTIFY_SEARCH_CONFIG.MIN_CONFIDENCE_SCORE) {
-                project.spotifyUrl = bestMatch.external_urls?.spotify;
-                console.log(`🎵 [Collaboration] Best match for "${project.name}": "${bestMatch.name}" (Score: ${bestScore}) - ${project.spotifyUrl}`);
+                const spotifyUrl = bestMatch.external_urls?.spotify;
+                
+                if (SPOTIFY_SEARCH_CONFIG.VALIDATE_URLS && spotifyUrl) {
+                  // Validate the URL by checking track accessibility
+                  const isValidUrl = await validateSpotifyUrl(spotifyUrl, spotifyToken, bestMatch.id);
+                  
+                  if (isValidUrl) {
+                    project.spotifyUrl = spotifyUrl;
+                    console.log(`🎵 [Collaboration] Validated match for "${project.name}": "${bestMatch.name}" (Score: ${bestScore}) - ${spotifyUrl}`);
+                  } else {
+                    console.log(`⚠️ [Collaboration] URL validation failed for "${project.name}": "${bestMatch.name}" - URL not accessible`);
+                    
+                    // Try to find alternative markets
+                    const alternativeUrl = await findAlternativeMarketUrl(bestMatch.id, spotifyToken, project);
+                    if (alternativeUrl) {
+                      project.spotifyUrl = alternativeUrl;
+                      console.log(`🎵 [Collaboration] Found alternative market URL for "${project.name}": ${alternativeUrl}`);
+                    }
+                  }
+                } else {
+                  project.spotifyUrl = spotifyUrl;
+                  console.log(`🎵 [Collaboration] Best match for "${project.name}": "${bestMatch.name}" (Score: ${bestScore}) - ${spotifyUrl}`);
+                }
               } else {
                 console.log(`❌ [Collaboration] No suitable match found for "${project.name}" (best score: ${bestScore})`);
               }
@@ -466,4 +504,118 @@ function validateSpotifyMatch(spotifyItem: any, project: any, artistName: string
 function getArtistNames(spotifyItem: any): string {
   if (!spotifyItem.artists) return '';
   return spotifyItem.artists.map((artist: any) => artist.name).join(' ');
+}
+
+// Function to validate if a Spotify URL is accessible
+async function validateSpotifyUrl(spotifyUrl: string, spotifyToken: string, trackId: string): Promise<boolean> {
+  try {
+    // Extract track ID from URL if needed
+    const trackIdToCheck = trackId || extractTrackIdFromUrl(spotifyUrl);
+    
+    if (!trackIdToCheck) {
+      console.warn(`⚠️ [Collaboration] Could not extract track ID from URL: ${spotifyUrl}`);
+      return false;
+    }
+
+    const axios = (await import('axios')).default;
+    
+    // Check track accessibility using Get Track endpoint with market parameter
+    const trackResponse = await axios.get(
+      `https://api.spotify.com/v1/tracks/${trackIdToCheck}`,
+      {
+        params: {
+          market: SPOTIFY_SEARCH_CONFIG.MARKET
+        },
+        headers: {
+          'Authorization': `Bearer ${spotifyToken}`
+        }
+      }
+    );
+
+    const track = trackResponse.data;
+    
+    // Check if track is playable in the specified market
+    if (track.is_playable === false) {
+      console.log(`⚠️ [Collaboration] Track ${trackIdToCheck} not playable in market ${SPOTIFY_SEARCH_CONFIG.MARKET}`);
+      return false;
+    }
+
+    // Check if track has restrictions
+    if (track.restrictions && track.restrictions.reason) {
+      console.log(`⚠️ [Collaboration] Track ${trackIdToCheck} has restrictions: ${track.restrictions.reason}`);
+      return false;
+    }
+
+    // Additional check: verify the URL format is correct
+    if (!spotifyUrl.match(/^https:\/\/open\.spotify\.com\/(track|album)\/[a-zA-Z0-9]+/)) {
+      console.warn(`⚠️ [Collaboration] Invalid Spotify URL format: ${spotifyUrl}`);
+      return false;
+    }
+
+    console.log(`✅ [Collaboration] URL validation successful for track ${trackIdToCheck}`);
+    return true;
+
+  } catch (error: any) {
+    console.warn(`⚠️ [Collaboration] URL validation failed for ${spotifyUrl}:`, error.response?.status || error.message);
+    
+    // If it's a 404, the track definitely doesn't exist or isn't accessible
+    if (error.response?.status === 404) {
+      return false;
+    }
+    
+    // For other errors, we'll assume the URL might be valid (network issues, etc.)
+    return true;
+  }
+}
+
+// Function to find alternative market URLs for a track
+async function findAlternativeMarketUrl(trackId: string, spotifyToken: string, project: any): Promise<string | null> {
+  try {
+    const axios = (await import('axios')).default;
+    
+    // Try different markets to find one where the track is available
+    for (const market of SPOTIFY_SEARCH_CONFIG.FALLBACK_MARKETS) {
+      try {
+        console.log(`🔍 [Collaboration] Trying market ${market} for track ${trackId}`);
+        
+        const trackResponse = await axios.get(
+          `https://api.spotify.com/v1/tracks/${trackId}`,
+          {
+            params: { market },
+            headers: {
+              'Authorization': `Bearer ${spotifyToken}`
+            }
+          }
+        );
+
+        const track = trackResponse.data;
+        
+        // Check if track is playable in this market
+        if (track.is_playable !== false && !track.restrictions) {
+          const alternativeUrl = track.external_urls?.spotify;
+          if (alternativeUrl) {
+            console.log(`✅ [Collaboration] Found playable version in market ${market}: ${alternativeUrl}`);
+            return alternativeUrl;
+          }
+        }
+        
+      } catch (marketError: any) {
+        console.log(`⚠️ [Collaboration] Market ${market} failed for track ${trackId}: ${marketError.response?.status || marketError.message}`);
+        continue;
+      }
+    }
+    
+    console.log(`❌ [Collaboration] No alternative markets found for track ${trackId}`);
+    return null;
+    
+  } catch (error: any) {
+    console.error(`❌ [Collaboration] Error finding alternative markets for track ${trackId}:`, error.message);
+    return null;
+  }
+}
+
+// Helper function to extract track ID from Spotify URL
+function extractTrackIdFromUrl(spotifyUrl: string): string | null {
+  const match = spotifyUrl.match(/\/track\/([a-zA-Z0-9]+)/);
+  return match ? match[1] : null;
 } 

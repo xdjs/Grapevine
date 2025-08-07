@@ -11,6 +11,8 @@ This document outlines the improvements made to fix incorrect Spotify links in c
 2. **No Result Validation**: Always took the first result without checking if it was actually relevant
 3. **Single Strategy**: No fallback methods if the initial search failed
 4. **Name Variations**: Didn't handle different artist name formats between data sources
+5. **404 Errors**: No URL validation or market restrictions handling leading to broken links
+6. **Geographic Restrictions**: Tracks available in search but not accessible in user's region
 
 ## New Solution
 
@@ -62,6 +64,21 @@ Each search result is scored based on multiple factors:
 - Year matching: 5-15 points
 - Release date proximity: 5 points
 
+### URL Validation & Market Handling
+
+Each potential match now undergoes comprehensive validation:
+
+#### **URL Accessibility Verification**
+- **API Validation**: Uses Spotify's Get Track endpoint with market parameter
+- **Playability Check**: Verifies `is_playable` field is not `false`
+- **Restrictions Check**: Ensures no market restrictions exist
+- **URL Format Validation**: Confirms proper Spotify URL structure
+
+#### **Market-Aware Fallback**
+- **Multiple Markets**: Tests 6 major markets (US, GB, CA, AU, DE, FR)
+- **Alternative URLs**: Finds playable versions in different regions
+- **Automatic Relinking**: Uses Spotify's track relinking when available
+
 ### Configuration Options
 
 ```javascript
@@ -70,7 +87,9 @@ const SPOTIFY_SEARCH_CONFIG = {
   HIGH_CONFIDENCE_THRESHOLD: 80,   // Score to stop searching early
   MAX_RESULTS_PER_STRATEGY: 5,     // Results to fetch per search strategy
   ENABLE_DETAILED_LOGGING: true,   // Enable detailed search logging
-  MARKET: 'US'                     // Spotify market for search
+  MARKET: 'US',                    // Default Spotify market for search
+  VALIDATE_URLS: true,             // Enable URL validation
+  FALLBACK_MARKETS: ['US', 'GB', 'CA', 'AU', 'DE', 'FR'] // Markets to try if main market fails
 };
 ```
 
@@ -97,6 +116,16 @@ const SPOTIFY_SEARCH_CONFIG = {
 - Confidence scores for debugging
 - Clear success/failure indicators
 
+### 6. **404 Error Prevention**
+- **Before**: URLs often led to "Page Not Found" errors
+- **After**: Comprehensive validation prevents broken links
+- **Market-Aware**: Automatically finds accessible alternatives
+
+### 7. **Geographic Accessibility**
+- **Before**: Same search results regardless of user location
+- **After**: Validates accessibility in target market
+- **Fallback**: Finds alternative versions when needed
+
 ## Usage
 
 ### In Production
@@ -105,16 +134,16 @@ The improvements are automatically applied to the collaboration details API:
 - **Automatic**: No code changes needed in frontend
 
 ### Testing
-Run the test script to validate improvements:
+Run the test scripts to validate improvements:
 
 ```bash
-npm run test:spotify
+npm run test:spotify              # Test search accuracy
+npm run test:spotify-validation   # Test URL validation and market handling
 ```
 
-The test script includes real-world examples:
-- Taylor Swift & Jack Antonoff collaborations
-- Ariana Grande & The Weeknd tracks
-- Billie Eilish & FINNEAS productions
+The test scripts include:
+- **Search Tests**: Taylor Swift & Jack Antonoff collaborations, Ariana Grande & The Weeknd tracks, Billie Eilish & FINNEAS productions
+- **URL Validation Tests**: Market restrictions, geographic accessibility, alternative market finding
 
 ## Example Results
 

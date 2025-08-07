@@ -22,7 +22,8 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "test:spotify": "node test-spotify-search.js"
+    "test:spotify": "node test-spotify-search.js",
+    "test:spotify-validation": "node test-spotify-url-validation.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
