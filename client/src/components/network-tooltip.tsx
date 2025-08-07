@@ -60,6 +60,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
   const paddingRight = isMobile ? '20px' : '30px';
   const gap = isMobile ? '4px' : '8px';
   const expandIconFontSize = isMobile ? '12px' : '16px';
+  const collaborationIconSize = isMobile ? 14 : 24;
 
   // Check if this node is an artist (has artist role)
   const isArtist = roles.includes('artist');
@@ -90,8 +91,8 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
   // Pink Users icon SVG for collaboration details
   const collaborationIconSvg = (
     <svg 
-      width={iconSize} 
-      height={iconSize} 
+      width={collaborationIconSize} 
+      height={collaborationIconSize} 
       viewBox="0 0 24 24" 
       fill="none" 
       xmlns="http://www.w3.org/2000/svg"
