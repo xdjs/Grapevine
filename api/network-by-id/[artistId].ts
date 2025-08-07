@@ -10,6 +10,8 @@ interface NetworkNode {
   size: number;
   artistId: string | null;
   collaborations?: string[];
+  imageUrl?: string | null;
+  spotifyId?: string | null;
 }
 
 interface NetworkLink {
@@ -111,7 +113,82 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
           // If hallucinations requested, continue to generation logic below
         } else {
-          // Multi-node network, return cached data normally
+          // Multi-node network, check if it needs Spotify images
+          console.log(`🎵 [Vercel] Checking cached network for missing Spotify profile pictures...`);
+          
+          let nodes = cachedData.nodes;
+          let needsSpotifyFetch = false;
+          
+          // Check if any nodes are missing imageUrl or spotifyId
+          for (const node of nodes) {
+            if (!node.imageUrl && !node.spotifyId) {
+              needsSpotifyFetch = true;
+              break;
+            }
+          }
+          
+          if (needsSpotifyFetch) {
+            console.log(`🎵 [Vercel] Cached network missing Spotify images, fetching now...`);
+            
+            try {
+              // Import Spotify service
+              const { spotifyService } = await import('../../server/spotify');
+              
+              if (spotifyService.isConfigured()) {
+                // Fetch images for all nodes
+                const allNodes = nodes;
+                
+                console.log(`🎵 [Vercel] Found ${allNodes.length} nodes to fetch images for`);
+                
+                if (allNodes.length > 0) {
+                  const nodeNames = allNodes.map(node => node.name);
+                  const spotifyResults = await spotifyService.batchGetArtistProfileImages(nodeNames);
+                  
+                  // Update nodes with Spotify data
+                  for (const node of allNodes) {
+                    const spotifyData = spotifyResults.get(node.name);
+                    if (spotifyData) {
+                      node.imageUrl = spotifyData.imageUrl;
+                      node.spotifyId = spotifyData.spotifyId;
+                      console.log(`✅ [Vercel] Updated cached node ${node.name} with Spotify image`);
+                      
+                      // Update in database if we have an artistId
+                      if (node.artistId) {
+                        try {
+                          const updateQuery = 'UPDATE artists SET image_url = $1, spotify_id = $2 WHERE id = $3';
+                          await client.query(updateQuery, [spotifyData.imageUrl, spotifyData.spotifyId, node.artistId]);
+                          console.log(`💾 [Vercel] Stored Spotify data for ${node.name} in database`);
+                        } catch (dbError) {
+                          console.warn(`⚠️ [Vercel] Failed to store Spotify data for ${node.name}:`, dbError);
+                        }
+                      }
+                    }
+                  }
+                  
+                  // Update the cached data with new Spotify info
+                  const updatedNetworkData = { nodes, links: cachedData.links };
+                  
+                  try {
+                    const updateCacheQuery = 'UPDATE artists SET webmapdata = $1 WHERE id = $2';
+                    await client.query(updateCacheQuery, [JSON.stringify(updatedNetworkData), artistId]);
+                    console.log(`💾 [Vercel] Updated cached network data with Spotify images for ${artist.name}`);
+                  } catch (cacheError) {
+                    console.warn('⚠️ [Vercel] Failed to update cache with Spotify data:', cacheError);
+                  }
+                  
+                  await client.end();
+                  return res.json(updatedNetworkData);
+                }
+              } else {
+                console.log(`⚠️ [Vercel] Spotify API not configured, using cached data without images`);
+              }
+            } catch (spotifyError) {
+              console.error(`❌ [Vercel] Spotify integration error for cached data:`, spotifyError);
+              // Continue with cached data without Spotify images
+            }
+          }
+          
+          // Return cached data (either already had images or Spotify fetch failed/not configured)
           await client.end();
           return res.json(cachedData);
         }
