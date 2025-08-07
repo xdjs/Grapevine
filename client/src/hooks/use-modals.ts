@@ -56,6 +56,83 @@ export function useModals({
   const [collaborationCollaborator, setCollaborationCollaborator] = useState('');
   const [mainArtistName, setMainArtistName] = useState('');
 
+  // Persist modal state in sessionStorage to survive tab switches
+  useEffect(() => {
+    const modalState = {
+      showArtistModal,
+      selectedArtistName,
+      showCollaborationPopup,
+      collaborationArtist,
+      collaborationCollaborator,
+      mainArtistName
+    };
+    
+    if (showArtistModal || showCollaborationPopup) {
+      sessionStorage.setItem('modalState', JSON.stringify(modalState));
+      console.log('🔧 [Modal] Persisting modal state:', modalState);
+    } else {
+      sessionStorage.removeItem('modalState');
+    }
+  }, [showArtistModal, selectedArtistName, showCollaborationPopup, collaborationArtist, collaborationCollaborator, mainArtistName]);
+
+  // Restore modal state on component mount and page visibility changes
+  useEffect(() => {
+    const restoreModalState = () => {
+      const saved = sessionStorage.getItem('modalState');
+      if (saved) {
+        try {
+          const state = JSON.parse(saved);
+          console.log('🔧 [Modal] Restoring modal state:', state);
+          
+          if (state.showArtistModal) {
+            setShowArtistModal(true);
+            setSelectedArtistName(state.selectedArtistName || '');
+          }
+          
+          if (state.showCollaborationPopup) {
+            setShowCollaborationPopup(true);
+            setCollaborationArtist(state.collaborationArtist || '');
+            setCollaborationCollaborator(state.collaborationCollaborator || '');
+            setMainArtistName(state.mainArtistName || '');
+          }
+        } catch (error) {
+          console.error('🔧 [Modal] Error restoring modal state:', error);
+          sessionStorage.removeItem('modalState');
+        }
+      }
+    };
+
+    // Restore on mount
+    restoreModalState();
+
+    // Restore on page visibility change (tab switching back)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('🔧 [Modal] Page became visible, checking for modal state to restore');
+        // Add a small delay to ensure page is fully loaded
+        setTimeout(() => {
+          restoreModalState();
+        }, 100);
+      }
+    };
+
+    const handlePageShow = () => {
+      console.log('🔧 [Modal] Page show event, checking for modal state to restore');
+      // Add a small delay to ensure page is fully loaded
+      setTimeout(() => {
+        restoreModalState();
+      }, 100);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pageshow', handlePageShow);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pageshow', handlePageShow);
+    };
+  }, []);
+
   // Artist Modal Actions
   const openArtistModal = useCallback((artistName: string) => {
     setSelectedArtistName(artistName);
@@ -65,6 +142,22 @@ export function useModals({
   const closeArtistModal = useCallback(() => {
     setShowArtistModal(false);
     setSelectedArtistName('');
+    // Clean up persisted state when deliberately closing
+    const saved = sessionStorage.getItem('modalState');
+    if (saved) {
+      try {
+        const state = JSON.parse(saved);
+        state.showArtistModal = false;
+        state.selectedArtistName = '';
+        if (!state.showCollaborationPopup) {
+          sessionStorage.removeItem('modalState');
+        } else {
+          sessionStorage.setItem('modalState', JSON.stringify(state));
+        }
+      } catch (error) {
+        sessionStorage.removeItem('modalState');
+      }
+    }
   }, []);
 
   // Collaboration Popup Actions
@@ -84,6 +177,24 @@ export function useModals({
     setCollaborationArtist('');
     setCollaborationCollaborator('');
     setMainArtistName('');
+    // Clean up persisted state when deliberately closing
+    const saved = sessionStorage.getItem('modalState');
+    if (saved) {
+      try {
+        const state = JSON.parse(saved);
+        state.showCollaborationPopup = false;
+        state.collaborationArtist = '';
+        state.collaborationCollaborator = '';
+        state.mainArtistName = '';
+        if (!state.showArtistModal) {
+          sessionStorage.removeItem('modalState');
+        } else {
+          sessionStorage.setItem('modalState', JSON.stringify(state));
+        }
+      } catch (error) {
+        sessionStorage.removeItem('modalState');
+      }
+    }
   }, []);
 
   // Artist Selection Handler
@@ -124,6 +235,9 @@ export function useModals({
   const closeAllModals = useCallback(() => {
     closeArtistModal();
     closeCollaborationPopup();
+    // Clean up all persisted state
+    sessionStorage.removeItem('modalState');
+    console.log('🔧 [Modal] Cleared all persisted modal state');
   }, [closeArtistModal, closeCollaborationPopup]);
 
   const isAnyModalOpen = showArtistModal || showCollaborationPopup;

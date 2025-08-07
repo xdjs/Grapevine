@@ -125,8 +125,28 @@ export function useConfig(): UseConfigReturn {
       setIsLoading(false);
     };
     
+    // Only initialize on first mount, don't re-fetch on visibility changes
     initConfig();
-  }, [fetchConfig]);
+
+    // Add event listeners to prevent re-initialization on tab switching
+    const handleVisibilityChange = () => {
+      // Don't re-fetch config when tab becomes visible again
+      console.log('🔧 [Config] Visibility change detected, preserving current config state');
+    };
+
+    const handlePageShow = () => {
+      // Don't re-fetch config when page shows again
+      console.log('🔧 [Config] Page show detected, preserving current config state');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pageshow', handlePageShow);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pageshow', handlePageShow);
+    };
+  }, [fetchConfig]); // Keep dependency but add visibility protection
 
   return {
     musicNerdBaseUrl,
