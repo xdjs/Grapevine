@@ -60,7 +60,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
   const closeButtonSize = isMobile ? '18px' : '24px';
   const paddingRight = isMobile ? '20px' : '30px';
   const gap = isMobile ? '4px' : '8px';
-  const expandIconFontSize = isMobile ? '12px' : '16px';
+  const expandIconFontSize = isMobile ? '16px' : '20px';
   const collaborationStrokeWidth = isMobile ? "1.5" : "2";
 
   // Check if this node is an artist (has artist role)
@@ -240,6 +240,10 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                   color: 'white',
                   fontSize: expandIconFontSize,
                   fontWeight: 'bold',
+                  lineHeight: '1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
                 +
