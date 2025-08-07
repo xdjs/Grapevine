@@ -210,6 +210,12 @@ export default function D3NetworkRenderer({
       const group = d3.select(this);
       const roles = d.types || [d.type];
       
+      // Debug all nodes to check imageUrl
+      console.log(`🔍 [D3Renderer] Processing node "${d.name}": has imageUrl = ${Boolean(d.imageUrl)}`);
+      if (d.imageUrl) {
+        console.log(`📸 [D3Renderer] Node "${d.name}" has imageUrl: ${d.imageUrl}`);
+      }
+      
       // Debug multi-role nodes
       if (roles.length > 1) {
         console.log(`🎭 [D3Renderer] Multi-role node "${d.name}": roles = [${roles.join(', ')}]`);
