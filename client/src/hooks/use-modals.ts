@@ -38,6 +38,13 @@ export interface UseModalsProps {
   onArtistSelection?: (artistId: string) => void;
 }
 
+// Global modal state to persist across tab switches
+declare global {
+  interface Window {
+    grapevineModalState?: ModalState;
+  }
+}
+
 /**
  * Custom hook for managing modal states and interactions
  * Handles artist selection modal and collaboration details popup
@@ -46,15 +53,50 @@ export function useModals({
   musicNerdBaseUrl, 
   onArtistSelection 
 }: UseModalsProps = {}): ModalState & ModalActions {
+  
+  // Initialize from global state if available
+  const getInitialState = () => {
+    if (typeof window !== 'undefined' && window.grapevineModalState) {
+      console.log('🔧 [Modal] Restoring from global state:', window.grapevineModalState);
+      return window.grapevineModalState;
+    }
+    return {
+      showArtistModal: false,
+      selectedArtistName: '',
+      showCollaborationPopup: false,
+      collaborationArtist: '',
+      collaborationCollaborator: '',
+      mainArtistName: ''
+    };
+  };
+
+  const initialState = getInitialState();
+  
   // Artist Selection Modal State
-  const [showArtistModal, setShowArtistModal] = useState(false);
-  const [selectedArtistName, setSelectedArtistName] = useState('');
+  const [showArtistModal, setShowArtistModal] = useState(initialState.showArtistModal);
+  const [selectedArtistName, setSelectedArtistName] = useState(initialState.selectedArtistName);
   
   // Collaboration Details Popup State
-  const [showCollaborationPopup, setShowCollaborationPopup] = useState(false);
-  const [collaborationArtist, setCollaborationArtist] = useState('');
-  const [collaborationCollaborator, setCollaborationCollaborator] = useState('');
-  const [mainArtistName, setMainArtistName] = useState('');
+  const [showCollaborationPopup, setShowCollaborationPopup] = useState(initialState.showCollaborationPopup);
+  const [collaborationArtist, setCollaborationArtist] = useState(initialState.collaborationArtist);
+  const [collaborationCollaborator, setCollaborationCollaborator] = useState(initialState.collaborationCollaborator);
+  const [mainArtistName, setMainArtistName] = useState(initialState.mainArtistName);
+
+  // Update global state whenever modal state changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.grapevineModalState = {
+        showArtistModal,
+        selectedArtistName,
+        showCollaborationPopup,
+        collaborationArtist,
+        collaborationCollaborator,
+        mainArtistName
+      };
+      
+      console.log('🔧 [Modal] Updated global state:', window.grapevineModalState);
+    }
+  }, [showArtistModal, selectedArtistName, showCollaborationPopup, collaborationArtist, collaborationCollaborator, mainArtistName]);
 
   // Artist Modal Actions
   const openArtistModal = useCallback((artistName: string) => {
@@ -65,6 +107,17 @@ export function useModals({
   const closeArtistModal = useCallback(() => {
     setShowArtistModal(false);
     setSelectedArtistName('');
+    // Clean up persisted state when deliberately closing
+    if (typeof window !== 'undefined') {
+      window.grapevineModalState = {
+        ...window.grapevineModalState,
+        showArtistModal: false,
+        selectedArtistName: ''
+      };
+      if (!window.grapevineModalState.showCollaborationPopup) {
+        delete window.grapevineModalState;
+      }
+    }
   }, []);
 
   // Collaboration Popup Actions
@@ -84,6 +137,19 @@ export function useModals({
     setCollaborationArtist('');
     setCollaborationCollaborator('');
     setMainArtistName('');
+    // Clean up persisted state when deliberately closing
+    if (typeof window !== 'undefined') {
+      window.grapevineModalState = {
+        ...window.grapevineModalState,
+        showCollaborationPopup: false,
+        collaborationArtist: '',
+        collaborationCollaborator: '',
+        mainArtistName: ''
+      };
+      if (!window.grapevineModalState.showArtistModal) {
+        delete window.grapevineModalState;
+      }
+    }
   }, []);
 
   // Artist Selection Handler
@@ -124,6 +190,11 @@ export function useModals({
   const closeAllModals = useCallback(() => {
     closeArtistModal();
     closeCollaborationPopup();
+    // Clean up all persisted state
+    if (typeof window !== 'undefined') {
+      delete window.grapevineModalState;
+    }
+    console.log('🔧 [Modal] Cleared all persisted modal state');
   }, [closeArtistModal, closeCollaborationPopup]);
 
   const isAnyModalOpen = showArtistModal || showCollaborationPopup;
@@ -137,14 +208,59 @@ export function useModals({
       }
     };
 
+    // Prevent modals from closing on tab switching and window events
+    const handleVisibilityChange = (event: Event) => {
+      if (isAnyModalOpen) {
+        // Prevent automatic closing when tab becomes hidden/visible
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    const handlePageHide = (event: PageTransitionEvent) => {
+      if (isAnyModalOpen) {
+        event.preventDefault();
+      }
+    };
+
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (isAnyModalOpen) {
+        event.preventDefault();
+      }
+    };
+
+    const handleWindowBlur = (event: FocusEvent) => {
+      if (isAnyModalOpen) {
+        // Prevent automatic closing when window loses focus
+        event.preventDefault();
+      }
+    };
+
+    const handleWindowFocus = (event: FocusEvent) => {
+      if (isAnyModalOpen) {
+        // Prevent automatic closing when window regains focus
+        event.preventDefault();
+      }
+    };
+
     if (isAnyModalOpen) {
       document.addEventListener('keydown', handleEscapeKey);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('pagehide', handlePageHide);
+      window.addEventListener('pageshow', handlePageShow);
+      window.addEventListener('blur', handleWindowBlur);
+      window.addEventListener('focus', handleWindowFocus);
       // Prevent body scroll when modal is open
       document.body.style.overflow = 'hidden';
     }
 
     return () => {
       document.removeEventListener('keydown', handleEscapeKey);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('pageshow', handlePageShow);
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('focus', handleWindowFocus);
       document.body.style.overflow = '';
     };
   }, [isAnyModalOpen, closeAllModals]);

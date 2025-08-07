@@ -37,6 +37,64 @@ export default function CollaborationDetailsPopup({
     }
   }, [isOpen, artistName, collaboratorName]);
 
+  // Handle keyboard events (especially ESC key)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only close on deliberate ESC key press, not on window focus events
+      if (event.key === 'Escape' && event.target === document.body) {
+        onClose();
+      }
+    };
+
+    // Prevent modal from closing on window blur/focus events
+    const handleWindowBlur = (event: FocusEvent) => {
+      // Prevent any automatic closing when window loses focus
+      event.preventDefault();
+    };
+
+    const handleWindowFocus = (event: FocusEvent) => {
+      // Prevent any automatic closing when window regains focus
+      event.preventDefault();
+    };
+
+    // Prevent modal from closing when switching tabs
+    const handleVisibilityChange = (event: Event) => {
+      // Prevent automatic closing when tab becomes hidden/visible
+      console.log('Collaboration details popup: preventing close on visibility change');
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    // Prevent modal from closing on page hide/show (tab switching)
+    const handlePageHide = (event: PageTransitionEvent) => {
+      console.log('Collaboration details popup: preventing close on page hide');
+      event.preventDefault();
+    };
+
+    const handlePageShow = (event: PageTransitionEvent) => {
+      console.log('Collaboration details popup: preventing close on page show');
+      event.preventDefault();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('pageshow', handlePageShow);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('pageshow', handlePageShow);
+    };
+  }, [isOpen, onClose]);
+
   const fetchCollaborationDetails = async () => {
     setLoading(true);
     setError(null);
@@ -90,16 +148,34 @@ export default function CollaborationDetailsPopup({
     }
   };
 
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    // Only close if clicking directly on the overlay, not on child elements
+    if (e.target === e.currentTarget) {
+      // Prevent default behavior - don't close the modal on background click
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  const handleContentClick = (e: React.MouseEvent) => {
+    // Prevent event bubbling from content to overlay
+    e.stopPropagation();
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div 
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={handleOverlayClick}
+    >
       <div 
         className="bg-black/95 backdrop-blur-sm border-2 border-purple-500/30 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden text-white"
         style={{
           boxShadow: '0 0 20px rgba(180, 39, 180, 0.3)',
           borderColor: '#b427b4'
         }}
+        onClick={handleContentClick}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-700">

@@ -35,7 +35,7 @@ interface UseConfigReturn {
  */
 export function useConfig(): UseConfigReturn {
   const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false); // Start as false to prevent loading screen
   const [error, setError] = useState<string | null>(null);
 
   /**
@@ -72,7 +72,7 @@ export function useConfig(): UseConfigReturn {
       }
     } catch (error) {
       const errorMsg = `Network error fetching config: ${error instanceof Error ? error.message : 'Unknown error'}`;
-      console.error('🔧 [Config] Error fetching config:', error);
+      console.error('🔧 [Config] Error:', errorMsg);
       setError(errorMsg);
       return null;
     }
@@ -120,13 +120,44 @@ export function useConfig(): UseConfigReturn {
 
   // Fetch configuration on component mount
   useEffect(() => {
+    let mounted = true;
+    
     const initConfig = async () => {
-      await fetchConfig();
-      setIsLoading(false);
+      // Only show loading if we don't have a URL yet and this is a real fetch
+      if (!musicNerdBaseUrl) {
+        setIsLoading(true);
+      }
+      
+      const config = await fetchConfig();
+      
+      if (mounted) {
+        setIsLoading(false);
+      }
     };
     
+    // Only initialize on first mount, don't re-fetch on visibility changes
     initConfig();
-  }, [fetchConfig]);
+
+    // Add event listeners to prevent re-initialization on tab switching
+    const handleVisibilityChange = () => {
+      // Don't re-fetch config when tab becomes visible again
+      console.log('🔧 [Config] Visibility change detected, preserving current config state');
+    };
+
+    const handlePageShow = () => {
+      // Don't re-fetch config when page shows again
+      console.log('🔧 [Config] Page show detected, preserving current config state');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pageshow', handlePageShow);
+
+    return () => {
+      mounted = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pageshow', handlePageShow);
+    };
+  }, []); // Remove fetchConfig dependency to prevent re-running
 
   return {
     musicNerdBaseUrl,
