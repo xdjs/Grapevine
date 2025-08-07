@@ -2,23 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { X, ExternalLink, Music, Disc3, Mic2, Users, Loader2 } from 'lucide-react';
 import { CollaborationDetails } from '@/types/network';
 
-// Mobile detection hook
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(false);
-  
-  useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkIfMobile();
-    window.addEventListener('resize', checkIfMobile);
-    return () => window.removeEventListener('resize', checkIfMobile);
-  }, []);
-  
-  return isMobile;
-};
-
 interface CollaborationDetailsPopupProps {
   isOpen: boolean;
   onClose: () => void;
@@ -37,14 +20,6 @@ export default function CollaborationDetailsPopup({
   const [details, setDetails] = useState<CollaborationDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isMobile = useIsMobile();
-
-  // Responsive sizing
-  const iconSize = isMobile ? 'w-4 h-4' : 'w-4 h-4';
-  const headerIconSize = isMobile ? 'w-4 h-4' : 'w-4 h-4';
-  const loadingIconSize = isMobile ? 'w-6 h-6' : 'w-8 h-8';
-  const closeIconSize = isMobile ? 'w-5 h-5' : 'w-6 h-6';
-  const usersIconContainerSize = isMobile ? 'w-6 h-6' : 'w-8 h-8';
 
   useEffect(() => {
     if (isOpen && artistName && collaboratorName) {
@@ -127,16 +102,16 @@ export default function CollaborationDetailsPopup({
         }}
       >
         {/* Header */}
-        <div className={`flex items-center justify-between ${isMobile ? 'p-4' : 'p-6'} border-b border-gray-700`}>
+        <div className="flex items-center justify-between p-6 border-b border-gray-700">
           <div className="flex items-center gap-3">
-            <div className={`flex items-center justify-center ${usersIconContainerSize} rounded-full bg-purple-500/20 border border-purple-500/30`}>
-              <Users className={`${headerIconSize} text-purple-400`} />
+            <div className="flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-purple-500/20 border border-purple-500/30">
+              <Users className="h-3 w-3 sm:h-4 sm:w-4 text-purple-400" />
             </div>
             <div>
-              <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold text-white`}>
+              <h2 className="text-xl font-semibold text-white">
                 Collaboration Details
               </h2>
-              <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-300 mt-1`}>
+              <p className="text-sm text-gray-300 mt-1">
                 <span className="font-medium text-purple-300">{artistName}</span>
                 <span className="text-gray-400"> & </span>
                 <span className="font-medium text-purple-300">{collaboratorName}</span>
@@ -147,17 +122,17 @@ export default function CollaborationDetailsPopup({
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800"
           >
-            <X className={closeIconSize} />
+<X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
 
         {/* Content */}
-        <div className={`${isMobile ? 'p-4' : 'p-6'} overflow-y-auto max-h-[calc(90vh-120px)]`}>
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
           {loading && (
-            <div className={`flex items-center justify-center ${isMobile ? 'py-8' : 'py-12'}`}>
+            <div className="flex items-center justify-center py-12">
               <div className="flex items-center gap-3">
-                <Loader2 className={`${loadingIconSize} animate-spin text-purple-400`} />
-                <span className={`text-gray-300 ${isMobile ? 'text-sm' : 'text-base'}`}>Loading collaboration details...</span>
+<Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-purple-400" />
+                <span className="text-gray-300">Loading collaboration details...</span>
               </div>
             </div>
           )}
@@ -190,8 +165,8 @@ export default function CollaborationDetailsPopup({
             <div className="space-y-6">
               {/* Description */}
               <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
-                <h3 className={`${isMobile ? 'text-base' : 'text-lg'} font-medium text-white mb-3 flex items-center gap-2`}>
-                  <Users className={`text-purple-400 ${iconSize}`} />
+                <h3 className="text-lg font-medium text-white mb-3 flex items-center gap-2">
+                  <Users className="text-purple-400 w-3 h-3 sm:w-4 sm:h-4" />
                   Collaboration
                 </h3>
                 <p className="text-gray-300 leading-relaxed">{details.description}</p>
@@ -200,8 +175,8 @@ export default function CollaborationDetailsPopup({
               {/* Projects */}
               {details.projects && details.projects.length > 0 && (
                 <div>
-                  <h3 className={`${isMobile ? 'text-base' : 'text-lg'} font-medium text-white mb-4 flex items-center gap-2`}>
-                    <Music className={`text-purple-400 ${iconSize}`} />
+                  <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+<Music className="text-purple-400 w-3 h-3 sm:w-4 sm:h-4" />
                     Projects Together
                   </h3>
                   <div className="space-y-3">
@@ -254,7 +229,7 @@ export default function CollaborationDetailsPopup({
               {/* No projects found */}
               {(!details.projects || details.projects.length === 0) && (
                 <div className="text-center py-12 text-gray-400">
-                  <Music className="w-8 h-8 mx-auto mb-4 text-gray-600" />
+                  <Music className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-4 text-gray-600" />
                   <p className="text-lg">No specific collaboration projects found between these artists.</p>
                   <p className="text-sm text-gray-500 mt-2">This could mean they haven't officially collaborated yet, or the data isn't available.</p>
                 </div>
@@ -264,13 +239,13 @@ export default function CollaborationDetailsPopup({
         </div>
 
         {/* Footer */}
-        <div className={`flex items-center justify-between ${isMobile ? 'p-4' : 'p-6'} border-t border-gray-700 bg-gray-900/50`}>
-          <div className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-400`}>
+        <div className="flex items-center justify-between p-6 border-t border-gray-700 bg-gray-900/50">
+          <div className="text-sm text-gray-400">
             Powered by OpenAI & Spotify
           </div>
           <button
             onClick={onClose}
-            className={`${isMobile ? 'px-4 py-2 text-sm' : 'px-6 py-2'} bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium`}
+            className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
           >
             Close
           </button>
