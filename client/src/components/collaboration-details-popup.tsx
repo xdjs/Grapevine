@@ -102,12 +102,33 @@ export default function CollaborationDetailsPopup({
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-3 sm:p-6 border-b border-gray-700">
-          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-            <div className="flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-purple-500/20 border border-purple-500/30 flex-shrink-0">
-              <Users className="h-3 w-3 sm:h-4 sm:w-4 text-purple-400" />
+        <div className="relative flex items-center justify-between p-3 sm:p-6 border-b border-gray-700" style={{ minHeight: '60px' }}>
+          {/* Left side - Purple icon and text */}
+          <div className="absolute left-3 sm:left-6 top-1/2 transform -translate-y-1/2 flex items-center gap-2 sm:gap-3 max-w-[calc(100%-80px)]">
+            <div 
+              className="flex items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30"
+              style={{ 
+                width: '24px !important', 
+                height: '24px !important',
+                minWidth: '24px !important',
+                minHeight: '24px !important',
+                maxWidth: '24px !important',
+                maxHeight: '24px !important'
+              }}
+            >
+              <Users 
+                style={{ 
+                  width: '14px !important', 
+                  height: '14px !important',
+                  minWidth: '14px !important',
+                  minHeight: '14px !important',
+                  maxWidth: '14px !important',
+                  maxHeight: '14px !important'
+                }} 
+                className="text-purple-400" 
+              />
             </div>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0">
               <h2 className="text-lg sm:text-xl font-semibold text-white truncate">
                 Collaboration Details
               </h2>
@@ -118,11 +139,23 @@ export default function CollaborationDetailsPopup({
               </p>
             </div>
           </div>
+          
+          {/* Right side - Close button */}
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors p-1 sm:p-2 rounded-lg hover:bg-gray-800 flex-shrink-0 ml-2"
+            className="absolute right-3 sm:right-6 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors p-1 sm:p-2 rounded-lg hover:bg-gray-800"
+            style={{ zIndex: 10 }}
           >
-            <X className="w-5 h-5 sm:w-6 sm:h-6" />
+            <X 
+              style={{ 
+                width: '20px !important', 
+                height: '20px !important',
+                minWidth: '20px !important',
+                minHeight: '20px !important',
+                maxWidth: '20px !important',
+                maxHeight: '20px !important'
+              }} 
+            />
           </button>
         </div>
 
@@ -131,7 +164,17 @@ export default function CollaborationDetailsPopup({
           {loading && (
             <div className="flex items-center justify-center py-12">
               <div className="flex items-center gap-3">
-<Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-purple-400" />
+                <Loader2 
+                  style={{ 
+                    width: '24px !important', 
+                    height: '24px !important',
+                    minWidth: '24px !important',
+                    minHeight: '24px !important',
+                    maxWidth: '24px !important',
+                    maxHeight: '24px !important'
+                  }}
+                  className="animate-spin text-purple-400" 
+                />
                 <span className="text-gray-300">Loading collaboration details...</span>
               </div>
             </div>
