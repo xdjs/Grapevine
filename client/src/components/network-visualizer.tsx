@@ -113,7 +113,10 @@ export default function NetworkVisualizer({
   const tooltip = useTooltip({
     networkData: data,
     config: { musicNerdBaseUrl, getFreshConfig },
-    networkDataHook: { finalDisplayData, expandNodeNetwork },
+    networkDataHook: { 
+      finalDisplayData, 
+      expandNodeNetwork 
+    },
     callbacks: {
       onArtistNodeClick,
       onShowArtistModal: modals.openArtistModal,

@@ -243,23 +243,8 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
               alignItems: 'center',
               gap,
               cursor: 'pointer',
-              marginBottom: gap,
-              padding: '4px',
-              border: '1px solid rgba(76, 175, 80, 0.3)',
-              borderRadius: '4px',
-              backgroundColor: 'rgba(76, 175, 80, 0.1)',
             }}
-            onClick={(e) => {
-              console.log(`🔗 [TOOLTIP] Expand button clicked for ${node.name}`);
-              console.log(`🔗 [TOOLTIP] Expand click event:`, e.type, e.target);
-              handleActionClick(e, () => onExpandAction(node));
-            }}
-            onTouchEnd={(e) => {
-              console.log(`🔗 [TOOLTIP] Expand button touched for ${node.name}`);
-              e.preventDefault();
-              e.stopPropagation();
-              onExpandAction(node);
-            }}
+            onClick={(e) => handleActionClick(e, () => onExpandAction(node))}
             onKeyDown={(e) => handleKeyPress(e, () => onExpandAction(node))}
             tabIndex={0}
             role="button"
@@ -350,23 +335,8 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
               alignItems: 'center',
               gap,
               cursor: 'pointer',
-              marginTop: gap,
-              padding: '4px',
-              border: '1px solid rgba(255, 105, 180, 0.3)',
-              borderRadius: '4px',
-              backgroundColor: 'rgba(255, 105, 180, 0.1)',
             }}
-            onClick={(e) => {
-              console.log(`🔗 [TOOLTIP] Collaboration button clicked for ${node.name}`);
-              console.log(`🔗 [TOOLTIP] Collaboration click event:`, e.type, e.target);
-              handleActionClick(e, () => onCollaborationAction(node));
-            }}
-            onTouchEnd={(e) => {
-              console.log(`🔗 [TOOLTIP] Collaboration button touched for ${node.name}`);
-              e.preventDefault();
-              e.stopPropagation();
-              onCollaborationAction(node);
-            }}
+            onClick={(e) => handleActionClick(e, () => onCollaborationAction(node))}
             onKeyDown={(e) => handleKeyPress(e, () => onCollaborationAction(node))}
             tabIndex={0}
             role="button"
