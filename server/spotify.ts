@@ -226,7 +226,82 @@ class SpotifyService {
   }
 
   /**
-   * Batch fetch profile images for multiple artists
+   * Enhanced artist search with retry logic and better name matching
+   * @param artistName - Name of the artist to search for
+   * @param retries - Number of retries if search fails (default: 2)
+   * @returns Promise with artist data or null if not found
+   */
+  async searchArtistWithRetry(artistName: string, retries: number = 2): Promise<SpotifyArtist | null> {
+    const searchVariations = [
+      artistName, // Original name
+      artistName.replace(/[^\w\s]/g, ''), // Remove special characters
+      artistName.replace(/\s+/g, ' ').trim(), // Normalize whitespace
+    ];
+
+    for (const searchTerm of searchVariations) {
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+          const result = await this.searchArtist(searchTerm);
+          if (result) {
+            if (searchTerm !== artistName) {
+              console.log(`🔄 [Spotify] Found "${artistName}" using variation: "${searchTerm}"`);
+            }
+            return result;
+          }
+        } catch (error) {
+          if (attempt === retries) {
+            console.warn(`⚠️ [Spotify] Search failed for "${searchTerm}" after ${retries + 1} attempts:`, error);
+          } else {
+            console.log(`🔄 [Spotify] Retrying search for "${searchTerm}" (attempt ${attempt + 2}/${retries + 1})`);
+            await new Promise(resolve => setTimeout(resolve, 200 * (attempt + 1))); // Exponential backoff
+          }
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Enhanced get artist profile image with retry logic
+   * @param artistName - The name of the artist to search for
+   * @param size - The preferred image size (defaults to medium ~300px)
+   * @returns Promise with artist profile image data or null if not found
+   */
+  async getArtistProfileImageWithRetry(artistName: string, size: 'small' | 'medium' | 'large' = 'medium'): Promise<{
+    imageUrl: string;
+    spotifyId: string;
+    spotifyArtist: SpotifyArtist;
+  } | null> {
+    try {
+      console.log(`🎵 [Spotify] Fetching profile image for: ${artistName}`);
+      
+      const artist = await this.searchArtistWithRetry(artistName);
+      if (!artist) {
+        console.log(`❌ [Spotify] No artist found for: ${artistName}`);
+        return null;
+      }
+
+      const imageUrl = this.getArtistImageUrl(artist, size);
+      if (!imageUrl) {
+        console.log(`❌ [Spotify] No image available for artist: ${artistName}`);
+        return null;
+      }
+
+      console.log(`✅ [Spotify] Found profile image for ${artistName}: ${imageUrl}`);
+      return {
+        imageUrl,
+        spotifyId: artist.id,
+        spotifyArtist: artist
+      };
+    } catch (error) {
+      console.error(`❌ [Spotify] Failed to get profile image for ${artistName}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Batch fetch profile images for multiple artists with enhanced error handling
    * @param artistNames - Array of artist names to fetch images for
    * @param size - The preferred image size (defaults to medium ~300px)
    * @returns Promise with map of artist names to their profile image data
@@ -240,35 +315,47 @@ class SpotifyService {
     spotifyArtist: SpotifyArtist;
   }>> {
     const results = new Map();
-    const batchSize = 5; // Process in small batches to respect rate limits
+    const failures = new Set<string>();
+    const batchSize = 3; // Smaller batches for better reliability
     
     console.log(`🎵 [Spotify] Batch fetching profile images for ${artistNames.length} artists`);
     
     for (let i = 0; i < artistNames.length; i += batchSize) {
       const batch = artistNames.slice(i, i + batchSize);
+      console.log(`🎵 [Spotify] Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(artistNames.length/batchSize)}: [${batch.join(', ')}]`);
+      
+      // Use Promise.allSettled to handle individual failures gracefully
       const batchPromises = batch.map(async (artistName) => {
-        const result = await this.getArtistProfileImage(artistName, size);
+        const result = await this.getArtistProfileImageWithRetry(artistName, size);
         return { artistName, result };
       });
       
-      try {
-        const batchResults = await Promise.all(batchPromises);
-        for (const { artistName, result } of batchResults) {
+      const batchResults = await Promise.allSettled(batchPromises);
+      
+      for (const promiseResult of batchResults) {
+        if (promiseResult.status === 'fulfilled') {
+          const { artistName, result } = promiseResult.value;
           if (result) {
             results.set(artistName, result);
+          } else {
+            failures.add(artistName);
           }
+        } else {
+          console.error(`❌ [Spotify] Promise rejected in batch:`, promiseResult.reason);
         }
-        
-        // Add small delay between batches to respect rate limits
-        if (i + batchSize < artistNames.length) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      } catch (error) {
-        console.error(`❌ [Spotify] Batch processing error for batch starting at index ${i}:`, error);
+      }
+      
+      // Longer delay between batches for better rate limit compliance
+      if (i + batchSize < artistNames.length) {
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
     }
     
     console.log(`✅ [Spotify] Batch processing complete: ${results.size}/${artistNames.length} images found`);
+    if (failures.size > 0) {
+      console.log(`⚠️ [Spotify] Failed to find images for: [${Array.from(failures).join(', ')}]`);
+    }
+    
     return results;
   }
 

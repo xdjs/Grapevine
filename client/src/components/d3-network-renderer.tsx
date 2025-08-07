@@ -210,12 +210,6 @@ export default function D3NetworkRenderer({
       const group = d3.select(this);
       const roles = d.types || [d.type];
       
-      // Debug all nodes to check imageUrl
-      console.log(`🔍 [D3Renderer] Processing node "${d.name}": has imageUrl = ${Boolean(d.imageUrl)}`);
-      if (d.imageUrl) {
-        console.log(`📸 [D3Renderer] Node "${d.name}" has imageUrl: ${d.imageUrl}`);
-      }
-      
       // Debug multi-role nodes
       if (roles.length > 1) {
         console.log(`🎭 [D3Renderer] Multi-role node "${d.name}": roles = [${roles.join(', ')}]`);
@@ -285,8 +279,6 @@ export default function D3NetworkRenderer({
 
         // Add loading spinner initially if imageUrl exists
         if (d.imageUrl) {
-          console.log(`🎯 [D3Renderer] Setting up profile image for ${d.name}: ${d.imageUrl}`);
-          
           const loadingGroup = group.append("g")
             .attr("class", "loading-spinner")
             .style("opacity", 1);
@@ -311,31 +303,19 @@ export default function D3NetworkRenderer({
             .attr("clip-path", `url(#${clipId})`)
             .style("opacity", 0)
             .attr("href", d.imageUrl)
-            .attr("crossorigin", "anonymous"); // Try to handle CORS
-
-          console.log(`🔗 [D3Renderer] Image element created for ${d.name}, waiting for load...`);
+            .attr("crossorigin", "anonymous");
 
           // Handle image load success
           image.on("load", function() {
-            console.log(`✅ [D3Renderer] Profile image loaded for ${d.name}`);
             loadingGroup.transition().duration(300).style("opacity", 0).remove();
             d3.select(this).transition().duration(300).style("opacity", 1);
           });
 
           // Handle image load error
           image.on("error", function() {
-            console.log(`❌ [D3Renderer] Profile image failed to load for ${d.name}, using default`);
             loadingGroup.transition().duration(300).style("opacity", 0).remove();
             d3.select(this).remove();
           });
-
-          // Add a timeout to detect if the image never loads
-          setTimeout(() => {
-            const imageElement = image.node() as SVGImageElement;
-            if (imageElement && loadingGroup.node()) {
-              console.log(`⏰ [D3Renderer] Timeout check for ${d.name} - still loading after 5s`);
-            }
-          }, 5000);
         }
       }
     })
