@@ -10,8 +10,6 @@ interface NetworkNode {
   size: number;
   artistId: string | null;
   collaborations?: string[];
-  imageUrl?: string | null;
-  spotifyId?: string | null;
 }
 
 interface NetworkLink {
@@ -113,56 +111,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
           // If hallucinations requested, continue to generation logic below
         } else {
-          // Multi-node network, enhance with profile pictures using existing approach
-          console.log(`🎵 [Vercel] Enhancing cached network with profile pictures...`);
-          
-          let nodes = [...cachedData.nodes]; // Copy nodes to avoid mutating original cache
-          
-          // Check if nodes need profile picture data (more thorough check)
-          const nodesNeedingImages = nodes.filter(node => 
-            (!node.imageUrl || node.imageUrl === null || node.imageUrl === '') && 
-            (!node.spotifyId || node.spotifyId === null || node.spotifyId === '')
-          );
-          
-          console.log(`🔍 [Vercel] Total nodes: ${nodes.length}, nodes needing images: ${nodesNeedingImages.length}`);
-          
-          if (nodesNeedingImages.length > 0) {
-            console.log(`🎵 [Vercel] Fetching Spotify images for ${nodesNeedingImages.length} nodes without profile pictures`);
-            
-            try {
-              // Import Spotify service
-              const { spotifyService } = await import('../../server/spotify');
-              
-              if (spotifyService.isConfigured()) {
-                const nodeNames = nodesNeedingImages.map(node => node.name);
-                const spotifyResults = await spotifyService.batchGetArtistProfileImages(nodeNames);
-                
-                // Update nodes with Spotify data
-                for (const node of nodesNeedingImages) {
-                  const spotifyData = spotifyResults.get(node.name);
-                  if (spotifyData) {
-                    node.imageUrl = spotifyData.imageUrl;
-                    node.spotifyId = spotifyData.spotifyId;
-                    console.log(`✅ [Vercel] Updated cached node ${node.name} with Spotify image`);
-                  }
-                }
-                
-                console.log(`🎵 [Vercel] Successfully enhanced ${nodesNeedingImages.length} nodes with Spotify data`);
-              } else {
-                console.log(`⚠️ [Vercel] Spotify API not configured, using cached data without images`);
-              }
-            } catch (spotifyError) {
-              console.error(`❌ [Vercel] Spotify integration error for cached data:`, spotifyError);
-              // Continue with cached data without Spotify images
-            }
-          } else {
-            console.log(`✅ [Vercel] All nodes already have profile picture data`);
-          }
-          
-          // Return enhanced network data
-          const enhancedNetworkData = { nodes, links: cachedData.links };
+          // Multi-node network, return cached data normally
           await client.end();
-          return res.json(enhancedNetworkData);
+          return res.json(cachedData);
         }
       }
       
