@@ -165,8 +165,7 @@ Please respond with JSON in this exact format:
     {
       "name": "Project Name",
       "type": "song|album|ep|single",
-      "year": "YYYY",
-      "spotifyUrl": "https://open.spotify.com/track/... or https://open.spotify.com/album/..."
+      "year": "YYYY"
     }
   ],
   "personalHistory": "Optional personal history or background information about their relationship"
@@ -175,11 +174,12 @@ Please respond with JSON in this exact format:
 Guidelines:
 - Only include real, verified collaborations
 - Include specific project names and types
-- If you find Spotify URLs for the projects, include them
+- DO NOT include Spotify URLs or any external links
 - Include years when available
 - Keep the description concise but informative
 - If no real collaborations exist, return empty projects array
-- Personal history should be factual and relevant`;
+- Personal history should be factual and relevant
+- Focus on factual collaboration information only`;
 
           const completion = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -230,7 +230,22 @@ Guidelines:
             const existingProjectNames = new Set(collaborationDetails.projects.map(p => p.name.toLowerCase()));
             const newProjects = openaiDetails.projects.filter((project: any) => 
               !existingProjectNames.has(project.name.toLowerCase())
-            );
+            ).map((project: any) => {
+              // CRITICAL: Strip any URLs that OpenAI might have hallucinated
+              const cleanProject = {
+                name: project.name,
+                type: project.type || 'song',
+                year: project.year,
+                // Explicitly DO NOT include spotifyUrl from OpenAI - we'll add this via validated search
+              };
+              
+              // Log if OpenAI tried to provide URLs (this shouldn't happen with new prompt)
+              if (project.spotifyUrl) {
+                console.warn(`⚠️ [Collaboration] OpenAI provided Spotify URL for "${project.name}" - ignoring fake URL: ${project.spotifyUrl}`);
+              }
+              
+              return cleanProject;
+            });
             collaborationDetails.projects = [...collaborationDetails.projects, ...newProjects];
           }
           
@@ -408,6 +423,19 @@ Guidelines:
         // Continue without Spotify enhancement
       }
     }
+
+    // Final validation: Ensure no fake URLs exist before returning
+    collaborationDetails.projects = collaborationDetails.projects.map(project => {
+      if (project.spotifyUrl) {
+        // Validate URL format and ensure it wasn't hallucinated
+        const isValidFormat = project.spotifyUrl.match(/^https:\/\/open\.spotify\.com\/(track|album)\/[a-zA-Z0-9]+$/);
+        if (!isValidFormat) {
+          console.warn(`⚠️ [Collaboration] Removing invalid Spotify URL format for "${project.name}": ${project.spotifyUrl}`);
+          return { ...project, spotifyUrl: undefined };
+        }
+      }
+      return project;
+    });
 
     console.log(`✅ [Collaboration] Returning collaboration details for ${artistName} and ${collaboratorName}`);
     res.json(collaborationDetails);
