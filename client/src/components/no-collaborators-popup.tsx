@@ -40,6 +40,7 @@ export default function NoCollaboratorsPopup({
           borderColor: '#b427b4'
         }}
         onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-white">

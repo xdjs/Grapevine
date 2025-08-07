@@ -80,7 +80,11 @@ export default function ArtistSelectionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
+      <DialogContent 
+        className="max-w-2xl max-h-[80vh]"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Multiple Artists Found</DialogTitle>
           <DialogDescription>

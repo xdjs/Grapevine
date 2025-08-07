@@ -20,7 +20,11 @@ export default function HelpButton() {
             <HelpCircle className="w-6 h-6" />
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-md bg-gray-900 border-gray-700">
+        <DialogContent 
+          className="max-w-md bg-gray-900 border-gray-700"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="text-white">How To Use</DialogTitle>
           </DialogHeader>
