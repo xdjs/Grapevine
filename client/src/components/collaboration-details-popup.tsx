@@ -108,22 +108,22 @@ export default function CollaborationDetailsPopup({
             <div 
               className="flex items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30"
               style={{ 
-                width: '24px !important', 
-                height: '24px !important',
-                minWidth: '24px !important',
-                minHeight: '24px !important',
-                maxWidth: '24px !important',
-                maxHeight: '24px !important'
+                width: '20px !important', 
+                height: '20px !important',
+                minWidth: '20px !important',
+                minHeight: '20px !important',
+                maxWidth: '20px !important',
+                maxHeight: '20px !important'
               }}
             >
               <Users 
                 style={{ 
-                  width: '14px !important', 
-                  height: '14px !important',
-                  minWidth: '14px !important',
-                  minHeight: '14px !important',
-                  maxWidth: '14px !important',
-                  maxHeight: '14px !important'
+                  width: '12px !important', 
+                  height: '12px !important',
+                  minWidth: '12px !important',
+                  minHeight: '12px !important',
+                  maxWidth: '12px !important',
+                  maxHeight: '12px !important'
                 }} 
                 className="text-purple-400" 
               />
@@ -148,12 +148,12 @@ export default function CollaborationDetailsPopup({
           >
             <X 
               style={{ 
-                width: '20px !important', 
-                height: '20px !important',
-                minWidth: '20px !important',
-                minHeight: '20px !important',
-                maxWidth: '20px !important',
-                maxHeight: '20px !important'
+                width: '24px !important', 
+                height: '24px !important',
+                minWidth: '24px !important',
+                minHeight: '24px !important',
+                maxWidth: '24px !important',
+                maxHeight: '24px !important'
               }} 
             />
           </button>
@@ -166,12 +166,12 @@ export default function CollaborationDetailsPopup({
               <div className="flex items-center gap-3">
                 <Loader2 
                   style={{ 
-                    width: '24px !important', 
-                    height: '24px !important',
-                    minWidth: '24px !important',
-                    minHeight: '24px !important',
-                    maxWidth: '24px !important',
-                    maxHeight: '24px !important'
+                    width: '20px !important', 
+                    height: '20px !important',
+                    minWidth: '20px !important',
+                    minHeight: '20px !important',
+                    maxWidth: '20px !important',
+                    maxHeight: '20px !important'
                   }}
                   className="animate-spin text-purple-400" 
                 />
