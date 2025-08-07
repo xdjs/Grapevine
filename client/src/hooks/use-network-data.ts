@@ -103,14 +103,24 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
   // Function to expand a node's network
   const expandNodeNetwork = useCallback(async (nodeName: string, nodeId?: string) => {
     console.log(`🔗 [DEBUG] expandNodeNetwork called for: ${nodeName}`);
+    console.log(`🔗 [DEBUG] Current data nodes count: ${data.nodes.length}`);
+    console.log(`🔗 [DEBUG] Current data links count: ${data.links.length}`);
     
     try {
       // Fetch the full network for this collaborator
       const url = `/api/network/${encodeURIComponent(nodeName)}`;
       console.log(`🔗 [DEBUG] Fetching from URL: ${url}`);
-      const response = await fetch(url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
       console.log(`🔗 [DEBUG] Response status: ${response.status}`);
       console.log(`🔗 [DEBUG] Response ok: ${response.ok}`);
+      console.log(`🔗 [DEBUG] Response headers:`, Array.from(response.headers.entries()));
       
       if (response.ok) {
         const collaboratorNetwork = await response.json();
@@ -174,7 +184,8 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         
         console.log(`✅ Expanded network for ${nodeName} - added ${addedCount} new collaborators (max ${maxNewCollaborators})`);
       } else {
-        console.error(`❌ Failed to fetch network for ${nodeName}`);
+        const errorText = await response.text();
+        console.error(`❌ Failed to fetch network for ${nodeName}. Status: ${response.status}, Response: ${errorText}`);
       }
     } catch (error) {
       console.error(`❌ Error expanding network for ${nodeName}:`, error);

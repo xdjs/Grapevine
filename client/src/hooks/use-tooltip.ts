@@ -215,6 +215,12 @@ export function useTooltip({
     console.log(`🔗 [DEBUG] handleExpandAction called for ${node.name}`);
     console.log(`🔗 [DEBUG] networkDataHook:`, networkDataHook);
     console.log(`🔗 [DEBUG] expandNodeNetwork function:`, networkDataHook.expandNodeNetwork);
+    console.log(`🔗 [DEBUG] expandNodeNetwork exists:`, typeof networkDataHook.expandNodeNetwork === 'function');
+    
+    if (typeof networkDataHook.expandNodeNetwork !== 'function') {
+      console.error(`🔗 [DEBUG] expandNodeNetwork is not a function! Type:`, typeof networkDataHook.expandNodeNetwork);
+      return;
+    }
     
     try {
       console.log(`🔗 [DEBUG] About to call expandNodeNetwork for ${node.name}`);

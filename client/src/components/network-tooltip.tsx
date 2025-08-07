@@ -216,6 +216,8 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             }}
             onClick={(e) => {
               console.log(`🔗 [DEBUG] Expand button clicked for ${node.name}`);
+              console.log(`🔗 [DEBUG] onExpandAction function:`, onExpandAction);
+              console.log(`🔗 [DEBUG] Event:`, e);
               handleActionClick(e, () => onExpandAction(node));
             }}
             onKeyDown={(e) => handleKeyPress(e, () => onExpandAction(node))}

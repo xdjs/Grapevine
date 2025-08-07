@@ -61,26 +61,20 @@ export default function CollaborationDetailsPopup({
   };
 
   const getProjectIcon = (type: string) => {
-    const iconStyle = { 
-      width: '16px !important', 
-      height: '16px !important',
-      minWidth: '16px !important',
-      minHeight: '16px !important',
-      maxWidth: '16px !important',
-      maxHeight: '16px !important'
-    };
+    // Use consistent sizing approach like other components in the codebase
+    const iconClasses = "w-4 h-4";
 
     switch (type) {
       case 'song':
-        return <Music style={iconStyle} />;
+        return <Music className={iconClasses} />;
       case 'album':
-        return <Disc3 style={iconStyle} />;
+        return <Disc3 className={iconClasses} />;
       case 'ep':
-        return <Disc3 style={iconStyle} />;
+        return <Disc3 className={iconClasses} />;
       case 'single':
-        return <Mic2 style={iconStyle} />;
+        return <Mic2 className={iconClasses} />;
       default:
-        return <Music style={iconStyle} />;
+        return <Music className={iconClasses} />;
     }
   };
 
@@ -218,17 +212,7 @@ export default function CollaborationDetailsPopup({
               {/* Description */}
               <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
                 <h3 className="text-lg font-medium text-white mb-3 flex items-center gap-2">
-                  <Users 
-                    style={{ 
-                      width: '16px !important', 
-                      height: '16px !important',
-                      minWidth: '16px !important',
-                      minHeight: '16px !important',
-                      maxWidth: '16px !important',
-                      maxHeight: '16px !important'
-                    }}
-                    className="text-purple-400" 
-                  />
+                  <Users className="w-4 h-4 text-purple-400" />
                   Collaboration
                 </h3>
                 <p className="text-gray-300 leading-relaxed">{details.description}</p>
@@ -238,17 +222,7 @@ export default function CollaborationDetailsPopup({
               {details.projects && details.projects.length > 0 && (
                 <div>
                   <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
-                    <Music 
-                      style={{ 
-                        width: '16px !important', 
-                        height: '16px !important',
-                        minWidth: '16px !important',
-                        minHeight: '16px !important',
-                        maxWidth: '16px !important',
-                        maxHeight: '16px !important'
-                      }}
-                      className="text-purple-400" 
-                    />
+                    <Music className="w-4 h-4 text-purple-400" />
                     Projects Together
                   </h3>
                   <div className="space-y-3">
