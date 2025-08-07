@@ -187,6 +187,91 @@ class SpotifyService {
     }
   }
 
+  /**
+   * Get artist profile image by searching for the artist and extracting the best image
+   * @param artistName - The name of the artist to search for
+   * @param size - The preferred image size (defaults to medium ~300px)
+   * @returns Promise with artist profile image data or null if not found
+   */
+  async getArtistProfileImage(artistName: string, size: 'small' | 'medium' | 'large' = 'medium'): Promise<{
+    imageUrl: string;
+    spotifyId: string;
+    spotifyArtist: SpotifyArtist;
+  } | null> {
+    try {
+      console.log(`🎵 [Spotify] Fetching profile image for: ${artistName}`);
+      
+      const artist = await this.searchArtist(artistName);
+      if (!artist) {
+        console.log(`❌ [Spotify] No artist found for: ${artistName}`);
+        return null;
+      }
+
+      const imageUrl = this.getArtistImageUrl(artist, size);
+      if (!imageUrl) {
+        console.log(`❌ [Spotify] No image available for artist: ${artistName}`);
+        return null;
+      }
+
+      console.log(`✅ [Spotify] Found profile image for ${artistName}: ${imageUrl}`);
+      return {
+        imageUrl,
+        spotifyId: artist.id,
+        spotifyArtist: artist
+      };
+    } catch (error) {
+      console.error(`❌ [Spotify] Failed to get profile image for ${artistName}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Batch fetch profile images for multiple artists
+   * @param artistNames - Array of artist names to fetch images for
+   * @param size - The preferred image size (defaults to medium ~300px)
+   * @returns Promise with map of artist names to their profile image data
+   */
+  async batchGetArtistProfileImages(
+    artistNames: string[], 
+    size: 'small' | 'medium' | 'large' = 'medium'
+  ): Promise<Map<string, {
+    imageUrl: string;
+    spotifyId: string;
+    spotifyArtist: SpotifyArtist;
+  }>> {
+    const results = new Map();
+    const batchSize = 5; // Process in small batches to respect rate limits
+    
+    console.log(`🎵 [Spotify] Batch fetching profile images for ${artistNames.length} artists`);
+    
+    for (let i = 0; i < artistNames.length; i += batchSize) {
+      const batch = artistNames.slice(i, i + batchSize);
+      const batchPromises = batch.map(async (artistName) => {
+        const result = await this.getArtistProfileImage(artistName, size);
+        return { artistName, result };
+      });
+      
+      try {
+        const batchResults = await Promise.all(batchPromises);
+        for (const { artistName, result } of batchResults) {
+          if (result) {
+            results.set(artistName, result);
+          }
+        }
+        
+        // Add small delay between batches to respect rate limits
+        if (i + batchSize < artistNames.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      } catch (error) {
+        console.error(`❌ [Spotify] Batch processing error for batch starting at index ${i}:`, error);
+      }
+    }
+    
+    console.log(`✅ [Spotify] Batch processing complete: ${results.size}/${artistNames.length} images found`);
+    return results;
+  }
+
   isConfigured(): boolean {
     return !!(this.clientId && this.clientSecret);
   }
