@@ -263,8 +263,8 @@ export default function D3NetworkRenderer({
           .attr("stroke-width", 2);
       }
 
-      // Add profile picture support for artist nodes
-      if (roles.includes('artist')) {
+      // Add profile picture support for any node with an imageUrl
+      if (d.imageUrl) {
         const profileImageSize = d.size - 4; // Leave minimal space for border
         
         // Create clipPath for circular image
@@ -364,8 +364,7 @@ export default function D3NetworkRenderer({
       .attr("text-anchor", "middle")
       .attr("dy", (d) => {
         // Position labels below nodes when they have profile pictures
-        const roles = d.types || [d.type];
-        const hasProfilePicture = roles.includes('artist') && d.imageUrl;
+        const hasProfilePicture = Boolean(d.imageUrl);
         return hasProfilePicture ? `${d.size + 18}px` : "0.35em";
       })
       .attr("font-size", (d) => d.type === 'artist' ? "14px" : "11px")

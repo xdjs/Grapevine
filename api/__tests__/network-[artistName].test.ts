@@ -105,7 +105,7 @@ describe('/api/network/[artistName] with Spotify Integration', () => {
   });
 
   describe('Spotify Profile Picture Integration', () => {
-    it('should fetch and include Spotify profile pictures for artist nodes', async () => {
+    it('should fetch and include Spotify profile pictures for all node types', async () => {
       // Mock Spotify service configuration and responses
       mockSpotifyService.isConfigured.mockReturnValue(true);
       mockSpotifyService.batchGetArtistProfileImages.mockResolvedValue(

@@ -728,26 +728,24 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
       // Convert nodeMap to nodes array
       const nodes = Array.from(nodeMap.values());
 
-      // Fetch Spotify profile pictures for artist nodes (separate from network generation)
-      console.log(`🎵 [Vercel] Fetching Spotify profile pictures for artist nodes...`);
+      // Fetch Spotify profile pictures for all nodes (separate from network generation)
+      console.log(`🎵 [Vercel] Fetching Spotify profile pictures for all collaborators...`);
       try {
         // Import Spotify service
         const { spotifyService } = await import('../../server/spotify');
         
         if (spotifyService.isConfigured()) {
-          // Filter for artist nodes only (nodes that have 'artist' in their types)
-          const artistNodes = nodes.filter(node => 
-            node.types?.includes('artist') || node.type === 'artist'
-          );
+          // Fetch images for all nodes - artists, producers, and songwriters can all have Spotify profiles
+          const allNodes = nodes;
           
-          console.log(`🎵 [Vercel] Found ${artistNodes.length} artist nodes to fetch images for`);
+          console.log(`🎵 [Vercel] Found ${allNodes.length} nodes to fetch images for`);
           
-          if (artistNodes.length > 0) {
-            const artistNames = artistNodes.map(node => node.name);
-            const spotifyResults = await spotifyService.batchGetArtistProfileImages(artistNames);
+          if (allNodes.length > 0) {
+            const nodeNames = allNodes.map(node => node.name);
+            const spotifyResults = await spotifyService.batchGetArtistProfileImages(nodeNames);
             
             // Update nodes with Spotify data
-            for (const node of artistNodes) {
+            for (const node of allNodes) {
               const spotifyData = spotifyResults.get(node.name);
               if (spotifyData) {
                 node.imageUrl = spotifyData.imageUrl;
