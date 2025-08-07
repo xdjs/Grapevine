@@ -107,36 +107,27 @@ export class DatabaseStorage implements IStorage {
     if (!db) return undefined;
     
     try {
-      const result = await db
-        .select({
-          id: artists.id,
-          name: artists.name,
-          type: artists.type,
-          imageUrl: artists.imageUrl,
-          spotifyId: artists.spotifyId,
-          nodePfp: artists.nodePfp,
-          webmapdata: artists.webmapdata,
-          x: artists.x,
-          instagramUsername: artists.instagramUsername,
-          facebookUsername: artists.facebookUsername
-        })
-        .from(artists)
-        .where(eq(artists.name, name))
-        .limit(1);
+      // Use raw SQL since our schema doesn't match the actual database columns
+      const result = await db.execute(sql`
+        SELECT id, name, spotify as spotify_id, node_pfp, webmapdata, x, instagram, facebook
+        FROM artists 
+        WHERE name = ${name}
+        LIMIT 1
+      `);
       
-      const artist = result[0];
+      const artist = result[0] as any;
       if (artist) {
         return {
           id: artist.id,
           name: artist.name,
-          type: artist.type || 'artist',
-          imageUrl: artist.imageUrl,
-          spotifyId: artist.spotifyId,
-          nodePfp: artist.nodePfp,
+          type: 'artist', // Default type since it doesn't exist in this schema
+          imageUrl: null, // Will be populated from node_pfp if needed
+          spotifyId: artist.spotify_id,
+          nodePfp: artist.node_pfp,
           webmapdata: artist.webmapdata,
           x: artist.x,
-          instagramUsername: artist.instagramUsername,
-          facebookUsername: artist.facebookUsername
+          instagramUsername: artist.instagram,
+          facebookUsername: artist.facebook
         };
       }
       return undefined;
@@ -765,27 +756,23 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
       const existingArtist = await this.getArtistByName(artistName);
       
       if (existingArtist) {
+        // Update existing artist with profile picture data
         await db.execute(sql`
           UPDATE artists 
           SET 
-            node_pfp = ${JSON.stringify(nodeProfileData)},
-            image_url = ${profileData.imageUrl},
-            spotify_id = ${profileData.spotifyId}
+            node_pfp = ${JSON.stringify(nodeProfileData)}::jsonb,
+            spotify = ${profileData.spotifyId},
+            updated_at = NOW()
           WHERE name = ${artistName}
         `);
         console.log(`✅ [DEBUG] Updated profile picture cache for existing artist "${artistName}"`);
         return true;
       } else {
         // Create new artist entry if it doesn't exist
-        await db
-          .insert(artists)
-          .values({
-            name: artistName,
-            type: 'artist',
-            imageUrl: profileData.imageUrl,
-            spotifyId: profileData.spotifyId,
-            nodePfp: JSON.stringify(nodeProfileData)
-          });
+        await db.execute(sql`
+          INSERT INTO artists (name, spotify, node_pfp, created_at, updated_at)
+          VALUES (${artistName}, ${profileData.spotifyId}, ${JSON.stringify(nodeProfileData)}::jsonb, NOW(), NOW())
+        `);
         console.log(`✅ [DEBUG] Created new artist entry with profile picture cache for "${artistName}"`);
         return true;
       }
@@ -806,46 +793,49 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
     if (!db) return null;
 
     try {
-      const result = await db
-        .select({
-          nodePfp: artists.nodePfp,
-          imageUrl: artists.imageUrl,
-          spotifyId: artists.spotifyId
-        })
-        .from(artists)
-        .where(eq(artists.name, artistName))
-        .limit(1);
+      // Use raw SQL to match actual database schema
+      const result = await db.execute(sql`
+        SELECT node_pfp, spotify as spotify_id
+        FROM artists 
+        WHERE name = ${artistName}
+        LIMIT 1
+      `);
       
-      const artist = result[0];
+      const artist = result[0] as any;
       if (!artist) {
         return null;
       }
 
       // First try to get from node_pfp column (new caching system)
-      if (artist.nodePfp) {
-        try {
-          const profileData = JSON.parse(artist.nodePfp as string);
-          if (profileData.imageUrl && profileData.spotifyId) {
-            console.log(`🎯 [DEBUG] Found cached profile picture for "${artistName}" from node_pfp`);
-            return {
-              imageUrl: profileData.imageUrl,
-              spotifyId: profileData.spotifyId,
-              cachedAt: profileData.cachedAt || 'unknown'
-            };
+      if (artist.node_pfp) {
+        let profileData = artist.node_pfp;
+        
+        // Handle case where it's a string that needs parsing
+        if (typeof profileData === 'string') {
+          try {
+            profileData = JSON.parse(profileData);
+          } catch (parseError) {
+            console.warn(`⚠️ [DEBUG] Could not parse node_pfp data for "${artistName}":`, parseError);
+            profileData = null;
           }
-        } catch (parseError) {
-          console.warn(`⚠️ [DEBUG] Could not parse node_pfp data for "${artistName}":`, parseError);
+        }
+        
+        // Now check if we have valid profile data
+        if (profileData && profileData.imageUrl && profileData.spotifyId) {
+          console.log(`🎯 [DEBUG] Found cached profile picture for "${artistName}" from node_pfp`);
+          return {
+            imageUrl: profileData.imageUrl,
+            spotifyId: profileData.spotifyId,
+            cachedAt: profileData.cachedAt || 'unknown'
+          };
         }
       }
 
-      // Fallback to legacy columns
-      if (artist.imageUrl && artist.spotifyId) {
-        console.log(`🎯 [DEBUG] Found profile picture for "${artistName}" from legacy columns`);
-        return {
-          imageUrl: artist.imageUrl,
-          spotifyId: artist.spotifyId,
-          cachedAt: 'legacy'
-        };
+      // Fallback to legacy spotify column (no image URL in this schema)
+      if (artist.spotify_id) {
+        console.log(`🎯 [DEBUG] Found Spotify ID for "${artistName}" from legacy column, but no image URL`);
+        // We can't provide an image URL from legacy data alone
+        return null;
       }
 
       return null;
