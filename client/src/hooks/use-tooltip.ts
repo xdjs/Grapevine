@@ -202,7 +202,7 @@ export function useTooltip({
     // Call the callback to load the artist's network within the app
     if (callbacks.onArtistNodeClick) {
       console.log(`🔗 Loading ${node.name}'s network within the app`);
-      callbacks.onArtistNodeClick(node.name, artistId);
+      callbacks.onArtistNodeClick(node.name, artistId || undefined);
     } else {
       console.warn(`🔗 No onArtistNodeClick callback provided for ${node.name}`);
       alert(`Sorry, ${node.name} is not available in the network yet. They may be added in future updates!`);
@@ -212,8 +212,15 @@ export function useTooltip({
   }, [callbacks.onArtistNodeClick, hideTooltip]);
 
   const handleExpandAction = useCallback(async (node: NetworkNode) => {
-    console.log(`🔗 Expanding network for ${node.name}`);
-    await networkDataHook.expandNodeNetwork(node.name, node.artistId);
+    console.log(`🔗 [EXPAND] Button clicked for ${node.name}`);
+    console.log(`🔗 [EXPAND] Node data:`, node);
+    console.log(`🔗 [EXPAND] About to call expandNodeNetwork...`);
+    try {
+      await networkDataHook.expandNodeNetwork(node.name, node.artistId || undefined);
+      console.log(`🔗 [EXPAND] Successfully called expandNodeNetwork for ${node.name}`);
+    } catch (error) {
+      console.error(`🔗 [EXPAND] Error in expandNodeNetwork:`, error);
+    }
     hideTooltip();
   }, [networkDataHook.expandNodeNetwork, hideTooltip]);
 

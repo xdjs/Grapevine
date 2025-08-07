@@ -102,13 +102,20 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
 
   // Function to expand a node's network
   const expandNodeNetwork = useCallback(async (nodeName: string, nodeId?: string) => {
-    console.log(`🔗 Expanding network for: ${nodeName}`);
+    console.log(`🔗 [NETWORK-DATA] Expanding network for: ${nodeName}`);
+    console.log(`🔗 [NETWORK-DATA] Current data:`, { nodes: data.nodes.length, links: data.links.length });
     
     try {
       // Fetch the full network for this collaborator
+      console.log(`🔗 [NETWORK-DATA] Fetching from API: /api/network/${encodeURIComponent(nodeName)}`);
       const response = await fetch(`/api/network/${encodeURIComponent(nodeName)}`);
+      console.log(`🔗 [NETWORK-DATA] API Response status:`, response.status);
       if (response.ok) {
         const collaboratorNetwork = await response.json();
+        console.log(`🔗 [NETWORK-DATA] Received collaborator network:`, { 
+          nodes: collaboratorNetwork.nodes?.length || 0, 
+          links: collaboratorNetwork.links?.length || 0 
+        });
         
         // Merge the collaborator's network with the existing network
         const mergedNodes = [...data.nodes];
@@ -126,6 +133,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
               mergedNodes.push(collaboratorNode);
               existingNodeIds.add(collaboratorNode.id);
               addedCount++;
+              console.log(`🔗 [NETWORK-DATA] Added collaborator ${addedCount}/${maxNewCollaborators}: ${collaboratorNode.name}`);
             }
           }
         });
@@ -161,7 +169,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         setFullNetworkData(mergedNetworkData);
         
         // Add this node to expanded set
-        setExpandedNodes(prev => new Set([...prev, nodeName]));
+        setExpandedNodes(prev => new Set([...Array.from(prev), nodeName]));
         setIsExpandedMode(true);
         
         console.log(`✅ Expanded network for ${nodeName} - added ${addedCount} new collaborators (max ${maxNewCollaborators})`);
