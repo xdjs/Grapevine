@@ -164,6 +164,9 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
           flexDirection: 'column',
           gap,
           marginTop: isMobile ? '4px' : gap,
+          alignItems: 'flex-start',
+          width: '100%',
+          overflow: 'hidden',
         }}
       >
         {/* Network action - always available */}
@@ -174,6 +177,9 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             alignItems: 'center',
             gap,
             cursor: 'pointer',
+            width: '100%',
+            maxWidth: '100%',
+            overflow: 'hidden',
           }}
           onClick={(e) => handleActionClick(e, () => onNetworkAction(node))}
           onKeyDown={(e) => handleKeyPress(e, () => onNetworkAction(node))}
@@ -187,8 +193,13 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             style={{
               width: `${iconSize}px`,
               height: `${iconSize}px`,
+              maxWidth: `${iconSize}px`,
+              maxHeight: `${iconSize}px`,
               borderRadius: '50%',
               cursor: 'pointer',
+              objectFit: 'cover',
+              display: 'block',
+              flexShrink: 0,
             }}
           />
           <span
@@ -213,6 +224,9 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
               alignItems: 'center',
               gap,
               cursor: 'pointer',
+              width: '100%',
+              maxWidth: '100%',
+              overflow: 'hidden',
             }}
             onClick={(e) => {
               console.log(`🔗 [DEBUG] Expand button clicked for ${node.name}`);
@@ -274,6 +288,9 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
               alignItems: 'center',
               gap,
               cursor: 'pointer',
+              width: '100%',
+              maxWidth: '100%',
+              overflow: 'hidden',
             }}
             onClick={(e) => handleActionClick(e, () => onProfileAction(node))}
             onKeyDown={(e) => handleKeyPress(e, () => onProfileAction(node))}
@@ -287,8 +304,13 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
               style={{
                 width: `${iconSize}px`,
                 height: `${iconSize}px`,
+                maxWidth: `${iconSize}px`,
+                maxHeight: `${iconSize}px`,
                 borderRadius: '50%',
                 cursor: 'pointer',
+                objectFit: 'cover',
+                display: 'block',
+                flexShrink: 0,
               }}
             />
             <span
@@ -314,6 +336,9 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
               alignItems: 'center',
               gap,
               cursor: 'pointer',
+              width: '100%',
+              maxWidth: '100%',
+              overflow: 'hidden',
             }}
             onClick={(e) => handleActionClick(e, () => onCollaborationAction(node))}
             onKeyDown={(e) => handleKeyPress(e, () => onCollaborationAction(node))}
