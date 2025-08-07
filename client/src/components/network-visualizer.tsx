@@ -49,7 +49,7 @@ export default function NetworkVisualizer({
   
   // Component error and loading state
   const [componentError, setComponentError] = useState<ComponentError | null>(null);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(false); // No loading state by default
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 3;
   
@@ -175,40 +175,37 @@ export default function NetworkVisualizer({
     setRetryCount(0);
   }, []);
 
-  // Component initialization and error handling
+  // Don't wait for config loading, initialize immediately
   useEffect(() => {
-    const initializeComponent = async () => {
+    if (!data) {
+      setIsInitializing(false);
+      return;
+    }
+
+    // Skip config loading check, initialize network immediately
+    const initializeNetwork = async () => {
       try {
-        setIsInitializing(true);
-        
-        // Validate required data
-        if (!data || !data.nodes || data.nodes.length === 0) {
-          throw new Error('Invalid or empty network data provided');
-        }
-        
-        // Wait for config to load if still loading
-        if (configLoading) {
-          console.log('⏳ [NetworkVisualizer] Waiting for config to load...');
-          return;
-        }
-        
-        // Check for config errors
-        if (configError) {
-          throw new Error(`Configuration error: ${configError}`);
-        }
-        
-        console.log('✅ [NetworkVisualizer] Component initialized successfully');
         setComponentError(null);
-        setIsInitializing(false);
+        setRetryCount(0);
         
-      } catch (error) {
-        handleError(error as Error, 'component initialization');
+        console.log('🌐 [NetworkVisualizer] Initializing network visualization');
+        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for smooth transition
+        
         setIsInitializing(false);
+        console.log('🌐 [NetworkVisualizer] Network visualization ready');
+      } catch (error) {
+        const componentError = {
+          message: error instanceof Error ? error.message : 'Failed to initialize network',
+          retryable: true
+        };
+        
+        console.error('🌐 [NetworkVisualizer] Initialization error:', componentError);
+        handleError(error as Error, 'network initialization');
       }
     };
 
-    initializeComponent();
-  }, [data, configLoading, configError, handleError]);
+    initializeNetwork();
+  }, [data, handleError]); // Removed configLoading and configError dependencies
 
   // Log the current state for debugging
   useEffect(() => {
@@ -258,21 +255,6 @@ export default function NetworkVisualizer({
 
 
 
-  // Loading state component
-  const LoadingState = () => (
-    <div 
-      className="flex items-center justify-center w-full h-full"
-      data-testid="loading-state"
-    >
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600 dark:text-gray-400">
-          {configLoading ? 'Loading configuration...' : 'Initializing network visualization...'}
-        </p>
-      </div>
-    </div>
-  );
-
   // Error state component  
   const ErrorState = ({ error }: { error: ComponentError }) => (
     <div 
@@ -291,18 +273,23 @@ export default function NetworkVisualizer({
           {error.retryable && (
             <button
               onClick={handleRetry}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200"
+              disabled={retryCount >= maxRetries}
+              className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                retryCount >= maxRetries
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500'
+              }`}
               data-testid="retry-button"
             >
-              Retry ({maxRetries - retryCount} attempts left)
+              {retryCount >= maxRetries ? 'Max Retries Reached' : `Retry (${retryCount}/${maxRetries})`}
             </button>
           )}
           <button
             onClick={clearError}
-            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200"
-            data-testid="dismiss-error-button"
+            className="px-4 py-2 rounded-md font-medium bg-gray-600 text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
+            data-testid="reset-button"
           >
-            Dismiss
+            Reset Network
           </button>
         </div>
       </div>
@@ -310,26 +297,22 @@ export default function NetworkVisualizer({
   );
 
   return (
-    <div
-      className={`network-container transition-opacity duration-700 w-full h-full ${
-        visible ? "opacity-100" : "opacity-0"
-      }`}
-      data-testid="network-container"
-    >
-      {/* Show loading state during initialization */}
-      {isInitializing && <LoadingState />}
-      
-      {/* Show error state if there's a component error */}
+    <div className="w-full h-full relative">
       {componentError && <ErrorState error={componentError} />}
       
-      {/* Main visualization - only render when not loading and no errors */}
-      {!isInitializing && !componentError && (
+      {/* Always render network content, no loading state */}
+      {!componentError && (
         <>
-          <svg 
-            ref={svgRef} 
-            className="w-full h-full" 
-            role="img" 
-            aria-label="Music collaboration network visualization"
+          <D3NetworkRenderer
+            ref={svgRef}
+            data={data}
+            visible={visible}
+            filterState={filterState}
+            onNodeClick={nodeInteractions.handleNodeClick}
+            onNodeHover={nodeInteractions.handleNodeHover}
+            onNodeLeave={nodeInteractions.handleNodeLeave}
+            zoom={zoom}
+            className="w-full h-full"
           />
 
           {/* Enhanced Zoom Controls - Hidden on mobile */}
@@ -346,19 +329,6 @@ export default function NetworkVisualizer({
               ariaLabel="Zoom controls"
             />
           )}
-
-          {/* D3 Network Renderer Component */}
-          <D3NetworkRenderer
-            data={finalDisplayData}
-            visible={visible}
-            filterState={filterState}
-            svgRef={svgRef}
-            simulationRef={simulationRef}
-            zoom={zoom}
-            nodeInteractions={nodeInteractions}
-            tooltip={tooltip}
-            mainArtistNode={mainArtistNode}
-          />
           
           {/* Reset button for expanded mode */}
           {isExpandedMode && (
