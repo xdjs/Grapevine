@@ -61,17 +61,26 @@ export default function CollaborationDetailsPopup({
   };
 
   const getProjectIcon = (type: string) => {
+    const iconStyle = { 
+      width: '16px !important', 
+      height: '16px !important',
+      minWidth: '16px !important',
+      minHeight: '16px !important',
+      maxWidth: '16px !important',
+      maxHeight: '16px !important'
+    };
+
     switch (type) {
       case 'song':
-        return <Music className="w-4 h-4" />;
+        return <Music style={iconStyle} />;
       case 'album':
-        return <Disc3 className="w-4 h-4" />;
+        return <Disc3 style={iconStyle} />;
       case 'ep':
-        return <Disc3 className="w-4 h-4" />;
+        return <Disc3 style={iconStyle} />;
       case 'single':
-        return <Mic2 className="w-4 h-4" />;
+        return <Mic2 style={iconStyle} />;
       default:
-        return <Music className="w-4 h-4" />;
+        return <Music style={iconStyle} />;
     }
   };
 
@@ -108,22 +117,22 @@ export default function CollaborationDetailsPopup({
             <div 
               className="flex items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30"
               style={{ 
-                width: '20px !important', 
-                height: '20px !important',
-                minWidth: '20px !important',
-                minHeight: '20px !important',
-                maxWidth: '20px !important',
-                maxHeight: '20px !important'
+                width: '24px !important', 
+                height: '24px !important',
+                minWidth: '24px !important',
+                minHeight: '24px !important',
+                maxWidth: '24px !important',
+                maxHeight: '24px !important'
               }}
             >
               <Users 
                 style={{ 
-                  width: '12px !important', 
-                  height: '12px !important',
-                  minWidth: '12px !important',
-                  minHeight: '12px !important',
-                  maxWidth: '12px !important',
-                  maxHeight: '12px !important'
+                  width: '14px !important', 
+                  height: '14px !important',
+                  minWidth: '14px !important',
+                  minHeight: '14px !important',
+                  maxWidth: '14px !important',
+                  maxHeight: '14px !important'
                 }} 
                 className="text-purple-400" 
               />
@@ -148,12 +157,12 @@ export default function CollaborationDetailsPopup({
           >
             <X 
               style={{ 
-                width: '24px !important', 
-                height: '24px !important',
-                minWidth: '24px !important',
-                minHeight: '24px !important',
-                maxWidth: '24px !important',
-                maxHeight: '24px !important'
+                width: '20px !important', 
+                height: '20px !important',
+                minWidth: '20px !important',
+                minHeight: '20px !important',
+                maxWidth: '20px !important',
+                maxHeight: '20px !important'
               }} 
             />
           </button>
@@ -166,12 +175,12 @@ export default function CollaborationDetailsPopup({
               <div className="flex items-center gap-3">
                 <Loader2 
                   style={{ 
-                    width: '20px !important', 
-                    height: '20px !important',
-                    minWidth: '20px !important',
-                    minHeight: '20px !important',
-                    maxWidth: '20px !important',
-                    maxHeight: '20px !important'
+                    width: '24px !important', 
+                    height: '24px !important',
+                    minWidth: '24px !important',
+                    minHeight: '24px !important',
+                    maxWidth: '24px !important',
+                    maxHeight: '24px !important'
                   }}
                   className="animate-spin text-purple-400" 
                 />
@@ -209,7 +218,17 @@ export default function CollaborationDetailsPopup({
               {/* Description */}
               <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
                 <h3 className="text-lg font-medium text-white mb-3 flex items-center gap-2">
-                  <Users className="text-purple-400 w-3 h-3 sm:w-4 sm:h-4" />
+                  <Users 
+                    style={{ 
+                      width: '16px !important', 
+                      height: '16px !important',
+                      minWidth: '16px !important',
+                      minHeight: '16px !important',
+                      maxWidth: '16px !important',
+                      maxHeight: '16px !important'
+                    }}
+                    className="text-purple-400" 
+                  />
                   Collaboration
                 </h3>
                 <p className="text-gray-300 leading-relaxed">{details.description}</p>
@@ -219,7 +238,17 @@ export default function CollaborationDetailsPopup({
               {details.projects && details.projects.length > 0 && (
                 <div>
                   <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
-<Music className="text-purple-400 w-3 h-3 sm:w-4 sm:h-4" />
+                    <Music 
+                      style={{ 
+                        width: '16px !important', 
+                        height: '16px !important',
+                        minWidth: '16px !important',
+                        minHeight: '16px !important',
+                        maxWidth: '16px !important',
+                        maxHeight: '16px !important'
+                      }}
+                      className="text-purple-400" 
+                    />
                     Projects Together
                   </h3>
                   <div className="space-y-3">
