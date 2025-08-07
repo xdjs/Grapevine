@@ -8,6 +8,7 @@ export const artists = pgTable("artists", {
   type: text("type").notNull(), // 'artist', 'producer', 'songwriter'
   imageUrl: text("image_url"),
   spotifyId: text("spotify_id"),
+  nodePfp: text("node_pfp"), // Cache for profile picture URLs or image IDs
   webmapdata: jsonb("webmapdata"), // Cache for network visualization data
   x: text("x"), // X/Twitter username (without @)
   instagramUsername: text("instagram_username"), // Instagram username (without @)
