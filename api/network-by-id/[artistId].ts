@@ -121,8 +121,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           
           // Check if any nodes are missing imageUrl or spotifyId
           for (const node of nodes) {
-            if (!node.imageUrl && !node.spotifyId) {
+            if (!node.hasOwnProperty('imageUrl') || !node.hasOwnProperty('spotifyId') || 
+                !node.imageUrl || !node.spotifyId) {
               needsSpotifyFetch = true;
+              console.log(`🔍 [Vercel] Node "${node.name}" missing Spotify data - imageUrl: ${node.imageUrl || 'undefined'}, spotifyId: ${node.spotifyId || 'undefined'}`);
               break;
             }
           }
