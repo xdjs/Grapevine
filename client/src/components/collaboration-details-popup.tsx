@@ -102,16 +102,16 @@ export default function CollaborationDetailsPopup({
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-purple-500/20 border border-purple-500/30">
+        <div className="flex items-center justify-between p-3 sm:p-6 border-b border-gray-700">
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+            <div className="flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-purple-500/20 border border-purple-500/30 flex-shrink-0">
               <Users className="h-3 w-3 sm:h-4 sm:w-4 text-purple-400" />
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-white">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-xl font-semibold text-white truncate">
                 Collaboration Details
               </h2>
-              <p className="text-sm text-gray-300 mt-1">
+              <p className="text-xs sm:text-sm text-gray-300 mt-1 truncate">
                 <span className="font-medium text-purple-300">{artistName}</span>
                 <span className="text-gray-400"> & </span>
                 <span className="font-medium text-purple-300">{collaboratorName}</span>
@@ -120,9 +120,9 @@ export default function CollaborationDetailsPopup({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800"
+            className="text-gray-400 hover:text-white transition-colors p-1 sm:p-2 rounded-lg hover:bg-gray-800 flex-shrink-0 ml-2"
           >
-<X className="w-5 h-5 sm:w-6 sm:h-6" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
 
