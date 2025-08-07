@@ -111,7 +111,14 @@ export class DatabaseStorage implements IStorage {
         .select({
           id: artists.id,
           name: artists.name,
-          webmapdata: artists.webmapdata
+          type: artists.type,
+          imageUrl: artists.imageUrl,
+          spotifyId: artists.spotifyId,
+          nodePfp: artists.nodePfp,
+          webmapdata: artists.webmapdata,
+          x: artists.x,
+          instagramUsername: artists.instagramUsername,
+          facebookUsername: artists.facebookUsername
         })
         .from(artists)
         .where(eq(artists.name, name))
@@ -122,10 +129,14 @@ export class DatabaseStorage implements IStorage {
         return {
           id: artist.id,
           name: artist.name,
-          type: 'artist' as const,
-          imageUrl: null,
-          spotifyId: null,
-          webmapdata: artist.webmapdata
+          type: artist.type || 'artist',
+          imageUrl: artist.imageUrl,
+          spotifyId: artist.spotifyId,
+          nodePfp: artist.nodePfp,
+          webmapdata: artist.webmapdata,
+          x: artist.x,
+          instagramUsername: artist.instagramUsername,
+          facebookUsername: artist.facebookUsername
         };
       }
       return undefined;
@@ -725,5 +736,235 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
       console.error(`❌ [DEBUG] Error fetching network data for artist ID "${artistId}":`, error);
       return null;
     }
+  }
+
+  /**
+   * Store profile picture URL and Spotify ID for an artist in the node_pfp column
+   * This is separate from network generation and specifically for caching profile pictures
+   */
+  async storeArtistProfilePicture(artistName: string, profileData: {
+    imageUrl: string;
+    spotifyId: string;
+  }): Promise<boolean> {
+    if (!db) {
+      console.log(`⚠️ [DEBUG] Database not available - cannot store profile picture for "${artistName}"`);
+      return false;
+    }
+
+    try {
+      console.log(`💾 [DEBUG] Storing profile picture for "${artistName}": ${profileData.imageUrl}`);
+      
+      // Create profile data object for node_pfp column
+      const nodeProfileData = {
+        imageUrl: profileData.imageUrl,
+        spotifyId: profileData.spotifyId,
+        cachedAt: new Date().toISOString()
+      };
+
+      // First try to update existing artist
+      const existingArtist = await this.getArtistByName(artistName);
+      
+      if (existingArtist) {
+        await db.execute(sql`
+          UPDATE artists 
+          SET 
+            node_pfp = ${JSON.stringify(nodeProfileData)},
+            image_url = ${profileData.imageUrl},
+            spotify_id = ${profileData.spotifyId}
+          WHERE name = ${artistName}
+        `);
+        console.log(`✅ [DEBUG] Updated profile picture cache for existing artist "${artistName}"`);
+        return true;
+      } else {
+        // Create new artist entry if it doesn't exist
+        await db
+          .insert(artists)
+          .values({
+            name: artistName,
+            type: 'artist',
+            imageUrl: profileData.imageUrl,
+            spotifyId: profileData.spotifyId,
+            nodePfp: JSON.stringify(nodeProfileData)
+          });
+        console.log(`✅ [DEBUG] Created new artist entry with profile picture cache for "${artistName}"`);
+        return true;
+      }
+    } catch (error) {
+      console.error(`❌ [DEBUG] Error storing profile picture for "${artistName}":`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Retrieve cached profile picture data for an artist from node_pfp column
+   */
+  async getCachedProfilePicture(artistName: string): Promise<{
+    imageUrl: string;
+    spotifyId: string;
+    cachedAt: string;
+  } | null> {
+    if (!db) return null;
+
+    try {
+      const result = await db
+        .select({
+          nodePfp: artists.nodePfp,
+          imageUrl: artists.imageUrl,
+          spotifyId: artists.spotifyId
+        })
+        .from(artists)
+        .where(eq(artists.name, artistName))
+        .limit(1);
+      
+      const artist = result[0];
+      if (!artist) {
+        return null;
+      }
+
+      // First try to get from node_pfp column (new caching system)
+      if (artist.nodePfp) {
+        try {
+          const profileData = JSON.parse(artist.nodePfp as string);
+          if (profileData.imageUrl && profileData.spotifyId) {
+            console.log(`🎯 [DEBUG] Found cached profile picture for "${artistName}" from node_pfp`);
+            return {
+              imageUrl: profileData.imageUrl,
+              spotifyId: profileData.spotifyId,
+              cachedAt: profileData.cachedAt || 'unknown'
+            };
+          }
+        } catch (parseError) {
+          console.warn(`⚠️ [DEBUG] Could not parse node_pfp data for "${artistName}":`, parseError);
+        }
+      }
+
+      // Fallback to legacy columns
+      if (artist.imageUrl && artist.spotifyId) {
+        console.log(`🎯 [DEBUG] Found profile picture for "${artistName}" from legacy columns`);
+        return {
+          imageUrl: artist.imageUrl,
+          spotifyId: artist.spotifyId,
+          cachedAt: 'legacy'
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error(`❌ [DEBUG] Error retrieving cached profile picture for "${artistName}":`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Batch store profile pictures for multiple artists
+   */
+  async batchStoreProfilePictures(profileDataMap: Map<string, {
+    imageUrl: string;
+    spotifyId: string;
+  }>): Promise<{
+    successful: string[];
+    failed: string[];
+  }> {
+    const successful: string[] = [];
+    const failed: string[] = [];
+
+    console.log(`💾 [DEBUG] Batch storing profile pictures for ${profileDataMap.size} artists`);
+
+    for (const [artistName, profileData] of profileDataMap) {
+      const result = await this.storeArtistProfilePicture(artistName, profileData);
+      if (result) {
+        successful.push(artistName);
+      } else {
+        failed.push(artistName);
+      }
+    }
+
+    console.log(`✅ [DEBUG] Batch store complete: ${successful.length} successful, ${failed.length} failed`);
+    return { successful, failed };
+  }
+
+  /**
+   * Check if profile picture cache is fresh (within specified hours)
+   */
+  async isProfilePictureCacheFresh(artistName: string, maxAgeHours: number = 24): Promise<boolean> {
+    const cachedData = await this.getCachedProfilePicture(artistName);
+    if (!cachedData || cachedData.cachedAt === 'legacy') {
+      return false;
+    }
+
+    try {
+      const cachedTime = new Date(cachedData.cachedAt);
+      const now = new Date();
+      const ageHours = (now.getTime() - cachedTime.getTime()) / (1000 * 60 * 60);
+      return ageHours < maxAgeHours;
+    } catch (error) {
+      console.warn(`⚠️ [DEBUG] Could not determine cache age for "${artistName}":`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Get profile pictures with cache-first strategy
+   */
+  async getProfilePicturesWithCache(artistNames: string[], forceRefresh: boolean = false): Promise<Map<string, {
+    imageUrl: string;
+    spotifyId: string;
+    fromCache: boolean;
+  }>> {
+    const results = new Map();
+    const needsFetch: string[] = [];
+
+    console.log(`🎯 [DEBUG] Getting profile pictures for ${artistNames.length} artists (forceRefresh: ${forceRefresh})`);
+
+    // Check cache first
+    if (!forceRefresh) {
+      for (const artistName of artistNames) {
+        const cached = await this.getCachedProfilePicture(artistName);
+        const isFresh = await this.isProfilePictureCacheFresh(artistName);
+        
+        if (cached && isFresh) {
+          results.set(artistName, {
+            imageUrl: cached.imageUrl,
+            spotifyId: cached.spotifyId,
+            fromCache: true
+          });
+          console.log(`💾 [DEBUG] Using cached profile picture for "${artistName}"`);
+        } else {
+          needsFetch.push(artistName);
+        }
+      }
+    } else {
+      needsFetch.push(...artistNames);
+    }
+
+    // Fetch missing images from Spotify
+    if (needsFetch.length > 0 && spotifyService.isConfigured()) {
+      console.log(`🎵 [DEBUG] Fetching ${needsFetch.length} profile pictures from Spotify API`);
+      
+      const spotifyResults = await spotifyService.batchGetArtistProfileImages(needsFetch);
+      
+      // Store new results and add to return map
+      const storageMap = new Map();
+      for (const [artistName, spotifyData] of spotifyResults) {
+        storageMap.set(artistName, {
+          imageUrl: spotifyData.imageUrl,
+          spotifyId: spotifyData.spotifyId
+        });
+        
+        results.set(artistName, {
+          imageUrl: spotifyData.imageUrl,
+          spotifyId: spotifyData.spotifyId,
+          fromCache: false
+        });
+      }
+      
+      // Batch store to database
+      if (storageMap.size > 0) {
+        await this.batchStoreProfilePictures(storageMap);
+      }
+    }
+
+    console.log(`✅ [DEBUG] Profile picture retrieval complete: ${results.size} found, ${results.size - needsFetch.length} from cache`);
+    return results;
   }
 }
