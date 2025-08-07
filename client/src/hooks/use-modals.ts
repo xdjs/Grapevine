@@ -137,14 +137,59 @@ export function useModals({
       }
     };
 
+    // Prevent modals from closing on tab switching and window events
+    const handleVisibilityChange = (event: Event) => {
+      if (isAnyModalOpen) {
+        // Prevent automatic closing when tab becomes hidden/visible
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    const handlePageHide = (event: PageTransitionEvent) => {
+      if (isAnyModalOpen) {
+        event.preventDefault();
+      }
+    };
+
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (isAnyModalOpen) {
+        event.preventDefault();
+      }
+    };
+
+    const handleWindowBlur = (event: FocusEvent) => {
+      if (isAnyModalOpen) {
+        // Prevent automatic closing when window loses focus
+        event.preventDefault();
+      }
+    };
+
+    const handleWindowFocus = (event: FocusEvent) => {
+      if (isAnyModalOpen) {
+        // Prevent automatic closing when window regains focus
+        event.preventDefault();
+      }
+    };
+
     if (isAnyModalOpen) {
       document.addEventListener('keydown', handleEscapeKey);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('pagehide', handlePageHide);
+      window.addEventListener('pageshow', handlePageShow);
+      window.addEventListener('blur', handleWindowBlur);
+      window.addEventListener('focus', handleWindowFocus);
       // Prevent body scroll when modal is open
       document.body.style.overflow = 'hidden';
     }
 
     return () => {
       document.removeEventListener('keydown', handleEscapeKey);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('pageshow', handlePageShow);
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('focus', handleWindowFocus);
       document.body.style.overflow = '';
     };
   }, [isAnyModalOpen, closeAllModals]);

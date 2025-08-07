@@ -59,14 +59,39 @@ export default function CollaborationDetailsPopup({
       event.preventDefault();
     };
 
+    // Prevent modal from closing when switching tabs
+    const handleVisibilityChange = (event: Event) => {
+      // Prevent automatic closing when tab becomes hidden/visible
+      console.log('Collaboration details popup: preventing close on visibility change');
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    // Prevent modal from closing on page hide/show (tab switching)
+    const handlePageHide = (event: PageTransitionEvent) => {
+      console.log('Collaboration details popup: preventing close on page hide');
+      event.preventDefault();
+    };
+
+    const handlePageShow = (event: PageTransitionEvent) => {
+      console.log('Collaboration details popup: preventing close on page show');
+      event.preventDefault();
+    };
+
     document.addEventListener('keydown', handleKeyDown);
     window.addEventListener('blur', handleWindowBlur);
     window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('pageshow', handlePageShow);
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('blur', handleWindowBlur);
       window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('pageshow', handlePageShow);
     };
   }, [isOpen, onClose]);
 
