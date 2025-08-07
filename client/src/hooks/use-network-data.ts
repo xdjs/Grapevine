@@ -114,28 +114,39 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         const mergedNodes = [...data.nodes];
         const mergedLinks = [...data.links];
         
-        // Add new nodes from collaborator's network (avoiding duplicates)
+        // Add new nodes from collaborator's network (avoiding duplicates, limit to 3 new collaborators)
         const existingNodeIds = new Set(data.nodes.map(n => n.id));
+        let addedCount = 0;
+        const maxNewCollaborators = 3;
+        
         collaboratorNetwork.nodes.forEach((collaboratorNode: NetworkNode) => {
-          if (!existingNodeIds.has(collaboratorNode.id)) {
-            mergedNodes.push(collaboratorNode);
-            existingNodeIds.add(collaboratorNode.id);
+          if (!existingNodeIds.has(collaboratorNode.id) && addedCount < maxNewCollaborators) {
+            // Skip the main artist node (which would be the expanded node)
+            if (collaboratorNode.name !== nodeName) {
+              mergedNodes.push(collaboratorNode);
+              existingNodeIds.add(collaboratorNode.id);
+              addedCount++;
+            }
           }
         });
         
-        // Add new links from collaborator's network (avoiding duplicates)
+        // Add new links from collaborator's network (avoiding duplicates, only for added nodes)
         const existingLinkIds = new Set(data.links.map(link => {
           const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
           const targetId = typeof link.target === 'string' ? link.target : link.target.id;
           return `${sourceId}-${targetId}`;
         }));
         
+        // Get the IDs of all nodes in the current merged network
+        const allNodeIds = new Set(mergedNodes.map(n => n.id));
+        
         collaboratorNetwork.links.forEach((collaboratorLink: NetworkLink) => {
           const sourceId = typeof collaboratorLink.source === 'string' ? collaboratorLink.source : collaboratorLink.source.id;
           const targetId = typeof collaboratorLink.target === 'string' ? collaboratorLink.target : collaboratorLink.target.id;
           const linkId = `${sourceId}-${targetId}`;
           
-          if (!existingLinkIds.has(linkId)) {
+          // Only add links where both nodes exist in our merged network
+          if (!existingLinkIds.has(linkId) && allNodeIds.has(sourceId) && allNodeIds.has(targetId)) {
             mergedLinks.push(collaboratorLink);
             existingLinkIds.add(linkId);
           }
@@ -153,7 +164,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         setExpandedNodes(prev => new Set([...prev, nodeName]));
         setIsExpandedMode(true);
         
-        console.log(`✅ Expanded network for ${nodeName} - added ${collaboratorNetwork.nodes.length} nodes and ${collaboratorNetwork.links.length} links`);
+        console.log(`✅ Expanded network for ${nodeName} - added ${addedCount} new collaborators (max ${maxNewCollaborators})`);
       } else {
         console.error(`❌ Failed to fetch network for ${nodeName}`);
       }

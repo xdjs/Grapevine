@@ -128,7 +128,7 @@ describe('NetworkTooltip', () => {
   });
 
   describe('Expand Action', () => {
-    it('should render expand action for first-degree collaborators', () => {
+    it('should render expand action for non-main-artist nodes', () => {
       render(<NetworkTooltip {...defaultProps} />);
 
       const expandLink = screen.getByText(`Expand ${mockArtistNode.name}'s network`);
@@ -137,15 +137,6 @@ describe('NetworkTooltip', () => {
 
     it('should not render expand action for main artist', () => {
       render(<NetworkTooltip {...defaultProps} isMainArtist={true} />);
-
-      const expandLink = screen.queryByText(`Expand ${mockArtistNode.name}'s network`);
-      expect(expandLink).not.toBeInTheDocument();
-    });
-
-    it('should not render expand action for non-first-degree collaborators', () => {
-      render(
-        <NetworkTooltip {...defaultProps} isFirstDegreeCollaborator={false} />
-      );
 
       const expandLink = screen.queryByText(`Expand ${mockArtistNode.name}'s network`);
       expect(expandLink).not.toBeInTheDocument();

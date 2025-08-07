@@ -234,8 +234,8 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
           </span>
         </div>
 
-        {/* Expand action - only for first-degree collaborators that aren't main artist */}
-        {isFirstDegreeCollaborator && !isMainArtist && (
+        {/* Expand action - for all nodes except main artist */}
+        {!isMainArtist && (
           <div
             data-testid="expand-action"
             style={{
