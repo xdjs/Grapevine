@@ -113,86 +113,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
           // If hallucinations requested, continue to generation logic below
         } else {
-          // Multi-node network, enhance with profile pictures from separate cache
+          // Multi-node network, enhance with profile pictures using existing approach
           console.log(`🎵 [Vercel] Enhancing cached network with profile pictures...`);
           
           let nodes = [...cachedData.nodes]; // Copy nodes to avoid mutating original cache
           
-          // Get cached profile picture data from node_pfp column
-          const pfpQuery = 'SELECT node_pfp FROM artists WHERE id = $1';
-          const pfpResult = await client.query(pfpQuery, [artistId]);
+          // Check if nodes need profile picture data (more thorough check)
+          const nodesNeedingImages = nodes.filter(node => 
+            (!node.imageUrl || node.imageUrl === null || node.imageUrl === '') && 
+            (!node.spotifyId || node.spotifyId === null || node.spotifyId === '')
+          );
           
-          let cachedProfilePictures = {};
-          if (pfpResult.rows.length > 0 && pfpResult.rows[0].node_pfp) {
-            cachedProfilePictures = pfpResult.rows[0].node_pfp;
-            console.log(`💾 [Vercel] Found cached profile pictures for ${Object.keys(cachedProfilePictures).length} nodes`);
-          }
+          console.log(`🔍 [Vercel] Total nodes: ${nodes.length}, nodes needing images: ${nodesNeedingImages.length}`);
           
-          // Determine which nodes need Spotify data
-          const nodesToFetch = [];
-          for (const node of nodes) {
-            const cachedPfp = cachedProfilePictures[node.name];
-            if (!cachedPfp) {
-              nodesToFetch.push(node.name);
-            } else {
-              // Apply cached profile picture data
-              node.imageUrl = cachedPfp.imageUrl;
-              node.spotifyId = cachedPfp.spotifyId;
-            }
-          }
-          
-          // Fetch missing profile pictures if needed
-          if (nodesToFetch.length > 0) {
-            console.log(`🎵 [Vercel] Fetching Spotify images for ${nodesToFetch.length} nodes: ${nodesToFetch.join(', ')}`);
+          if (nodesNeedingImages.length > 0) {
+            console.log(`🎵 [Vercel] Fetching Spotify images for ${nodesNeedingImages.length} nodes without profile pictures`);
             
             try {
               // Import Spotify service
               const { spotifyService } = await import('../../server/spotify');
               
               if (spotifyService.isConfigured()) {
-                const spotifyResults = await spotifyService.batchGetArtistProfileImages(nodesToFetch);
+                const nodeNames = nodesNeedingImages.map(node => node.name);
+                const spotifyResults = await spotifyService.batchGetArtistProfileImages(nodeNames);
                 
-                // Update nodes and cache the new data
-                for (const nodeName of nodesToFetch) {
-                  const spotifyData = spotifyResults.get(nodeName);
+                // Update nodes with Spotify data
+                for (const node of nodesNeedingImages) {
+                  const spotifyData = spotifyResults.get(node.name);
                   if (spotifyData) {
-                    // Update the node
-                    const node = nodes.find(n => n.name === nodeName);
-                    if (node) {
-                      node.imageUrl = spotifyData.imageUrl;
-                      node.spotifyId = spotifyData.spotifyId;
-                      console.log(`✅ [Vercel] Updated node ${nodeName} with Spotify image`);
-                    }
-                    
-                    // Add to profile picture cache
-                    cachedProfilePictures[nodeName] = {
-                      imageUrl: spotifyData.imageUrl,
-                      spotifyId: spotifyData.spotifyId,
-                      cachedAt: new Date().toISOString()
-                    };
+                    node.imageUrl = spotifyData.imageUrl;
+                    node.spotifyId = spotifyData.spotifyId;
+                    console.log(`✅ [Vercel] Updated cached node ${node.name} with Spotify image`);
                   }
                 }
                 
-                // Update the profile picture cache in database
-                try {
-                  const updatePfpQuery = 'UPDATE artists SET node_pfp = $1 WHERE id = $2';
-                  await client.query(updatePfpQuery, [JSON.stringify(cachedProfilePictures), artistId]);
-                  console.log(`💾 [Vercel] Updated profile picture cache for ${artist.name}`);
-                } catch (cacheError) {
-                  console.warn('⚠️ [Vercel] Failed to update profile picture cache:', cacheError);
-                }
+                console.log(`🎵 [Vercel] Successfully enhanced ${nodesNeedingImages.length} nodes with Spotify data`);
               } else {
-                console.log(`⚠️ [Vercel] Spotify API not configured, using data without new images`);
+                console.log(`⚠️ [Vercel] Spotify API not configured, using cached data without images`);
               }
             } catch (spotifyError) {
-              console.error(`❌ [Vercel] Spotify integration error:`, spotifyError);
-              // Continue with existing cached data
+              console.error(`❌ [Vercel] Spotify integration error for cached data:`, spotifyError);
+              // Continue with cached data without Spotify images
             }
           } else {
-            console.log(`✅ [Vercel] All nodes have cached profile pictures`);
+            console.log(`✅ [Vercel] All nodes already have profile picture data`);
           }
           
-          // Return enhanced network data (original webmapdata + profile pictures)
+          // Return enhanced network data
           const enhancedNetworkData = { nodes, links: cachedData.links };
           await client.end();
           return res.json(enhancedNetworkData);
