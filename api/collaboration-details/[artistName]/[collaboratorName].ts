@@ -16,7 +16,7 @@ interface CollaborationDetails {
   description: string;
   projects: Array<{
     name: string;
-    type: 'song' | 'album' | 'ep' | 'single';
+    type: 'song' | 'album' | 'ep' | 'single' | 'mixtape' | 'compilation';
     spotifyUrl?: string;
     year?: string;
   }>;
@@ -331,7 +331,7 @@ Guidelines:
                     {
                       params: {
                         q: searchQuery,
-                        type: project.type === 'song' ? 'track' : 'album',
+                        type: getSpotifySearchType(project.type),
                         limit: SPOTIFY_SEARCH_CONFIG.MAX_RESULTS_PER_STRATEGY,
                         market: SPOTIFY_SEARCH_CONFIG.MARKET
                       },
@@ -341,7 +341,7 @@ Guidelines:
                     }
                   );
 
-                  const items = searchResponse.data[project.type === 'song' ? 'tracks' : 'albums']?.items || [];
+                  const items = searchResponse.data[getSpotifyResponseKey(project.type)]?.items || [];
                   
                   // Validate and score each result
                   for (const item of items) {
@@ -509,6 +509,21 @@ function validateSpotifyMatch(spotifyItem: any, project: any, artistName: string
     score += 10;
   }
   
+  // Bonus for correct type matching
+  const expectedType = getSpotifySearchType(project.type);
+  if (expectedType === 'track' && spotifyItem.type === 'track') {
+    score += 5; // Track matched correctly
+  } else if (expectedType === 'album' && spotifyItem.type === 'album') {
+    score += 5; // Album matched correctly
+    
+    // Additional bonus for EP/album distinction
+    if (project.type === 'ep' && spotifyItem.album_type === 'single') {
+      score += 5; // EP correctly identified as single album type
+    } else if (project.type === 'album' && spotifyItem.album_type === 'album') {
+      score += 5; // Full album correctly identified
+    }
+  }
+  
   // Penalty for too many artists (likely compilation)
   const artistCount = spotifyItem.artists?.length || 0;
   if (artistCount > 4) {
@@ -516,16 +531,65 @@ function validateSpotifyMatch(spotifyItem: any, project: any, artistName: string
   }
   
   // Year matching bonus (if available)
-  if (project.year && spotifyItem.album?.release_date) {
-    const spotifyYear = new Date(spotifyItem.album.release_date).getFullYear().toString();
-    if (project.year === spotifyYear) {
-      score += 15;
-    } else if (Math.abs(parseInt(project.year) - parseInt(spotifyYear)) <= 1) {
-      score += 5; // Close year match
+  if (project.year) {
+    let releaseDate = null;
+    
+    // For albums, use the release_date directly
+    if (spotifyItem.release_date) {
+      releaseDate = spotifyItem.release_date;
+    }
+    // For tracks, use the album's release_date
+    else if (spotifyItem.album?.release_date) {
+      releaseDate = spotifyItem.album.release_date;
+    }
+    
+    if (releaseDate) {
+      const spotifyYear = new Date(releaseDate).getFullYear().toString();
+      if (project.year === spotifyYear) {
+        score += 15;
+      } else if (Math.abs(parseInt(project.year) - parseInt(spotifyYear)) <= 1) {
+        score += 5; // Close year match
+      }
     }
   }
   
   return Math.max(0, score); // Ensure non-negative score
+}
+
+// Helper function to map project types to Spotify search types
+function getSpotifySearchType(projectType: string): string {
+  switch (projectType) {
+    case 'song':
+      return 'track';
+    case 'album':
+      return 'album';
+    case 'ep':
+      return 'album'; // EPs are searched as albums in Spotify API
+    case 'single':
+      return 'track'; // Singles are individual tracks
+    case 'mixtape':
+      return 'album'; // Mixtapes are typically albums in Spotify
+    case 'compilation':
+      return 'album'; // Compilations are albums in Spotify
+    default:
+      return 'track'; // Default fallback
+  }
+}
+
+// Helper function to get the correct response key from Spotify API
+function getSpotifyResponseKey(projectType: string): string {
+  switch (projectType) {
+    case 'song':
+    case 'single':
+      return 'tracks';
+    case 'album':
+    case 'ep':
+    case 'mixtape':
+    case 'compilation':
+      return 'albums';
+    default:
+      return 'tracks'; // Default fallback
+  }
 }
 
 // Helper function to extract artist names from Spotify item
@@ -535,58 +599,63 @@ function getArtistNames(spotifyItem: any): string {
 }
 
 // Function to validate if a Spotify URL is accessible
-async function validateSpotifyUrl(spotifyUrl: string, spotifyToken: string, trackId: string): Promise<boolean> {
+async function validateSpotifyUrl(spotifyUrl: string, spotifyToken: string, itemId: string): Promise<boolean> {
   try {
-    // Extract track ID from URL if needed
-    const trackIdToCheck = trackId || extractTrackIdFromUrl(spotifyUrl);
+    // Extract item ID and type from URL if needed
+    const { id: itemIdToCheck, type: itemType } = itemId ? 
+      { id: itemId, type: extractSpotifyUrlType(spotifyUrl) } : 
+      extractSpotifyIdAndType(spotifyUrl);
     
-    if (!trackIdToCheck) {
-      console.warn(`⚠️ [Collaboration] Could not extract track ID from URL: ${spotifyUrl}`);
+    if (!itemIdToCheck || !itemType) {
+      console.warn(`⚠️ [Collaboration] Could not extract item ID or type from URL: ${spotifyUrl}`);
       return false;
     }
 
     const axios = (await import('axios')).default;
     
-    // Check track accessibility using Get Track endpoint with market parameter
-    const trackResponse = await axios.get(
-      `https://api.spotify.com/v1/tracks/${trackIdToCheck}`,
-      {
-        params: {
-          market: SPOTIFY_SEARCH_CONFIG.MARKET
-        },
-        headers: {
-          'Authorization': `Bearer ${spotifyToken}`
-        }
-      }
-    );
-
-    const track = trackResponse.data;
+    // Use appropriate endpoint based on item type
+    const endpoint = itemType === 'track' ? 
+      `https://api.spotify.com/v1/tracks/${itemIdToCheck}` :
+      `https://api.spotify.com/v1/albums/${itemIdToCheck}`;
     
-    // Check if track is playable in the specified market
-    if (track.is_playable === false) {
-      console.log(`⚠️ [Collaboration] Track ${trackIdToCheck} not playable in market ${SPOTIFY_SEARCH_CONFIG.MARKET}`);
+    console.log(`🔍 [Collaboration] Validating ${itemType} ${itemIdToCheck} via ${endpoint}`);
+    
+    const itemResponse = await axios.get(endpoint, {
+      params: {
+        market: SPOTIFY_SEARCH_CONFIG.MARKET
+      },
+      headers: {
+        'Authorization': `Bearer ${spotifyToken}`
+      }
+    });
+
+    const item = itemResponse.data;
+    
+    // Check if item is playable in the specified market
+    if (item.is_playable === false) {
+      console.log(`⚠️ [Collaboration] ${itemType} ${itemIdToCheck} not playable in market ${SPOTIFY_SEARCH_CONFIG.MARKET}`);
       return false;
     }
 
-    // Check if track has restrictions
-    if (track.restrictions && track.restrictions.reason) {
-      console.log(`⚠️ [Collaboration] Track ${trackIdToCheck} has restrictions: ${track.restrictions.reason}`);
+    // Check if item has restrictions
+    if (item.restrictions && item.restrictions.reason) {
+      console.log(`⚠️ [Collaboration] ${itemType} ${itemIdToCheck} has restrictions: ${item.restrictions.reason}`);
       return false;
     }
 
     // Additional check: verify the URL format is correct
-    if (!spotifyUrl.match(/^https:\/\/open\.spotify\.com\/(track|album)\/[a-zA-Z0-9]+/)) {
+    if (!spotifyUrl.match(/^https:\/\/open\.spotify\.com\/(track|album)\/[a-zA-Z0-9]+$/)) {
       console.warn(`⚠️ [Collaboration] Invalid Spotify URL format: ${spotifyUrl}`);
       return false;
     }
 
-    console.log(`✅ [Collaboration] URL validation successful for track ${trackIdToCheck}`);
+    console.log(`✅ [Collaboration] URL validation successful for ${itemType} ${itemIdToCheck}`);
     return true;
 
   } catch (error: any) {
     console.warn(`⚠️ [Collaboration] URL validation failed for ${spotifyUrl}:`, error.response?.status || error.message);
     
-    // If it's a 404, the track definitely doesn't exist or isn't accessible
+    // If it's a 404, the item definitely doesn't exist or isn't accessible
     if (error.response?.status === 404) {
       return false;
     }
@@ -596,54 +665,81 @@ async function validateSpotifyUrl(spotifyUrl: string, spotifyToken: string, trac
   }
 }
 
-// Function to find alternative market URLs for a track
-async function findAlternativeMarketUrl(trackId: string, spotifyToken: string, project: any): Promise<string | null> {
+// Function to find alternative market URLs for any Spotify item (track or album)
+async function findAlternativeMarketUrl(itemId: string, spotifyToken: string, project: any): Promise<string | null> {
   try {
     const axios = (await import('axios')).default;
+    const itemType = getSpotifySearchType(project.type) === 'track' ? 'track' : 'album';
     
-    // Try different markets to find one where the track is available
+    // Try different markets to find one where the item is available
     for (const market of SPOTIFY_SEARCH_CONFIG.FALLBACK_MARKETS) {
       try {
-        console.log(`🔍 [Collaboration] Trying market ${market} for track ${trackId}`);
+        console.log(`🔍 [Collaboration] Trying market ${market} for ${itemType} ${itemId}`);
         
-        const trackResponse = await axios.get(
-          `https://api.spotify.com/v1/tracks/${trackId}`,
-          {
-            params: { market },
-            headers: {
-              'Authorization': `Bearer ${spotifyToken}`
-            }
+        const endpoint = itemType === 'track' ? 
+          `https://api.spotify.com/v1/tracks/${itemId}` :
+          `https://api.spotify.com/v1/albums/${itemId}`;
+        
+        const itemResponse = await axios.get(endpoint, {
+          params: { market },
+          headers: {
+            'Authorization': `Bearer ${spotifyToken}`
           }
-        );
+        });
 
-        const track = trackResponse.data;
+        const item = itemResponse.data;
         
-        // Check if track is playable in this market
-        if (track.is_playable !== false && !track.restrictions) {
-          const alternativeUrl = track.external_urls?.spotify;
+        // Check if item is playable in this market
+        if (item.is_playable !== false && !item.restrictions) {
+          const alternativeUrl = item.external_urls?.spotify;
           if (alternativeUrl) {
-            console.log(`✅ [Collaboration] Found playable version in market ${market}: ${alternativeUrl}`);
+            console.log(`✅ [Collaboration] Found playable ${itemType} in market ${market}: ${alternativeUrl}`);
             return alternativeUrl;
           }
         }
         
       } catch (marketError: any) {
-        console.log(`⚠️ [Collaboration] Market ${market} failed for track ${trackId}: ${marketError.response?.status || marketError.message}`);
+        console.log(`⚠️ [Collaboration] Market ${market} failed for ${itemType} ${itemId}: ${marketError.response?.status || marketError.message}`);
         continue;
       }
     }
     
-    console.log(`❌ [Collaboration] No alternative markets found for track ${trackId}`);
+    console.log(`❌ [Collaboration] No alternative markets found for ${itemType} ${itemId}`);
     return null;
     
   } catch (error: any) {
-    console.error(`❌ [Collaboration] Error finding alternative markets for track ${trackId}:`, error.message);
+    console.error(`❌ [Collaboration] Error finding alternative markets for ${itemType} ${itemId}:`, error.message);
     return null;
   }
 }
 
-// Helper function to extract track ID from Spotify URL
+// Helper function to extract Spotify item ID and type from URL
+function extractSpotifyIdAndType(spotifyUrl: string): { id: string | null; type: string | null } {
+  // Match both track and album URLs
+  const trackMatch = spotifyUrl.match(/\/track\/([a-zA-Z0-9]+)/);
+  const albumMatch = spotifyUrl.match(/\/album\/([a-zA-Z0-9]+)/);
+  
+  if (trackMatch) {
+    return { id: trackMatch[1], type: 'track' };
+  } else if (albumMatch) {
+    return { id: albumMatch[1], type: 'album' };
+  }
+  
+  return { id: null, type: null };
+}
+
+// Helper function to extract just the type from Spotify URL
+function extractSpotifyUrlType(spotifyUrl: string): string | null {
+  if (spotifyUrl.includes('/track/')) {
+    return 'track';
+  } else if (spotifyUrl.includes('/album/')) {
+    return 'album';
+  }
+  return null;
+}
+
+// Helper function to extract track ID from Spotify URL (for backwards compatibility)
 function extractTrackIdFromUrl(spotifyUrl: string): string | null {
-  const match = spotifyUrl.match(/\/track\/([a-zA-Z0-9]+)/);
-  return match ? match[1] : null;
+  const { id, type } = extractSpotifyIdAndType(spotifyUrl);
+  return type === 'track' ? id : null;
 } 
