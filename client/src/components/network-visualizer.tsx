@@ -221,10 +221,16 @@ export default function NetworkVisualizer({
       } else {
         console.log(`📊 Displaying first-degree network with ${visibleNodes.length} nodes and ${visibleLinks.length} links`);
       }
+      
+      console.log(`🔍 [DEBUG] finalDisplayData nodes count: ${finalDisplayData.nodes.length}`);
+      console.log(`🔍 [DEBUG] finalDisplayData links count: ${finalDisplayData.links.length}`);
+      console.log(`🔍 [DEBUG] isExpandedMode: ${isExpandedMode}`);
+      console.log(`🔍 [DEBUG] finalDisplayData node names:`, finalDisplayData.nodes.map(n => n.name));
+      
     } catch (error) {
       handleError(error as Error, 'data logging');
     }
-  }, [fullNetworkData, visibleNodes, visibleLinks, handleError]);
+  }, [fullNetworkData, visibleNodes, visibleLinks, finalDisplayData, isExpandedMode, handleError]);
 
   // Handle zoom controls with direct function calls
   useEffect(() => {
@@ -352,6 +358,7 @@ export default function NetworkVisualizer({
 
           {/* D3 Network Renderer Component */}
           <D3NetworkRenderer
+            key={`d3-renderer-${finalDisplayData.nodes.length}-${finalDisplayData.links.length}-${isExpandedMode}`}
             data={finalDisplayData}
             visible={visible}
             filterState={filterState}
