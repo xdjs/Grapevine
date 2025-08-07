@@ -328,8 +328,8 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
               }}
             >
               <svg 
-                width={iconSize * 0.7} 
-                height={iconSize * 0.7} 
+                width={iconSize * 0.85} 
+                height={iconSize * 0.85} 
                 viewBox="0 0 24 24" 
                 fill="none" 
                 xmlns="http://www.w3.org/2000/svg"
