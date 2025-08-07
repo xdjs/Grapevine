@@ -1,6 +1,15 @@
 import 'dotenv/config';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+// Spotify search configuration
+const SPOTIFY_SEARCH_CONFIG = {
+  MIN_CONFIDENCE_SCORE: 50,        // Minimum score to consider a match
+  HIGH_CONFIDENCE_THRESHOLD: 80,   // Score to stop searching early
+  MAX_RESULTS_PER_STRATEGY: 5,     // Results to fetch per search strategy
+  ENABLE_DETAILED_LOGGING: true,   // Enable detailed search logging
+  MARKET: 'US'                     // Spotify market for search
+};
+
 interface CollaborationDetails {
   description: string;
   projects: Array<{
@@ -272,33 +281,87 @@ Guidelines:
 
         const spotifyToken = tokenResponse.data.access_token;
         
-        // Try to find Spotify URLs for the projects
+        // Enhanced Spotify search with multiple strategies and validation
         for (const project of collaborationDetails.projects) {
           if (!project.spotifyUrl) {
             try {
-              // Search for the project on Spotify
-              const searchResponse = await axios.get(
-                'https://api.spotify.com/v1/search',
-                {
-                  params: {
-                    q: `${project.name} ${artistName} ${collaboratorName}`,
-                    type: project.type === 'song' ? 'track' : 'album',
-                    limit: 1
-                  },
-                  headers: {
-                    'Authorization': `Bearer ${spotifyToken}`
-                  }
-                }
-              );
+              console.log(`🔍 [Collaboration] Searching for: "${project.name}" by ${artistName} & ${collaboratorName}`);
+              
+              // Multiple search strategies in order of preference
+              const searchStrategies = [
+                // Strategy 1: Exact project name with primary artist
+                `"${project.name}" artist:"${artistName}"`,
+                // Strategy 2: Project name with both artists
+                `"${project.name}" "${artistName}" "${collaboratorName}"`,
+                // Strategy 3: Project name with primary artist (no quotes)
+                `${project.name} artist:${artistName}`,
+                // Strategy 4: Just the project name with some artist context
+                `${project.name} ${artistName}`,
+                // Strategy 5: Simplified search (fallback)
+                `${project.name}`,
+              ];
 
-              const items = searchResponse.data[project.type === 'song' ? 'tracks' : 'albums']?.items;
-              if (items && items.length > 0) {
-                const item = items[0];
-                project.spotifyUrl = item.external_urls?.spotify;
-                console.log(`🎵 [Collaboration] Found Spotify URL for ${project.name}: ${project.spotifyUrl}`);
+              let bestMatch = null;
+              let bestScore = 0;
+
+              for (let i = 0; i < searchStrategies.length; i++) {
+                const searchQuery = searchStrategies[i];
+                console.log(`🔍 [Collaboration] Strategy ${i + 1}: "${searchQuery}"`);
+                
+                try {
+                  const searchResponse = await axios.get(
+                    'https://api.spotify.com/v1/search',
+                    {
+                      params: {
+                        q: searchQuery,
+                        type: project.type === 'song' ? 'track' : 'album',
+                        limit: SPOTIFY_SEARCH_CONFIG.MAX_RESULTS_PER_STRATEGY,
+                        market: SPOTIFY_SEARCH_CONFIG.MARKET
+                      },
+                      headers: {
+                        'Authorization': `Bearer ${spotifyToken}`
+                      }
+                    }
+                  );
+
+                  const items = searchResponse.data[project.type === 'song' ? 'tracks' : 'albums']?.items || [];
+                  
+                  // Validate and score each result
+                  for (const item of items) {
+                    const score = validateSpotifyMatch(item, project, artistName, collaboratorName);
+                    
+                    if (SPOTIFY_SEARCH_CONFIG.ENABLE_DETAILED_LOGGING) {
+                      console.log(`🎯 [Collaboration] "${item.name}" by ${getArtistNames(item)} - Score: ${score}`);
+                    }
+                    
+                    if (score > bestScore && score >= SPOTIFY_SEARCH_CONFIG.MIN_CONFIDENCE_SCORE) {
+                      bestMatch = item;
+                      bestScore = score;
+                    }
+                  }
+
+                  // If we found a high-confidence match, stop searching
+                  if (bestScore >= SPOTIFY_SEARCH_CONFIG.HIGH_CONFIDENCE_THRESHOLD) {
+                    console.log(`✅ [Collaboration] High-confidence match found (${bestScore}), stopping search`);
+                    break;
+                  }
+                  
+                } catch (strategyError) {
+                  console.warn(`⚠️ [Collaboration] Strategy ${i + 1} failed:`, strategyError.message);
+                  continue;
+                }
               }
-            } catch (spotifyError) {
-              console.warn(`⚠️ [Collaboration] Failed to find Spotify URL for ${project.name}:`, spotifyError);
+
+              // Apply the best match if found
+              if (bestMatch && bestScore >= SPOTIFY_SEARCH_CONFIG.MIN_CONFIDENCE_SCORE) {
+                project.spotifyUrl = bestMatch.external_urls?.spotify;
+                console.log(`🎵 [Collaboration] Best match for "${project.name}": "${bestMatch.name}" (Score: ${bestScore}) - ${project.spotifyUrl}`);
+              } else {
+                console.log(`❌ [Collaboration] No suitable match found for "${project.name}" (best score: ${bestScore})`);
+              }
+
+            } catch (projectError) {
+              console.warn(`⚠️ [Collaboration] Failed to find Spotify URL for ${project.name}:`, projectError.message);
             }
           }
         }
@@ -318,4 +381,89 @@ Guidelines:
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
+} 
+
+// Helper function to validate Spotify search results
+function validateSpotifyMatch(spotifyItem: any, project: any, artistName: string, collaboratorName: string): number {
+  let score = 0;
+  const itemName = spotifyItem.name.toLowerCase();
+  const projectName = project.name.toLowerCase();
+  
+  // Get artist names from the Spotify item
+  const spotifyArtists = getArtistNames(spotifyItem).toLowerCase();
+  const artistNameLower = artistName.toLowerCase();
+  const collaboratorNameLower = collaboratorName.toLowerCase();
+  
+  // Title matching (most important factor)
+  if (itemName === projectName) {
+    score += 40; // Exact title match
+  } else if (itemName.includes(projectName) || projectName.includes(itemName)) {
+    score += 25; // Partial title match
+  } else {
+    // Check for common variations (remove parentheses, feat., etc.)
+    const cleanItemName = itemName.replace(/\s*\([^)]*\)|\s*feat\.?.*|\s*ft\.?.*|\s*featuring.*$/i, '').trim();
+    const cleanProjectName = projectName.replace(/\s*\([^)]*\)|\s*feat\.?.*|\s*ft\.?.*|\s*featuring.*$/i, '').trim();
+    
+    if (cleanItemName === cleanProjectName) {
+      score += 35; // Clean title match
+    } else if (cleanItemName.includes(cleanProjectName) || cleanProjectName.includes(cleanItemName)) {
+      score += 20; // Clean partial match
+    }
+  }
+  
+  // Artist matching
+  let artistMatches = 0;
+  if (spotifyArtists.includes(artistNameLower)) {
+    artistMatches++;
+    score += 25;
+  }
+  if (spotifyArtists.includes(collaboratorNameLower)) {
+    artistMatches++;
+    score += 25;
+  }
+  
+  // Check for common artist name variations
+  const artistWords = artistNameLower.split(/\s+/);
+  const collaboratorWords = collaboratorNameLower.split(/\s+/);
+  
+  for (const word of artistWords) {
+    if (word.length > 2 && spotifyArtists.includes(word)) {
+      score += 5;
+    }
+  }
+  
+  for (const word of collaboratorWords) {
+    if (word.length > 2 && spotifyArtists.includes(word)) {
+      score += 5;
+    }
+  }
+  
+  // Bonus for featuring/collaboration indicators
+  if (spotifyArtists.includes('feat') || spotifyArtists.includes('featuring') || spotifyArtists.includes('ft')) {
+    score += 10;
+  }
+  
+  // Penalty for too many artists (likely compilation)
+  const artistCount = spotifyItem.artists?.length || 0;
+  if (artistCount > 4) {
+    score -= 10;
+  }
+  
+  // Year matching bonus (if available)
+  if (project.year && spotifyItem.album?.release_date) {
+    const spotifyYear = new Date(spotifyItem.album.release_date).getFullYear().toString();
+    if (project.year === spotifyYear) {
+      score += 15;
+    } else if (Math.abs(parseInt(project.year) - parseInt(spotifyYear)) <= 1) {
+      score += 5; // Close year match
+    }
+  }
+  
+  return Math.max(0, score); // Ensure non-negative score
+}
+
+// Helper function to extract artist names from Spotify item
+function getArtistNames(spotifyItem: any): string {
+  if (!spotifyItem.artists) return '';
+  return spotifyItem.artists.map((artist: any) => artist.name).join(' ');
 } 
