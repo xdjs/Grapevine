@@ -51,14 +51,15 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
   
   // Detect mobile and adjust sizes accordingly
   const isMobile = window.innerWidth <= 768;
-  const maxWidth = isMobile ? '320px' : '380px';
-  const iconSize = isMobile ? 24 : 32;
-  const titleFontSize = isMobile ? '14px' : '16px';
-  const roleFontSize = isMobile ? '11px' : '12px';
-  const linkFontSize = isMobile ? '11px' : '12px';
-  const closeButtonSize = isMobile ? '20px' : '24px';
-  const paddingRight = isMobile ? '25px' : '30px';
-  const gap = isMobile ? '6px' : '8px';
+  const maxWidth = isMobile ? '280px' : '380px';
+  const iconSize = isMobile ? 18 : 32;
+  const titleFontSize = isMobile ? '13px' : '16px';
+  const roleFontSize = isMobile ? '10px' : '12px';
+  const linkFontSize = isMobile ? '10px' : '12px';
+  const closeButtonSize = isMobile ? '18px' : '24px';
+  const paddingRight = isMobile ? '20px' : '30px';
+  const gap = isMobile ? '4px' : '8px';
+  const expandIconFontSize = isMobile ? '12px' : '16px';
 
   // Check if this node is an artist (has artist role)
   const isArtist = roles.includes('artist');
@@ -133,9 +134,9 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
         background: 'rgba(0, 0, 0, 0.9)',
         color: 'white',
         borderRadius: '8px',
-        padding: '12px',
+        padding: isMobile ? '8px' : '12px',
         fontFamily: 'system-ui, -apple-system, sans-serif',
-        fontSize: '14px',
+        fontSize: isMobile ? '12px' : '14px',
         lineHeight: '1.4',
         zIndex: 1000,
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
@@ -179,7 +180,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
       </div>
       <div
         style={{
-          marginTop: '2px',
+          marginTop: isMobile ? '1px' : '2px',
           fontSize: roleFontSize,
           textAlign: 'left',
         }}
@@ -193,7 +194,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
           display: 'flex',
           flexDirection: 'column',
           gap,
-          marginTop: gap,
+          marginTop: isMobile ? '4px' : gap,
         }}
       >
         {/* Network action - always available */}
@@ -265,7 +266,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
               <span
                 style={{
                   color: 'white',
-                  fontSize: '16px',
+                  fontSize: expandIconFontSize,
                   fontWeight: 'bold',
                 }}
               >
