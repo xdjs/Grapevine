@@ -21,7 +21,11 @@
     "db:migrate": "drizzle-kit migrate",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:spotify": "node test-spotify-search.js",
+    "test:spotify-validation": "node test-spotify-url-validation.js",
+    "test:data-integrity": "node test-data-integrity.js",
+    "test:music-types": "node test-music-types.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
