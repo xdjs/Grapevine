@@ -102,13 +102,21 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
 
   // Function to expand a node's network
   const expandNodeNetwork = useCallback(async (nodeName: string, nodeId?: string) => {
-    console.log(`🔗 Expanding network for: ${nodeName}`);
+    console.log(`🔗 [DEBUG] expandNodeNetwork called for: ${nodeName}`);
     
     try {
       // Fetch the full network for this collaborator
-      const response = await fetch(`/api/network/${encodeURIComponent(nodeName)}`);
+      const url = `/api/network/${encodeURIComponent(nodeName)}`;
+      console.log(`🔗 [DEBUG] Fetching from URL: ${url}`);
+      const response = await fetch(url);
+      console.log(`🔗 [DEBUG] Response status: ${response.status}`);
+      console.log(`🔗 [DEBUG] Response ok: ${response.ok}`);
+      
       if (response.ok) {
         const collaboratorNetwork = await response.json();
+        console.log(`🔗 [DEBUG] Received collaborator network:`, collaboratorNetwork);
+        console.log(`🔗 [DEBUG] Collaborator nodes count: ${collaboratorNetwork.nodes?.length || 0}`);
+        console.log(`🔗 [DEBUG] Collaborator links count: ${collaboratorNetwork.links?.length || 0}`);
         
         // Merge the collaborator's network with the existing network
         const mergedNodes = [...data.nodes];

@@ -212,8 +212,17 @@ export function useTooltip({
   }, [callbacks.onArtistNodeClick, hideTooltip]);
 
   const handleExpandAction = useCallback(async (node: NetworkNode) => {
-    console.log(`🔗 Expanding network for ${node.name}`);
-    await networkDataHook.expandNodeNetwork(node.name, node.artistId || undefined);
+    console.log(`🔗 [DEBUG] handleExpandAction called for ${node.name}`);
+    console.log(`🔗 [DEBUG] networkDataHook:`, networkDataHook);
+    console.log(`🔗 [DEBUG] expandNodeNetwork function:`, networkDataHook.expandNodeNetwork);
+    
+    try {
+      console.log(`🔗 [DEBUG] About to call expandNodeNetwork for ${node.name}`);
+      await networkDataHook.expandNodeNetwork(node.name, node.artistId || undefined);
+      console.log(`🔗 [DEBUG] expandNodeNetwork completed for ${node.name}`);
+    } catch (error) {
+      console.error(`🔗 [DEBUG] Error in expandNodeNetwork:`, error);
+    }
     hideTooltip();
   }, [networkDataHook.expandNodeNetwork, hideTooltip]);
 
