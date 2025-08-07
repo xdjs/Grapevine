@@ -279,6 +279,8 @@ export default function D3NetworkRenderer({
 
         // Add loading spinner initially if imageUrl exists
         if (d.imageUrl) {
+          console.log(`🎯 [D3Renderer] Setting up profile image for ${d.name}: ${d.imageUrl}`);
+          
           const loadingGroup = group.append("g")
             .attr("class", "loading-spinner")
             .style("opacity", 1);
@@ -302,7 +304,10 @@ export default function D3NetworkRenderer({
             .attr("height", profileImageSize * 2)
             .attr("clip-path", `url(#${clipId})`)
             .style("opacity", 0)
-            .attr("href", d.imageUrl);
+            .attr("href", d.imageUrl)
+            .attr("crossorigin", "anonymous"); // Try to handle CORS
+
+          console.log(`🔗 [D3Renderer] Image element created for ${d.name}, waiting for load...`);
 
           // Handle image load success
           image.on("load", function() {
@@ -317,6 +322,14 @@ export default function D3NetworkRenderer({
             loadingGroup.transition().duration(300).style("opacity", 0).remove();
             d3.select(this).remove();
           });
+
+          // Add a timeout to detect if the image never loads
+          setTimeout(() => {
+            const imageElement = image.node() as SVGImageElement;
+            if (imageElement && loadingGroup.node()) {
+              console.log(`⏰ [D3Renderer] Timeout check for ${d.name} - still loading after 5s`);
+            }
+          }, 5000);
         }
       }
     })

@@ -730,6 +730,7 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
 
       // Fetch Spotify profile pictures for all nodes (separate from network generation)
       console.log(`🎵 [Vercel] Fetching Spotify profile pictures for all collaborators...`);
+      console.log(`🎵 [Vercel] Total nodes to process: ${nodes.length}`);
       try {
         // Import Spotify service
         const { spotifyService } = await import('../../server/spotify');
@@ -755,8 +756,8 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
                 // Store in database if we have an artistId
                 if (node.artistId) {
                   try {
-                    const updateQuery = 'UPDATE artists SET image_url = $1, spotify_id = $2 WHERE id = $3';
-                    await client.query(updateQuery, [spotifyData.imageUrl, spotifyData.spotifyId, node.artistId]);
+                    const updateQuery = 'UPDATE artists SET node_pfp = $1 WHERE id = $2';
+                    await client.query(updateQuery, [spotifyData.imageUrl, node.artistId]);
                     console.log(`💾 [Vercel] Stored Spotify data for ${node.name} in database`);
                   } catch (dbError) {
                     console.warn(`⚠️ [Vercel] Failed to store Spotify data for ${node.name}:`, dbError);
