@@ -53,7 +53,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
   const isMobile = window.innerWidth <= 768;
   const maxWidth = isMobile ? '280px' : '380px';
   const iconSize = isMobile ? 18 : 32;
-  // Remove separate collaboration icon size - use same as other icons
+  const collaborationIconSize = isMobile ? 10 : 14; // Even smaller for collaboration icon
   const titleFontSize = isMobile ? '13px' : '16px';
   const roleFontSize = isMobile ? '10px' : '12px';
   const linkFontSize = isMobile ? '10px' : '12px';
@@ -61,7 +61,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
   const paddingRight = isMobile ? '20px' : '30px';
   const gap = isMobile ? '4px' : '8px';
   const expandIconFontSize = isMobile ? '12px' : '16px';
-  const collaborationStrokeWidth = isMobile ? "1.5" : "2";
+  const collaborationStrokeWidth = isMobile ? "0.8" : "1";
 
   // Check if this node is an artist (has artist role)
   const isArtist = roles.includes('artist');
@@ -92,8 +92,8 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
   // Pink Users icon SVG for collaboration details
   const collaborationIconSvg = (
     <svg 
-      width={iconSize} 
-      height={iconSize} 
+      width={collaborationIconSize} 
+      height={collaborationIconSize} 
       viewBox="0 0 24 24" 
       fill="none" 
       xmlns="http://www.w3.org/2000/svg"
