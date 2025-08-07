@@ -262,6 +262,62 @@ export default function D3NetworkRenderer({
           .attr("stroke", "white")
           .attr("stroke-width", 2);
       }
+
+      // Add profile picture support for any node with an imageUrl
+      if (d.imageUrl) {
+        const profileImageSize = d.size - 4; // Leave minimal space for border
+        
+        // Create clipPath for circular image
+        const clipId = `clip-${d.id.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        group.append("defs")
+          .append("clipPath")
+          .attr("id", clipId)
+          .append("circle")
+          .attr("cx", 0)
+          .attr("cy", 0)
+          .attr("r", profileImageSize);
+
+        // Add loading spinner initially if imageUrl exists
+        if (d.imageUrl) {
+          const loadingGroup = group.append("g")
+            .attr("class", "loading-spinner")
+            .style("opacity", 1);
+          
+          // Loading spinner circle
+          loadingGroup.append("circle")
+            .attr("r", 8)
+            .attr("fill", "none")
+            .attr("stroke", "#666")
+            .attr("stroke-width", 2)
+            .attr("stroke-dasharray", "12.57")
+            .attr("stroke-linecap", "round")
+            .style("animation", "spin 1s linear infinite");
+          
+          // Add profile image (hidden initially)
+          const image = group.append("image")
+            .attr("class", "profile-image")
+            .attr("x", -profileImageSize)
+            .attr("y", -profileImageSize)
+            .attr("width", profileImageSize * 2)
+            .attr("height", profileImageSize * 2)
+            .attr("clip-path", `url(#${clipId})`)
+            .style("opacity", 0)
+            .attr("href", d.imageUrl)
+            .attr("crossorigin", "anonymous");
+
+          // Handle image load success
+          image.on("load", function() {
+            loadingGroup.transition().duration(300).style("opacity", 0).remove();
+            d3.select(this).transition().duration(300).style("opacity", 1);
+          });
+
+          // Handle image load error
+          image.on("error", function() {
+            loadingGroup.transition().duration(300).style("opacity", 0).remove();
+            d3.select(this).remove();
+          });
+        }
+      }
     })
       .on("click", function(event, d) {
         // Use the node interactions hook for click handling
@@ -305,7 +361,11 @@ export default function D3NetworkRenderer({
       .append("text")
       .attr("class", "label")
       .attr("text-anchor", "middle")
-      .attr("dy", "0.35em")
+      .attr("dy", (d) => {
+        // Position labels below nodes when they have profile pictures
+        const hasProfilePicture = Boolean(d.imageUrl);
+        return hasProfilePicture ? `${d.size + 18}px` : "0.35em";
+      })
       .attr("font-size", (d) => d.type === 'artist' ? "14px" : "11px")
       .attr("font-weight", (d) => d.type === 'artist' ? "600" : "500")
       .attr("fill", "white")

@@ -10,6 +10,8 @@ interface NetworkNode {
   size: number;
   artistId: string | null;
   collaborations?: string[];
+  imageUrl?: string | null;
+  spotifyId?: string | null;
 }
 
 interface NetworkLink {
@@ -725,6 +727,54 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
 
       // Convert nodeMap to nodes array
       const nodes = Array.from(nodeMap.values());
+
+      // Fetch Spotify profile pictures for all nodes (separate from network generation)
+      console.log(`🎵 [Vercel] Fetching Spotify profile pictures for all collaborators...`);
+      console.log(`🎵 [Vercel] Total nodes to process: ${nodes.length}`);
+      try {
+        // Import Spotify service
+        const { spotifyService } = await import('../../server/spotify');
+        
+        if (spotifyService.isConfigured()) {
+          // Fetch images for all nodes - artists, producers, and songwriters can all have Spotify profiles
+          const allNodes = nodes;
+          
+          console.log(`🎵 [Vercel] Found ${allNodes.length} nodes to fetch images for`);
+          
+          if (allNodes.length > 0) {
+            const nodeNames = allNodes.map(node => node.name);
+            const spotifyResults = await spotifyService.batchGetArtistProfileImages(nodeNames);
+            
+            // Update nodes with Spotify data
+            for (const node of allNodes) {
+              const spotifyData = spotifyResults.get(node.name);
+              if (spotifyData) {
+                node.imageUrl = spotifyData.imageUrl;
+                node.spotifyId = spotifyData.spotifyId;
+                console.log(`✅ [Vercel] Updated ${node.name} with Spotify image: ${node.imageUrl}`);
+                
+                // Store in database if we have an artistId
+                if (node.artistId) {
+                  try {
+                    const updateQuery = 'UPDATE artists SET node_pfp = $1 WHERE id = $2';
+                    await client.query(updateQuery, [spotifyData.imageUrl, node.artistId]);
+                    console.log(`💾 [Vercel] Stored Spotify data for ${node.name} in database`);
+                  } catch (dbError) {
+                    console.warn(`⚠️ [Vercel] Failed to store Spotify data for ${node.name}:`, dbError);
+                  }
+                }
+              }
+            }
+            
+            console.log(`✅ [Vercel] Spotify integration complete: ${spotifyResults.size}/${artistNames.length} images fetched`);
+          }
+        } else {
+          console.log(`⚠️ [Vercel] Spotify API not configured, skipping profile picture fetch`);
+        }
+      } catch (spotifyError) {
+        console.error(`❌ [Vercel] Spotify integration error:`, spotifyError);
+        // Continue without Spotify data - this is not a breaking error
+      }
 
       const networkData = { nodes, links };
 

@@ -31,6 +31,16 @@
   --songwriter-color: #67D1F8;    /* Light Blue */
 }
 
+/* Profile picture loading animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .dark {
   --background: hsl(0, 0%, 0%);
   --foreground: hsl(0, 0%, 100%);
