@@ -34,7 +34,7 @@ export interface SpotifyTrack {
   };
 }
 
-class SpotifyService {
+export class SpotifyService {
   private clientId: string;
   private clientSecret: string;
   private accessToken: string | null = null;
@@ -185,6 +185,116 @@ class SpotifyService {
       default:
         return sortedImages[Math.floor(sortedImages.length / 2)]?.url || sortedImages[0]?.url;
     }
+  }
+
+  /**
+   * Get artist profile image with size preference
+   * @param artistName - Name of the artist to search for
+   * @param size - Preferred image size (default: medium ~300px)
+   * @returns Object with imageUrl, spotifyId, and artist data, or null if not found
+   */
+  async getArtistProfileImage(
+    artistName: string, 
+    size: 'small' | 'medium' | 'large' = 'medium'
+  ): Promise<{
+    imageUrl: string | null;
+    spotifyId: string | null;
+    artist: SpotifyArtist | null;
+  } | null> {
+    try {
+      const artist = await this.searchArtist(artistName);
+      
+      if (!artist) {
+        console.log(`No Spotify artist found for: ${artistName}`);
+        return {
+          imageUrl: null,
+          spotifyId: null,
+          artist: null
+        };
+      }
+
+      const imageUrl = this.getArtistImageUrl(artist, size);
+      
+      return {
+        imageUrl,
+        spotifyId: artist.id,
+        artist
+      };
+    } catch (error) {
+      console.error(`Failed to get profile image for artist ${artistName}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Batch fetch profile images for multiple artists
+   * @param artistNames - Array of artist names
+   * @param size - Preferred image size
+   * @returns Map of artist name to image data
+   */
+  async batchGetArtistProfileImages(
+    artistNames: string[],
+    size: 'small' | 'medium' | 'large' = 'medium'
+  ): Promise<Map<string, {
+    imageUrl: string | null;
+    spotifyId: string | null;
+    artist: SpotifyArtist | null;
+  }>> {
+    const results = new Map();
+    
+    // Process in chunks to respect rate limits
+    const chunkSize = 10;
+    for (let i = 0; i < artistNames.length; i += chunkSize) {
+      const chunk = artistNames.slice(i, i + chunkSize);
+      
+      // Add delay between chunks to respect rate limits
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      const chunkPromises = chunk.map(async (artistName) => {
+        const result = await this.getArtistProfileImage(artistName, size);
+        return { artistName, result };
+      });
+      
+      const chunkResults = await Promise.allSettled(chunkPromises);
+      
+      chunkResults.forEach((promiseResult) => {
+        if (promiseResult.status === 'fulfilled' && promiseResult.value) {
+          const { artistName, result } = promiseResult.value;
+          results.set(artistName, result);
+        }
+      });
+    }
+    
+    return results;
+  }
+
+  /**
+   * Get optimal image URL based on preferred size
+   * Enhanced version with better size selection logic
+   */
+  getOptimalImageUrl(artist: SpotifyArtist, preferredSize: number = 300): string | null {
+    if (!artist.images || artist.images.length === 0) {
+      return null;
+    }
+
+    // Sort images by size (largest first)
+    const sortedImages = artist.images.sort((a, b) => b.width - a.width);
+    
+    // Find the image closest to our preferred size
+    let bestImage = sortedImages[0];
+    let smallestSizeDiff = Math.abs(bestImage.width - preferredSize);
+    
+    for (const image of sortedImages) {
+      const sizeDiff = Math.abs(image.width - preferredSize);
+      if (sizeDiff < smallestSizeDiff) {
+        bestImage = image;
+        smallestSizeDiff = sizeDiff;
+      }
+    }
+    
+    return bestImage.url;
   }
 
   isConfigured(): boolean {

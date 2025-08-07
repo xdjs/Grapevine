@@ -21,7 +21,8 @@
     "db:migrate": "drizzle-kit migrate",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:spotify": "tsx test-spotify-images.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
