@@ -38,6 +38,13 @@ export interface UseModalsProps {
   onArtistSelection?: (artistId: string) => void;
 }
 
+// Global modal state to persist across tab switches
+declare global {
+  interface Window {
+    grapevineModalState?: ModalState;
+  }
+}
+
 /**
  * Custom hook for managing modal states and interactions
  * Handles artist selection modal and collaboration details popup
@@ -46,92 +53,50 @@ export function useModals({
   musicNerdBaseUrl, 
   onArtistSelection 
 }: UseModalsProps = {}): ModalState & ModalActions {
+  
+  // Initialize from global state if available
+  const getInitialState = () => {
+    if (typeof window !== 'undefined' && window.grapevineModalState) {
+      console.log('🔧 [Modal] Restoring from global state:', window.grapevineModalState);
+      return window.grapevineModalState;
+    }
+    return {
+      showArtistModal: false,
+      selectedArtistName: '',
+      showCollaborationPopup: false,
+      collaborationArtist: '',
+      collaborationCollaborator: '',
+      mainArtistName: ''
+    };
+  };
+
+  const initialState = getInitialState();
+  
   // Artist Selection Modal State
-  const [showArtistModal, setShowArtistModal] = useState(false);
-  const [selectedArtistName, setSelectedArtistName] = useState('');
+  const [showArtistModal, setShowArtistModal] = useState(initialState.showArtistModal);
+  const [selectedArtistName, setSelectedArtistName] = useState(initialState.selectedArtistName);
   
   // Collaboration Details Popup State
-  const [showCollaborationPopup, setShowCollaborationPopup] = useState(false);
-  const [collaborationArtist, setCollaborationArtist] = useState('');
-  const [collaborationCollaborator, setCollaborationCollaborator] = useState('');
-  const [mainArtistName, setMainArtistName] = useState('');
+  const [showCollaborationPopup, setShowCollaborationPopup] = useState(initialState.showCollaborationPopup);
+  const [collaborationArtist, setCollaborationArtist] = useState(initialState.collaborationArtist);
+  const [collaborationCollaborator, setCollaborationCollaborator] = useState(initialState.collaborationCollaborator);
+  const [mainArtistName, setMainArtistName] = useState(initialState.mainArtistName);
 
-  // Persist modal state in sessionStorage to survive tab switches
+  // Update global state whenever modal state changes
   useEffect(() => {
-    const modalState = {
-      showArtistModal,
-      selectedArtistName,
-      showCollaborationPopup,
-      collaborationArtist,
-      collaborationCollaborator,
-      mainArtistName
-    };
-    
-    if (showArtistModal || showCollaborationPopup) {
-      sessionStorage.setItem('modalState', JSON.stringify(modalState));
-      console.log('🔧 [Modal] Persisting modal state:', modalState);
-    } else {
-      sessionStorage.removeItem('modalState');
+    if (typeof window !== 'undefined') {
+      window.grapevineModalState = {
+        showArtistModal,
+        selectedArtistName,
+        showCollaborationPopup,
+        collaborationArtist,
+        collaborationCollaborator,
+        mainArtistName
+      };
+      
+      console.log('🔧 [Modal] Updated global state:', window.grapevineModalState);
     }
   }, [showArtistModal, selectedArtistName, showCollaborationPopup, collaborationArtist, collaborationCollaborator, mainArtistName]);
-
-  // Restore modal state on component mount and page visibility changes
-  useEffect(() => {
-    const restoreModalState = () => {
-      const saved = sessionStorage.getItem('modalState');
-      if (saved) {
-        try {
-          const state = JSON.parse(saved);
-          console.log('🔧 [Modal] Restoring modal state:', state);
-          
-          if (state.showArtistModal) {
-            setShowArtistModal(true);
-            setSelectedArtistName(state.selectedArtistName || '');
-          }
-          
-          if (state.showCollaborationPopup) {
-            setShowCollaborationPopup(true);
-            setCollaborationArtist(state.collaborationArtist || '');
-            setCollaborationCollaborator(state.collaborationCollaborator || '');
-            setMainArtistName(state.mainArtistName || '');
-          }
-        } catch (error) {
-          console.error('🔧 [Modal] Error restoring modal state:', error);
-          sessionStorage.removeItem('modalState');
-        }
-      }
-    };
-
-    // Restore on mount
-    restoreModalState();
-
-    // Restore on page visibility change (tab switching back)
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        console.log('🔧 [Modal] Page became visible, checking for modal state to restore');
-        // Add a small delay to ensure page is fully loaded
-        setTimeout(() => {
-          restoreModalState();
-        }, 100);
-      }
-    };
-
-    const handlePageShow = () => {
-      console.log('🔧 [Modal] Page show event, checking for modal state to restore');
-      // Add a small delay to ensure page is fully loaded
-      setTimeout(() => {
-        restoreModalState();
-      }, 100);
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('pageshow', handlePageShow);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('pageshow', handlePageShow);
-    };
-  }, []);
 
   // Artist Modal Actions
   const openArtistModal = useCallback((artistName: string) => {
@@ -143,19 +108,14 @@ export function useModals({
     setShowArtistModal(false);
     setSelectedArtistName('');
     // Clean up persisted state when deliberately closing
-    const saved = sessionStorage.getItem('modalState');
-    if (saved) {
-      try {
-        const state = JSON.parse(saved);
-        state.showArtistModal = false;
-        state.selectedArtistName = '';
-        if (!state.showCollaborationPopup) {
-          sessionStorage.removeItem('modalState');
-        } else {
-          sessionStorage.setItem('modalState', JSON.stringify(state));
-        }
-      } catch (error) {
-        sessionStorage.removeItem('modalState');
+    if (typeof window !== 'undefined') {
+      window.grapevineModalState = {
+        ...window.grapevineModalState,
+        showArtistModal: false,
+        selectedArtistName: ''
+      };
+      if (!window.grapevineModalState.showCollaborationPopup) {
+        delete window.grapevineModalState;
       }
     }
   }, []);
@@ -178,21 +138,16 @@ export function useModals({
     setCollaborationCollaborator('');
     setMainArtistName('');
     // Clean up persisted state when deliberately closing
-    const saved = sessionStorage.getItem('modalState');
-    if (saved) {
-      try {
-        const state = JSON.parse(saved);
-        state.showCollaborationPopup = false;
-        state.collaborationArtist = '';
-        state.collaborationCollaborator = '';
-        state.mainArtistName = '';
-        if (!state.showArtistModal) {
-          sessionStorage.removeItem('modalState');
-        } else {
-          sessionStorage.setItem('modalState', JSON.stringify(state));
-        }
-      } catch (error) {
-        sessionStorage.removeItem('modalState');
+    if (typeof window !== 'undefined') {
+      window.grapevineModalState = {
+        ...window.grapevineModalState,
+        showCollaborationPopup: false,
+        collaborationArtist: '',
+        collaborationCollaborator: '',
+        mainArtistName: ''
+      };
+      if (!window.grapevineModalState.showArtistModal) {
+        delete window.grapevineModalState;
       }
     }
   }, []);
@@ -236,7 +191,9 @@ export function useModals({
     closeArtistModal();
     closeCollaborationPopup();
     // Clean up all persisted state
-    sessionStorage.removeItem('modalState');
+    if (typeof window !== 'undefined') {
+      delete window.grapevineModalState;
+    }
     console.log('🔧 [Modal] Cleared all persisted modal state');
   }, [closeArtistModal, closeCollaborationPopup]);
 

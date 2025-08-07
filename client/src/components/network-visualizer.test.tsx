@@ -675,28 +675,19 @@ describe("NetworkVisualizer Integration Tests", () => {
   });
 
   describe("Error Handling and Loading States", () => {
-    it("should render network content immediately regardless of config loading state", async () => {
-      const { rerender } = render(<NetworkVisualizer {...mockProps} />);
-
-      // Should not show loading initially since we removed loading states
-      expect(screen.queryByTestId("loading-state")).not.toBeInTheDocument();
-
-      // Simulate config loading - should still not show loading state
+    it("should show loading state during component initialization", async () => {
       const loadingConfig = {
         ...mockUseConfig,
         isLoading: true
       };
       
       vi.mocked(useConfigModule.useConfig).mockReturnValue(loadingConfig);
-      rerender(<NetworkVisualizer {...mockProps} />);
 
-      // Still no loading state since we removed it
-      expect(screen.queryByTestId("loading-state")).not.toBeInTheDocument();
+      render(<NetworkVisualizer {...mockProps} />);
 
-      // Network content should render regardless of config state
-      await waitFor(() => {
-        expect(screen.getByRole("img")).toBeInTheDocument(); // SVG should be rendered
-      });
+      expect(screen.getByTestId("loading-state")).toBeInTheDocument();
+      expect(screen.getByText("Loading configuration...")).toBeInTheDocument();
+      expect(screen.queryByRole("img")).not.toBeInTheDocument(); // SVG should not be rendered
     });
 
     it("should show error state when config fails to load", async () => {
@@ -815,7 +806,33 @@ describe("NetworkVisualizer Integration Tests", () => {
       expect(screen.getByText(/Retry \(2 attempts left\)/)).toBeInTheDocument();
     });
 
+    it("should transition from loading to success state", async () => {
+      const { rerender } = render(<NetworkVisualizer {...mockProps} />);
 
+      // Should not show loading initially since config is not loading
+      expect(screen.queryByTestId("loading-state")).not.toBeInTheDocument();
+
+      // Simulate config loading
+      const loadingConfig = {
+        ...mockUseConfig,
+        isLoading: true
+      };
+      
+      vi.mocked(useConfigModule.useConfig).mockReturnValue(loadingConfig);
+      rerender(<NetworkVisualizer {...mockProps} />);
+
+      expect(screen.getByTestId("loading-state")).toBeInTheDocument();
+
+      // Simulate config loaded successfully
+      vi.mocked(useConfigModule.useConfig).mockReturnValue(mockUseConfig);
+      rerender(<NetworkVisualizer {...mockProps} />);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("loading-state")).not.toBeInTheDocument();
+        expect(screen.queryByTestId("error-state")).not.toBeInTheDocument();
+        expect(screen.getByRole("img")).toBeInTheDocument(); // SVG should be rendered
+      });
+    });
 
     it("should handle errors in tooltip calculations gracefully", async () => {
       const tooltipActiveState = {
