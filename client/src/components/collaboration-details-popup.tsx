@@ -210,8 +210,9 @@ export default function CollaborationDetailsPopup({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className={`fixed left-0 right-0 ${isMobile ? '' : 'top-0'} bottom-0 bg-black/80 backdrop-blur-sm flex ${isMobile ? 'items-start justify-center' : 'items-center justify-center'} z-50 p-4`}
       onClick={handleOverlayClick}
+      style={isMobile ? { top: 'calc(env(safe-area-inset-top, 0px) + 56px)' } : undefined}
     >
       <div 
         className={`relative bg-black/95 backdrop-blur-sm border-2 border-purple-500/30 rounded-xl shadow-2xl w-full max-h-[90vh] ${
