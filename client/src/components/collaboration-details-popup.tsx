@@ -21,11 +21,22 @@ export default function CollaborationDetailsPopup({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Mobile detection for responsive sizing - use more aggressive detection
-  const isMobile = typeof window !== 'undefined' && (
-    window.innerWidth <= 768 || 
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-  );
+  // Reactive mobile detection that updates on window resize  
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = typeof window !== 'undefined' && (
+        window.innerWidth <= 768 || 
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      );
+      setIsMobile(mobile);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     if (isOpen && artistName && collaboratorName) {
@@ -125,7 +136,7 @@ export default function CollaborationDetailsPopup({
   };
 
   const getProjectIcon = (type: string) => {
-    const iconClass = isMobile ? "w-3 h-3" : "w-4 h-4";
+    const iconClass = isMobile ? "w-2.5 h-2.5" : "w-4 h-4"; // Even smaller mobile icons
     switch (type) {
       case 'song':
         return <Music className={iconClass} />;
@@ -192,9 +203,9 @@ export default function CollaborationDetailsPopup({
         }`}>
           <div className="flex items-center gap-3">
             <div className={`flex items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30 ${
-              isMobile ? 'w-6 h-6' : 'w-8 h-8'
+              isMobile ? 'w-5 h-5' : 'w-8 h-8'
             }`}>
-              <Users className={`text-purple-400 ${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
+              <Users className={`text-purple-400 ${isMobile ? 'h-2.5 w-2.5' : 'h-4 w-4'}`} />
             </div>
             <div>
               <h2 className={`font-semibold text-white ${
@@ -215,7 +226,7 @@ export default function CollaborationDetailsPopup({
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800"
           >
-            <X className={isMobile ? "w-5 h-5" : "w-6 h-6"} />
+            <X className={isMobile ? "w-4 h-4" : "w-6 h-6"} />
           </button>
         </div>
 
@@ -227,7 +238,7 @@ export default function CollaborationDetailsPopup({
             <div className={`flex items-center justify-center ${isMobile ? 'py-8' : 'py-12'}`}>
               <div className="flex items-center gap-3">
                 <Loader2 className={`animate-spin text-purple-400 ${
-                  isMobile ? 'w-6 h-6' : 'w-8 h-8'
+                  isMobile ? 'w-5 h-5' : 'w-8 h-8'
                 }`} />
                 <span className={`text-gray-300 ${
                   isMobile ? 'text-sm' : 'text-base'
@@ -268,7 +279,7 @@ export default function CollaborationDetailsPopup({
                   isMobile ? 'text-base' : 'text-lg'
                 }`}>
                   <Users className={`text-purple-400 ${
-                    isMobile ? 'w-3 h-3' : 'w-4 h-4'
+                    isMobile ? 'w-2.5 h-2.5' : 'w-4 h-4'
                   }`} />
                   Collaboration
                 </h3>
@@ -282,7 +293,7 @@ export default function CollaborationDetailsPopup({
                     isMobile ? 'text-base' : 'text-lg'
                   }`}>
                     <Music className={`text-purple-400 ${
-                      isMobile ? 'w-3 h-3' : 'w-4 h-4'
+                      isMobile ? 'w-2.5 h-2.5' : 'w-4 h-4'
                     }`} />
                     Projects Together
                   </h3>
@@ -318,7 +329,7 @@ export default function CollaborationDetailsPopup({
                             className="text-green-400 hover:text-green-300 transition-colors p-2 rounded-lg hover:bg-green-500/10"
                             title="Open in Spotify"
                           >
-                            <ExternalLink className={isMobile ? "w-4 h-4" : "w-5 h-5"} />
+                            <ExternalLink className={isMobile ? "w-3 h-3" : "w-5 h-5"} />
                           </a>
                         )}
                       </div>
@@ -343,7 +354,7 @@ export default function CollaborationDetailsPopup({
               {(!details.projects || details.projects.length === 0) && (
                 <div className={`text-center text-gray-400 ${isMobile ? 'py-8' : 'py-12'}`}>
                   <Music className={`mx-auto mb-4 text-gray-600 ${
-                    isMobile ? 'w-6 h-6' : 'w-8 h-8'
+                    isMobile ? 'w-5 h-5' : 'w-8 h-8'
                   }`} />
                   <p className={isMobile ? 'text-base' : 'text-lg'}>No specific collaboration projects found between these artists.</p>
                   <p className={`text-gray-500 mt-2 ${

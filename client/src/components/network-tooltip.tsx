@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { NetworkNode } from '@/types/network';
 
 export interface NetworkTooltipProps {
@@ -49,13 +49,25 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
   const roles = node.types || [node.type];
   const roleDisplay = roles.length > 1 ? roles.join(', ') : roles[0];
   
-  // Detect mobile and adjust sizes accordingly - use more aggressive mobile detection
-  const isMobile = typeof window !== 'undefined' && (
-    window.innerWidth <= 768 || 
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-  );
+  // Reactive mobile detection that updates on window resize
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = typeof window !== 'undefined' && (
+        window.innerWidth <= 768 || 
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      );
+      setIsMobile(mobile);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const maxWidth = isMobile ? '320px' : '380px';
-  const iconSize = isMobile ? 18 : 32; // Even smaller for mobile to ensure no overlap
+  const iconSize = isMobile ? 14 : 32; // Much smaller icons on mobile
   const titleFontSize = isMobile ? '14px' : '16px';
   const roleFontSize = isMobile ? '11px' : '12px';
   const linkFontSize = isMobile ? '11px' : '12px';
