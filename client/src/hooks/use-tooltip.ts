@@ -215,6 +215,10 @@ export function useTooltip({
 
   const handleExpandAction = useCallback(async (node: NetworkNode) => {
     console.log(`🔗 Expanding network for ${node.name}`);
+    if (isExpandLoading) {
+      console.log(`⏳ Expand already in progress, ignoring click for ${node.name}`);
+      return;
+    }
     try {
       setIsExpandLoading(true);
       await networkDataHook.expandNodeNetwork(node.name, node.artistId);
@@ -222,7 +226,7 @@ export function useTooltip({
       setIsExpandLoading(false);
     }
     hideTooltip();
-  }, [networkDataHook.expandNodeNetwork, hideTooltip]);
+  }, [networkDataHook.expandNodeNetwork, hideTooltip, isExpandLoading]);
 
   const handleProfileAction = useCallback(async (node: NetworkNode) => {
     console.log(`🎵 [Frontend] openMusicNerdProfile called for "${node.name}" with artistId: ${node.artistId}`);
