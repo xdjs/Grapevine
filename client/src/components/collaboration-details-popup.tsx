@@ -373,24 +373,17 @@ export default function CollaborationDetailsPopup({
                         </div>
                         {project.spotifyUrl && (
                           <div className="ml-auto">
-                            <a
-                              href={project.spotifyUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`inline-flex items-center transition-colors rounded-md ${
-                                isMobile ? 'gap-1 px-2 py-1 text-green-400 hover:text-green-300' : 'p-2 text-green-400 hover:text-green-300 hover:bg-green-500/10'
-                              }`}
-                              title="Open on Spotify"
-                            >
-                              {isMobile ? (
-                                <>
-                                  <span className="text-xs font-medium">Spotify</span>
-                                  <ArrowUpRight className="w-3.5 h-3.5" style={{ minWidth: 14, minHeight: 14, maxWidth: 14, maxHeight: 14 }} />
-                                </>
-                              ) : (
+                            {!isMobile && (
+                              <a
+                                href={project.spotifyUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center p-2 rounded-md text-green-400 hover:text-green-300 hover:bg-green-500/10 transition-colors"
+                                title="Open on Spotify"
+                              >
                                 <ExternalLink className="w-5 h-5" style={{ minWidth: 20, minHeight: 20, maxWidth: 20, maxHeight: 20 }} />
-                              )}
-                            </a>
+                              </a>
+                            )}
                           </div>
                         )}
                       </div>
