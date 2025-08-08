@@ -137,23 +137,27 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       // Normalize helper
       const getId = (end: string | { id: string }) => (typeof end === 'string' ? end : end.id);
 
-      // Determine identifiers that represent the clicked node within the collaborator network
-      const clickedIdentifiers = new Set<string>();
-      if (nodeName) clickedIdentifiers.add(nodeName);
-      if (nodeId) clickedIdentifiers.add(nodeId);
-      // Try to resolve collaborator network node id by name
-      const clickedFromReturned = returnedNodeByKey.get(nodeName);
-      if (clickedFromReturned) clickedIdentifiers.add(clickedFromReturned.id);
+      // Determine canonical identifier for the clicked node inside the collaborator network
+      let clickedCanonicalId: string | undefined;
+      // Prefer exact id match when provided
+      if (nodeId && returnedNodeByKey.has(nodeId)) {
+        clickedCanonicalId = nodeId;
+      }
+      // Fallback: match by name
+      if (!clickedCanonicalId) {
+        const byName = returnedNodeByKey.get(nodeName);
+        if (byName) clickedCanonicalId = byName.id;
+      }
+      // Last resort: use provided id or name directly
+      if (!clickedCanonicalId) clickedCanonicalId = nodeId || nodeName;
 
       // Find direct neighbors of the clicked node in the collaborator's network
       const neighborIds: string[] = [];
       for (const link of collaboratorNetwork.links) {
         const s = getId(link.source as any);
         const t = getId(link.target as any);
-        const sIsClicked = clickedIdentifiers.has(s);
-        const tIsClicked = clickedIdentifiers.has(t);
-        if (sIsClicked || tIsClicked) {
-          const neighborId = sIsClicked ? t : s;
+        if (s === clickedCanonicalId || t === clickedCanonicalId) {
+          const neighborId = s === clickedCanonicalId ? t : s;
           if (!neighborIds.includes(neighborId)) neighborIds.push(neighborId);
         }
       }
@@ -189,9 +193,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       for (const link of collaboratorNetwork.links) {
         const s = getId(link.source as any);
         const t = getId(link.target as any);
-        const sIsClicked = clickedIdentifiers.has(s);
-        const tIsClicked = clickedIdentifiers.has(t);
-        const connectsClicked = (sIsClicked && selectedNeighborIds.includes(t)) || (tIsClicked && selectedNeighborIds.includes(s));
+        const connectsClicked = (s === clickedCanonicalId && selectedNeighborIds.includes(t)) || (t === clickedCanonicalId && selectedNeighborIds.includes(s));
         if (!connectsClicked) continue;
         const key = `${s}->${t}`;
         if (!existingLinkKeys.has(key)) {
@@ -205,7 +207,12 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       setExpandedNodes(prev => new Set([...prev, nodeName]));
       setIsExpandedMode(true);
 
-      console.log(`✅ Expanded ${nodeName}: added up to 3 collaborators (actual added nodes: ${mergedNodes.length - baseData.nodes.length}, links: ${mergedLinks.length - baseData.links.length})`);
+      const addedNodeCount = mergedNodes.length - baseData.nodes.length;
+      const addedLinkCount = mergedLinks.length - baseData.links.length;
+      const neighborNames = selectedNeighborIds
+        .map(id => returnedNodeByKey.get(id)?.name || id)
+        .slice(0, 3);
+      console.log(`✅ Expanded ${nodeName} [canonicalId=${clickedCanonicalId}]: added up to 3 collaborators -> [${neighborNames.join(', ')}] (nodes: ${addedNodeCount}, links: ${addedLinkCount})`);
     } catch (error) {
       console.error(`❌ Error expanding network for ${nodeName}:`, error);
     }
