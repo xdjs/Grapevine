@@ -49,10 +49,13 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
   const roles = node.types || [node.type];
   const roleDisplay = roles.length > 1 ? roles.join(', ') : roles[0];
   
-  // Detect mobile and adjust sizes accordingly
-  const isMobile = window.innerWidth <= 768;
+  // Detect mobile and adjust sizes accordingly - use more aggressive mobile detection
+  const isMobile = typeof window !== 'undefined' && (
+    window.innerWidth <= 768 || 
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  );
   const maxWidth = isMobile ? '320px' : '380px';
-  const iconSize = isMobile ? 20 : 32;
+  const iconSize = isMobile ? 18 : 32; // Even smaller for mobile to ensure no overlap
   const titleFontSize = isMobile ? '14px' : '16px';
   const roleFontSize = isMobile ? '11px' : '12px';
   const linkFontSize = isMobile ? '11px' : '12px';

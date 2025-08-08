@@ -21,8 +21,11 @@ export default function CollaborationDetailsPopup({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Mobile detection for responsive sizing
-  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  // Mobile detection for responsive sizing - use more aggressive detection
+  const isMobile = typeof window !== 'undefined' && (
+    window.innerWidth <= 768 || 
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  );
 
   useEffect(() => {
     if (isOpen && artistName && collaboratorName) {
