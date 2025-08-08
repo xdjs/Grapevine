@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, Music, Disc3, Mic2, Users, Loader2 } from 'lucide-react';
+import { X, ExternalLink, Music, Disc3, Mic2, Users, Loader2, Share2 } from 'lucide-react';
 import { CollaborationDetails } from '@/types/network';
 
 interface CollaborationDetailsPopupProps {
@@ -336,17 +336,32 @@ export default function CollaborationDetailsPopup({
                           </div>
                         </div>
                         {project.spotifyUrl && (
-                          <a
-                            href={project.spotifyUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-green-400 hover:text-green-300 transition-colors p-2 rounded-lg hover:bg-green-500/10"
-                            title="Open in Spotify"
-                          >
-                            <ExternalLink className={`flex-shrink-0 ${
-                              isMobile ? "w-2.5 h-2.5 min-w-2.5 min-h-2.5 max-w-2.5 max-h-2.5" : "w-5 h-5 min-w-5 min-h-5 max-w-5 max-h-5"
-                            }`} />
-                          </a>
+                          <>
+                            {/* Desktop: keep existing external link icon */}
+                            {!isMobile && (
+                              <a
+                                href={project.spotifyUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-green-400 hover:text-green-300 transition-colors p-2 rounded-lg hover:bg-green-500/10"
+                                title="Open in Spotify"
+                              >
+                                <ExternalLink className="w-5 h-5 min-w-5 min-h-5 max-w-5 max-h-5" />
+                              </a>
+                            )}
+                            {/* Mobile: replace with a new Share icon */}
+                            {isMobile && (
+                              <a
+                                href={project.spotifyUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 rounded-full bg-gray-800/80 border border-gray-700 text-white hover:bg-gray-700/80"
+                                title="Open on Spotify"
+                              >
+                                <Share2 className="w-4 h-4" />
+                              </a>
+                            )}
+                          </>
                         )}
                       </div>
                     ))}
