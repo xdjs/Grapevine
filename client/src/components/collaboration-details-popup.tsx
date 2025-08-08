@@ -188,7 +188,7 @@ export default function CollaborationDetailsPopup({
       onClick={handleOverlayClick}
     >
       <div 
-        className={`bg-black/95 backdrop-blur-sm border-2 border-purple-500/30 rounded-xl shadow-2xl w-full max-h-[90vh] overflow-hidden text-white ${
+        className={`relative bg-black/95 backdrop-blur-sm border-2 border-purple-500/30 rounded-xl shadow-2xl w-full max-h-[90vh] overflow-hidden text-white ${
           isMobile ? 'max-w-sm mx-2' : 'max-w-2xl'
         }`}
         style={{
@@ -202,7 +202,7 @@ export default function CollaborationDetailsPopup({
           isMobile ? 'p-4' : 'p-6'
         }`}>
           <div className="flex items-center gap-3">
-{!isMobile && (
+            {!isMobile && (
               <div className="flex items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30 flex-shrink-0 w-8 h-8 min-w-8 min-h-8 max-w-8 max-h-8">
                 <Users className="text-purple-400 flex-shrink-0 h-4 w-4 min-h-4 min-w-4 max-h-4 max-w-4" />
               </div>
@@ -222,13 +222,25 @@ export default function CollaborationDetailsPopup({
               </p>
             </div>
           </div>
+          {/* Desktop close button (hidden on mobile) */}
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800"
+            className={`text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800 ${isMobile ? 'hidden' : ''}`}
           >
             <X className={isMobile ? "w-4 h-4" : "w-6 h-6"} />
           </button>
         </div>
+
+        {/* Mobile close button - absolute top-right inside the popup */}
+        {isMobile && (
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="absolute top-2 right-2 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-gray-800/80 hover:bg-gray-700/80 border border-gray-700 text-white"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Content */}
         <div className={`overflow-y-auto max-h-[calc(90vh-120px)] ${
