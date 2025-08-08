@@ -728,52 +728,28 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
       // Convert nodeMap to nodes array
       const nodes = Array.from(nodeMap.values());
 
-      // Fetch Spotify profile pictures for all nodes (separate from network generation)
-      console.log(`🎵 [Vercel] Fetching Spotify profile pictures for all collaborators...`);
-      console.log(`🎵 [Vercel] Total nodes to process: ${nodes.length}`);
+      // Profile picture fetching is now handled by separate API endpoint
+      // Check database cache for existing profile pictures
+      console.log(`🖼️ [Vercel] Checking cached profile pictures for ${nodes.length} nodes...`);
       try {
-        // Import Spotify service
-        const { spotifyService } = await import('../../server/spotify');
-        
-        if (spotifyService.isConfigured()) {
-          // Fetch images for all nodes - artists, producers, and songwriters can all have Spotify profiles
-          const allNodes = nodes;
-          
-          console.log(`🎵 [Vercel] Found ${allNodes.length} nodes to fetch images for`);
-          
-          if (allNodes.length > 0) {
-            const nodeNames = allNodes.map(node => node.name);
-            const spotifyResults = await spotifyService.batchGetArtistProfileImages(nodeNames);
+        for (const node of nodes) {
+          if (node.artistId) {
+            const cacheQuery = 'SELECT node_pfp, spotify_id FROM artists WHERE id = $1 AND node_pfp IS NOT NULL';
+            const cacheResult = await client.query(cacheQuery, [node.artistId]);
             
-            // Update nodes with Spotify data
-            for (const node of allNodes) {
-              const spotifyData = spotifyResults.get(node.name);
-              if (spotifyData) {
-                node.imageUrl = spotifyData.imageUrl;
-                node.spotifyId = spotifyData.spotifyId;
-                console.log(`✅ [Vercel] Updated ${node.name} with Spotify image: ${node.imageUrl}`);
-                
-                // Store in database if we have an artistId
-                if (node.artistId) {
-                  try {
-                    const updateQuery = 'UPDATE artists SET node_pfp = $1 WHERE id = $2';
-                    await client.query(updateQuery, [spotifyData.imageUrl, node.artistId]);
-                    console.log(`💾 [Vercel] Stored Spotify data for ${node.name} in database`);
-                  } catch (dbError) {
-                    console.warn(`⚠️ [Vercel] Failed to store Spotify data for ${node.name}:`, dbError);
-                  }
-                }
-              }
+            if (cacheResult.rows.length > 0 && cacheResult.rows[0].node_pfp) {
+              node.imageUrl = cacheResult.rows[0].node_pfp;
+              node.spotifyId = cacheResult.rows[0].spotify_id;
+              console.log(`✅ [Vercel] Loaded cached image for ${node.name}: ${node.imageUrl}`);
             }
-            
-            console.log(`✅ [Vercel] Spotify integration complete: ${spotifyResults.size}/${artistNames.length} images fetched`);
           }
-        } else {
-          console.log(`⚠️ [Vercel] Spotify API not configured, skipping profile picture fetch`);
         }
-      } catch (spotifyError) {
-        console.error(`❌ [Vercel] Spotify integration error:`, spotifyError);
-        // Continue without Spotify data - this is not a breaking error
+        
+        const cachedImageCount = nodes.filter(n => n.imageUrl).length;
+        console.log(`📦 [Vercel] Profile picture cache check complete: ${cachedImageCount}/${nodes.length} images loaded from cache`);
+      } catch (cacheError) {
+        console.warn(`⚠️ [Vercel] Failed to check profile picture cache:`, cacheError);
+        // Continue without cached images - this is not a breaking error
       }
 
       const networkData = { nodes, links };
@@ -794,7 +770,16 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
       await client.end();
       console.log(`✅ [Vercel] Generated network with ${nodes.length} nodes for ${artistName}`);
       
-      res.json(networkData);
+      // Return network data with note about separate profile picture API
+      const response = {
+        ...networkData,
+        _metadata: {
+          profilePicturesAPI: '/api/artist-profile-pictures-batch',
+          profilePicturesNote: 'Profile pictures should be fetched separately using the batch API for better performance'
+        }
+      };
+      
+      res.json(response);
       
     } catch (dbError) {
       console.error('❌ [Vercel] Database/OpenAI error:', dbError);
