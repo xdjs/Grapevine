@@ -202,7 +202,23 @@ export default function D3NetworkRenderer({
       .data(nodes)
       .enter()
       .append("g")
-      .attr("class", (d) => `node-group network-node node-${d.type}`)
+      .attr("class", (d) => {
+        const roles = d.types || [d.type];
+        const hasImage = Boolean(d.imageUrl);
+        const isMultiRole = roles.length > 1;
+        
+        let classes = `node-group network-node node-${d.type}`;
+        
+        if (hasImage) {
+          classes += " node-with-image";
+        }
+        
+        if (isMultiRole) {
+          classes += " node-multi-role";
+        }
+        
+        return classes;
+      })
       .style("cursor", "pointer");
 
     // Add circles for each node - single color for single role, multi-colored for multiple roles
@@ -293,9 +309,9 @@ export default function D3NetworkRenderer({
             .attr("stroke-linecap", "round")
             .style("animation", "spin 1s linear infinite");
           
-          // Add profile image (hidden initially)
+          // Add profile image (hidden initially with loading class)
           const image = group.append("image")
-            .attr("class", "profile-image")
+            .attr("class", "profile-image profile-image-loading")
             .attr("x", -profileImageSize)
             .attr("y", -profileImageSize)
             .attr("width", profileImageSize * 2)
@@ -303,18 +319,49 @@ export default function D3NetworkRenderer({
             .attr("clip-path", `url(#${clipId})`)
             .style("opacity", 0)
             .attr("href", d.imageUrl)
-            .attr("crossorigin", "anonymous");
+            .attr("crossorigin", "anonymous")
+            .attr("alt", `Profile picture of ${d.name}`)
+            .attr("role", "img")
+            .attr("aria-label", `Profile picture of ${d.name}`);
 
           // Handle image load success
           image.on("load", function() {
-            loadingGroup.transition().duration(300).style("opacity", 0).remove();
-            d3.select(this).transition().duration(300).style("opacity", 1);
+            const imageElement = d3.select(this);
+            
+            // Update classes and trigger fade-in animation
+            imageElement
+              .classed("profile-image-loading", false)
+              .classed("profile-image-loaded", true);
+            
+            // Remove loading spinner with transition
+            loadingGroup.transition()
+              .duration(300)
+              .style("opacity", 0)
+              .on("end", function() { loadingGroup.remove(); });
+            
+            // Fade in the image with smooth transition
+            imageElement.transition()
+              .duration(500)
+              .ease(d3.easeOutCubic)
+              .style("opacity", 1);
           });
 
           // Handle image load error
           image.on("error", function() {
-            loadingGroup.transition().duration(300).style("opacity", 0).remove();
-            d3.select(this).remove();
+            const imageElement = d3.select(this);
+            
+            // Update classes for error state
+            imageElement
+              .classed("profile-image-loading", false)
+              .classed("profile-image-error", true);
+            
+            // Remove loading spinner and image
+            loadingGroup.transition()
+              .duration(300)
+              .style("opacity", 0)
+              .on("end", function() { loadingGroup.remove(); });
+            
+            imageElement.remove();
           });
         }
       }
