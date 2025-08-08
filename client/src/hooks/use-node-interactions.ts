@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { NetworkNode, NetworkLink } from '@/types/network';
 import { UseTooltipReturn } from './use-tooltip';
@@ -23,8 +23,10 @@ export interface UseNodeInteractionsReturn {
   handleNodeClick: (event: MouseEvent, node: NetworkNode, nodeElement: SVGGElement) => void;
   /** Setup drag behavior on a D3 selection */
   setupDragBehavior: (selection: d3.Selection<SVGGElement, NetworkNode, d3.BaseType, unknown>) => void;
-  /** Reset node highlighting back to original colors */
-  resetNodeHighlight: () => void;
+  /** Currently selected node element */
+  selectedNode: d3.Selection<SVGGElement, unknown, null, undefined> | null;
+  /** Reset all node selections */
+  resetAllSelections: () => void;
 }
 
 /**
@@ -37,52 +39,84 @@ export function useNodeInteractions({
   visible,
 }: UseNodeInteractionsParams): UseNodeInteractionsReturn {
   
-  // Track currently highlighted node for direct manipulation
-  const currentlyHighlightedNodeRef = useRef<{
-    selection: d3.Selection<SVGGElement, unknown, null, undefined>;
-    nodeData: NetworkNode;
-  } | null>(null);
+  // State for tracking the currently selected node
+  const [selectedNode, setSelectedNode] = useState<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
   
   /**
-   * Reset node highlighting back to original colors.
-   * Handles both single-role and multi-role nodes appropriately.
+   * Reset the currently selected node back to its original styling
    */
-  const resetNodeHighlight = useCallback(() => {
-    const currentlyHighlighted = currentlyHighlightedNodeRef.current;
-    if (!currentlyHighlighted) return;
-
-    const { selection, nodeData } = currentlyHighlighted;
-    const roles = nodeData.types || [nodeData.type];
-
-    console.log(`🔄 Resetting highlight for: ${nodeData.name}`);
-
+  const resetNodeSelection = useCallback((nodeSelection: d3.Selection<SVGGElement, unknown, null, undefined>) => {
+    if (!nodeSelection || nodeSelection.empty()) return;
+    
     try {
+      const nodeData = nodeSelection.datum() as NetworkNode;
+      const roles = nodeData.types || [nodeData.type];
+      
       if (roles.length === 1) {
         // Single role - reset to original stroke color and width
-        selection.selectAll('circle')
-          .attr('stroke', () => {
+        nodeSelection.selectAll("circle")
+          .attr("stroke", () => {
             if (roles[0] === 'artist') return '#FF0ACF';       // Magenta Pink
             if (roles[0] === 'producer') return '#AE53FF';     // Bright Purple  
             if (roles[0] === 'songwriter') return '#67D1F8';   // Light Blue
-            return '#355367';  // Police Blue (default)
+            return '#355367';  // Police Blue
           })
-          .attr('stroke-width', 4);
+          .attr("stroke-width", 4);
       } else {
-        // Multiple roles - reset path strokes and inner circle to original white
-        selection.selectAll('path')
-          .attr('stroke', 'white')
-          .attr('stroke-width', 1);
+        // Multiple roles - reset path strokes and inner circle
+        nodeSelection.selectAll("path")
+          .attr("stroke", "white")
+          .attr("stroke-width", 1);
         
-        selection.selectAll('circle')
-          .attr('stroke', 'white')
-          .attr('stroke-width', 2);
+        nodeSelection.selectAll("circle")
+          .attr("stroke", "white")
+          .attr("stroke-width", 2);
       }
     } catch (error) {
-      console.error('🔄 Error resetting node highlight:', error);
+      console.error('🎯 Error resetting node selection:', error);
     }
-
-    // Clear the highlighted node reference
-    currentlyHighlightedNodeRef.current = null;
+  }, []);
+  
+  /**
+   * Reset all node selections
+   */
+  const resetAllSelections = useCallback(() => {
+    if (selectedNode && !selectedNode.empty()) {
+      resetNodeSelection(selectedNode);
+      setSelectedNode(null);
+    }
+  }, [selectedNode, resetNodeSelection]);
+  
+  /**
+   * Apply white stroke highlighting to a selected node
+   */
+  const applySelectionHighlight = useCallback((nodeSelection: d3.Selection<SVGGElement, unknown, null, undefined>) => {
+    if (!nodeSelection || nodeSelection.empty()) return;
+    
+    try {
+      const nodeData = nodeSelection.datum() as NetworkNode;
+      const roles = nodeData.types || [nodeData.type];
+      
+      if (roles.length === 1) {
+        // Single role - apply white stroke
+        nodeSelection.selectAll("circle")
+          .attr("stroke", "white")
+          .attr("stroke-width", 3);
+      } else {
+        // Multiple roles - apply white stroke to both paths and inner circle
+        nodeSelection.selectAll("path")
+          .attr("stroke", "white")
+          .attr("stroke-width", 3);
+        
+        nodeSelection.selectAll("circle")
+          .attr("stroke", "white")
+          .attr("stroke-width", 3);
+      }
+      
+      console.log(`✨ Applied white stroke selection to: ${nodeData.name}`);
+    } catch (error) {
+      console.error('🎯 Error applying selection highlight:', error);
+    }
   }, []);
   
   /**
@@ -155,13 +189,7 @@ export function useNodeInteractions({
 
   /**
    * Handles node click events and coordinates with the tooltip system.
-   * Manages highlighting and tooltip display with enhanced visual feedback.
-   * 
-   * Click Selection Mechanism:
-   * 1. Reset any previously selected node back to original colors
-   * 2. Apply white stroke highlighting to the clicked node
-   * 3. Handle both single-role and multi-role nodes appropriately
-   * 4. Show tooltip with interaction options
+   * Manages highlighting and tooltip display with improved selection mechanism.
    */
   const handleNodeClick = useCallback(
     (event: MouseEvent, node: NetworkNode, nodeElement: SVGGElement) => {
@@ -170,44 +198,35 @@ export function useNodeInteractions({
         
         if (!visible) return;
         
-        // Reset previous node highlighting to original colors
-        resetNodeHighlight();
-        
-        // Apply white stroke highlighting to the current node
         const currentNodeSelection = d3.select(nodeElement);
         
-        // The white stroke effect provides visual feedback that:
-        // - The node is currently selected
-        // - Provides contrast against colored backgrounds  
-        // - Prepares to show tooltip with interaction options
-        currentNodeSelection.selectAll("circle, path")
-          .attr("stroke", "white")
-          .attr("stroke-width", 3)
-          .style("stroke-opacity", 1);
+        // Reset any previously selected node back to original colors
+        if (selectedNode && !selectedNode.empty()) {
+          resetNodeSelection(selectedNode);
+        }
         
-        // Track this node as highlighted for reset mechanism
-        currentlyHighlightedNodeRef.current = {
-          selection: currentNodeSelection,
-          nodeData: node
-        };
+        // Reset tooltip highlighting (this is separate from selection highlighting)
+        tooltip.resetNodeHighlight();
+        
+        // Apply white stroke selection highlighting to the current node
+        applySelectionHighlight(currentNodeSelection);
+        
+        // Track this node as selected
+        setSelectedNode(currentNodeSelection);
+        
+        // Track this node as highlighted for tooltip system
+        tooltip.setHighlightedNode(currentNodeSelection);
         
         // Show tooltip using the tooltip system
         tooltip.showTooltip(event, node);
         
-        console.log(`🎯 Node clicked: ${node.name} (${node.type})`);
-        
-        // Log multi-role node information for debugging
-        const roles = node.types || [node.type];
-        if (roles.length > 1) {
-          console.log(`🎭 Multi-role node selected: ${node.name} has roles [${roles.join(', ')}]`);
-        }
-        
+        console.log(`🎯 Node selected: ${node.name} (${node.type}) - white stroke applied`);
       } catch (error) {
         console.error('🎯 Error handling node click:', error);
         // Continue execution - don't let errors break the interaction
       }
     },
-    [resetNodeHighlight, tooltip, visible]
+    [tooltip, visible, selectedNode, resetNodeSelection, applySelectionHighlight]
   );
 
   /**
@@ -239,6 +258,7 @@ export function useNodeInteractions({
     dragended,
     handleNodeClick,
     setupDragBehavior,
-    resetNodeHighlight,
+    selectedNode,
+    resetAllSelections,
   };
 }
