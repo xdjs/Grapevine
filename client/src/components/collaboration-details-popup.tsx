@@ -247,16 +247,32 @@ export default function CollaborationDetailsPopup({
           isMobile ? 'p-4' : 'p-6'
         }`}>
           {loading && (
-            <div className={`flex items-center justify-center ${isMobile ? 'py-8' : 'py-12'}`}>
-              <div className="flex items-center gap-3">
-                <Loader2 className={`animate-spin text-purple-400 ${
-                  isMobile ? 'w-5 h-5' : 'w-8 h-8'
-                }`} />
-                <span className={`text-gray-300 ${
-                  isMobile ? 'text-sm' : 'text-base'
-                }`}>Loading collaboration details...</span>
-              </div>
-            </div>
+            <>
+              {isMobile ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex items-center gap-4">
+                    {/* Ring spinner styled like the mock */}
+                    <div
+                      aria-label="Loading"
+                      className="rounded-full border-4 border-purple-400/30 border-t-purple-400 animate-spin"
+                      style={{ width: 64, height: 64 }}
+                    />
+                    <div className="text-left">
+                      <div className="text-gray-300 text-base font-medium">Loading</div>
+                      <div className="text-gray-300 text-base">collaboration</div>
+                      <div className="text-gray-300 text-base">details...</div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className={`flex items-center justify-center py-12`}>
+                  <div className="flex items-center gap-3">
+                    <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
+                    <span className="text-gray-300 text-base">Loading collaboration details...</span>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {error && (
