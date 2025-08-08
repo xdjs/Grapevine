@@ -338,7 +338,7 @@ export default function CollaborationDetailsPopup({
                   isMobile ? 'text-base' : 'text-lg'
                 }`}>
                   {isMobile ? (
-                    <span className="text-purple-400"><MobileUsersIcon /></span>
+                    <span className="text-purple-400" aria-hidden>•</span>
                   ) : (
                     <Users className="text-purple-400 flex-shrink-0 w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4" />
                   )}
@@ -354,7 +354,7 @@ export default function CollaborationDetailsPopup({
                     isMobile ? 'text-base' : 'text-lg'
                   }`}>
                     {isMobile ? (
-                      <span className="text-purple-400"><MobileMusicIcon /></span>
+                      <span className="text-purple-400" aria-hidden>•</span>
                     ) : (
                       <Music className="text-purple-400 flex-shrink-0 w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4" />
                     )}
@@ -370,7 +370,7 @@ export default function CollaborationDetailsPopup({
                       >
                         <div className="flex items-center space-x-3">
                           {isMobile ? (
-                            <span className="text-purple-400"><MobileMusicIcon /></span>
+                            <span className="text-purple-400" aria-hidden>•</span>
                           ) : (
                             <div className="text-purple-400">{getProjectIcon(project.type)}</div>
                           )}
@@ -393,11 +393,10 @@ export default function CollaborationDetailsPopup({
                                 href={project.spotifyUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-green-400 hover:text-green-300 transition-colors"
+                                className="inline-flex items-center px-2 py-1 rounded-md text-green-400 hover:text-green-300 underline text-xs"
                                 title="Open on Spotify"
                               >
-                                <span className="text-xs font-medium">Spotify</span>
-                                <span className="inline-flex"><MobileExternalIcon /></span>
+                                Spotify
                               </a>
                             ) : (
                               <a
