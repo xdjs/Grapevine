@@ -202,16 +202,11 @@ export default function CollaborationDetailsPopup({
           isMobile ? 'p-4' : 'p-6'
         }`}>
           <div className="flex items-center gap-3">
-            <div
-              className={`flex items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30 flex-shrink-0 ${
-                isMobile ? 'w-6 h-6 min-w-6 min-h-6 max-w-6 max-h-6' : 'w-8 h-8 min-w-8 min-h-8 max-w-8 max-h-8'
-              }`}
-            >
-              <Users
-                className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} text-purple-400`}
-                style={{ minWidth: isMobile ? 12 : 16, minHeight: isMobile ? 12 : 16, maxWidth: isMobile ? 12 : 16, maxHeight: isMobile ? 12 : 16 }}
-              />
-            </div>
+            {!isMobile && (
+              <div className="flex items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30 flex-shrink-0 w-8 h-8 min-w-8 min-h-8 max-w-8 max-h-8">
+                <Users className="text-purple-400 flex-shrink-0 h-4 w-4 min-h-4 min-w-4 max-h-4 max-w-4" />
+              </div>
+            )}
             <div>
               <h2 className={`font-semibold text-white ${
                 isMobile ? 'text-lg' : 'text-xl'
@@ -311,10 +306,16 @@ export default function CollaborationDetailsPopup({
                 <h3 className={`font-medium text-white mb-3 flex items-center gap-2 ${
                   isMobile ? 'text-base' : 'text-lg'
                 }`}>
-                  <Users
-                    className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} text-purple-400 flex-shrink-0`}
-                    style={{ minWidth: isMobile ? 12 : 16, minHeight: isMobile ? 12 : 16, maxWidth: isMobile ? 12 : 16, maxHeight: isMobile ? 12 : 16 }}
-                  />
+                  {/* Desktop keeps icon; Mobile uses a small accent dot to avoid oversized icons */}
+                  {isMobile ? (
+                    <span
+                      aria-hidden
+                      className="inline-block rounded-full"
+                      style={{ width: 6, height: 6, backgroundColor: '#a855f7' }}
+                    />
+                  ) : (
+                    <Users className="text-purple-400 flex-shrink-0 w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4" />
+                  )}
                   Collaboration
                 </h3>
                 <p className="text-gray-300 leading-relaxed">{details.description}</p>
@@ -326,10 +327,15 @@ export default function CollaborationDetailsPopup({
                   <h3 className={`font-medium text-white mb-4 flex items-center gap-2 ${
                     isMobile ? 'text-base' : 'text-lg'
                   }`}>
-                    <Music
-                      className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'} text-purple-400 flex-shrink-0`}
-                      style={{ minWidth: isMobile ? 12 : 16, minHeight: isMobile ? 12 : 16, maxWidth: isMobile ? 12 : 16, maxHeight: isMobile ? 12 : 16 }}
-                    />
+                    {isMobile ? (
+                      <span
+                        aria-hidden
+                        className="inline-block rounded-full"
+                        style={{ width: 6, height: 6, backgroundColor: '#a855f7' }}
+                      />
+                    ) : (
+                      <Music className="text-purple-400 flex-shrink-0 w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4" />
+                    )}
                     Projects Together
                   </h3>
                   <div className="space-y-3">
@@ -341,9 +347,18 @@ export default function CollaborationDetailsPopup({
                         }`}
                       >
                         <div className="flex items-center space-x-3">
-                          <div className="text-purple-400 flex-shrink-0">
-                            {getProjectIcon(project.type)}
-                          </div>
+                          {/* On mobile, use a subtle accent bullet instead of an icon */}
+                          {isMobile ? (
+                            <span
+                              aria-hidden
+                              className="inline-block rounded-full flex-shrink-0"
+                              style={{ width: 6, height: 6, backgroundColor: '#a855f7' }}
+                            />
+                          ) : (
+                            <div className="text-purple-400">
+                              {getProjectIcon(project.type)}
+                            </div>
+                          )}
                           <div>
                             <div className="font-medium text-white">{project.name}</div>
                             <div className="flex items-center space-x-2 text-sm text-gray-400 mt-1">
