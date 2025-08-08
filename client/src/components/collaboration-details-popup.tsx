@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, Music, Disc3, Mic2, Users, Loader2 } from 'lucide-react';
+import { X, ExternalLink, Music, Disc3, Mic2, Users, Loader2, ArrowUpRight } from 'lucide-react';
 import { CollaborationDetails } from '@/types/network';
 
 interface CollaborationDetailsPopupProps {
@@ -372,20 +372,26 @@ export default function CollaborationDetailsPopup({
                           </div>
                         </div>
                         {project.spotifyUrl && (
-                          <a
-                            href={project.spotifyUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`inline-flex items-center justify-center transition-colors rounded-lg hover:bg-green-500/10 ${
-                              isMobile ? 'p-1.5 text-green-400 hover:text-green-300' : 'p-2 text-green-400 hover:text-green-300'
-                            }`}
-                            title="Open in Spotify"
-                          >
-                            <ExternalLink
-                              className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`}
-                              style={{ width: isMobile ? 16 : 20, height: isMobile ? 16 : 20, minWidth: isMobile ? 16 : 20, minHeight: isMobile ? 16 : 20, maxWidth: isMobile ? 16 : 20, maxHeight: isMobile ? 16 : 20 }}
-                            />
-                          </a>
+                          <div className="ml-auto">
+                            <a
+                              href={project.spotifyUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`inline-flex items-center transition-colors rounded-md ${
+                                isMobile ? 'gap-1 px-2 py-1 text-green-400 hover:text-green-300' : 'p-2 text-green-400 hover:text-green-300 hover:bg-green-500/10'
+                              }`}
+                              title="Open on Spotify"
+                            >
+                              {isMobile ? (
+                                <>
+                                  <span className="text-xs font-medium">Spotify</span>
+                                  <ArrowUpRight className="w-3.5 h-3.5" style={{ minWidth: 14, minHeight: 14, maxWidth: 14, maxHeight: 14 }} />
+                                </>
+                              ) : (
+                                <ExternalLink className="w-5 h-5" style={{ minWidth: 20, minHeight: 20, maxWidth: 20, maxHeight: 20 }} />
+                              )}
+                            </a>
+                          </div>
                         )}
                       </div>
                     ))}
