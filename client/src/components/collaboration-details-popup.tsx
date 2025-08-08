@@ -136,7 +136,7 @@ export default function CollaborationDetailsPopup({
   };
 
   const getProjectIcon = (type: string) => {
-    const iconClass = isMobile ? "w-2.5 h-2.5" : "w-4 h-4"; // Even smaller mobile icons
+    const iconClass = isMobile ? "w-2 h-2 min-w-2 min-h-2 max-w-2 max-h-2 flex-shrink-0" : "w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4 flex-shrink-0"; // Ultra small mobile icons
     switch (type) {
       case 'song':
         return <Music className={iconClass} />;
@@ -202,10 +202,12 @@ export default function CollaborationDetailsPopup({
           isMobile ? 'p-4' : 'p-6'
         }`}>
           <div className="flex items-center gap-3">
-            <div className={`flex items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30 ${
-              isMobile ? 'w-5 h-5' : 'w-8 h-8'
+            <div className={`flex items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30 flex-shrink-0 ${
+              isMobile ? 'w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4' : 'w-8 h-8 min-w-8 min-h-8 max-w-8 max-h-8'
             }`}>
-              <Users className={`text-purple-400 ${isMobile ? 'h-2.5 w-2.5' : 'h-4 w-4'}`} />
+              <Users className={`text-purple-400 flex-shrink-0 ${
+                isMobile ? 'h-2 w-2 min-h-2 min-w-2 max-h-2 max-w-2' : 'h-4 w-4 min-h-4 min-w-4 max-h-4 max-w-4'
+              }`} />
             </div>
             <div>
               <h2 className={`font-semibold text-white ${
@@ -278,8 +280,8 @@ export default function CollaborationDetailsPopup({
                 <h3 className={`font-medium text-white mb-3 flex items-center gap-2 ${
                   isMobile ? 'text-base' : 'text-lg'
                 }`}>
-                  <Users className={`text-purple-400 ${
-                    isMobile ? 'w-2.5 h-2.5' : 'w-4 h-4'
+                  <Users className={`text-purple-400 flex-shrink-0 ${
+                    isMobile ? 'w-2 h-2 min-w-2 min-h-2 max-w-2 max-h-2' : 'w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4'
                   }`} />
                   Collaboration
                 </h3>
@@ -292,8 +294,8 @@ export default function CollaborationDetailsPopup({
                   <h3 className={`font-medium text-white mb-4 flex items-center gap-2 ${
                     isMobile ? 'text-base' : 'text-lg'
                   }`}>
-                    <Music className={`text-purple-400 ${
-                      isMobile ? 'w-2.5 h-2.5' : 'w-4 h-4'
+                    <Music className={`text-purple-400 flex-shrink-0 ${
+                      isMobile ? 'w-2 h-2 min-w-2 min-h-2 max-w-2 max-h-2' : 'w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4'
                     }`} />
                     Projects Together
                   </h3>
@@ -329,7 +331,9 @@ export default function CollaborationDetailsPopup({
                             className="text-green-400 hover:text-green-300 transition-colors p-2 rounded-lg hover:bg-green-500/10"
                             title="Open in Spotify"
                           >
-                            <ExternalLink className={isMobile ? "w-3 h-3" : "w-5 h-5"} />
+                            <ExternalLink className={`flex-shrink-0 ${
+                              isMobile ? "w-2.5 h-2.5 min-w-2.5 min-h-2.5 max-w-2.5 max-h-2.5" : "w-5 h-5 min-w-5 min-h-5 max-w-5 max-h-5"
+                            }`} />
                           </a>
                         )}
                       </div>
