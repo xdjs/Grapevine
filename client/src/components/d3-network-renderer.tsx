@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import { UseZoomReturn } from "@/hooks/use-zoom";
@@ -50,8 +50,8 @@ export default function D3NetworkRenderer({
   mainArtistNode,
 }: D3NetworkRendererProps) {
   
-  // Use filter visibility management hook
-  const { isNodeVisible } = useFilterVisibility({
+  // Use filter visibility management hook (applies visibility side effects internally)
+  useFilterVisibility({
     svgRef,
     visible,
     filterState
@@ -248,14 +248,14 @@ export default function D3NetworkRenderer({
       
       let cleanedCount = 0;
       
-      for (const patternId of this.cleanupQueue) {
+      this.cleanupQueue.forEach((patternId) => {
         const pattern = defs.querySelector(`#${patternId}`);
         if (pattern) {
           pattern.remove();
           this.patterns.delete(patternId);
           cleanedCount++;
         }
-      }
+      });
       
       this.cleanupQueue.clear();
       
@@ -605,8 +605,9 @@ export default function D3NetworkRenderer({
             .startAngle(startAngle)
             .endAngle(endAngle);
           
+          const pathData = (arcPath as unknown as (arg?: any) => string | null)();
           group.append("path")
-            .attr("d", arcPath)
+            .attr("d", pathData ?? null)
             .attr("fill", () => {
               if (role === 'artist') return '#FF0ACF';       // Magenta Pink
               if (role === 'producer') return '#AE53FF';     // Bright Purple  
@@ -698,7 +699,7 @@ export default function D3NetworkRenderer({
             .attr("width", profileImageSize * 2)
             .attr("height", profileImageSize * 2)
             .attr("clip-path", `url(#${clipId})`)
-            .attr("href", d.imageUrl)
+            .attr("href", d.imageUrl!)
             .attr("crossorigin", "anonymous")
             .style("opacity", 1)
             .style("image-rendering", optimalSize.quality === 'low' ? 'pixelated' : 'auto');
@@ -767,7 +768,7 @@ export default function D3NetworkRenderer({
                 .attr("width", profileImageSize * 2)
                 .attr("height", profileImageSize * 2)
                 .attr("clip-path", `url(#${clipId})`)
-                .attr("href", d.imageUrl)
+                .attr("href", d.imageUrl!)
                 .attr("crossorigin", "anonymous")
                 .style("opacity", 0)
                 .style("image-rendering", optimalSize.quality === 'low' ? 'pixelated' : 'auto');
@@ -896,7 +897,8 @@ export default function D3NetworkRenderer({
           ImageLoadingManager.viewportCache.set(node.id, inViewport);
           
           // Find the corresponding image elements and update their loading priority
-          const nodeGroup = svg.querySelector(`.node-group:has([data-node-id="${node.id}"])`);
+          // Avoid :has selector for broader compatibility
+          const nodeGroup = svg.querySelector(`.node-group[data-node-id="${node.id}"]`);
           if (nodeGroup) {
             const imageElement = nodeGroup.querySelector('image.profile-image');
             const placeholderElement = nodeGroup.querySelector('.image-placeholder-lazy');
@@ -925,7 +927,7 @@ export default function D3NetworkRenderer({
                         .attr("width", profileImageSize * 2)
                         .attr("height", profileImageSize * 2)
                         .attr("clip-path", `url(#${clipId})`)
-                        .attr("href", node.imageUrl)
+                        .attr("href", node.imageUrl!)
                         .attr("crossorigin", "anonymous")
                         .style("opacity", 0);
                       
@@ -973,7 +975,7 @@ export default function D3NetworkRenderer({
     };
     
     // Throttled viewport update function for performance
-    let viewportUpdateTimeout: NodeJS.Timeout;
+    let viewportUpdateTimeout: ReturnType<typeof setTimeout>;
     const throttledViewportUpdate = () => {
       clearTimeout(viewportUpdateTimeout);
       viewportUpdateTimeout = setTimeout(updateViewportImages, 150);
@@ -1063,7 +1065,8 @@ export default function D3NetworkRenderer({
 
     // Create and configure D3 simulation
     const simulation = createSimulation(data.nodes, validLinks, width, height, mainArtistNode);
-    simulationRef.current = simulation;
+    // Assign via as any to satisfy readonly typing of the ref object in some TS configs
+    (simulationRef as any).current = simulation;
 
     // Add resize listener to handle orientation changes
     const handleResize = () => {
