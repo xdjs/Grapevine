@@ -1,6 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { X, ExternalLink, Music, Disc3, Mic2, Users, Loader2, ArrowUpRight } from 'lucide-react';
+import { X, ExternalLink, Music, Disc3, Mic2, Users, Loader2 } from 'lucide-react';
 import { CollaborationDetails } from '@/types/network';
+
+// Tiny inline SVGs for mobile only (fixed size, cannot scale)
+const MobileUsersIcon = () => (
+  <svg aria-hidden width="12" height="12" viewBox="0 0 24 24" fill="none" className="inline-block" style={{ minWidth: 12, minHeight: 12, maxWidth: 12, maxHeight: 12 }}>
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" />
+    <path d="M22 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M16 3.13A4 4 0 1 1 16 10.9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const MobileMusicIcon = () => (
+  <svg aria-hidden width="12" height="12" viewBox="0 0 24 24" fill="none" className="inline-block" style={{ minWidth: 12, minHeight: 12, maxWidth: 12, maxHeight: 12 }}>
+    <path d="M9 18V5l10-2v13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="7" cy="18" r="3" stroke="currentColor" strokeWidth="2" />
+    <circle cx="17" cy="16" r="3" stroke="currentColor" strokeWidth="2" />
+  </svg>
+);
+
+const MobileExternalIcon = () => (
+  <svg aria-label="Open on Spotify" width="14" height="14" viewBox="0 0 24 24" fill="none" className="inline-block" style={{ minWidth: 14, minHeight: 14, maxWidth: 14, maxHeight: 14 }}>
+    <path d="M14 3h7v7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M10 14L21 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M21 14v7H3V3h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 interface CollaborationDetailsPopupProps {
   isOpen: boolean;
@@ -202,7 +228,12 @@ export default function CollaborationDetailsPopup({
           isMobile ? 'p-4' : 'p-6'
         }`}>
           <div className="flex items-center gap-3">
-            {!isMobile && (
+            {/* Small circled users icon on mobile; normal icon on desktop */}
+            {isMobile ? (
+              <div className="flex items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-400 w-5 h-5 flex-shrink-0">
+                <MobileUsersIcon />
+              </div>
+            ) : (
               <div className="flex items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30 flex-shrink-0 w-8 h-8 min-w-8 min-h-8 max-w-8 max-h-8">
                 <Users className="text-purple-400 flex-shrink-0 h-4 w-4 min-h-4 min-w-4 max-h-4 max-w-4" />
               </div>
@@ -306,13 +337,8 @@ export default function CollaborationDetailsPopup({
                 <h3 className={`font-medium text-white mb-3 flex items-center gap-2 ${
                   isMobile ? 'text-base' : 'text-lg'
                 }`}>
-                  {/* Desktop keeps icon; Mobile uses a small accent dot to avoid oversized icons */}
                   {isMobile ? (
-                    <span
-                      aria-hidden
-                      className="inline-block rounded-full"
-                      style={{ width: 6, height: 6, backgroundColor: '#a855f7' }}
-                    />
+                    <span className="text-purple-400"><MobileUsersIcon /></span>
                   ) : (
                     <Users className="text-purple-400 flex-shrink-0 w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4" />
                   )}
@@ -328,11 +354,7 @@ export default function CollaborationDetailsPopup({
                     isMobile ? 'text-base' : 'text-lg'
                   }`}>
                     {isMobile ? (
-                      <span
-                        aria-hidden
-                        className="inline-block rounded-full"
-                        style={{ width: 6, height: 6, backgroundColor: '#a855f7' }}
-                      />
+                      <span className="text-purple-400"><MobileMusicIcon /></span>
                     ) : (
                       <Music className="text-purple-400 flex-shrink-0 w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4" />
                     )}
@@ -347,17 +369,10 @@ export default function CollaborationDetailsPopup({
                         }`}
                       >
                         <div className="flex items-center space-x-3">
-                          {/* On mobile, use a subtle accent bullet instead of an icon */}
                           {isMobile ? (
-                            <span
-                              aria-hidden
-                              className="inline-block rounded-full flex-shrink-0"
-                              style={{ width: 6, height: 6, backgroundColor: '#a855f7' }}
-                            />
+                            <span className="text-purple-400"><MobileMusicIcon /></span>
                           ) : (
-                            <div className="text-purple-400">
-                              {getProjectIcon(project.type)}
-                            </div>
+                            <div className="text-purple-400">{getProjectIcon(project.type)}</div>
                           )}
                           <div>
                             <div className="font-medium text-white">{project.name}</div>
@@ -373,7 +388,18 @@ export default function CollaborationDetailsPopup({
                         </div>
                         {project.spotifyUrl && (
                           <div className="ml-auto">
-                            {!isMobile && (
+                            {isMobile ? (
+                              <a
+                                href={project.spotifyUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-green-400 hover:text-green-300 transition-colors"
+                                title="Open on Spotify"
+                              >
+                                <span className="text-xs font-medium">Spotify</span>
+                                <span className="inline-flex"><MobileExternalIcon /></span>
+                              </a>
+                            ) : (
                               <a
                                 href={project.spotifyUrl}
                                 target="_blank"
