@@ -100,67 +100,109 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     });
   }, [data.links, getVisibleNodes]);
 
-  // Function to expand a node's network
+  // Function to expand a node's network (limit to at most 3 directly connected collaborators)
   const expandNodeNetwork = useCallback(async (nodeName: string, nodeId?: string) => {
     console.log(`🔗 Expanding network for: ${nodeName}`);
-    
+
     try {
-      // Fetch the full network for this collaborator
       const response = await fetch(`/api/network/${encodeURIComponent(nodeName)}`);
-      if (response.ok) {
-        const collaboratorNetwork = await response.json();
-        
-        // Merge the collaborator's network with the existing network
-        const mergedNodes = [...data.nodes];
-        const mergedLinks = [...data.links];
-        
-        // Add new nodes from collaborator's network (avoiding duplicates)
-        const existingNodeIds = new Set(data.nodes.map(n => n.id));
-        collaboratorNetwork.nodes.forEach((collaboratorNode: NetworkNode) => {
-          if (!existingNodeIds.has(collaboratorNode.id)) {
-            mergedNodes.push(collaboratorNode);
-            existingNodeIds.add(collaboratorNode.id);
-          }
-        });
-        
-        // Add new links from collaborator's network (avoiding duplicates)
-        const existingLinkIds = new Set(data.links.map(link => {
-          const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-          const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-          return `${sourceId}-${targetId}`;
-        }));
-        
-        collaboratorNetwork.links.forEach((collaboratorLink: NetworkLink) => {
-          const sourceId = typeof collaboratorLink.source === 'string' ? collaboratorLink.source : collaboratorLink.source.id;
-          const targetId = typeof collaboratorLink.target === 'string' ? collaboratorLink.target : collaboratorLink.target.id;
-          const linkId = `${sourceId}-${targetId}`;
-          
-          if (!existingLinkIds.has(linkId)) {
-            mergedLinks.push(collaboratorLink);
-            existingLinkIds.add(linkId);
-          }
-        });
-        
-        // Create merged network data
-        const mergedNetworkData = {
-          nodes: mergedNodes,
-          links: mergedLinks
-        };
-        
-        setFullNetworkData(mergedNetworkData);
-        
-        // Add this node to expanded set
-        setExpandedNodes(prev => new Set([...prev, nodeName]));
-        setIsExpandedMode(true);
-        
-        console.log(`✅ Expanded network for ${nodeName} - added ${collaboratorNetwork.nodes.length} nodes and ${collaboratorNetwork.links.length} links`);
-      } else {
+      if (!response.ok) {
         console.error(`❌ Failed to fetch network for ${nodeName}`);
+        return;
       }
+
+      const collaboratorNetwork: NetworkData = await response.json();
+
+      // Start from the currently displayed graph (accumulate expansions)
+      const baseData: NetworkData = fullNetworkData ?? { nodes: data.nodes, links: data.links };
+      const mergedNodes: NetworkNode[] = [...baseData.nodes];
+      const mergedLinks: NetworkLink[] = [...baseData.links];
+
+      const existingNodeIds = new Set<string>(mergedNodes.map(n => n.id));
+      const existingLinkKeys = new Set<string>(
+        mergedLinks.map(l => {
+          const s = typeof l.source === 'string' ? l.source : l.source.id;
+          const t = typeof l.target === 'string' ? l.target : l.target.id;
+          return `${s}->${t}`;
+        })
+      );
+
+      // Build quick lookup for nodes returned by the collaborator network
+      const returnedNodeById = new Map<string, NetworkNode>();
+      for (const n of collaboratorNetwork.nodes) {
+        returnedNodeById.set(n.id, n);
+        // Some APIs may use name as link id; map that as well if different
+        if (n.name && n.name !== n.id && !returnedNodeById.has(n.name)) {
+          returnedNodeById.set(n.name, n);
+        }
+      }
+
+      // Normalize helper
+      const getId = (end: string | { id: string }) => (typeof end === 'string' ? end : end.id);
+
+      // Find direct neighbors of the clicked node in the collaborator's network
+      const neighborIds: string[] = [];
+      for (const link of collaboratorNetwork.links) {
+        const s = getId(link.source as any);
+        const t = getId(link.target as any);
+        if (s === nodeName || t === nodeName) {
+          const neighborId = s === nodeName ? t : s;
+          if (!neighborIds.includes(neighborId)) {
+            neighborIds.push(neighborId);
+          }
+        }
+      }
+
+      // Select up to three neighbors not already present as nodes (prioritize new nodes)
+      const selectedNeighborIds: string[] = [];
+      for (const nid of neighborIds) {
+        if (selectedNeighborIds.length >= 3) break;
+        if (!existingNodeIds.has(nid)) {
+          selectedNeighborIds.push(nid);
+        }
+      }
+      // If fewer than 3 new ones, allow existing ones to ensure up to 3 visible connections
+      if (selectedNeighborIds.length < 3) {
+        for (const nid of neighborIds) {
+          if (selectedNeighborIds.length >= 3) break;
+          if (!selectedNeighborIds.includes(nid)) {
+            selectedNeighborIds.push(nid);
+          }
+        }
+      }
+
+      // Add selected neighbor nodes (from returned data only; no fabrication)
+      for (const nid of selectedNeighborIds) {
+        const nodeToAdd = returnedNodeById.get(nid);
+        if (nodeToAdd && !existingNodeIds.has(nodeToAdd.id)) {
+          mergedNodes.push(nodeToAdd);
+          existingNodeIds.add(nodeToAdd.id);
+        }
+      }
+
+      // Add only the links that connect the clicked node to the selected neighbors
+      for (const link of collaboratorNetwork.links) {
+        const s = getId(link.source as any);
+        const t = getId(link.target as any);
+        const connectsClicked = (s === nodeName && selectedNeighborIds.includes(t)) || (t === nodeName && selectedNeighborIds.includes(s));
+        if (!connectsClicked) continue;
+        const key = `${s}->${t}`;
+        if (!existingLinkKeys.has(key)) {
+          mergedLinks.push(link);
+          existingLinkKeys.add(key);
+        }
+      }
+
+      const mergedNetworkData: NetworkData = { nodes: mergedNodes, links: mergedLinks };
+      setFullNetworkData(mergedNetworkData);
+      setExpandedNodes(prev => new Set([...prev, nodeName]));
+      setIsExpandedMode(true);
+
+      console.log(`✅ Expanded ${nodeName}: added up to 3 collaborators (actual added nodes: ${mergedNodes.length - baseData.nodes.length}, links: ${mergedLinks.length - baseData.links.length})`);
     } catch (error) {
       console.error(`❌ Error expanding network for ${nodeName}:`, error);
     }
-  }, [data.nodes, data.links]);
+  }, [data.nodes, data.links, fullNetworkData]);
 
   // Function to collapse a node's network
   const collapseNodeNetwork = useCallback((nodeName: string) => {
