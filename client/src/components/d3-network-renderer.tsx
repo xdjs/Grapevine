@@ -190,7 +190,116 @@ export default function D3NetworkRenderer({
   };
 
   /**
-   * Render node elements with multi-role support.
+   * Progressive image loading system for profile pictures
+   */
+  const ImageLoadingManager = {
+    loadedImages: new Map<string, boolean>(),
+    failedImages: new Set<string>(),
+    pendingImages: new Map<string, Promise<boolean>>(),
+    
+    // Preload an image and return a promise
+    preloadImage(url: string): Promise<boolean> {
+      if (this.loadedImages.has(url)) {
+        return Promise.resolve(this.loadedImages.get(url)!);
+      }
+      
+      if (this.failedImages.has(url)) {
+        return Promise.resolve(false);
+      }
+      
+      if (this.pendingImages.has(url)) {
+        return this.pendingImages.get(url)!;
+      }
+      
+      const promise = new Promise<boolean>((resolve) => {
+        const img = new Image();
+        
+        // Set up timeout for image loading (5 seconds)
+        const timeout = setTimeout(() => {
+          console.warn(`⏰ [ImageLoader] Timeout loading image: ${url}`);
+          this.failedImages.add(url);
+          resolve(false);
+        }, 5000);
+        
+        img.onload = () => {
+          clearTimeout(timeout);
+          console.log(`✅ [ImageLoader] Successfully loaded: ${url}`);
+          this.loadedImages.set(url, true);
+          resolve(true);
+        };
+        
+        img.onerror = () => {
+          clearTimeout(timeout);
+          console.warn(`❌ [ImageLoader] Failed to load: ${url}`);
+          this.failedImages.add(url);
+          resolve(false);
+        };
+        
+        // Handle CORS issues by trying with crossorigin
+        img.crossOrigin = 'anonymous';
+        img.src = url;
+      });
+      
+      this.pendingImages.set(url, promise);
+      
+      // Clean up pending promise after resolution
+      promise.finally(() => {
+        this.pendingImages.delete(url);
+      });
+      
+      return promise;
+    },
+    
+    // Batch preload multiple images with retry logic
+    async batchPreloadImages(urls: string[], maxRetries: number = 2): Promise<Map<string, boolean>> {
+      const results = new Map<string, boolean>();
+      
+      console.log(`🖼️ [ImageLoader] Starting batch preload of ${urls.length} images`);
+      
+      for (const url of urls) {
+        let success = false;
+        let attempt = 0;
+        
+        while (!success && attempt <= maxRetries) {
+          if (attempt > 0) {
+            console.log(`🔄 [ImageLoader] Retry attempt ${attempt} for: ${url}`);
+            // Add small delay between retries
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          }
+          
+          success = await this.preloadImage(url);
+          attempt++;
+        }
+        
+        results.set(url, success);
+      }
+      
+      const successCount = Array.from(results.values()).filter(Boolean).length;
+      console.log(`📊 [ImageLoader] Batch complete: ${successCount}/${urls.length} images loaded successfully`);
+      
+      return results;
+    },
+    
+    // Check if image is ready to display
+    isImageReady(url: string): boolean {
+      return this.loadedImages.get(url) === true;
+    },
+    
+    // Check if image failed to load
+    hasImageFailed(url: string): boolean {
+      return this.failedImages.has(url);
+    },
+    
+    // Clear cache (useful for testing)
+    clearCache() {
+      this.loadedImages.clear();
+      this.failedImages.clear();
+      this.pendingImages.clear();
+    }
+  };
+
+  /**
+   * Render node elements with multi-role support and progressive image loading.
    * Single-role nodes get simple circles, multi-role nodes get segmented circles.
    */
   const renderNodes = (
@@ -277,14 +386,46 @@ export default function D3NetworkRenderer({
           .attr("cy", 0)
           .attr("r", profileImageSize);
 
-        // Add loading spinner initially if imageUrl exists
-        if (d.imageUrl) {
+        // Progressive loading implementation
+        if (ImageLoadingManager.isImageReady(d.imageUrl)) {
+          // Image is already loaded - display immediately
+          const image = group.append("image")
+            .attr("class", "profile-image")
+            .attr("x", -profileImageSize)
+            .attr("y", -profileImageSize)
+            .attr("width", profileImageSize * 2)
+            .attr("height", profileImageSize * 2)
+            .attr("clip-path", `url(#${clipId})`)
+            .attr("href", d.imageUrl)
+            .attr("crossorigin", "anonymous")
+            .style("opacity", 1);
+            
+        } else if (ImageLoadingManager.hasImageFailed(d.imageUrl)) {
+          // Image has failed to load - show fallback placeholder
+          const placeholderGroup = group.append("g")
+            .attr("class", "image-placeholder");
+            
+          placeholderGroup.append("circle")
+            .attr("r", profileImageSize)
+            .attr("fill", "#2a2a2a")
+            .attr("stroke", "#555")
+            .attr("stroke-width", 1);
+            
+          placeholderGroup.append("text")
+            .attr("text-anchor", "middle")
+            .attr("dy", "0.35em")
+            .attr("font-size", "12px")
+            .attr("fill", "#888")
+            .text("?");
+            
+        } else {
+          // Image is not yet loaded - show loading spinner and start progressive loading
           const loadingGroup = group.append("g")
             .attr("class", "loading-spinner")
             .style("opacity", 1);
           
-          // Loading spinner circle
-          loadingGroup.append("circle")
+          // Enhanced loading spinner with pulsing effect
+          const spinnerCircle = loadingGroup.append("circle")
             .attr("r", 8)
             .attr("fill", "none")
             .attr("stroke", "#666")
@@ -293,28 +434,75 @@ export default function D3NetworkRenderer({
             .attr("stroke-linecap", "round")
             .style("animation", "spin 1s linear infinite");
           
-          // Add profile image (hidden initially)
-          const image = group.append("image")
-            .attr("class", "profile-image")
-            .attr("x", -profileImageSize)
-            .attr("y", -profileImageSize)
-            .attr("width", profileImageSize * 2)
-            .attr("height", profileImageSize * 2)
-            .attr("clip-path", `url(#${clipId})`)
-            .style("opacity", 0)
-            .attr("href", d.imageUrl)
-            .attr("crossorigin", "anonymous");
-
-          // Handle image load success
-          image.on("load", function() {
-            loadingGroup.transition().duration(300).style("opacity", 0).remove();
-            d3.select(this).transition().duration(300).style("opacity", 1);
-          });
-
-          // Handle image load error
-          image.on("error", function() {
-            loadingGroup.transition().duration(300).style("opacity", 0).remove();
-            d3.select(this).remove();
+          // Add pulsing background circle
+          loadingGroup.append("circle")
+            .attr("r", profileImageSize * 0.8)
+            .attr("fill", "rgba(255, 255, 255, 0.05)")
+            .attr("stroke", "rgba(255, 255, 255, 0.1)")
+            .attr("stroke-width", 1)
+            .style("animation", "pulse 2s ease-in-out infinite");
+          
+          // Start progressive loading
+          ImageLoadingManager.preloadImage(d.imageUrl).then((success) => {
+            if (success) {
+              // Image loaded successfully - transition to display
+              const image = group.append("image")
+                .attr("class", "profile-image")
+                .attr("x", -profileImageSize)
+                .attr("y", -profileImageSize)
+                .attr("width", profileImageSize * 2)
+                .attr("height", profileImageSize * 2)
+                .attr("clip-path", `url(#${clipId})`)
+                .attr("href", d.imageUrl)
+                .attr("crossorigin", "anonymous")
+                .style("opacity", 0);
+              
+              // Smooth transition from loading to image
+              loadingGroup.transition()
+                .duration(300)
+                .style("opacity", 0)
+                .on("end", () => loadingGroup.remove());
+              
+              image.transition()
+                .duration(300)
+                .style("opacity", 1);
+                
+            } else {
+              // Image failed to load - transition to placeholder
+              const placeholderGroup = group.append("g")
+                .attr("class", "image-placeholder")
+                .style("opacity", 0);
+                
+              placeholderGroup.append("circle")
+                .attr("r", profileImageSize)
+                .attr("fill", "#2a2a2a")
+                .attr("stroke", "#555")
+                .attr("stroke-width", 1);
+                
+              placeholderGroup.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", "0.35em")
+                .attr("font-size", "12px")
+                .attr("fill", "#888")
+                .text("?");
+              
+              // Smooth transition from loading to placeholder
+              loadingGroup.transition()
+                .duration(300)
+                .style("opacity", 0)
+                .on("end", () => loadingGroup.remove());
+              
+              placeholderGroup.transition()
+                .duration(300)
+                .style("opacity", 1);
+            }
+          }).catch((error) => {
+            console.error(`❌ [ImageLoader] Error loading ${d.imageUrl}:`, error);
+            // Remove loading spinner on error
+            loadingGroup.transition()
+              .duration(300)
+              .style("opacity", 0)
+              .on("end", () => loadingGroup.remove());
           });
         }
       }
@@ -395,6 +583,19 @@ export default function D3NetworkRenderer({
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       return nodeSet.has(sourceId) && nodeSet.has(targetId);
     });
+
+    // Start batch preloading of profile pictures
+    const imageUrls = data.nodes
+      .filter(node => node.imageUrl)
+      .map(node => node.imageUrl!)
+      .filter(url => !ImageLoadingManager.isImageReady(url) && !ImageLoadingManager.hasImageFailed(url));
+    
+    if (imageUrls.length > 0) {
+      console.log(`🚀 [D3Renderer] Starting batch preload of ${imageUrls.length} profile pictures`);
+      ImageLoadingManager.batchPreloadImages(imageUrls).then(() => {
+        console.log(`✅ [D3Renderer] Batch preload complete`);
+      });
+    }
 
     // Create network group
     const networkGroup = svg.append("g").attr("class", "network-group");
