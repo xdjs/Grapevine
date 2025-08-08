@@ -93,8 +93,9 @@ export class SpotifyService {
         }
       );
 
-      const artists = response.data.artists.items;
-      return artists.length > 0 ? artists[0] : null;
+      // Safe access to nested response data
+      const artists = response?.data?.artists?.items;
+      return (artists && Array.isArray(artists) && artists.length > 0) ? artists[0] : null;
     } catch (error) {
       console.error(`Failed to search for artist ${artistName}:`, error);
       return null;
@@ -232,10 +233,17 @@ export class SpotifyService {
    * @returns Promise with artist data or null if not found
    */
   async searchArtistWithRetry(artistName: string, retries: number = 2): Promise<SpotifyArtist | null> {
+    // Input validation
+    if (!artistName || typeof artistName !== 'string' || artistName.trim() === '') {
+      console.log(`❌ [Spotify] Invalid artist name provided: ${artistName}`);
+      return null;
+    }
+
+    const cleanName = artistName.trim();
     const searchVariations = [
-      artistName, // Original name
-      artistName.replace(/[^\w\s]/g, ''), // Remove special characters
-      artistName.replace(/\s+/g, ' ').trim(), // Normalize whitespace
+      cleanName, // Original name
+      cleanName.replace(/[^\w\s]/g, ''), // Remove special characters
+      cleanName.replace(/\s+/g, ' ').trim(), // Normalize whitespace
     ];
 
     for (const searchTerm of searchVariations) {
@@ -273,29 +281,56 @@ export class SpotifyService {
     spotifyId: string;
     spotifyArtist: SpotifyArtist;
   } | null> {
+    const startTime = Date.now();
+    const requestId = Math.random().toString(36).substring(7);
+    
     try {
-      console.log(`🎵 [Spotify] Fetching profile image for: ${artistName}`);
+      console.log(`🎵 [Spotify:${requestId}] Fetching profile image for: ${artistName} (size: ${size})`);
       
       const artist = await this.searchArtistWithRetry(artistName);
       if (!artist) {
-        console.log(`❌ [Spotify] No artist found for: ${artistName}`);
+        const duration = Date.now() - startTime;
+        console.log(`❌ [Spotify:${requestId}] No artist found for: ${artistName} (${duration}ms)`);
+        // Enhanced monitoring: Track failure reasons
+        console.log(`📊 [Spotify:${requestId}] Search failure - Artist not found in Spotify catalog`);
         return null;
       }
 
       const imageUrl = this.getArtistImageUrl(artist, size);
       if (!imageUrl) {
-        console.log(`❌ [Spotify] No image available for artist: ${artistName}`);
+        const duration = Date.now() - startTime;
+        console.log(`❌ [Spotify:${requestId}] No image available for artist: ${artistName} (${duration}ms)`);
+        console.log(`📊 [Spotify:${requestId}] Image failure - Artist found but no images available. Images count: ${artist.images?.length || 0}`);
         return null;
       }
 
-      console.log(`✅ [Spotify] Found profile image for ${artistName}: ${imageUrl}`);
+      const duration = Date.now() - startTime;
+      console.log(`✅ [Spotify:${requestId}] Found profile image for ${artistName}: ${imageUrl} (${duration}ms)`);
+      console.log(`📊 [Spotify:${requestId}] Success metrics - Artist ID: ${artist.id}, Image dimensions: ${artist.images?.[0]?.width}x${artist.images?.[0]?.height}, Popularity: ${artist.popularity}`);
+      
       return {
         imageUrl,
         spotifyId: artist.id,
         spotifyArtist: artist
       };
     } catch (error) {
-      console.error(`❌ [Spotify] Failed to get profile image for ${artistName}:`, error);
+      const duration = Date.now() - startTime;
+      console.error(`❌ [Spotify:${requestId}] Failed to get profile image for ${artistName} (${duration}ms):`, error);
+      
+      // Enhanced error monitoring with structured logging
+      const errorType = error?.code || error?.response?.status || 'UNKNOWN';
+      const errorMessage = error?.message || JSON.stringify(error);
+      console.error(`📊 [Spotify:${requestId}] Error details - Type: ${errorType}, Message: ${errorMessage}, Artist: ${artistName}`);
+      
+      // Track different error patterns for monitoring
+      if (error?.response?.status === 429) {
+        console.error(`🚨 [Spotify:${requestId}] Rate limit exceeded - consider implementing circuit breaker`);
+      } else if (error?.code === 'ECONNREFUSED' || error?.code === 'ETIMEDOUT') {
+        console.error(`🚨 [Spotify:${requestId}] Network connectivity issue - check Spotify API status`);
+      } else if (error?.response?.status === 401) {
+        console.error(`🚨 [Spotify:${requestId}] Authentication failure - check API credentials`);
+      }
+      
       return null;
     }
   }
@@ -316,34 +351,51 @@ export class SpotifyService {
   }>> {
     const results = new Map();
     const failures = new Set<string>();
+    const errors = new Map<string, string>(); // Track error types
     const batchSize = 3; // Smaller batches for better reliability
+    const startTime = Date.now();
+    const batchId = Math.random().toString(36).substring(7);
     
-    console.log(`🎵 [Spotify] Batch fetching profile images for ${artistNames.length} artists`);
+    console.log(`🎵 [Spotify:${batchId}] Batch fetching profile images for ${artistNames.length} artists (size: ${size})`);
     
     for (let i = 0; i < artistNames.length; i += batchSize) {
       const batch = artistNames.slice(i, i + batchSize);
-      console.log(`🎵 [Spotify] Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(artistNames.length/batchSize)}: [${batch.join(', ')}]`);
+      const batchNumber = Math.floor(i/batchSize) + 1;
+      const totalBatches = Math.ceil(artistNames.length/batchSize);
+      
+      console.log(`🎵 [Spotify:${batchId}] Processing batch ${batchNumber}/${totalBatches}: [${batch.join(', ')}]`);
       
       // Use Promise.allSettled to handle individual failures gracefully
       const batchPromises = batch.map(async (artistName) => {
-        const result = await this.getArtistProfileImageWithRetry(artistName, size);
-        return { artistName, result };
+        try {
+          const result = await this.getArtistProfileImageWithRetry(artistName, size);
+          return { artistName, result, error: null };
+        } catch (error) {
+          return { artistName, result: null, error };
+        }
       });
       
       const batchResults = await Promise.allSettled(batchPromises);
       
       for (const promiseResult of batchResults) {
         if (promiseResult.status === 'fulfilled') {
-          const { artistName, result } = promiseResult.value;
+          const { artistName, result, error } = promiseResult.value;
           if (result) {
             results.set(artistName, result);
           } else {
             failures.add(artistName);
+            if (error) {
+              const errorType = error?.code || error?.response?.status || 'UNKNOWN';
+              errors.set(artistName, errorType);
+            }
           }
         } else {
-          console.error(`❌ [Spotify] Promise rejected in batch:`, promiseResult.reason);
+          console.error(`❌ [Spotify:${batchId}] Promise rejected in batch:`, promiseResult.reason);
         }
       }
+      
+      // Log batch progress
+      console.log(`📊 [Spotify:${batchId}] Batch ${batchNumber} complete: ${batch.length - failures.size} successful, ${failures.size} failed`);
       
       // Longer delay between batches for better rate limit compliance
       if (i + batchSize < artistNames.length) {
@@ -351,9 +403,23 @@ export class SpotifyService {
       }
     }
     
-    console.log(`✅ [Spotify] Batch processing complete: ${results.size}/${artistNames.length} images found`);
+    const duration = Date.now() - startTime;
+    const successRate = ((results.size / artistNames.length) * 100).toFixed(1);
+    
+    console.log(`✅ [Spotify:${batchId}] Batch processing complete: ${results.size}/${artistNames.length} images found (${successRate}% success rate) in ${duration}ms`);
+    
     if (failures.size > 0) {
-      console.log(`⚠️ [Spotify] Failed to find images for: [${Array.from(failures).join(', ')}]`);
+      console.log(`⚠️ [Spotify:${batchId}] Failed to find images for: [${Array.from(failures).join(', ')}]`);
+      
+      // Log error distribution for monitoring
+      const errorTypes = new Map<string, number>();
+      for (const [artist, errorType] of errors) {
+        errorTypes.set(errorType, (errorTypes.get(errorType) || 0) + 1);
+      }
+      
+      if (errorTypes.size > 0) {
+        console.log(`📊 [Spotify:${batchId}] Error distribution:`, Object.fromEntries(errorTypes));
+      }
     }
     
     return results;
