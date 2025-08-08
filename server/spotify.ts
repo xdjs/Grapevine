@@ -102,6 +102,157 @@ export class SpotifyService {
     }
   }
 
+  async searchTrackWithValidation(
+    trackName: string, 
+    primaryArtist: string, 
+    collaborator?: string,
+    options: {
+      limit?: number;
+      market?: string;
+      minScore?: number;
+    } = {}
+  ): Promise<{ track: SpotifyTrack | null; score: number; searchStrategies: string[] }> {
+    try {
+      const token = await this.getAccessToken();
+      const { limit = 5, market = 'US', minScore = 50 } = options;
+      
+      // Multiple search strategies in order of preference
+      const searchStrategies = [
+        `"${trackName}" artist:"${primaryArtist}"`,
+        ...(collaborator ? [`"${trackName}" "${primaryArtist}" "${collaborator}"`] : []),
+        `${trackName} artist:${primaryArtist}`,
+        `${trackName} ${primaryArtist}`,
+        trackName,
+      ];
+
+      let bestMatch = null;
+      let bestScore = 0;
+      const strategiesUsed: string[] = [];
+
+      for (let i = 0; i < searchStrategies.length; i++) {
+        const searchQuery = searchStrategies[i];
+        strategiesUsed.push(searchQuery);
+        
+        try {
+          const response = await axios.get(
+            'https://api.spotify.com/v1/search',
+            {
+              params: {
+                q: searchQuery,
+                type: 'track',
+                limit,
+                market
+              },
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            }
+          );
+
+          const tracks = response.data.tracks?.items || [];
+          
+          // Validate and score each result
+          for (const track of tracks) {
+            const score = this.validateTrackMatch(track, trackName, primaryArtist, collaborator);
+            
+            if (score > bestScore && score >= minScore) {
+              bestMatch = track;
+              bestScore = score;
+            }
+          }
+
+          // If we found a high-confidence match, stop searching
+          if (bestScore >= 80) {
+            break;
+          }
+          
+        } catch (strategyError) {
+          console.warn(`Spotify search strategy ${i + 1} failed:`, strategyError);
+          continue;
+        }
+      }
+
+      return {
+        track: bestMatch,
+        score: bestScore,
+        searchStrategies: strategiesUsed
+      };
+      
+    } catch (error) {
+      console.error(`Failed to search for track ${trackName}:`, error);
+      return { track: null, score: 0, searchStrategies: [] };
+    }
+  }
+
+  private validateTrackMatch(
+    spotifyTrack: SpotifyTrack, 
+    targetTrackName: string, 
+    primaryArtist: string, 
+    collaborator?: string
+  ): number {
+    let score = 0;
+    const trackName = spotifyTrack.name.toLowerCase();
+    const targetName = targetTrackName.toLowerCase();
+    
+    // Get artist names from the Spotify track
+    const spotifyArtists = spotifyTrack.artists.map(artist => artist.name.toLowerCase()).join(' ');
+    const primaryArtistLower = primaryArtist.toLowerCase();
+    const collaboratorLower = collaborator?.toLowerCase();
+    
+    // Title matching (most important factor)
+    if (trackName === targetName) {
+      score += 40; // Exact title match
+    } else if (trackName.includes(targetName) || targetName.includes(trackName)) {
+      score += 25; // Partial title match
+    } else {
+      // Check for common variations (remove parentheses, feat., etc.)
+      const cleanTrackName = trackName.replace(/\s*\([^)]*\)|\s*feat\.?.*|\s*ft\.?.*|\s*featuring.*$/i, '').trim();
+      const cleanTargetName = targetName.replace(/\s*\([^)]*\)|\s*feat\.?.*|\s*ft\.?.*|\s*featuring.*$/i, '').trim();
+      
+      if (cleanTrackName === cleanTargetName) {
+        score += 35; // Clean title match
+      } else if (cleanTrackName.includes(cleanTargetName) || cleanTargetName.includes(cleanTrackName)) {
+        score += 20; // Clean partial match
+      }
+    }
+    
+    // Artist matching
+    if (spotifyArtists.includes(primaryArtistLower)) {
+      score += 25;
+    }
+    if (collaboratorLower && spotifyArtists.includes(collaboratorLower)) {
+      score += 25;
+    }
+    
+    // Check for partial artist name matches
+    const primaryWords = primaryArtistLower.split(/\s+/);
+    const collaboratorWords = collaboratorLower?.split(/\s+/) || [];
+    
+    for (const word of primaryWords) {
+      if (word.length > 2 && spotifyArtists.includes(word)) {
+        score += 5;
+      }
+    }
+    
+    for (const word of collaboratorWords) {
+      if (word.length > 2 && spotifyArtists.includes(word)) {
+        score += 5;
+      }
+    }
+    
+    // Bonus for featuring/collaboration indicators
+    if (spotifyArtists.includes('feat') || spotifyArtists.includes('featuring') || spotifyArtists.includes('ft')) {
+      score += 10;
+    }
+    
+    // Penalty for too many artists (likely compilation)
+    if (spotifyTrack.artists.length > 4) {
+      score -= 10;
+    }
+    
+    return Math.max(0, score);
+  }
+
   async getArtistTopTracks(artistId: string, market: string = 'US'): Promise<SpotifyTrack[]> {
     try {
       const token = await this.getAccessToken();

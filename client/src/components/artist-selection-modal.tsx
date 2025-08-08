@@ -80,7 +80,26 @@ export default function ArtistSelectionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
+      <DialogContent 
+        className="max-w-2xl max-h-[80vh]"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => {
+          // Only allow ESC to close if it's a deliberate key press
+          if (e.currentTarget === document.activeElement) {
+            return; // Allow normal ESC behavior when dialog is focused
+          }
+          e.preventDefault(); // Prevent ESC from closing on other events
+        }}
+        onOpenAutoFocus={(e) => {
+          // Prevent focus issues that might cause unwanted closing
+          e.preventDefault();
+        }}
+        onCloseAutoFocus={(e) => {
+          // Prevent focus issues when closing
+          e.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Multiple Artists Found</DialogTitle>
           <DialogDescription>

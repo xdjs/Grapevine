@@ -194,15 +194,15 @@ export default function NetworkVisualizer({
           throw new Error('Invalid or empty network data provided');
         }
         
-        // Wait for config to load if still loading
+        // Don't wait for config to load - the network can render without it
+        // Config is only needed for artist modal functionality
         if (configLoading) {
-          console.log('⏳ [NetworkVisualizer] Waiting for config to load...');
-          return;
+          console.log('⏳ [NetworkVisualizer] Config still loading, but proceeding with visualization...');
         }
         
-        // Check for config errors
-        if (configError) {
-          throw new Error(`Configuration error: ${configError}`);
+        // Only throw error if config explicitly failed, not if it's still loading
+        if (configError && !configLoading) {
+          console.warn('⚠️ [NetworkVisualizer] Config error detected, but proceeding without artist links:', configError);
         }
         
         console.log('✅ [NetworkVisualizer] Component initialized successfully');
@@ -216,7 +216,7 @@ export default function NetworkVisualizer({
     };
 
     initializeComponent();
-  }, [data, configLoading, configError, handleError]);
+  }, [data, configError, handleError]); // Remove configLoading dependency
 
   // Log the current state for debugging
   useEffect(() => {
@@ -275,7 +275,7 @@ export default function NetworkVisualizer({
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
         <p className="text-gray-600 dark:text-gray-400">
-          {configLoading ? 'Loading configuration...' : 'Initializing network visualization...'}
+          Initializing network visualization...
         </p>
       </div>
     </div>
