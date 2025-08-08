@@ -126,13 +126,30 @@ export function useTooltip({
     setCurrentNode(node);
   }, [calculatePosition]);
 
-  // Node highlighting functions
+  /**
+   * Reset node highlighting back to original colors.
+   * 
+   * Reset Mechanism:
+   * 1. For single-role nodes: Reset circle stroke to original role-specific color
+   * 2. For multi-role nodes: Reset path strokes and inner circle to white (original style)
+   * 3. Clear the highlighted node state
+   */
   const resetNodeHighlight = useCallback(() => {
     if (highlightedNode) {
       const nodeData = highlightedNode.datum() as NetworkNode;
+      
+      // Handle case where datum might be undefined
+      if (!nodeData) {
+        console.warn('🎯 No node data found during reset, clearing highlighted state');
+        setHighlightedNode(null);
+        return;
+      }
+      
       const roles = nodeData.types || [nodeData.type];
       
-      // Reset to original styling
+      console.log(`🔄 Resetting node highlight for "${nodeData.name}" with roles: [${roles.join(', ')}]`);
+      
+      // Reset to original styling based on node type
       if (roles.length === 1) {
         // Single role - reset to original stroke color and width
         highlightedNode.selectAll('circle')
@@ -140,11 +157,11 @@ export function useTooltip({
             if (roles[0] === 'artist') return '#FF0ACF';       // Magenta Pink
             if (roles[0] === 'producer') return '#AE53FF';     // Bright Purple  
             if (roles[0] === 'songwriter') return '#67D1F8';   // Light Blue
-            return '#355367';  // Police Blue
+            return '#355367';  // Police Blue (default)
           })
           .attr('stroke-width', 4);
       } else {
-        // Multiple roles - reset path strokes and inner circle
+        // Multiple roles - reset path strokes and inner circle to original white
         highlightedNode.selectAll('path')
           .attr('stroke', 'white')
           .attr('stroke-width', 1);
@@ -154,6 +171,7 @@ export function useTooltip({
           .attr('stroke-width', 2);
       }
       
+      // Clear the highlighted node state
       setHighlightedNode(null);
     }
   }, [highlightedNode]);

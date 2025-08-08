@@ -573,9 +573,9 @@ export default function D3NetworkRenderer({
       const group = d3.select(this);
       const roles = d.types || [d.type];
       
-      // Debug multi-role nodes
+      // Debug multi-role nodes for click selection verification
       if (roles.length > 1) {
-        console.log(`🎭 [D3Renderer] Multi-role node "${d.name}": roles = [${roles.join(', ')}]`);
+        console.log(`🎭 [D3Renderer] Multi-role node "${d.name}": roles = [${roles.join(', ')}], will use segmented circle`);
       }
       
       if (roles.length === 1) {
@@ -822,13 +822,43 @@ export default function D3NetworkRenderer({
         }
       }
     })
-      .on("click", function(event, d) {
-        // Use the node interactions hook for click handling
-        nodeInteractions.handleNodeClick(event as MouseEvent, d, this);
-      });
+      .call(
+        d3
+          .drag<SVGGElement, NetworkNode>()
+          .on("start", function(event, d) {
+            isDragging = false; // Reset at start
+            nodeInteractions.dragstarted(event, d);
+          })
+          .on("drag", function(event, d) {
+            isDragging = true; // Set to true when actually dragging
+            nodeInteractions.dragged(event, d);
+          })
+          .on("end", function(event, d) {
+            nodeInteractions.dragended(event, d);
+            
+            // If we didn't drag, treat as a click
+            if (!isDragging) {
+              console.log(`🎯 Click detected on: ${d.name}`);
+              
+              // Reset previous node highlighting
+              resetNodeHighlight();
 
-    // Setup drag behavior using the node interactions hook
-    nodeInteractions.setupDragBehavior(nodeElements);
+              // Highlight the current node group
+              const currentNode = d3.select(this);
+              currentNode.selectAll("circle, path")
+                .attr("stroke", "white")
+                .attr("stroke-width", 3);
+              
+              // Track this node as highlighted
+              currentlyHighlightedNode = currentNode;
+
+              // Show the tooltip and use cursor coordinates for placement
+              tooltip.showTooltip(event.sourceEvent as MouseEvent, d);
+            }
+            
+            isDragging = false; // Reset after handling
+          })
+      );
 
     return nodeElements;
   };
@@ -1010,6 +1040,50 @@ export default function D3NetworkRenderer({
     // Clear existing content
     svg.selectAll("*").remove();
 
+    // Variable to track currently highlighted node
+    let currentlyHighlightedNode: d3.Selection<SVGGElement, unknown, null, undefined> | null = null;
+    
+    // Track if the user is dragging to differentiate from clicks
+    let isDragging = false;
+
+    function resetNodeHighlight() {
+      if (currentlyHighlightedNode) {
+        const nodeData = currentlyHighlightedNode.datum() as NetworkNode;
+        const roles = nodeData.types || [nodeData.type];
+        
+        console.log(`🔄 Resetting highlight for: ${nodeData.name}`);
+        
+        // Reset to original styling
+        if (roles.length === 1) {
+          // Single role - reset to original stroke color and width
+          currentlyHighlightedNode.selectAll("circle")
+            .attr("stroke", () => {
+              if (roles[0] === 'artist') return '#FF0ACF';       // Magenta Pink
+              if (roles[0] === 'producer') return '#AE53FF';     // Bright Purple  
+              if (roles[0] === 'songwriter') return '#67D1F8';   // Light Blue
+              return '#355367';  // Police Blue
+            })
+            .attr("stroke-width", 4);
+        } else {
+          // Multiple roles - reset path strokes and inner circle
+          currentlyHighlightedNode.selectAll("path")
+            .attr("stroke", "white")
+            .attr("stroke-width", 1);
+          
+          currentlyHighlightedNode.selectAll("circle")
+            .attr("stroke", "white")
+            .attr("stroke-width", 2);
+        }
+        
+        currentlyHighlightedNode = null;
+      }
+    }
+
+    function hideTooltip() {
+      tooltip.hideTooltip();
+      resetNodeHighlight();
+    }
+
     // Filter out links where either node doesn't exist or is isolated
     const nodeSet = new Set(data.nodes.map(n => n.id));
     const validLinks = data.links.filter(link => {
@@ -1048,10 +1122,13 @@ export default function D3NetworkRenderer({
     zoom.setupZoomBehavior(networkGroup);
 
     // Add background click handler to hide tooltip and reset highlighting
+    // This creates a clear visual feedback system where only one node can be "selected" (white) at a time
     svg.on("click", function(event) {
       // Only trigger if clicking on the background (not on a node)
       if (event.target === this || event.target.tagName === 'svg') {
-        tooltip.hideTooltip();
+        console.log('🎯 Background clicked - resetting selection and hiding tooltip');
+        resetNodeHighlight(); // Reset node highlighting directly
+        tooltip.hideTooltip(); // Hide tooltip
       }
     });
 
