@@ -387,7 +387,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
         )}
 
         {/* Collaboration details action - not for main artist, hide on mobile */}
-        {!isMainArtist && !isMobile && (
+        {!isMainArtist && (
           <div
             data-testid="collaboration-action"
             style={{
@@ -404,24 +404,26 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             role="button"
             aria-label="View collaboration details"
           >
-            <div
-              style={{
-                width: `${iconSize}px`,
-                height: `${iconSize}px`,
-                minWidth: `${iconSize}px`,
-                minHeight: `${iconSize}px`,
-                maxWidth: `${iconSize}px`,
-                maxHeight: `${iconSize}px`,
-                borderRadius: '50%',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              {collaborationIconSvg}
-            </div>
+            {!isMobile && (
+              <div
+                style={{
+                  width: `${iconSize}px`,
+                  height: `${iconSize}px`,
+                  minWidth: `${iconSize}px`,
+                  minHeight: `${iconSize}px`,
+                  maxWidth: `${iconSize}px`,
+                  maxHeight: `${iconSize}px`,
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                {collaborationIconSvg}
+              </div>
+            )}
             <span
               style={{
                 fontSize: linkFontSize,
