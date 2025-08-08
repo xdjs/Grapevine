@@ -8,6 +8,7 @@ import { useTooltip } from "@/hooks/use-tooltip";
 import { useNodeInteractions } from "@/hooks/use-node-interactions";
 import { useModals } from "@/hooks/use-modals";
 import { useFilterVisibility } from "@/hooks/use-filter-visibility";
+import { useProfilePictures } from "@/hooks/use-profile-pictures";
 import D3NetworkRenderer from "./d3-network-renderer";
 import ArtistSelectionModal from "./artist-selection-modal";
 import CollaborationDetailsPopup from "./collaboration-details-popup";
@@ -108,6 +109,13 @@ export default function NetworkVisualizer({
     collapseNodeNetwork,
     resetToFirstDegree
   } = useNetworkData({ data });
+
+  // Profile picture management hook
+  const profilePictures = useProfilePictures({
+    autoFetch: true,
+    useCache: true,
+    batchSize: 20
+  });
 
   // Tooltip management hook
   const tooltip = useTooltip({
