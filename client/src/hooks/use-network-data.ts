@@ -105,18 +105,35 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     console.log(`🔗 Expanding network for: ${nodeName}`);
 
     try {
-      // Prefer fetching by artist ID when available for accuracy
-      const endpoint = nodeId
-        ? `/api/network-by-id/${encodeURIComponent(nodeId)}`
-        : `/api/network/${encodeURIComponent(nodeName)}`;
+      // Build a list of endpoints to try: prefer ID first (if provided), then fallback to name
+      const endpointsToTry: string[] = [];
+      if (nodeId) {
+        endpointsToTry.push(`/api/network-by-id/${encodeURIComponent(nodeId)}`);
+      }
+      endpointsToTry.push(`/api/network/${encodeURIComponent(nodeName)}`);
 
-      const response = await fetch(endpoint);
-      if (!response.ok) {
-        console.error(`❌ Failed to fetch network for ${nodeName}`);
-        return;
+      let collaboratorNetwork: { nodes: NetworkNode[]; links: NetworkLink[] } | null = null;
+      let lastErrorStatus: number | null = null;
+
+      for (const endpoint of endpointsToTry) {
+        try {
+          const resp = await fetch(endpoint);
+          if (!resp.ok) {
+            lastErrorStatus = resp.status;
+            continue; // try next endpoint
+          }
+          collaboratorNetwork = await resp.json();
+          break;
+        } catch (e) {
+          // try next endpoint
+          continue;
+        }
       }
 
-      const collaboratorNetwork: { nodes: NetworkNode[]; links: NetworkLink[] } = await response.json();
+      if (!collaboratorNetwork) {
+        console.error(`❌ Failed to fetch network for ${nodeName}${nodeId ? ` (id: ${nodeId})` : ''}${lastErrorStatus ? `, last status ${lastErrorStatus}` : ''}`);
+        return;
+      }
 
       // Determine base graph to merge into (support cumulative expansions)
       const baseNodes: NetworkNode[] = fullNetworkData?.nodes ?? data.nodes;
