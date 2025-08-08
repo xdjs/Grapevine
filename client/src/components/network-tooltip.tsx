@@ -386,8 +386,8 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
           </div>
         )}
 
-        {/* Collaboration details action - not for main artist */}
-        {!isMainArtist && (
+        {/* Collaboration details action - not for main artist, hide on mobile */}
+        {!isMainArtist && !isMobile && (
           <div
             data-testid="collaboration-action"
             style={{

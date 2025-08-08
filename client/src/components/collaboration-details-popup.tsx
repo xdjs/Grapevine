@@ -202,13 +202,11 @@ export default function CollaborationDetailsPopup({
           isMobile ? 'p-4' : 'p-6'
         }`}>
           <div className="flex items-center gap-3">
-            <div className={`flex items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30 flex-shrink-0 ${
-              isMobile ? 'w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4' : 'w-8 h-8 min-w-8 min-h-8 max-w-8 max-h-8'
-            }`}>
-              <Users className={`text-purple-400 flex-shrink-0 ${
-                isMobile ? 'h-2 w-2 min-h-2 min-w-2 max-h-2 max-w-2' : 'h-4 w-4 min-h-4 min-w-4 max-h-4 max-w-4'
-              }`} />
-            </div>
+{!isMobile && (
+              <div className="flex items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30 flex-shrink-0 w-8 h-8 min-w-8 min-h-8 max-w-8 max-h-8">
+                <Users className="text-purple-400 flex-shrink-0 h-4 w-4 min-h-4 min-w-4 max-h-4 max-w-4" />
+              </div>
+            )}
             <div>
               <h2 className={`font-semibold text-white ${
                 isMobile ? 'text-lg' : 'text-xl'
@@ -280,9 +278,9 @@ export default function CollaborationDetailsPopup({
                 <h3 className={`font-medium text-white mb-3 flex items-center gap-2 ${
                   isMobile ? 'text-base' : 'text-lg'
                 }`}>
-                  <Users className={`text-purple-400 flex-shrink-0 ${
-                    isMobile ? 'w-2 h-2 min-w-2 min-h-2 max-w-2 max-h-2' : 'w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4'
-                  }`} />
+                  {!isMobile && (
+                    <Users className="text-purple-400 flex-shrink-0 w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4" />
+                  )}
                   Collaboration
                 </h3>
                 <p className="text-gray-300 leading-relaxed">{details.description}</p>
@@ -294,9 +292,9 @@ export default function CollaborationDetailsPopup({
                   <h3 className={`font-medium text-white mb-4 flex items-center gap-2 ${
                     isMobile ? 'text-base' : 'text-lg'
                   }`}>
-                    <Music className={`text-purple-400 flex-shrink-0 ${
-                      isMobile ? 'w-2 h-2 min-w-2 min-h-2 max-w-2 max-h-2' : 'w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4'
-                    }`} />
+                    {!isMobile && (
+                      <Music className="text-purple-400 flex-shrink-0 w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4" />
+                    )}
                     Projects Together
                   </h3>
                   <div className="space-y-3">
@@ -308,9 +306,11 @@ export default function CollaborationDetailsPopup({
                         }`}
                       >
                         <div className="flex items-center space-x-3">
-                          <div className="text-purple-400">
-                            {getProjectIcon(project.type)}
-                          </div>
+                          {!isMobile && (
+                            <div className="text-purple-400">
+                              {getProjectIcon(project.type)}
+                            </div>
+                          )}
                           <div>
                             <div className="font-medium text-white">{project.name}</div>
                             <div className="flex items-center space-x-2 text-sm text-gray-400 mt-1">
@@ -357,9 +357,9 @@ export default function CollaborationDetailsPopup({
               {/* No projects found */}
               {(!details.projects || details.projects.length === 0) && (
                 <div className={`text-center text-gray-400 ${isMobile ? 'py-8' : 'py-12'}`}>
-                  <Music className={`mx-auto mb-4 text-gray-600 ${
-                    isMobile ? 'w-5 h-5' : 'w-8 h-8'
-                  }`} />
+{!isMobile && (
+                    <Music className="mx-auto mb-4 text-gray-600 w-8 h-8" />
+                  )}
                   <p className={isMobile ? 'text-base' : 'text-lg'}>No specific collaboration projects found between these artists.</p>
                   <p className={`text-gray-500 mt-2 ${
                     isMobile ? 'text-xs' : 'text-sm'
