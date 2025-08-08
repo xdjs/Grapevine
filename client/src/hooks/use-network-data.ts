@@ -128,28 +128,33 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       );
 
       // Build quick lookup for nodes returned by the collaborator network
-      const returnedNodeById = new Map<string, NetworkNode>();
+      const returnedNodeByKey = new Map<string, NetworkNode>();
       for (const n of collaboratorNetwork.nodes) {
-        returnedNodeById.set(n.id, n);
-        // Some APIs may use name as link id; map that as well if different
-        if (n.name && n.name !== n.id && !returnedNodeById.has(n.name)) {
-          returnedNodeById.set(n.name, n);
-        }
+        returnedNodeByKey.set(n.id, n);
+        if (n.name) returnedNodeByKey.set(n.name, n);
       }
 
       // Normalize helper
       const getId = (end: string | { id: string }) => (typeof end === 'string' ? end : end.id);
+
+      // Determine identifiers that represent the clicked node within the collaborator network
+      const clickedIdentifiers = new Set<string>();
+      if (nodeName) clickedIdentifiers.add(nodeName);
+      if (nodeId) clickedIdentifiers.add(nodeId);
+      // Try to resolve collaborator network node id by name
+      const clickedFromReturned = returnedNodeByKey.get(nodeName);
+      if (clickedFromReturned) clickedIdentifiers.add(clickedFromReturned.id);
 
       // Find direct neighbors of the clicked node in the collaborator's network
       const neighborIds: string[] = [];
       for (const link of collaboratorNetwork.links) {
         const s = getId(link.source as any);
         const t = getId(link.target as any);
-        if (s === nodeName || t === nodeName) {
-          const neighborId = s === nodeName ? t : s;
-          if (!neighborIds.includes(neighborId)) {
-            neighborIds.push(neighborId);
-          }
+        const sIsClicked = clickedIdentifiers.has(s);
+        const tIsClicked = clickedIdentifiers.has(t);
+        if (sIsClicked || tIsClicked) {
+          const neighborId = sIsClicked ? t : s;
+          if (!neighborIds.includes(neighborId)) neighborIds.push(neighborId);
         }
       }
 
@@ -173,7 +178,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
 
       // Add selected neighbor nodes (from returned data only; no fabrication)
       for (const nid of selectedNeighborIds) {
-        const nodeToAdd = returnedNodeById.get(nid);
+        const nodeToAdd = returnedNodeByKey.get(nid);
         if (nodeToAdd && !existingNodeIds.has(nodeToAdd.id)) {
           mergedNodes.push(nodeToAdd);
           existingNodeIds.add(nodeToAdd.id);
@@ -184,7 +189,9 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       for (const link of collaboratorNetwork.links) {
         const s = getId(link.source as any);
         const t = getId(link.target as any);
-        const connectsClicked = (s === nodeName && selectedNeighborIds.includes(t)) || (t === nodeName && selectedNeighborIds.includes(s));
+        const sIsClicked = clickedIdentifiers.has(s);
+        const tIsClicked = clickedIdentifiers.has(t);
+        const connectsClicked = (sIsClicked && selectedNeighborIds.includes(t)) || (tIsClicked && selectedNeighborIds.includes(s));
         if (!connectsClicked) continue;
         const key = `${s}->${t}`;
         if (!existingLinkKeys.has(key)) {
