@@ -190,8 +190,371 @@ export default function D3NetworkRenderer({
   };
 
   /**
-   * Render node elements with multi-role support.
+   * SVG Pattern Manager for optimized pattern creation and cleanup
+   */
+  const SVGPatternManager = {
+    patterns: new Map<string, boolean>(),
+    cleanupQueue: new Set<string>(),
+    
+    // Create or reuse SVG pattern for image
+    createImagePattern(svgElement: SVGSVGElement, imageUrl: string, nodeId: string): string {
+      const patternId = `image-pattern-${nodeId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      
+      // Check if pattern already exists
+      if (this.patterns.has(patternId)) {
+        return patternId;
+      }
+      
+      // Get or create defs section
+      let defs = svgElement.querySelector('defs');
+      if (!defs) {
+        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        svgElement.insertBefore(defs, svgElement.firstChild);
+      }
+      
+      // Create pattern element
+      const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+      pattern.setAttribute('id', patternId);
+      pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+      pattern.setAttribute('width', '100%');
+      pattern.setAttribute('height', '100%');
+      
+      // Create image element within pattern
+      const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+      image.setAttribute('href', imageUrl);
+      image.setAttribute('width', '100%');
+      image.setAttribute('height', '100%');
+      image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+      image.setAttribute('crossorigin', 'anonymous');
+      
+      pattern.appendChild(image);
+      defs.appendChild(pattern);
+      
+      this.patterns.set(patternId, true);
+      console.log(`✨ [PatternManager] Created pattern: ${patternId}`);
+      
+      return patternId;
+    },
+    
+    // Mark pattern for cleanup when no longer needed
+    markForCleanup(patternId: string) {
+      this.cleanupQueue.add(patternId);
+    },
+    
+    // Clean up unused patterns to prevent memory leaks
+    cleanupUnusedPatterns(svgElement: SVGSVGElement) {
+      const defs = svgElement.querySelector('defs');
+      if (!defs) return;
+      
+      let cleanedCount = 0;
+      
+      for (const patternId of this.cleanupQueue) {
+        const pattern = defs.querySelector(`#${patternId}`);
+        if (pattern) {
+          pattern.remove();
+          this.patterns.delete(patternId);
+          cleanedCount++;
+        }
+      }
+      
+      this.cleanupQueue.clear();
+      
+      if (cleanedCount > 0) {
+        console.log(`🧹 [PatternManager] Cleaned up ${cleanedCount} unused patterns`);
+      }
+      
+      // Remove empty defs if no patterns remain
+      if (defs.children.length === 0) {
+        defs.remove();
+      }
+    },
+    
+    // Get pattern usage statistics
+    getStats() {
+      return {
+        totalPatterns: this.patterns.size,
+        pendingCleanup: this.cleanupQueue.size
+      };
+    },
+    
+    // Clear all patterns (for testing or reset)
+    clear() {
+      this.patterns.clear();
+      this.cleanupQueue.clear();
+    }
+  };
+  
+  /**
+   * Enhanced image loading system with lazy loading and viewport culling
+   */
+  const ImageLoadingManager = {
+    loadedImages: new Map<string, boolean>(),
+    failedImages: new Set<string>(),
+    pendingImages: new Map<string, Promise<boolean>>(),
+    viewportCache: new Map<string, boolean>(),
+    
+    // Performance settings for large networks
+    LAZY_LOADING_THRESHOLD: 20, // Only show first 20 images immediately
+    VIEWPORT_CULLING_ENABLED: true,
+    MAX_CONCURRENT_LOADS: 3, // Limit concurrent image loads
+    
+    // Check if node is in viewport for performance optimization
+    isNodeInViewport(node: NetworkNode, svgElement: SVGSVGElement): boolean {
+      if (!this.VIEWPORT_CULLING_ENABLED || !node.x || !node.y) return true;
+      
+      try {
+        const rect = svgElement.getBoundingClientRect();
+        const zoom = d3.zoomTransform(svgElement);
+        
+        // Transform node coordinates to screen coordinates
+        const screenX = node.x * zoom.k + zoom.x;
+        const screenY = node.y * zoom.k + zoom.y;
+        
+        // Add margin for nodes just outside viewport
+        const margin = 100;
+        
+        return (
+          screenX >= -margin &&
+          screenX <= rect.width + margin &&
+          screenY >= -margin &&
+          screenY <= rect.height + margin
+        );
+      } catch {
+        return true; // Default to visible if calculation fails
+      }
+    },
+    
+    // Get optimal image size based on node size and zoom level
+    getOptimalImageSize(node: NetworkNode, svgElement?: SVGSVGElement): { width: number; height: number; quality: 'low' | 'medium' | 'high' } {
+      const baseSize = (node.size - 4) * 2; // Base image size
+      
+      // Get current zoom level if available
+      let zoomScale = 1;
+      if (svgElement) {
+        try {
+          const transform = d3.zoomTransform(svgElement);
+          zoomScale = transform.k;
+        } catch {
+          // Fallback to default zoom
+        }
+      }
+      
+      // Calculate effective size on screen
+      const effectiveSize = baseSize * zoomScale;
+      
+      // Determine quality based on effective size
+      let quality: 'low' | 'medium' | 'high';
+      let sizeFactor: number;
+      
+      if (effectiveSize < 32) {
+        quality = 'low';
+        sizeFactor = 0.5; // Reduce size for small nodes
+      } else if (effectiveSize < 64) {
+        quality = 'medium';
+        sizeFactor = 0.75;
+      } else {
+        quality = 'high';
+        sizeFactor = 1;
+      }
+      
+      const optimizedSize = Math.max(16, Math.min(128, baseSize * sizeFactor));
+      
+      return {
+        width: optimizedSize,
+        height: optimizedSize,
+        quality
+      };
+    },
+    
+    // Check if image should be loaded based on priority and performance settings
+    shouldLoadImage(node: NetworkNode, nodeIndex: number, svgElement?: SVGSVGElement): boolean {
+      // Always load images for high-priority nodes (first few nodes)
+      if (nodeIndex < this.LAZY_LOADING_THRESHOLD) return true;
+      
+      // For lower-priority nodes, check viewport if culling is enabled
+      if (svgElement && this.VIEWPORT_CULLING_ENABLED) {
+        return this.isNodeInViewport(node, svgElement);
+      }
+      
+      return true;
+    },
+    
+    // Preload an image and return a promise with performance optimization
+    preloadImage(url: string, priority: 'high' | 'normal' | 'low' = 'normal'): Promise<boolean> {
+      if (this.loadedImages.has(url)) {
+        return Promise.resolve(this.loadedImages.get(url)!);
+      }
+      
+      if (this.failedImages.has(url)) {
+        return Promise.resolve(false);
+      }
+      
+      if (this.pendingImages.has(url)) {
+        return this.pendingImages.get(url)!;
+      }
+      
+      const promise = new Promise<boolean>((resolve) => {
+        const img = new Image();
+        
+        // Set up timeout for image loading (adjust based on priority)
+        const timeoutDuration = priority === 'high' ? 8000 : priority === 'normal' ? 5000 : 3000;
+        const timeout = setTimeout(() => {
+          console.warn(`⏰ [ImageLoader] Timeout loading image (${priority}): ${url}`);
+          this.failedImages.add(url);
+          resolve(false);
+        }, timeoutDuration);
+        
+        img.onload = () => {
+          clearTimeout(timeout);
+          console.log(`✅ [ImageLoader] Successfully loaded: ${url}`);
+          this.loadedImages.set(url, true);
+          resolve(true);
+        };
+        
+        img.onerror = () => {
+          clearTimeout(timeout);
+          console.warn(`❌ [ImageLoader] Failed to load: ${url}`);
+          this.failedImages.add(url);
+          resolve(false);
+        };
+        
+        // Handle CORS issues by trying with crossorigin
+        img.crossOrigin = 'anonymous';
+        img.src = url;
+      });
+      
+      this.pendingImages.set(url, promise);
+      
+      // Clean up pending promise after resolution
+      promise.finally(() => {
+        this.pendingImages.delete(url);
+      });
+      
+      return promise;
+    },
+    
+    // Optimized batch preload with concurrent limiting and prioritization
+    async batchPreloadImages(
+      imageData: Array<{ url: string; node: NetworkNode; priority: 'high' | 'normal' | 'low' }>, 
+      maxRetries: number = 2
+    ): Promise<Map<string, boolean>> {
+      const results = new Map<string, boolean>();
+      
+      console.log(`🖼️ [ImageLoader] Starting optimized batch preload of ${imageData.length} images`);
+      
+      // Sort by priority (high first, then normal, then low)
+      const sortedImageData = imageData.sort((a, b) => {
+        const priorityOrder = { high: 0, normal: 1, low: 2 };
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      });
+      
+      // Process in concurrent batches with limited concurrency
+      const concurrentBatches = [];
+      for (let i = 0; i < sortedImageData.length; i += this.MAX_CONCURRENT_LOADS) {
+        const batch = sortedImageData.slice(i, i + this.MAX_CONCURRENT_LOADS);
+        
+        const batchPromise = Promise.all(
+          batch.map(async ({ url, priority }) => {
+            let success = false;
+            let attempt = 0;
+            
+            while (!success && attempt <= maxRetries) {
+              if (attempt > 0) {
+                console.log(`🔄 [ImageLoader] Retry attempt ${attempt} for: ${url}`);
+                // Add small delay between retries
+                await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+              }
+              
+              success = await this.preloadImage(url, priority);
+              attempt++;
+            }
+            
+            results.set(url, success);
+            return { url, success };
+          })
+        );
+        
+        concurrentBatches.push(batchPromise);
+        
+        // Small delay between concurrent batches to avoid overwhelming the browser
+        if (i + this.MAX_CONCURRENT_LOADS < sortedImageData.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      
+      // Wait for all batches to complete
+      await Promise.all(concurrentBatches);
+      
+      const successCount = Array.from(results.values()).filter(Boolean).length;
+      console.log(`📊 [ImageLoader] Optimized batch complete: ${successCount}/${imageData.length} images loaded successfully`);
+      
+      return results;
+    },
+    
+    // Check if image is ready to display
+    isImageReady(url: string): boolean {
+      return this.loadedImages.get(url) === true;
+    },
+    
+    // Check if image failed to load
+    hasImageFailed(url: string): boolean {
+      return this.failedImages.has(url);
+    },
+    
+    // Clear cache (useful for testing) with memory optimization
+    clearCache() {
+      this.loadedImages.clear();
+      this.failedImages.clear();
+      this.pendingImages.clear();
+      this.viewportCache.clear();
+      
+      // Clean up any unused image elements to free memory
+      const imageElements = document.querySelectorAll('image.profile-image');
+      imageElements.forEach(img => {
+        if (img.parentNode) {
+          const imgElement = img as SVGImageElement;
+          // Only remove if not currently visible
+          if (imgElement.style.opacity === '0') {
+            imgElement.remove();
+          }
+        }
+      });
+      
+      // Also clear SVG patterns
+      SVGPatternManager.clear();
+      
+      console.log(`🧹 [ImageLoader] Cache cleared and ${imageElements.length} image elements cleaned up`);
+    },
+    
+    // Performance monitoring with image quality metrics
+    getPerformanceStats() {
+      // Count images by quality level
+      const qualityStats = { low: 0, medium: 0, high: 0 };
+      const imageElements = document.querySelectorAll('image.profile-image[data-quality]');
+      imageElements.forEach(img => {
+        const quality = img.getAttribute('data-quality') as 'low' | 'medium' | 'high';
+        if (quality && qualityStats[quality] !== undefined) {
+          qualityStats[quality]++;
+        }
+      });
+      
+      return {
+        loadedImages: this.loadedImages.size,
+        failedImages: this.failedImages.size,
+        pendingImages: this.pendingImages.size,
+        viewportCacheSize: this.viewportCache.size,
+        imageQuality: qualityStats,
+        totalRenderedImages: imageElements.length,
+        memoryUsageMB: (performance as any).memory ? 
+          Math.round(((performance as any).memory.usedJSHeapSize / 1024 / 1024) * 100) / 100 : 'unknown'
+      };
+    }
+  };
+
+  /**
+   * Render node elements with multi-role support and optimized progressive image loading.
    * Single-role nodes get simple circles, multi-role nodes get segmented circles.
+   * Includes performance optimizations: lazy loading, viewport culling, and memory management.
    */
   const renderNodes = (
     networkGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
@@ -262,6 +625,202 @@ export default function D3NetworkRenderer({
           .attr("stroke", "white")
           .attr("stroke-width", 2);
       }
+
+      // Add profile picture support for any node with an imageUrl (optimized)
+      if (d.imageUrl) {
+        const profileImageSize = d.size - 4; // Leave minimal space for border
+        const nodeIndex = nodes.indexOf(d);
+        const shouldLoad = ImageLoadingManager.shouldLoadImage(d, nodeIndex, svgRef.current || undefined);
+        
+        // Create clipPath for circular image
+        const clipId = `clip-${d.id.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        
+        // Create optimized clipPath using centralized pattern management
+        const svg = svgRef.current!;
+        let defs = svg.querySelector('defs');
+        if (!defs) {
+          defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+          svg.insertBefore(defs, svg.firstChild);
+        }
+        
+        // Check if clipPath already exists to avoid duplication
+        if (!defs.querySelector(`#${clipId}`)) {
+          const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+          clipPath.setAttribute('id', clipId);
+          
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', '0');
+          circle.setAttribute('cy', '0');
+          circle.setAttribute('r', profileImageSize.toString());
+          
+          clipPath.appendChild(circle);
+          defs.appendChild(clipPath);
+        }
+          
+        // Add data attribute for viewport culling reference
+        group.attr("data-node-id", d.id);
+
+        // Optimized progressive loading with viewport culling
+        if (!shouldLoad) {
+          // For nodes outside viewport or low priority, show placeholder initially
+          const placeholderGroup = group.append("g")
+            .attr("class", "image-placeholder-lazy")
+            .style("opacity", 0.7);
+            
+          placeholderGroup.append("circle")
+            .attr("r", profileImageSize)
+            .attr("fill", "#1a1a1a")
+            .attr("stroke", "#444")
+            .attr("stroke-width", 1);
+            
+          placeholderGroup.append("text")
+            .attr("text-anchor", "middle")
+            .attr("dy", "0.35em")
+            .attr("font-size", "10px")
+            .attr("fill", "#666")
+            .text("⏳");
+          
+          // Mark as not in viewport initially for lazy loading
+          ImageLoadingManager.viewportCache.set(d.id, false);
+            
+        } else if (ImageLoadingManager.isImageReady(d.imageUrl)) {
+          // Mark as loaded and in viewport
+          ImageLoadingManager.viewportCache.set(d.id, true);
+          
+          // Image is already loaded - display immediately with optimal sizing
+          const optimalSize = ImageLoadingManager.getOptimalImageSize(d, svgRef.current || undefined);
+          
+          const image = group.append("image")
+            .attr("class", "profile-image")
+            .attr("data-quality", optimalSize.quality)
+            .attr("x", -profileImageSize)
+            .attr("y", -profileImageSize)
+            .attr("width", profileImageSize * 2)
+            .attr("height", profileImageSize * 2)
+            .attr("clip-path", `url(#${clipId})`)
+            .attr("href", d.imageUrl)
+            .attr("crossorigin", "anonymous")
+            .style("opacity", 1)
+            .style("image-rendering", optimalSize.quality === 'low' ? 'pixelated' : 'auto');
+            
+        } else if (ImageLoadingManager.hasImageFailed(d.imageUrl)) {
+          // Image has failed to load - show fallback placeholder
+          const placeholderGroup = group.append("g")
+            .attr("class", "image-placeholder");
+            
+          placeholderGroup.append("circle")
+            .attr("r", profileImageSize)
+            .attr("fill", "#2a2a2a")
+            .attr("stroke", "#555")
+            .attr("stroke-width", 1);
+            
+          placeholderGroup.append("text")
+            .attr("text-anchor", "middle")
+            .attr("dy", "0.35em")
+            .attr("font-size", "12px")
+            .attr("fill", "#888")
+            .text("?");
+            
+        } else {
+          // Image is not yet loaded - show loading spinner and start progressive loading
+          const loadingGroup = group.append("g")
+            .attr("class", "loading-spinner")
+            .style("opacity", 1);
+          
+          // Get optimal sizing for this node
+          const optimalSize = ImageLoadingManager.getOptimalImageSize(d, svgRef.current || undefined);
+          
+          // Enhanced loading spinner with pulsing effect (scaled appropriately)
+          const spinnerSize = Math.max(6, Math.min(12, profileImageSize * 0.3));
+          const spinnerCircle = loadingGroup.append("circle")
+            .attr("r", spinnerSize)
+            .attr("fill", "none")
+            .attr("stroke", optimalSize.quality === 'high' ? "#888" : "#666")
+            .attr("stroke-width", optimalSize.quality === 'high' ? 2 : 1)
+            .attr("stroke-dasharray", "12.57")
+            .attr("stroke-linecap", "round")
+            .style("animation", "spin 1s linear infinite");
+          
+          // Add pulsing background circle (size-optimized)
+          const bgSize = profileImageSize * (optimalSize.quality === 'high' ? 0.9 : 0.7);
+          loadingGroup.append("circle")
+            .attr("r", bgSize)
+            .attr("fill", "rgba(255, 255, 255, 0.05)")
+            .attr("stroke", "rgba(255, 255, 255, 0.1)")
+            .attr("stroke-width", 1)
+            .style("animation", "pulse 2s ease-in-out infinite");
+          
+          // Start progressive loading with priority based on node importance
+          const priority = nodeIndex < ImageLoadingManager.LAZY_LOADING_THRESHOLD ? 'high' : 
+                          d.type === 'artist' ? 'normal' : 'low';
+          
+          ImageLoadingManager.preloadImage(d.imageUrl, priority).then((success) => {
+            if (success) {
+              // Image loaded successfully - transition to display with optimal sizing
+              const optimalSize = ImageLoadingManager.getOptimalImageSize(d, svgRef.current || undefined);
+              
+              const image = group.append("image")
+                .attr("class", "profile-image")
+                .attr("data-quality", optimalSize.quality)
+                .attr("x", -profileImageSize)
+                .attr("y", -profileImageSize)
+                .attr("width", profileImageSize * 2)
+                .attr("height", profileImageSize * 2)
+                .attr("clip-path", `url(#${clipId})`)
+                .attr("href", d.imageUrl)
+                .attr("crossorigin", "anonymous")
+                .style("opacity", 0)
+                .style("image-rendering", optimalSize.quality === 'low' ? 'pixelated' : 'auto');
+              
+              // Smooth transition from loading to image
+              loadingGroup.transition()
+                .duration(300)
+                .style("opacity", 0)
+                .on("end", () => loadingGroup.remove());
+              
+              image.transition()
+                .duration(300)
+                .style("opacity", 1);
+                
+            } else {
+              // Image failed to load - transition to placeholder
+              const placeholderGroup = group.append("g")
+                .attr("class", "image-placeholder")
+                .style("opacity", 0);
+                
+              placeholderGroup.append("circle")
+                .attr("r", profileImageSize)
+                .attr("fill", "#2a2a2a")
+                .attr("stroke", "#555")
+                .attr("stroke-width", 1);
+                
+              placeholderGroup.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", "0.35em")
+                .attr("font-size", "12px")
+                .attr("fill", "#888")
+                .text("?");
+              
+              // Smooth transition from loading to placeholder
+              loadingGroup.transition()
+                .duration(300)
+                .style("opacity", 0)
+                .on("end", () => loadingGroup.remove());
+              
+              placeholderGroup.transition()
+                .duration(300)
+                .style("opacity", 1);
+            }
+          }).catch((error) => {
+            console.error(`❌ [ImageLoader] Error loading ${d.imageUrl}:`, error);
+            // Remove loading spinner on error
+            loadingGroup.transition()
+              .duration(300)
+              .style("opacity", 0)
+              .on("end", () => loadingGroup.remove());
+          });
+        }
+      }
     })
       .on("click", function(event, d) {
         // Use the node interactions hook for click handling
@@ -305,7 +864,11 @@ export default function D3NetworkRenderer({
       .append("text")
       .attr("class", "label")
       .attr("text-anchor", "middle")
-      .attr("dy", "0.35em")
+      .attr("dy", (d) => {
+        // Position labels below nodes when they have profile pictures
+        const hasProfilePicture = Boolean(d.imageUrl);
+        return hasProfilePicture ? `${d.size + 18}px` : "0.35em";
+      })
       .attr("font-size", (d) => d.type === 'artist' ? "14px" : "11px")
       .attr("font-weight", (d) => d.type === 'artist' ? "600" : "500")
       .attr("fill", "white")
@@ -314,6 +877,125 @@ export default function D3NetworkRenderer({
       .text((d) => d.name);
   };
 
+  // Viewport-aware image loading effect for performance optimization
+  useEffect(() => {
+    if (!svgRef.current || !data.nodes.length || !visible) return;
+    
+    const updateViewportImages = () => {
+      if (!ImageLoadingManager.VIEWPORT_CULLING_ENABLED) return;
+      
+      const svg = svgRef.current!;
+      const nodesWithImages = data.nodes.filter(node => node.imageUrl);
+      
+      // Track which images should be visible/hidden based on viewport
+      for (const node of nodesWithImages) {
+        const inViewport = ImageLoadingManager.isNodeInViewport(node, svg);
+        const wasInViewport = ImageLoadingManager.viewportCache.get(node.id);
+        
+        if (inViewport !== wasInViewport) {
+          ImageLoadingManager.viewportCache.set(node.id, inViewport);
+          
+          // Find the corresponding image elements and update their loading priority
+          const nodeGroup = svg.querySelector(`.node-group:has([data-node-id="${node.id}"])`);
+          if (nodeGroup) {
+            const imageElement = nodeGroup.querySelector('image.profile-image');
+            const placeholderElement = nodeGroup.querySelector('.image-placeholder-lazy');
+            
+            if (inViewport && placeholderElement && !imageElement) {
+              // Node entered viewport - start loading image
+              console.log(`🔍 [ViewportCuller] Loading image for ${node.name} (entered viewport)`);
+              
+              if (node.imageUrl && !ImageLoadingManager.isImageReady(node.imageUrl)) {
+                ImageLoadingManager.preloadImage(node.imageUrl, 'normal').then(success => {
+                  if (success) {
+                    // Replace placeholder with image
+                    const currentPlaceholder = nodeGroup.querySelector('.image-placeholder-lazy');
+                    if (currentPlaceholder) {
+                      currentPlaceholder.remove();
+                      
+                      // Create image element
+                      const group = d3.select(nodeGroup);
+                      const profileImageSize = node.size - 4;
+                      const clipId = `clip-${node.id.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                      
+                      const image = group.append("image")
+                        .attr("class", "profile-image")
+                        .attr("x", -profileImageSize)
+                        .attr("y", -profileImageSize)
+                        .attr("width", profileImageSize * 2)
+                        .attr("height", profileImageSize * 2)
+                        .attr("clip-path", `url(#${clipId})`)
+                        .attr("href", node.imageUrl)
+                        .attr("crossorigin", "anonymous")
+                        .style("opacity", 0);
+                      
+                      image.transition()
+                        .duration(200)
+                        .style("opacity", 1);
+                    }
+                  }
+                });
+              }
+            } else if (!inViewport && imageElement) {
+              // Node left viewport - consider unloading image for memory optimization
+              // Only unload if we have many images loaded
+              const loadedImageCount = ImageLoadingManager.loadedImages.size;
+              if (loadedImageCount > 30) {
+                console.log(`💿 [ViewportCuller] Unloading image for ${node.name} (left viewport, memory optimization)`);
+                
+                imageElement.remove();
+                
+                // Replace with placeholder
+                const group = d3.select(nodeGroup);
+                const profileImageSize = node.size - 4;
+                
+                const placeholderGroup = group.append("g")
+                  .attr("class", "image-placeholder-lazy")
+                  .style("opacity", 0.7);
+                  
+                placeholderGroup.append("circle")
+                  .attr("r", profileImageSize)
+                  .attr("fill", "#1a1a1a")
+                  .attr("stroke", "#444")
+                  .attr("stroke-width", 1);
+                  
+                placeholderGroup.append("text")
+                  .attr("text-anchor", "middle")
+                  .attr("dy", "0.35em")
+                  .attr("font-size", "10px")
+                  .attr("fill", "#666")
+                  .text("⏳");
+              }
+            }
+          }
+        }
+      }
+    };
+    
+    // Throttled viewport update function for performance
+    let viewportUpdateTimeout: NodeJS.Timeout;
+    const throttledViewportUpdate = () => {
+      clearTimeout(viewportUpdateTimeout);
+      viewportUpdateTimeout = setTimeout(updateViewportImages, 150);
+    };
+    
+    // Set up viewport monitoring for zoom and pan events
+    const svg = d3.select(svgRef.current);
+    const handleViewportChange = () => {
+      throttledViewportUpdate();
+    };
+    
+    svg.on('zoom.viewport', handleViewportChange);
+    
+    // Initial viewport check
+    updateViewportImages();
+    
+    return () => {
+      clearTimeout(viewportUpdateTimeout);
+      svg.on('zoom.viewport', null);
+    };
+  }, [data.nodes, visible]);
+  
   // Main D3 visualization effect
   useEffect(() => {
     if (!svgRef.current || !data || !visible) return;
@@ -335,6 +1017,29 @@ export default function D3NetworkRenderer({
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       return nodeSet.has(sourceId) && nodeSet.has(targetId);
     });
+
+    // Start optimized batch preloading of profile pictures
+    const imagesToLoad = data.nodes
+      .filter(node => node.imageUrl)
+      .map((node, index) => ({
+        url: node.imageUrl!,
+        node,
+        priority: index < ImageLoadingManager.LAZY_LOADING_THRESHOLD ? 'high' : 
+                 node.type === 'artist' ? 'normal' : 'low' as 'high' | 'normal' | 'low'
+      }))
+      .filter(({ url }) => !ImageLoadingManager.isImageReady(url) && !ImageLoadingManager.hasImageFailed(url));
+    
+    if (imagesToLoad.length > 0) {
+      console.log(`🚀 [D3Renderer] Starting optimized batch preload of ${imagesToLoad.length} profile pictures`);
+      console.log(`📊 [D3Renderer] Performance stats before loading:`, ImageLoadingManager.getPerformanceStats());
+      
+      ImageLoadingManager.batchPreloadImages(imagesToLoad).then(() => {
+        console.log(`✅ [D3Renderer] Optimized batch preload complete`);
+        console.log(`📊 [D3Renderer] Performance stats after loading:`, ImageLoadingManager.getPerformanceStats());
+      }).catch(error => {
+        console.error(`❌ [D3Renderer] Batch preload error:`, error);
+      });
+    }
 
     // Create network group
     const networkGroup = svg.append("g").attr("class", "network-group");
@@ -397,11 +1102,27 @@ export default function D3NetworkRenderer({
       labelElements.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
     });
 
-    // Cleanup function
+    // Enhanced cleanup function with comprehensive memory optimization
     return () => {
       simulation.stop();
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
+      
+      // Performance optimization: Clean up resources when component unmounts
+      if (data.nodes.length > 50) {
+        console.log(`🧹 [D3Renderer] Cleaning up large network (${data.nodes.length} nodes)`);
+        
+        // Clean up patterns and cache
+        if (svgRef.current) {
+          SVGPatternManager.cleanupUnusedPatterns(svgRef.current);
+        }
+        ImageLoadingManager.clearCache();
+        
+        console.log(`📊 [D3Renderer] Final cleanup stats:`, {
+          patterns: SVGPatternManager.getStats(),
+          images: ImageLoadingManager.getPerformanceStats()
+        });
+      }
     };
   }, [data, visible, mainArtistNode, zoom, nodeInteractions, tooltip, simulationRef, svgRef]);
 

@@ -279,7 +279,78 @@ export default function ShareButton({ artistId, networkData }: ShareButtonProps 
         throw new Error('Network visualization not found');
       }
 
-      // Temporarily hide UI controls but keep the current share dialog
+      // STEP 1: Convert all external profile picture URLs to data URLs
+      const svg = networkContainer.querySelector('svg');
+      const originalImageHrefs = new Map<HTMLImageElement, string>();
+      
+      if (svg) {
+        console.log('🖼️ [Snapshot] Converting profile pictures to data URLs...');
+        const imageElements = svg.querySelectorAll('image[href*="http"]') as NodeListOf<SVGImageElement>;
+        
+        if (imageElements.length > 0) {
+          console.log(`🖼️ [Snapshot] Found ${imageElements.length} external images to convert`);
+          
+          // Convert each external image to a data URL
+          const imageConversions = Array.from(imageElements).map(async (img) => {
+            const originalHref = img.getAttribute('href');
+            if (!originalHref || !originalHref.startsWith('http')) return;
+            
+            try {
+              // Create a canvas to convert the image
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              if (!ctx) return;
+              
+              // Load the image
+              const tempImg = new Image();
+              tempImg.crossOrigin = 'anonymous';
+              
+              return new Promise<void>((resolve) => {
+                tempImg.onload = () => {
+                  try {
+                    // Set canvas dimensions to match the image
+                    canvas.width = tempImg.naturalWidth;
+                    canvas.height = tempImg.naturalHeight;
+                    
+                    // Draw the image to canvas
+                    ctx.drawImage(tempImg, 0, 0);
+                    
+                    // Convert to data URL
+                    const dataUrl = canvas.toDataURL('image/png', 0.9);
+                    
+                    // Store original href for restoration
+                    originalImageHrefs.set(img as any, originalHref);
+                    
+                    // Update the SVG image element with data URL
+                    img.setAttribute('href', dataUrl);
+                    
+                    console.log(`✅ [Snapshot] Converted image: ${originalHref.substring(0, 50)}...`);
+                  } catch (error) {
+                    console.warn(`⚠️ [Snapshot] Failed to convert image ${originalHref}:`, error);
+                  }
+                  resolve();
+                };
+                
+                tempImg.onerror = () => {
+                  console.warn(`⚠️ [Snapshot] Failed to load image for conversion: ${originalHref}`);
+                  resolve();
+                };
+                
+                tempImg.src = originalHref;
+              });
+              
+            } catch (error) {
+              console.warn(`⚠️ [Snapshot] Error converting image ${originalHref}:`, error);
+            }
+          });
+          
+          // Wait for all images to be converted
+          await Promise.all(imageConversions);
+          console.log('✅ [Snapshot] All profile pictures converted to data URLs');
+        }
+      }
+
+      // STEP 2: Temporarily hide UI controls but keep the current share dialog
       currentDialog = document.querySelector('[data-state="open"][role="dialog"]') as HTMLElement;
       const controls = document.querySelectorAll('.fixed:not([role="dialog"]):not([data-radix-portal])') as NodeListOf<HTMLElement>;
       const tooltips = document.querySelectorAll('[data-radix-tooltip-content]') as NodeListOf<HTMLElement>;
@@ -301,13 +372,14 @@ export default function ShareButton({ artistId, networkData }: ShareButtonProps 
         }
       });
 
-      // Wait a brief moment for elements to hide
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait a brief moment for elements to hide and DOM to settle
+      await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Capture only the network visualization at high quality
+      // STEP 3: Capture the network visualization at high quality
       const devicePixelRatio = window.devicePixelRatio || 1;
       const highScale = Math.max(2, devicePixelRatio); // At least 2x, or device pixel ratio
       
+      console.log('📸 [Snapshot] Starting html2canvas capture...');
       const canvas = await html2canvas(networkContainer, {
         useCORS: true,
         allowTaint: true,
@@ -317,6 +389,14 @@ export default function ShareButton({ artistId, networkData }: ShareButtonProps 
         width: networkContainer.offsetWidth,
         height: networkContainer.offsetHeight,
       });
+      
+      // STEP 4: Restore original image URLs
+      if (originalImageHrefs.size > 0) {
+        console.log('🔄 [Snapshot] Restoring original image URLs...');
+        originalImageHrefs.forEach((originalHref, img) => {
+          img.setAttribute('href', originalHref);
+        });
+      }
 
       // Restore original display values
       elementsToHide.forEach((element, index) => {
@@ -331,7 +411,6 @@ export default function ShareButton({ artistId, networkData }: ShareButtonProps 
       }
 
       // Find the bounds of the network content by analyzing the SVG
-      const svg = networkContainer.querySelector('svg');
       let networkBounds = { minX: 0, minY: 0, maxX: canvas.width, maxY: canvas.height };
       
       if (svg) {
@@ -483,6 +562,14 @@ export default function ShareButton({ artistId, networkData }: ShareButtonProps 
       
       if (currentDialog) {
         currentDialog.style.display = dialogDisplay;
+      }
+      
+      // Restore original image URLs if they were changed
+      if (originalImageHrefs && originalImageHrefs.size > 0) {
+        console.log('🔄 [Snapshot] Restoring original image URLs after error...');
+        originalImageHrefs.forEach((originalHref, img) => {
+          img.setAttribute('href', originalHref);
+        });
       }
       
       setIsCapturing(false);

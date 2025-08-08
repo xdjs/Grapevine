@@ -10,6 +10,8 @@ interface NetworkNode {
   size: number;
   artistId: string | null;
   collaborations?: string[];
+  imageUrl?: string | null;
+  spotifyId?: string | null;
 }
 
 interface NetworkLink {
@@ -726,6 +728,30 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
       // Convert nodeMap to nodes array
       const nodes = Array.from(nodeMap.values());
 
+      // Profile picture fetching is now handled by separate API endpoint
+      // Check database cache for existing profile pictures
+      console.log(`🖼️ [Vercel] Checking cached profile pictures for ${nodes.length} nodes...`);
+      try {
+        for (const node of nodes) {
+          if (node.artistId) {
+            const cacheQuery = 'SELECT node_pfp, spotify_id FROM artists WHERE id = $1 AND node_pfp IS NOT NULL';
+            const cacheResult = await client.query(cacheQuery, [node.artistId]);
+            
+            if (cacheResult.rows.length > 0 && cacheResult.rows[0].node_pfp) {
+              node.imageUrl = cacheResult.rows[0].node_pfp;
+              node.spotifyId = cacheResult.rows[0].spotify_id;
+              console.log(`✅ [Vercel] Loaded cached image for ${node.name}: ${node.imageUrl}`);
+            }
+          }
+        }
+        
+        const cachedImageCount = nodes.filter(n => n.imageUrl).length;
+        console.log(`📦 [Vercel] Profile picture cache check complete: ${cachedImageCount}/${nodes.length} images loaded from cache`);
+      } catch (cacheError) {
+        console.warn(`⚠️ [Vercel] Failed to check profile picture cache:`, cacheError);
+        // Continue without cached images - this is not a breaking error
+      }
+
       const networkData = { nodes, links };
 
       // Only cache the generated data if hallucinations were NOT used
@@ -744,7 +770,16 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
       await client.end();
       console.log(`✅ [Vercel] Generated network with ${nodes.length} nodes for ${artistName}`);
       
-      res.json(networkData);
+      // Return network data with note about separate profile picture API
+      const response = {
+        ...networkData,
+        _metadata: {
+          profilePicturesAPI: '/api/artist-profile-pictures-batch',
+          profilePicturesNote: 'Profile pictures should be fetched separately using the batch API for better performance'
+        }
+      };
+      
+      res.json(response);
       
     } catch (dbError) {
       console.error('❌ [Vercel] Database/OpenAI error:', dbError);
