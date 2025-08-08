@@ -424,6 +424,9 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                 {collaborationIconSvg}
               </div>
             )}
+            {isMobile && (
+              <span style={{ color: '#a855f7', fontWeight: 700 }}>•</span>
+            )}
             <span
               style={{
                 fontSize: linkFontSize,
