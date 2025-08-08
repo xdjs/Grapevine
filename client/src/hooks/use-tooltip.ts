@@ -40,6 +40,7 @@ export interface UseTooltipReturn {
   tooltipPosition: TooltipPosition;
   highlightedNode: d3.Selection<SVGGElement, unknown, null, undefined> | null;
   currentNode: NetworkNode | null;
+  isExpandLoading?: boolean;
   
   // Core functions
   showTooltip: (event: MouseEvent, node: NetworkNode) => void;
@@ -71,6 +72,7 @@ export function useTooltip({
   const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition>({ x: 0, y: 0 });
   const [highlightedNode, setHighlightedNode] = useState<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
   const [currentNode, setCurrentNode] = useState<NetworkNode | null>(null);
+  const [isExpandLoading, setIsExpandLoading] = useState(false);
   
   // Remove D3 tooltip implementation - using React NetworkTooltip component instead
 
@@ -213,7 +215,12 @@ export function useTooltip({
 
   const handleExpandAction = useCallback(async (node: NetworkNode) => {
     console.log(`🔗 Expanding network for ${node.name}`);
-    await networkDataHook.expandNodeNetwork(node.name, node.artistId);
+    try {
+      setIsExpandLoading(true);
+      await networkDataHook.expandNodeNetwork(node.name, node.artistId);
+    } finally {
+      setIsExpandLoading(false);
+    }
     hideTooltip();
   }, [networkDataHook.expandNodeNetwork, hideTooltip]);
 
@@ -378,6 +385,7 @@ export function useTooltip({
     tooltipPosition,
     highlightedNode,
     currentNode,
+    isExpandLoading,
     
     // Core functions
     showTooltip,

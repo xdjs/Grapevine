@@ -10,6 +10,7 @@ import { useModals } from "@/hooks/use-modals";
 import { useFilterVisibility } from "@/hooks/use-filter-visibility";
 import { useProfilePictures } from "@/hooks/use-profile-pictures";
 import D3NetworkRenderer from "./d3-network-renderer";
+import ExpandLoading from "./expand-loading";
 import ArtistSelectionModal from "./artist-selection-modal";
 import CollaborationDetailsPopup from "./collaboration-details-popup";
 import NetworkTooltip from "./network-tooltip";
@@ -339,6 +340,9 @@ export default function NetworkVisualizer({
             role="img" 
             aria-label="Music collaboration network visualization"
           />
+
+          {/* Expand Loading Overlay */}
+          <ExpandLoading isVisible={Boolean((tooltip as any).isExpandLoading)} artistName={(tooltip as any).currentNode?.name} />
 
           {/* Enhanced Zoom Controls - Hidden on mobile */}
           {!isMobile && (
