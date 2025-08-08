@@ -105,13 +105,60 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     console.log(`🔗 Expanding network for: ${nodeName}`);
 
     try {
-      const response = await fetch(`/api/network/${encodeURIComponent(nodeName)}`);
-      if (!response.ok) {
-        console.error(`❌ Failed to fetch network for ${nodeName}`);
-        return;
+      // Helper to fetch with no-store and simple retry for transient 5xx
+      const fetchJson = async (url: string): Promise<NetworkData | null> => {
+        try {
+          const res = await fetch(`${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}` as string, {
+            cache: 'no-store'
+          } as RequestInit);
+          if (res.ok) return (await res.json()) as NetworkData;
+          // Retry once for 5xx
+          if (res.status >= 500) {
+            await new Promise(r => setTimeout(r, 400));
+            const retryRes = await fetch(`${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}` as string, {
+              cache: 'no-store'
+            } as RequestInit);
+            if (retryRes.ok) return (await retryRes.json()) as NetworkData;
+          }
+          console.error(`❌ Failed fetch ${url} → status ${res.status}`);
+          return null;
+        } catch (e) {
+          console.error(`❌ Network error for ${url}:`, e);
+          return null;
+        }
+      };
+
+      // Prefer fetching by ID to reduce 404s and ensure accuracy
+      let collaboratorNetwork: NetworkData | null = null;
+      if (nodeId) {
+        collaboratorNetwork = await fetchJson(`/api/network-by-id/${encodeURIComponent(nodeId)}?allowHallucinations=false`);
       }
 
-      const collaboratorNetwork: NetworkData = await response.json();
+      // If no ID fetch, try to resolve ID via artist-options
+      if (!collaboratorNetwork) {
+        try {
+          const optionsRes = await fetch(`/api/artist-options/${encodeURIComponent(nodeName)}?t=${Date.now()}`, { cache: 'no-store' as RequestCache });
+          if (optionsRes.ok) {
+            const optionsData = await optionsRes.json();
+            const candidateId: string | undefined = optionsData?.options?.[0]?.artistId || optionsData?.options?.[0]?.id;
+            if (candidateId) {
+              collaboratorNetwork = await fetchJson(`/api/network-by-id/${encodeURIComponent(candidateId)}?allowHallucinations=false`);
+            }
+          }
+        } catch (e) {
+          console.warn('⚠️ artist-options lookup failed, falling back to name fetch');
+        }
+      }
+
+      // Final fallback: fetch by name
+      if (!collaboratorNetwork) {
+        collaboratorNetwork = await fetchJson(`/api/network/${encodeURIComponent(nodeName)}?allowHallucinations=false`);
+      }
+
+      if (!collaboratorNetwork) {
+        console.error(`❌ Failed to fetch network for ${nodeName} (all strategies)`);
+        return;
+      }
 
       // Start from the currently displayed graph (accumulate expansions)
       const baseData: NetworkData = fullNetworkData ?? { nodes: data.nodes, links: data.links };
