@@ -228,12 +228,8 @@ export default function CollaborationDetailsPopup({
           isMobile ? 'p-4' : 'p-6'
         }`}>
           <div className="flex items-center gap-3">
-            {/* Small circled users icon on mobile; normal icon on desktop */}
-            {isMobile ? (
-              <div className="flex items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-400 w-5 h-5 flex-shrink-0">
-                <MobileUsersIcon />
-              </div>
-            ) : (
+            {/* Desktop header icon; hidden on mobile to avoid layout/overlay issues */}
+            {!isMobile && (
               <div className="flex items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30 flex-shrink-0 w-8 h-8 min-w-8 min-h-8 max-w-8 max-h-8">
                 <Users className="text-purple-400 flex-shrink-0 h-4 w-4 min-h-4 min-w-4 max-h-4 max-w-4" />
               </div>
