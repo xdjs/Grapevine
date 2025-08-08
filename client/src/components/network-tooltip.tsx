@@ -50,16 +50,15 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
   const roleDisplay = roles.length > 1 ? roles.join(', ') : roles[0];
   
   // Reactive mobile detection that updates on window resize
-  const [isMobile, setIsMobile] = useState(false);
+  const getIsMobile = () =>
+    typeof window !== 'undefined' && (
+      window.innerWidth <= 768 ||
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    );
+  const [isMobile, setIsMobile] = useState(getIsMobile);
   
   useEffect(() => {
-    const checkMobile = () => {
-      const mobile = typeof window !== 'undefined' && (
-        window.innerWidth <= 768 || 
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-      );
-      setIsMobile(mobile);
-    };
+    const checkMobile = () => setIsMobile(getIsMobile());
     
     checkMobile();
     window.addEventListener('resize', checkMobile);
