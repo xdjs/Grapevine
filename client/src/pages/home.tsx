@@ -9,6 +9,7 @@ import HelpButton from "@/components/help-button";
 import ShareButton from "@/components/share-button";
 import LoadingScreen from "@/components/loading-screen";
 import { Button } from "@/components/ui/button";
+import { useModals } from "@/hooks/use-modals";
 
 import { NetworkData, FilterState, NoCollaboratorsResponse, NetworkResponse } from "@/types/network";
 import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
@@ -124,6 +125,9 @@ export default function Home() {
   const saveToHistoryRef = useRef<((artistName: string, artistId: string | null) => void) | null>(null);
   const isMobile = useIsMobile();
   const spacing = useDynamicSpacing();
+
+  // Read popup visibility so we can hide mobile controls when collaboration popup is open
+  const { showCollaborationPopup } = useModals();
 
   // Manage body overflow classes based on network view state
   useEffect(() => {
@@ -421,14 +425,15 @@ export default function Home() {
       {showNetworkView && (
         <>
           {/* Mobile Controls */}
-          <MobileControls
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onZoomReset={handleZoomReset}
-            onClearAll={handleClearNetwork}
-            artistId={currentArtistId}
-
-          />
+          {!showCollaborationPopup && (
+            <MobileControls
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+              onZoomReset={handleZoomReset}
+              onClearAll={handleClearNetwork}
+              artistId={currentArtistId}
+            />
+          )}
         </>
       )}
 
