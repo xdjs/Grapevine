@@ -214,7 +214,9 @@ export default function CollaborationDetailsPopup({
       onClick={handleOverlayClick}
     >
       <div 
-        className={`relative bg-black/95 backdrop-blur-sm border-2 border-purple-500/30 rounded-xl shadow-2xl w-full max-h-[90vh] overflow-hidden text-white ${
+        className={`relative bg-black/95 backdrop-blur-sm border-2 border-purple-500/30 rounded-xl shadow-2xl w-full max-h-[90vh] ${
+          isMobile ? 'overflow-y-auto' : 'overflow-hidden'
+        } text-white ${
           isMobile ? 'max-w-sm mx-2' : 'max-w-2xl'
         }`}
         style={{
@@ -270,9 +272,9 @@ export default function CollaborationDetailsPopup({
         )}
 
         {/* Content */}
-        <div className={`overflow-y-auto max-h-[calc(90vh-120px)] ${
-          isMobile ? 'p-4' : 'p-6'
-        }`}>
+        <div className={`${
+          isMobile ? '' : 'overflow-y-auto max-h-[calc(90vh-120px)]'
+        } ${isMobile ? 'p-4' : 'p-6'}`}>
           {loading && (
             <>
               {isMobile ? (
