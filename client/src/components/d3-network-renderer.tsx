@@ -50,6 +50,9 @@ export default function D3NetworkRenderer({
   mainArtistNode,
 }: D3NetworkRendererProps) {
   
+  // Track which node IDs we've already batch-preloaded to avoid re-preloading on small expansions
+  const preloadedNodeIdsRef = useRef<Set<string>>(new Set());
+
   // Use filter visibility management hook
   const { isNodeVisible } = useFilterVisibility({
     svgRef,
@@ -1019,7 +1022,9 @@ export default function D3NetworkRenderer({
     });
 
     // Start optimized batch preloading of profile pictures
-    const imagesToLoad = data.nodes
+    // Only preload for nodes we haven't already batch-preloaded in this session
+    const nodesToPreload = data.nodes.filter(node => !preloadedNodeIdsRef.current.has(node.id));
+    const imagesToLoad = nodesToPreload
       .filter(node => node.imageUrl)
       .map((node, index) => ({
         url: node.imageUrl!,
@@ -1036,6 +1041,10 @@ export default function D3NetworkRenderer({
       ImageLoadingManager.batchPreloadImages(imagesToLoad).then(() => {
         console.log(`✅ [D3Renderer] Optimized batch preload complete`);
         console.log(`📊 [D3Renderer] Performance stats after loading:`, ImageLoadingManager.getPerformanceStats());
+        // Mark these nodes as preloaded to prevent future batch preloads for the same set
+        for (const { node } of imagesToLoad) {
+          preloadedNodeIdsRef.current.add(node.id);
+        }
       }).catch(error => {
         console.error(`❌ [D3Renderer] Batch preload error:`, error);
       });
