@@ -6,9 +6,7 @@ export interface NetworkTooltipProps {
   position: { x: number; y: number };
   visible: boolean;
   isMainArtist: boolean;
-  isFirstDegreeCollaborator: boolean;
   onNetworkAction: (node: NetworkNode) => void;
-  onExpandAction: (node: NetworkNode) => void;
   onProfileAction: (node: NetworkNode) => void;
   onCollaborationAction: (node: NetworkNode) => void;
   onClose: () => void;
@@ -19,9 +17,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
   position,
   visible,
   isMainArtist,
-  isFirstDegreeCollaborator,
   onNetworkAction,
-  onExpandAction,
   onProfileAction,
   onCollaborationAction,
   onClose,
@@ -256,7 +252,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
               flexShrink: 0,
             }}
           />
-          <span
+            <span
             style={{
               fontSize: linkFontSize,
               fontStyle: 'italic',
@@ -271,68 +267,6 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             {node.name}&apos;s network
           </span>
         </div>
-
-        {/* Expand action - only for first-degree collaborators that aren't main artist */}
-        {isFirstDegreeCollaborator && !isMainArtist && (
-          <div
-            data-testid="expand-action"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap,
-              cursor: 'pointer',
-              width: '100%',
-              overflow: 'hidden',
-            }}
-            onClick={(e) => handleActionClick(e, () => onExpandAction(node))}
-            onKeyDown={(e) => handleKeyPress(e, () => onExpandAction(node))}
-            tabIndex={0}
-            role="button"
-            aria-label={`Expand ${node.name}'s network`}
-          >
-            <div
-              style={{
-                width: `${iconSize}px`,
-                height: `${iconSize}px`,
-                minWidth: `${iconSize}px`,
-                minHeight: `${iconSize}px`,
-                maxWidth: `${iconSize}px`,
-                maxHeight: `${iconSize}px`,
-                borderRadius: '50%',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#4CAF50',
-                flexShrink: 0,
-              }}
-            >
-              <span
-                style={{
-                  color: 'white',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                }}
-              >
-                +
-              </span>
-            </div>
-            <span
-              style={{
-                fontSize: linkFontSize,
-                fontStyle: 'italic',
-                textDecoration: 'underline',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                flex: 1,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              Expand {node.name}&apos;s network
-            </span>
-          </div>
-        )}
 
         {/* Music Nerd profile action - only for artists */}
         {isArtist && (

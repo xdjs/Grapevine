@@ -416,22 +416,7 @@ export default function NetworkVisualizer({
                   return false;
                 }
               })()}
-              isFirstDegreeCollaborator={(() => {
-                try {
-                  const mainArtistNode = finalDisplayData.nodes.find(node => node.size === 30 && node.type === 'artist');
-                  return mainArtistNode && finalDisplayData.links.some(link => {
-                    const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-                    const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-                    return (sourceId === mainArtistNode.name && targetId === tooltip.currentNode?.name) || 
-                           (sourceId === tooltip.currentNode?.name && targetId === mainArtistNode.name);
-                  }) || false;
-                } catch (error) {
-                  handleError(error as Error, 'tooltip collaborator calculation');
-                  return false;
-                }
-              })()}
               onNetworkAction={tooltip.handleNetworkAction}
-              onExpandAction={tooltip.handleExpandAction}
               onProfileAction={tooltip.handleProfileAction}
               onCollaborationAction={tooltip.handleCollaborationAction}
               onClose={tooltip.hideTooltip}
