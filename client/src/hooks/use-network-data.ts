@@ -172,11 +172,12 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         })
       );
 
-      // Build quick lookup for nodes returned by the collaborator network
+      // Build quick lookup for nodes returned by the collaborator network (case-insensitive keys)
       const returnedNodeByKey = new Map<string, NetworkNode>();
+      const toKey = (v?: string) => (v || '').toLowerCase();
       for (const n of collaboratorNetwork.nodes) {
-        returnedNodeByKey.set(n.id, n);
-        if (n.name) returnedNodeByKey.set(n.name, n);
+        returnedNodeByKey.set(toKey(n.id), n);
+        if (n.name) returnedNodeByKey.set(toKey(n.name), n);
       }
 
       // Normalize helper
@@ -185,12 +186,12 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       // Determine canonical identifier for the clicked node inside the collaborator network
       let clickedCanonicalId: string | undefined;
       // Prefer exact id match when provided
-      if (nodeId && returnedNodeByKey.has(nodeId)) {
+      if (nodeId && returnedNodeByKey.has(toKey(nodeId))) {
         clickedCanonicalId = nodeId;
       }
       // Fallback: match by name
       if (!clickedCanonicalId) {
-        const byName = returnedNodeByKey.get(nodeName);
+        const byName = returnedNodeByKey.get(toKey(nodeName));
         if (byName) clickedCanonicalId = byName.id;
       }
       // Last resort: use provided id or name directly
@@ -201,8 +202,8 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       for (const link of collaboratorNetwork.links) {
         const s = getId(link.source as any);
         const t = getId(link.target as any);
-        if (s === clickedCanonicalId || t === clickedCanonicalId) {
-          const neighborId = s === clickedCanonicalId ? t : s;
+        if (toKey(s) === toKey(clickedCanonicalId) || toKey(t) === toKey(clickedCanonicalId)) {
+          const neighborId = toKey(s) === toKey(clickedCanonicalId) ? t : s;
           if (!neighborIds.includes(neighborId)) neighborIds.push(neighborId);
         }
       }
@@ -227,10 +228,11 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
 
       // Add selected neighbor nodes (from returned data only; no fabrication)
       for (const nid of selectedNeighborIds) {
-        const nodeToAdd = returnedNodeByKey.get(nid);
+        const nodeToAdd = returnedNodeByKey.get(toKey(nid));
         if (nodeToAdd && !existingNodeIds.has(nodeToAdd.id)) {
           mergedNodes.push(nodeToAdd);
           existingNodeIds.add(nodeToAdd.id);
+          console.log(`➕ [Expand] Added node: ${nodeToAdd.name} (id=${nodeToAdd.id})`);
         }
       }
 
@@ -238,12 +240,14 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       for (const link of collaboratorNetwork.links) {
         const s = getId(link.source as any);
         const t = getId(link.target as any);
-        const connectsClicked = (s === clickedCanonicalId && selectedNeighborIds.includes(t)) || (t === clickedCanonicalId && selectedNeighborIds.includes(s));
+        const connectsClicked = (toKey(s) === toKey(clickedCanonicalId) && selectedNeighborIds.map(toKey).includes(toKey(t))) ||
+                               (toKey(t) === toKey(clickedCanonicalId) && selectedNeighborIds.map(toKey).includes(toKey(s)));
         if (!connectsClicked) continue;
         const key = `${s}->${t}`;
         if (!existingLinkKeys.has(key)) {
           mergedLinks.push(link);
           existingLinkKeys.add(key);
+          console.log(`➕ [Expand] Added link: ${s} -> ${t}`);
         }
       }
 
