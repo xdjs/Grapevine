@@ -457,9 +457,7 @@ describe("NetworkVisualizer Integration Tests", () => {
           position: { x: 150, y: 250 },
           visible: true,
           isMainArtist: expect.any(Boolean),
-          isFirstDegreeCollaborator: expect.any(Boolean),
           onNetworkAction: tooltipActiveState.handleNetworkAction,
-          onExpandAction: tooltipActiveState.handleExpandAction,
           onProfileAction: tooltipActiveState.handleProfileAction,
           onCollaborationAction: tooltipActiveState.handleCollaborationAction,
           onClose: tooltipActiveState.hideTooltip

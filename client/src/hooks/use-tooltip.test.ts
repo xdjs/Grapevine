@@ -360,27 +360,7 @@ describe('useTooltip', () => {
       );
     });
 
-    it('should handle expand network action', async () => {
-      const { result } = renderHook(() =>
-        useTooltip({
-          networkData: mockNetworkData,
-          config: mockConfig,
-          networkDataHook: mockNetworkDataHook,
-          callbacks: mockCallbacks,
-        })
-      );
-
-      const mockNode = mockNetworkData.nodes[1]; // producer node
-
-      await act(async () => {
-        await result.current.handleExpandAction(mockNode);
-      });
-
-      expect(mockNetworkDataHook.expandNodeNetwork).toHaveBeenCalledWith(
-        mockNode.name,
-        mockNode.artistId
-      );
-    });
+    // Expand network action removed from UI
 
     it('should handle collaboration details action', () => {
       const { result } = renderHook(() =>
