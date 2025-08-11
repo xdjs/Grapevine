@@ -155,7 +155,9 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
         left: `${position.x}px`,
         top: `${position.y}px`,
         maxWidth,
-        background: 'rgba(0, 0, 0, 0.9)',
+        // Full-tooltip purple aesthetic background
+        background: 'linear-gradient(135deg, rgba(168,85,247,0.15) 0%, rgba(255,105,180,0.08) 100%)',
+        border: '1px solid rgba(168,85,247,0.35)',
         color: 'white',
         borderRadius: '8px',
         padding: '12px',
@@ -163,7 +165,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
         fontSize: '14px',
         lineHeight: '1.4',
         zIndex: 1000,
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
         pointerEvents: 'auto',
         paddingRight,
         minWidth: isMobile ? '280px' : '300px',
@@ -290,11 +292,8 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
               opacity: 1,
               padding: isMobile ? '6px 8px' : '8px 10px',
               borderRadius: '10px',
-              border: `1px solid ${isExpanded ? 'rgba(244,63,94,0.35)' : 'rgba(168,85,247,0.35)'}`, // rose-500 / purple-500
-              background: isExpanded
-                ? 'linear-gradient(135deg, rgba(244,63,94,0.12) 0%, rgba(244,63,94,0.08) 100%)'
-                : 'linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(168,85,247,0.08) 100%)',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.25)',
+              border: `1px solid ${isExpanded ? 'rgba(244,63,94,0.35)' : 'rgba(168,85,247,0.25)'}`,
+              background: 'transparent',
             }}
             onClick={(e) => {
               handleActionClick(e, () => (isExpanded ? onShrinkAction(node) : onExpandAction(node)));
