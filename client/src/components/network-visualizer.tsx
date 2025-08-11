@@ -54,6 +54,7 @@ export default function NetworkVisualizer({
   const [isInitializing, setIsInitializing] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 3;
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   
   // Configuration management hook
   const { 
@@ -219,6 +220,18 @@ export default function NetworkVisualizer({
     initializeComponent();
   }, [data, configError, handleError]); // Remove configLoading dependency
 
+  // Toast event listener for messages from hooks
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { message: string; type: 'success' | 'error' | 'info' };
+      setToast(detail);
+      // Auto-hide after 2.5s
+      setTimeout(() => setToast(null), 2500);
+    };
+    window.addEventListener('network-toast', handler as EventListener);
+    return () => window.removeEventListener('network-toast', handler as EventListener);
+  }, []);
+
   // Log the current state for debugging
   useEffect(() => {
     try {
@@ -341,6 +354,18 @@ export default function NetworkVisualizer({
             aria-label="Music collaboration network visualization"
           />
 
+          {toast && (
+            <div
+              className={`absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded shadow text-white z-20 ${
+                toast.type === 'success' ? 'bg-green-600' : toast.type === 'error' ? 'bg-red-600' : 'bg-gray-700'
+              }`}
+              role="status"
+              aria-live="polite"
+            >
+              {toast.message}
+            </div>
+          )}
+
           {/* Expand Loading Overlay */}
           <ExpandLoading isVisible={Boolean((tooltip as any).isExpandLoading)} artistName={(tooltip as any).currentNode?.name} />
 
@@ -417,6 +442,16 @@ export default function NetworkVisualizer({
                   return tooltip.currentNode === mainArtistNode;
                 } catch (error) {
                   handleError(error as Error, 'tooltip main artist calculation');
+                  return false;
+                }
+              })()}
+              isExpanded={(() => {
+                try {
+                  const nodeId = tooltip.currentNode?.id;
+                  if (!nodeId) return false;
+                  return expandedNodes.has(nodeId);
+                } catch (error) {
+                  handleError(error as Error, 'tooltip isExpanded calculation');
                   return false;
                 }
               })()}

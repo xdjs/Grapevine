@@ -44,6 +44,7 @@ describe('NetworkTooltip', () => {
     visible: true,
     isMainArtist: false,
     isFirstDegreeCollaborator: true,
+    isExpanded: false,
     onNetworkAction: vi.fn(),
     onExpandAction: vi.fn(),
     onProfileAction: vi.fn(),
@@ -128,7 +129,7 @@ describe('NetworkTooltip', () => {
   });
 
   describe('Expand Action', () => {
-    it('should render expand action for first-degree collaborators', () => {
+    it('should render expand action for non-main nodes', () => {
       render(<NetworkTooltip {...defaultProps} />);
 
       const expandLink = screen.getByText(`Expand ${mockArtistNode.name}'s network`);
@@ -142,13 +143,15 @@ describe('NetworkTooltip', () => {
       expect(expandLink).not.toBeInTheDocument();
     });
 
-    it('should not render expand action for non-first-degree collaborators', () => {
-      render(
-        <NetworkTooltip {...defaultProps} isFirstDegreeCollaborator={false} />
-      );
+    it('should show Already expanded state when isExpanded is true and block click', () => {
+      const onExpand = vi.fn();
+      render(<NetworkTooltip {...defaultProps} isExpanded={true} onExpandAction={onExpand} />);
 
-      const expandLink = screen.queryByText(`Expand ${mockArtistNode.name}'s network`);
-      expect(expandLink).not.toBeInTheDocument();
+      const label = screen.getByText('Already expanded');
+      expect(label).toBeInTheDocument();
+
+      fireEvent.click(label);
+      expect(onExpand).not.toHaveBeenCalled();
     });
 
     it('should call onExpandAction when expand link is clicked', () => {

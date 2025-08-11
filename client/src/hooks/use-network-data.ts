@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { NetworkData, NetworkNode, NetworkLink } from '@/types/network';
 
 interface UseNetworkDataProps {
@@ -29,6 +29,11 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [fullNetworkData, setFullNetworkData] = useState<NetworkData | null>(null);
   const [isExpandedMode, setIsExpandedMode] = useState(false);
+  const expandingNodeIdsRef = useRef<Set<string>>(new Set());
+
+  // Verbose logging toggle (set window.__GRAPEVINE_DEBUG__ = true in console to enable)
+  const isVerbose = typeof window !== 'undefined' && (window as any).__GRAPEVINE_DEBUG__ === true;
+  const vlog = (...args: any[]) => { if (isVerbose) console.log(...args); };
 
   // Find the main artist node (the largest artist node)
   const mainArtistNode = useMemo(() => {
@@ -102,9 +107,25 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
 
   // Function to expand a node's network (limit to at most 3 directly connected collaborators)
   const expandNodeNetwork = useCallback(async (nodeName: string, nodeId?: string) => {
-    console.log(`🔗 Expanding network for: ${nodeName}`);
+    vlog(`🔗 Expanding network for: ${nodeName}`);
 
     try {
+      const normalizeId = (v: string) => (v || '').toLowerCase();
+      const getId = (end: string | { id: string }) => (typeof end === 'string' ? end : end.id);
+      const undirectedKey = (a: string, b: string) => {
+        const aN = normalizeId(a);
+        const bN = normalizeId(b);
+        return aN < bN ? `${aN}|${bN}` : `${bN}|${aN}`;
+      };
+
+      // Determine a preliminary lock key (prefer id, else name)
+      const lockKey = normalizeId(nodeId || nodeName);
+      if (expandingNodeIdsRef.current.has(lockKey)) {
+        vlog(`⏳ Expansion already in progress for key=${lockKey}; ignoring duplicate request`);
+        return;
+      }
+      expandingNodeIdsRef.current.add(lockKey);
+
       // Helper: robustly fetch collaborator network, prefer ID when available
       const fetchCollaboratorNetwork = async (): Promise<NetworkData | null> => {
         const cacheBust = `t=${Date.now()}`;
@@ -155,6 +176,10 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       const collaboratorNetwork = await fetchCollaboratorNetwork();
       if (!collaboratorNetwork) {
         console.error(`❌ Failed to fetch network for ${nodeName} (all strategies)`);
+        // Toast: failed to fetch
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('network-toast', { detail: { message: `Could not fetch collaborators for ${nodeName}.`, type: 'error' } }));
+        }
         return;
       }
 
@@ -163,13 +188,21 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       const mergedNodes: NetworkNode[] = [...baseData.nodes];
       const mergedLinks: NetworkLink[] = [...baseData.links];
 
-      const existingNodeIds = new Set<string>(mergedNodes.map(n => n.id));
+      // Early exit if this node appears to be already expanded (best-effort)
+      const existingIdForName = baseData.nodes.find(n => n.name === nodeName)?.id;
+      const candidateId = nodeId || existingIdForName;
+      if (candidateId && expandedNodes.has(candidateId)) {
+        vlog(`ℹ️ Node already expanded id=${candidateId}; skipping expansion`);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('network-toast', { detail: { message: `${nodeName} is already expanded.`, type: 'info' } }));
+        }
+        return;
+      }
+
+      // Track existing nodes by normalized id, and links by undirected, normalized key
+      const existingNodeIdsNormalized = new Set<string>(mergedNodes.map(n => normalizeId(n.id)));
       const existingLinkKeys = new Set<string>(
-        mergedLinks.map(l => {
-          const s = typeof l.source === 'string' ? l.source : l.source.id;
-          const t = typeof l.target === 'string' ? l.target : l.target.id;
-          return `${s}->${t}`;
-        })
+        mergedLinks.map(l => undirectedKey(getId(l.source), getId(l.target)))
       );
 
       // Build quick lookup for nodes returned by the collaborator network (case-insensitive keys)
@@ -179,9 +212,6 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         returnedNodeByKey.set(toKey(n.id), n);
         if (n.name) returnedNodeByKey.set(toKey(n.name), n);
       }
-
-      // Normalize helper
-      const getId = (end: string | { id: string }) => (typeof end === 'string' ? end : end.id);
 
       // Determine canonical identifier for the clicked node inside the collaborator network
       let clickedCanonicalId: string | undefined;
@@ -197,13 +227,17 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       // Last resort: use provided id or name directly
       if (!clickedCanonicalId) clickedCanonicalId = nodeId || nodeName;
 
+      // Normalize to a canonical id from returned data if possible
+      const clickedCanonicalNode = returnedNodeByKey.get(toKey(clickedCanonicalId));
+      const clickedCanonicalFinalId = clickedCanonicalNode?.id || clickedCanonicalId;
+
       // Find direct neighbors of the clicked node in the collaborator's network
       const neighborIds: string[] = [];
       for (const link of collaboratorNetwork.links) {
         const s = getId(link.source as any);
         const t = getId(link.target as any);
-        if (toKey(s) === toKey(clickedCanonicalId) || toKey(t) === toKey(clickedCanonicalId)) {
-          const neighborId = toKey(s) === toKey(clickedCanonicalId) ? t : s;
+        if (toKey(s) === toKey(clickedCanonicalFinalId) || toKey(t) === toKey(clickedCanonicalFinalId)) {
+          const neighborId = toKey(s) === toKey(clickedCanonicalFinalId) ? t : s;
           if (!neighborIds.includes(neighborId)) neighborIds.push(neighborId);
         }
       }
@@ -212,7 +246,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       const selectedNeighborIds: string[] = [];
       for (const nid of neighborIds) {
         if (selectedNeighborIds.length >= 3) break;
-        if (!existingNodeIds.has(nid)) {
+        if (!existingNodeIdsNormalized.has(normalizeId(nid))) {
           selectedNeighborIds.push(nid);
         }
       }
@@ -229,10 +263,10 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       // Add selected neighbor nodes (from returned data only; no fabrication)
       for (const nid of selectedNeighborIds) {
         const nodeToAdd = returnedNodeByKey.get(toKey(nid));
-        if (nodeToAdd && !existingNodeIds.has(nodeToAdd.id)) {
+        if (nodeToAdd && !existingNodeIdsNormalized.has(normalizeId(nodeToAdd.id))) {
           mergedNodes.push(nodeToAdd);
-          existingNodeIds.add(nodeToAdd.id);
-          console.log(`➕ [Expand] Added node: ${nodeToAdd.name} (id=${nodeToAdd.id})`);
+          existingNodeIdsNormalized.add(normalizeId(nodeToAdd.id));
+          vlog(`➕ [Expand] Added node: ${nodeToAdd.name} (id=${nodeToAdd.id})`);
         }
       }
 
@@ -240,30 +274,46 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       for (const link of collaboratorNetwork.links) {
         const s = getId(link.source as any);
         const t = getId(link.target as any);
-        const connectsClicked = (toKey(s) === toKey(clickedCanonicalId) && selectedNeighborIds.map(toKey).includes(toKey(t))) ||
-                               (toKey(t) === toKey(clickedCanonicalId) && selectedNeighborIds.map(toKey).includes(toKey(s)));
+        const connectsClicked = (toKey(s) === toKey(clickedCanonicalFinalId) && selectedNeighborIds.map(toKey).includes(toKey(t))) ||
+                               (toKey(t) === toKey(clickedCanonicalFinalId) && selectedNeighborIds.map(toKey).includes(toKey(s)));
         if (!connectsClicked) continue;
-        const key = `${s}->${t}`;
+        // Map to canonical ids from returned data when possible, then normalize undirected
+        const sCanon = returnedNodeByKey.get(toKey(s))?.id || s;
+        const tCanon = returnedNodeByKey.get(toKey(t))?.id || t;
+        const key = undirectedKey(sCanon, tCanon);
         if (!existingLinkKeys.has(key)) {
-          mergedLinks.push(link);
+          mergedLinks.push({ source: sCanon, target: tCanon });
           existingLinkKeys.add(key);
-          console.log(`➕ [Expand] Added link: ${s} -> ${t}`);
+          vlog(`➕ [Expand] Added link: ${sCanon} -- ${tCanon}`);
         }
       }
 
       const mergedNetworkData: NetworkData = { nodes: mergedNodes, links: mergedLinks };
       setFullNetworkData(mergedNetworkData);
-      setExpandedNodes(prev => new Set([...prev, nodeName]));
+      setExpandedNodes(prev => new Set([...prev, clickedCanonicalFinalId]));
       setIsExpandedMode(true);
 
       const addedNodeCount = mergedNodes.length - baseData.nodes.length;
       const addedLinkCount = mergedLinks.length - baseData.links.length;
       const neighborNames = selectedNeighborIds
-        .map(id => returnedNodeByKey.get(id)?.name || id)
+        .map(id => returnedNodeByKey.get(toKey(id))?.name || id)
         .slice(0, 3);
-      console.log(`✅ Expanded ${nodeName} [canonicalId=${clickedCanonicalId}]: added up to 3 collaborators -> [${neighborNames.join(', ')}] (nodes: ${addedNodeCount}, links: ${addedLinkCount})`);
+      vlog(`✅ Expanded ${nodeName} [canonicalId=${clickedCanonicalFinalId}]: added up to 3 collaborators -> [${neighborNames.join(', ')}] (nodes: ${addedNodeCount}, links: ${addedLinkCount})`);
+
+      // Toast: success or no new neighbors
+      if (typeof window !== 'undefined') {
+        if (addedNodeCount === 0 && addedLinkCount === 0) {
+          window.dispatchEvent(new CustomEvent('network-toast', { detail: { message: `No new collaborators found for ${nodeName}.`, type: 'info' } }));
+        } else {
+          window.dispatchEvent(new CustomEvent('network-toast', { detail: { message: `Expanded ${nodeName} with up to 3 collaborators.`, type: 'success' } }));
+        }
+      }
     } catch (error) {
       console.error(`❌ Error expanding network for ${nodeName}:`, error);
+    } finally {
+      // Release the lock
+      const lockKey = (nodeId || nodeName || '').toLowerCase();
+      expandingNodeIdsRef.current.delete(lockKey);
     }
   }, [data.nodes, data.links, fullNetworkData]);
 
