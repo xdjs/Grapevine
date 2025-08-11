@@ -143,7 +143,6 @@ export default function NetworkVisualizer({
     svgRef,
     visible,
     filterState,
-    disableFilter: Boolean(fullNetworkData),
   });
 
   // Error handling and retry logic

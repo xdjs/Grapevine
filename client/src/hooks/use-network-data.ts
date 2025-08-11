@@ -183,8 +183,12 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         return;
       }
 
-      // Start from the currently displayed graph (accumulate expansions)
-      const baseData: NetworkData = fullNetworkData ?? { nodes: data.nodes, links: data.links };
+      // Start from the currently VISIBLE graph (accumulate expansions)
+      // If we already have an accumulated expanded graph, use it; otherwise use first-degree visible subset
+      const baseData: NetworkData = fullNetworkData ?? {
+        nodes: getVisibleNodes(),
+        links: getVisibleLinks(),
+      };
       const mergedNodes: NetworkNode[] = [...baseData.nodes];
       const mergedLinks: NetworkLink[] = [...baseData.links];
 
