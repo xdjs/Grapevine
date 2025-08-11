@@ -346,34 +346,31 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                 }}
               />
             ) : (
-              <div
+              <svg
+                width={iconSize}
+                height={iconSize}
+                viewBox="0 0 24 24"
+                aria-label={isExpanded ? 'Shrink icon' : 'Expand icon'}
+                xmlns="http://www.w3.org/2000/svg"
                 style={{
-                  width: `${iconSize}px`,
-                  height: `${iconSize}px`,
                   minWidth: `${iconSize}px`,
                   minHeight: `${iconSize}px`,
                   maxWidth: `${iconSize}px`,
                   maxHeight: `${iconSize}px`,
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#4CAF50',
+                  display: 'block',
                   flexShrink: 0,
                 }}
               >
-                <span
-                  style={{
-                    color: 'white',
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    lineHeight: 1,
-                  }}
-                >
-                  {isExpanded ? '−' : '+'}
-                </span>
-              </div>
+                <circle cx="12" cy="12" r="10" stroke="#ff69b4" strokeWidth="2" fill="none" />
+                {isExpanded ? (
+                  <line x1="7" y1="12" x2="17" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
+                ) : (
+                  <>
+                    <line x1="12" y1="7" x2="12" y2="17" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="7" y1="12" x2="17" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
+                  </>
+                )}
+              </svg>
             )}
             <span
               style={{
