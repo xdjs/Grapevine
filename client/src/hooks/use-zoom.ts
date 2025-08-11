@@ -293,6 +293,40 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
         networkGroup.attr("transform", transform);
         setCurrentZoom(transform.k);
         onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
+        // Guard against accidental hiding during active zoom
+        try {
+          svg.selectAll('.node-group,.label,.link').each(function() {
+            const el = d3.select(this);
+            if (el.style('display') === 'none') el.style('display', null);
+            if (el.style('visibility') === 'hidden') el.style('visibility', null);
+          });
+        } catch {}
+      })
+      .on("end", () => {
+        // Visibility watchdog: ensure elements are visible and transform is valid after pan/zoom end
+        try {
+          const g = svg.select('g.network-group');
+          if (!g.empty()) {
+            // If any display accidentally set to 'none', reset to visible
+            svg.selectAll('.node-group,.label,.link').each(function() {
+              const el = d3.select(this);
+              const disp = el.style('display');
+              if (disp === 'none') el.style('display', null);
+            });
+          }
+          // Guard against non-finite transform values
+          const m = (g.node() as SVGGElement)?.getCTM();
+          if (m && (!isFinite(m.a) || !isFinite(m.d) || !isFinite(m.e) || !isFinite(m.f))) {
+            // Reset viewBox if corrupt
+            const container = svgRef.current?.parentElement;
+            const width = container ? container.clientWidth : window.innerWidth;
+            const height = container ? container.clientHeight : window.innerHeight;
+            svg.attr('viewBox', `0 0 ${width} ${height}`);
+            setCurrentZoom(1);
+          }
+        } catch {
+          // Ignore watchdog errors
+        }
       });
 
     // Apply zoom behavior but prevent background dragging and clicking

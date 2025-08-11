@@ -43,6 +43,10 @@ describe('NetworkTooltip', () => {
     position: { x: 100, y: 200 },
     visible: true,
     isMainArtist: false,
+
+    isFirstDegreeCollaborator: true,
+    isExpanded: false,
+
     onNetworkAction: vi.fn(),
     onProfileAction: vi.fn(),
     onCollaborationAction: vi.fn(),
@@ -125,7 +129,54 @@ describe('NetworkTooltip', () => {
     });
   });
 
-  // Expand Action removed from UI
+
+  describe('Expand Action', () => {
+    it('should render expand action for non-main nodes', () => {
+      render(<NetworkTooltip {...defaultProps} />);
+
+      const expandLink = screen.getByText(`Expand ${mockArtistNode.name}'s network`);
+      expect(expandLink).toBeInTheDocument();
+    });
+
+    it('should not render expand action for main artist', () => {
+      render(<NetworkTooltip {...defaultProps} isMainArtist={true} />);
+
+      const expandLink = screen.queryByText(`Expand ${mockArtistNode.name}'s network`);
+      expect(expandLink).not.toBeInTheDocument();
+    });
+
+    it('should show Already expanded state when isExpanded is true and block click', () => {
+      const onExpand = vi.fn();
+      render(<NetworkTooltip {...defaultProps} isExpanded={true} onExpandAction={onExpand} />);
+
+      const label = screen.getByText('Already expanded');
+      expect(label).toBeInTheDocument();
+
+      fireEvent.click(label);
+      expect(onExpand).not.toHaveBeenCalled();
+    });
+
+    it('should call onExpandAction when expand link is clicked', () => {
+      render(<NetworkTooltip {...defaultProps} />);
+
+      const expandLink = screen.getByText(`Expand ${mockArtistNode.name}'s network`);
+      fireEvent.click(expandLink);
+
+      expect(defaultProps.onExpandAction).toHaveBeenCalledWith(mockArtistNode);
+      expect(defaultProps.onClose).toHaveBeenCalled();
+    });
+
+    it('should have correct expand icon styling', () => {
+      render(<NetworkTooltip {...defaultProps} />);
+
+      const expandIcon = screen.getByText('+');
+      expect(expandIcon).toBeInTheDocument();
+      expect(expandIcon.parentElement).toHaveStyle({
+        backgroundColor: '#4CAF50',
+      });
+    });
+  });
+
 
   describe('Music Nerd Profile Action', () => {
     it('should render profile action for artists', () => {

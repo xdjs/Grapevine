@@ -50,6 +50,9 @@ export default function D3NetworkRenderer({
   mainArtistNode,
 }: D3NetworkRendererProps) {
   
+  // Track which node IDs we've already batch-preloaded to avoid re-preloading on small expansions
+  const preloadedNodeIdsRef = useRef<Set<string>>(new Set());
+
   // Use filter visibility management hook
   const { isNodeVisible } = useFilterVisibility({
     svgRef,
@@ -1012,14 +1015,20 @@ export default function D3NetworkRenderer({
 
     // Filter out links where either node doesn't exist or is isolated
     const nodeSet = new Set(data.nodes.map(n => n.id));
-    const validLinks = data.links.filter(link => {
+    let validLinks = data.links.filter(link => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       return nodeSet.has(sourceId) && nodeSet.has(targetId);
     });
+    // If all added links disappeared due to transform/DOM glitch, ensure at least base connectivity is preserved
+    if (validLinks.length === 0 && data.links.length > 0) {
+      validLinks = data.links;
+    }
 
     // Start optimized batch preloading of profile pictures
-    const imagesToLoad = data.nodes
+    // Only preload for nodes we haven't already batch-preloaded in this session
+    const nodesToPreload = data.nodes.filter(node => !preloadedNodeIdsRef.current.has(node.id));
+    const imagesToLoad = nodesToPreload
       .filter(node => node.imageUrl)
       .map((node, index) => ({
         url: node.imageUrl!,
@@ -1036,6 +1045,10 @@ export default function D3NetworkRenderer({
       ImageLoadingManager.batchPreloadImages(imagesToLoad).then(() => {
         console.log(`✅ [D3Renderer] Optimized batch preload complete`);
         console.log(`📊 [D3Renderer] Performance stats after loading:`, ImageLoadingManager.getPerformanceStats());
+        // Mark these nodes as preloaded to prevent future batch preloads for the same set
+        for (const { node } of imagesToLoad) {
+          preloadedNodeIdsRef.current.add(node.id);
+        }
       }).catch(error => {
         console.error(`❌ [D3Renderer] Batch preload error:`, error);
       });
@@ -1054,6 +1067,8 @@ export default function D3NetworkRenderer({
         tooltip.hideTooltip();
       }
     });
+    // Prevent background drag from clearing the graph by disabling default drag on svg
+    svg.on('mousedown.drag', null);
 
     // Find connected components for cluster positioning
     const components = findConnectedComponents(data.nodes, validLinks);

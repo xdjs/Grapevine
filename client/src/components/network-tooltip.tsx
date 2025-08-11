@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import { NetworkNode } from '@/types/network';
 
 export interface NetworkTooltipProps {
@@ -6,7 +6,13 @@ export interface NetworkTooltipProps {
   position: { x: number; y: number };
   visible: boolean;
   isMainArtist: boolean;
+
+  isFirstDegreeCollaborator: boolean;
+  isExpanded?: boolean;
   onNetworkAction: (node: NetworkNode) => void;
+  onExpandAction: (node: NetworkNode) => void;
+  onShrinkAction: (node: NetworkNode) => void;
+
   onProfileAction: (node: NetworkNode) => void;
   onCollaborationAction: (node: NetworkNode) => void;
   onClose: () => void;
@@ -17,7 +23,13 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
   position,
   visible,
   isMainArtist,
+
+  isFirstDegreeCollaborator,
+  isExpanded,
   onNetworkAction,
+  onExpandAction,
+  onShrinkAction,
+
   onProfileAction,
   onCollaborationAction,
   onClose,
@@ -63,6 +75,36 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
 
   const maxWidth = isMobile ? '320px' : '380px';
   const iconSize = isMobile ? 14 : 32; // Much smaller icons on mobile
+  // Mobile-only bitmap icon (pre-rendered to PNG on the fly for crisp scaling)
+  const mobileIconPx = 14;
+  const mobileIconSrc = useMemo(() => {
+    if (!isMobile) return '';
+    if (typeof document === 'undefined') return '';
+    const canvas = document.createElement('canvas');
+    const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
+    const size = mobileIconPx * dpr;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, mobileIconPx, mobileIconPx);
+    ctx.strokeStyle = '#ff69b4';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    const pad = 4;
+    ctx.beginPath();
+    // horizontal
+    ctx.moveTo(pad, mobileIconPx / 2);
+    ctx.lineTo(mobileIconPx - pad, mobileIconPx / 2);
+    // vertical for plus
+    if (!isExpanded) {
+      ctx.moveTo(mobileIconPx / 2, pad);
+      ctx.lineTo(mobileIconPx / 2, mobileIconPx - pad);
+    }
+    ctx.stroke();
+    return canvas.toDataURL('image/png');
+  }, [isMobile, isExpanded]);
   const titleFontSize = isMobile ? '14px' : '16px';
   const roleFontSize = isMobile ? '11px' : '12px';
   const linkFontSize = isMobile ? '11px' : '12px';
@@ -267,6 +309,91 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             {node.name}&apos;s network
           </span>
         </div>
+
+
+        {/* Expand action - available for any non-main-artist node */}
+        {!isMainArtist && (
+          <div
+            data-testid="expand-action"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap,
+              cursor: 'pointer',
+              width: '100%',
+              overflow: 'hidden',
+              opacity: 1,
+            }}
+            onClick={(e) => {
+              handleActionClick(e, () => (isExpanded ? onShrinkAction(node) : onExpandAction(node)));
+            }}
+            onKeyDown={(e) => {
+              handleKeyPress(e, () => (isExpanded ? onShrinkAction(node) : onExpandAction(node)));
+            }}
+            tabIndex={0}
+            role="button"
+            aria-label={isExpanded ? `Shrink network` : `Expand ${node.name}'s network`}
+          >
+            {isMobile ? (
+              <img
+                src={mobileIconSrc}
+                alt={isExpanded ? 'Shrink icon' : 'Expand icon'}
+                style={{
+                  width: `${mobileIconPx}px`,
+                  height: `${mobileIconPx}px`,
+                  minWidth: `${mobileIconPx}px`,
+                  minHeight: `${mobileIconPx}px`,
+                  maxWidth: `${mobileIconPx}px`,
+                  maxHeight: `${mobileIconPx}px`,
+                  display: 'block',
+                  flexShrink: 0,
+                  background: 'transparent',
+                }}
+              />
+            ) : (
+              <svg
+                width={iconSize}
+                height={iconSize}
+                viewBox="0 0 24 24"
+                aria-label={isExpanded ? 'Shrink icon' : 'Expand icon'}
+                xmlns="http://www.w3.org/2000/svg"
+                style={{
+                  minWidth: `${iconSize}px`,
+                  minHeight: `${iconSize}px`,
+                  maxWidth: `${iconSize}px`,
+                  maxHeight: `${iconSize}px`,
+                  display: 'block',
+                  flexShrink: 0,
+                }}
+              >
+                <circle cx="12" cy="12" r="10" stroke="#ff69b4" strokeWidth="2" fill="none" />
+                {isExpanded ? (
+                  <line x1="7" y1="12" x2="17" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
+                ) : (
+                  <>
+                    <line x1="12" y1="7" x2="12" y2="17" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="7" y1="12" x2="17" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
+                  </>
+                )}
+              </svg>
+            )}
+            <span
+              style={{
+                fontSize: linkFontSize,
+                fontStyle: 'italic',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flex: 1,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {isExpanded ? 'Shrink network' : `Expand ${node.name}'s network`}
+            </span>
+          </div>
+        )}
+
 
         {/* Music Nerd profile action - only for artists */}
         {isArtist && (
