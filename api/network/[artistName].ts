@@ -738,8 +738,29 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
             const cacheResult = await client.query(cacheQuery, [node.artistId]);
             
             if (cacheResult.rows.length > 0 && cacheResult.rows[0].node_pfp) {
-              node.imageUrl = cacheResult.rows[0].node_pfp;
-              node.spotifyId = cacheResult.rows[0].spotify_id;
+              const rawPfp = cacheResult.rows[0].node_pfp as any;
+              let resolvedImageUrl: string | null = null;
+              let resolvedSpotifyId: string | null = cacheResult.rows[0].spotify_id ?? null;
+
+              if (typeof rawPfp === 'string') {
+                try {
+                  const parsed = JSON.parse(rawPfp);
+                  if (parsed && typeof parsed === 'object') {
+                    resolvedImageUrl = parsed.imageUrl ?? null;
+                    resolvedSpotifyId = resolvedSpotifyId ?? parsed.spotifyId ?? null;
+                  } else {
+                    resolvedImageUrl = rawPfp;
+                  }
+                } catch {
+                  resolvedImageUrl = rawPfp; // treat as direct URL
+                }
+              } else if (rawPfp && typeof rawPfp === 'object') {
+                resolvedImageUrl = rawPfp.imageUrl ?? null;
+                resolvedSpotifyId = resolvedSpotifyId ?? rawPfp.spotifyId ?? null;
+              }
+
+              node.imageUrl = resolvedImageUrl ?? undefined;
+              node.spotifyId = resolvedSpotifyId ?? undefined;
               console.log(`✅ [Vercel] Loaded cached image for ${node.name}: ${node.imageUrl}`);
             }
           }

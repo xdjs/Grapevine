@@ -98,14 +98,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const cacheResult = await client.query(cacheQuery, [artistName]);
           
           if (cacheResult.rows.length > 0 && cacheResult.rows[0].node_pfp) {
+            // node_pfp may be stored as a raw URL string or as JSON containing { imageUrl, spotifyId }
+            const rawPfp = cacheResult.rows[0].node_pfp as any;
+            let resolvedImageUrl: string | null = null;
+            let resolvedSpotifyId: string | null = cacheResult.rows[0].spotify_id ?? null;
+
+            if (typeof rawPfp === 'string') {
+              try {
+                const parsed = JSON.parse(rawPfp);
+                if (parsed && typeof parsed === 'object') {
+                  resolvedImageUrl = parsed.imageUrl ?? null;
+                  resolvedSpotifyId = resolvedSpotifyId ?? parsed.spotifyId ?? null;
+                } else {
+                  resolvedImageUrl = rawPfp;
+                }
+              } catch {
+                // Not JSON, treat as direct URL
+                resolvedImageUrl = rawPfp;
+              }
+            } else if (rawPfp && typeof rawPfp === 'object') {
+              // pg may return jsonb as object already
+              resolvedImageUrl = rawPfp.imageUrl ?? null;
+              resolvedSpotifyId = resolvedSpotifyId ?? rawPfp.spotifyId ?? null;
+            }
+
             results.push({
               artistName,
-              imageUrl: cacheResult.rows[0].node_pfp,
-              spotifyId: cacheResult.rows[0].spotify_id,
+              imageUrl: resolvedImageUrl,
+              spotifyId: resolvedSpotifyId,
               cached: true
             });
             cachedCount++;
-            console.log(`✅ [ProfilePics] Cache hit for ${artistName}: ${cacheResult.rows[0].node_pfp}`);
+            console.log(`✅ [ProfilePics] Cache hit for ${artistName}: ${results[results.length - 1].imageUrl}`);
           } else {
             uncachedArtists.push(artistName);
           }

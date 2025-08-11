@@ -808,25 +808,31 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
 
       // First try to get from node_pfp column (new caching system)
       if (artist.node_pfp) {
-        let profileData = artist.node_pfp;
-        
-        // Handle case where it's a string that needs parsing
+        let profileData: any = artist.node_pfp;
+        let resolvedImageUrl: string | null = null;
+        let resolvedSpotifyId: string | null = artist.spotify_id ?? null;
+
         if (typeof profileData === 'string') {
           try {
-            profileData = JSON.parse(profileData);
-          } catch (parseError) {
-            console.warn(`⚠️ [DEBUG] Could not parse node_pfp data for "${artistName}":`, parseError);
-            profileData = null;
+            const parsed = JSON.parse(profileData);
+            profileData = parsed;
+          } catch {
+            // Not JSON, treat as direct image URL string
+            resolvedImageUrl = profileData;
           }
         }
-        
-        // Now check if we have valid profile data
-        if (profileData && profileData.imageUrl && profileData.spotifyId) {
+
+        if (!resolvedImageUrl && profileData && typeof profileData === 'object') {
+          resolvedImageUrl = profileData.imageUrl ?? null;
+          resolvedSpotifyId = resolvedSpotifyId ?? profileData.spotifyId ?? null;
+        }
+
+        if (resolvedImageUrl) {
           console.log(`🎯 [DEBUG] Found cached profile picture for "${artistName}" from node_pfp`);
           return {
-            imageUrl: profileData.imageUrl,
-            spotifyId: profileData.spotifyId,
-            cachedAt: profileData.cachedAt || 'unknown'
+            imageUrl: resolvedImageUrl,
+            spotifyId: resolvedSpotifyId || '',
+            cachedAt: (profileData && profileData.cachedAt) || 'unknown'
           };
         }
       }
@@ -957,4 +963,5 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
     console.log(`✅ [DEBUG] Profile picture retrieval complete: ${results.size} found, ${results.size - needsFetch.length} from cache`);
     return results;
   }
+}
 }

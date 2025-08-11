@@ -895,8 +895,8 @@ export default function D3NetworkRenderer({
         if (inViewport !== wasInViewport) {
           ImageLoadingManager.viewportCache.set(node.id, inViewport);
           
-          // Find the corresponding image elements and update their loading priority
-          const nodeGroup = svg.querySelector(`.node-group:has([data-node-id="${node.id}"])`);
+          // Find the corresponding image group by its own data attribute
+          const nodeGroup = svg.querySelector(`.node-group[data-node-id="${node.id}"]`);
           if (nodeGroup) {
             const imageElement = nodeGroup.querySelector('image.profile-image');
             const placeholderElement = nodeGroup.querySelector('.image-placeholder-lazy');
