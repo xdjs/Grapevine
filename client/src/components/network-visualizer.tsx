@@ -471,6 +471,13 @@ export default function NetworkVisualizer({
               })()}
               onNetworkAction={tooltip.handleNetworkAction}
               onExpandAction={tooltip.handleExpandAction}
+              onShrinkAction={(node) => {
+                try {
+                  collapseNodeNetwork(node.name, node.artistId || undefined);
+                } catch (error) {
+                  handleError(error as Error, 'shrink network');
+                }
+              }}
               onProfileAction={tooltip.handleProfileAction}
               onCollaborationAction={tooltip.handleCollaborationAction}
               onClose={tooltip.hideTooltip}

@@ -20,7 +20,7 @@ interface UseNetworkDataReturn {
   // Functions
   getFirstDegreeCollaborators: () => Set<string>;
   expandNodeNetwork: (nodeName: string, nodeId?: string) => Promise<void>;
-  collapseNodeNetwork: (nodeName: string) => void;
+  collapseNodeNetwork: (nodeName: string, nodeId?: string) => void;
   resetToFirstDegree: () => void;
 }
 
@@ -30,6 +30,11 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
   const [fullNetworkData, setFullNetworkData] = useState<NetworkData | null>(null);
   const [isExpandedMode, setIsExpandedMode] = useState(false);
   const expandingNodeIdsRef = useRef<Set<string>>(new Set());
+  // Track base (first-degree) graph when entering expanded mode
+  const baseGraphRef = useRef<NetworkData | null>(null);
+  // Track per-node contributions so we can surgically remove them later
+  type Contribution = { addedNodeIds: Set<string>; addedLinkKeys: Set<string> };
+  const contributionsRef = useRef<Map<string, Contribution>>(new Map());
 
   // Verbose logging toggle (set window.__GRAPEVINE_DEBUG__ = true in console to enable)
   const isVerbose = typeof window !== 'undefined' && (window as any).__GRAPEVINE_DEBUG__ === true;
@@ -189,6 +194,9 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         nodes: getVisibleNodes(),
         links: getVisibleLinks(),
       };
+      if (!fullNetworkData && !baseGraphRef.current) {
+        baseGraphRef.current = baseData;
+      }
       const mergedNodes: NetworkNode[] = [...baseData.nodes];
       const mergedLinks: NetworkLink[] = [...baseData.links];
 
@@ -285,6 +293,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       }
 
       // Add selected neighbor nodes (from returned data only; no fabrication)
+      const addedNodeIdsForThisExpansion = new Set<string>();
       for (const nid of selectedNeighborIds) {
         const nodeToAdd = returnedNodeByKey.get(toKey(nid));
         if (nodeToAdd && !existingNodeIdsNormalized.has(normalizeId(nodeToAdd.id))) {
@@ -293,10 +302,12 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
           existingNodeByKey.set(keyify(nodeToAdd.id), nodeToAdd);
           if (nodeToAdd.name) existingNodeByKey.set(keyify(nodeToAdd.name), nodeToAdd);
           vlog(`➕ [Expand] Added node: ${nodeToAdd.name} (id=${nodeToAdd.id})`);
+          addedNodeIdsForThisExpansion.add(nodeToAdd.id);
         }
       }
 
       // Add only the links that connect the clicked node to the selected NEW neighbors
+      const addedLinkKeysForThisExpansion = new Set<string>();
       for (const link of collaboratorNetwork.links) {
         const s = getId(link.source as any);
         const t = getId(link.target as any);
@@ -311,6 +322,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
           mergedLinks.push({ source: sCanon, target: tCanon });
           existingLinkKeys.add(key);
           vlog(`➕ [Expand] Added link: ${sCanon} -- ${tCanon}`);
+          addedLinkKeysForThisExpansion.add(key);
         }
       }
 
@@ -318,6 +330,11 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       setFullNetworkData(mergedNetworkData);
       setExpandedNodes(prev => new Set([...prev, clickedCanonicalFinalId]));
       setIsExpandedMode(true);
+      // Record contribution for surgical shrink
+      contributionsRef.current.set(clickedCanonicalFinalId, {
+        addedNodeIds: addedNodeIdsForThisExpansion,
+        addedLinkKeys: addedLinkKeysForThisExpansion,
+      });
 
       const addedNodeCount = mergedNodes.length - baseData.nodes.length;
       const addedLinkCount = mergedLinks.length - baseData.links.length;
@@ -343,14 +360,74 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     }
   }, [data.nodes, data.links, fullNetworkData]);
 
-  // Function to collapse a node's network
-  const collapseNodeNetwork = useCallback((nodeName: string) => {
-    setExpandedNodes(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(nodeName);
-      return newSet;
+  // Function to surgically collapse a node's expansion
+  const collapseNodeNetwork = useCallback((nodeName: string, nodeId?: string) => {
+    if (!fullNetworkData) return;
+    const toKey = (v?: string) => (v || '').toLowerCase();
+    // Find the contribution key (canonical id) for this node
+    let keyToRemove: string | undefined;
+    if (nodeId && contributionsRef.current.has(nodeId)) {
+      keyToRemove = nodeId;
+    } else {
+      // Match by name against keys
+      for (const k of contributionsRef.current.keys()) {
+        if (toKey(k) === toKey(nodeName)) { keyToRemove = k; break; }
+      }
+    }
+    if (!keyToRemove) return;
+
+    const contribution = contributionsRef.current.get(keyToRemove);
+    if (!contribution) return;
+
+    // Remove contributed links
+    const remainingLinks = fullNetworkData.links.filter(l => {
+      const s = typeof l.source === 'string' ? l.source : l.source.id;
+      const t = typeof l.target === 'string' ? l.target : l.target.id;
+      const key = (s.toLowerCase() < t.toLowerCase()) ? `${s.toLowerCase()}|${t.toLowerCase()}` : `${t.toLowerCase()}|${s.toLowerCase()}`;
+      return !contribution.addedLinkKeys.has(key);
     });
-  }, []);
+
+    // Build keep sets
+    const baseNodeIds = new Set<string>((baseGraphRef.current?.nodes || []).map(n => n.id));
+    const otherContributionNodeIds = new Set<string>();
+    contributionsRef.current.forEach((c, k) => {
+      if (k === keyToRemove) return;
+      c.addedNodeIds.forEach(id => otherContributionNodeIds.add(id));
+    });
+    // Compute nodes still attached via remaining links
+    const attachedNodeIds = new Set<string>();
+    for (const l of remainingLinks) {
+      const s = typeof l.source === 'string' ? l.source : l.source.id;
+      const t = typeof l.target === 'string' ? l.target : l.target.id;
+      attachedNodeIds.add(s);
+      attachedNodeIds.add(t);
+    }
+
+    // Remove nodes that were added by this contribution and are no longer referenced elsewhere
+    const remainingNodes = fullNetworkData.nodes.filter(n => {
+      if (!contribution.addedNodeIds.has(n.id)) return true; // not added by this node
+      if (baseNodeIds.has(n.id)) return true; // part of base
+      if (otherContributionNodeIds.has(n.id)) return true; // used by others
+      if (attachedNodeIds.has(n.id)) return true; // still attached by remaining links
+      return false; // safe to remove
+    });
+
+    const nextData: NetworkData = { nodes: remainingNodes, links: remainingLinks };
+    setFullNetworkData(nextData);
+
+    // Update expanded sets/maps
+    const newExpanded = new Set(expandedNodes);
+    newExpanded.delete(keyToRemove);
+    setExpandedNodes(newExpanded);
+    contributionsRef.current.delete(keyToRemove);
+
+    // If no expansions remain, exit expanded mode and return to base
+    if (contributionsRef.current.size === 0) {
+      setIsExpandedMode(false);
+      setFullNetworkData(null);
+      baseGraphRef.current = null;
+    }
+  }, [expandedNodes, fullNetworkData]);
 
   // Function to reset to first-degree view
   const resetToFirstDegree = useCallback(() => {

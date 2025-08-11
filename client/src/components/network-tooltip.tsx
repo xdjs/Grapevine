@@ -10,6 +10,7 @@ export interface NetworkTooltipProps {
   isExpanded?: boolean;
   onNetworkAction: (node: NetworkNode) => void;
   onExpandAction: (node: NetworkNode) => void;
+  onShrinkAction: (node: NetworkNode) => void;
   onProfileAction: (node: NetworkNode) => void;
   onCollaborationAction: (node: NetworkNode) => void;
   onClose: () => void;
@@ -24,6 +25,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
   isExpanded,
   onNetworkAction,
   onExpandAction,
+  onShrinkAction,
   onProfileAction,
   onCollaborationAction,
   onClose,
@@ -282,23 +284,20 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap,
-              cursor: isExpanded ? 'not-allowed' : 'pointer',
+              cursor: 'pointer',
               width: '100%',
               overflow: 'hidden',
-              opacity: isExpanded ? 0.6 : 1,
+              opacity: 1,
             }}
             onClick={(e) => {
-              if (isExpanded) { e.preventDefault(); e.stopPropagation(); return; }
-              handleActionClick(e, () => onExpandAction(node));
+              handleActionClick(e, () => (isExpanded ? onShrinkAction(node) : onExpandAction(node)));
             }}
             onKeyDown={(e) => {
-              if (isExpanded) { e.preventDefault(); e.stopPropagation(); return; }
-              handleKeyPress(e, () => onExpandAction(node));
+              handleKeyPress(e, () => (isExpanded ? onShrinkAction(node) : onExpandAction(node)));
             }}
             tabIndex={0}
             role="button"
-            aria-disabled={isExpanded ? true : undefined}
-            aria-label={`Expand ${node.name}'s network`}
+            aria-label={isExpanded ? `Shrink network` : `Expand ${node.name}'s network`}
           >
             <div
               style={{
@@ -324,7 +323,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                   fontWeight: 'bold',
                 }}
               >
-                +
+                {isExpanded ? '−' : '+'}
               </span>
             </div>
             <span
@@ -332,14 +331,14 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                 fontSize: linkFontSize,
                 fontStyle: 'italic',
                 textDecoration: 'underline',
-                cursor: isExpanded ? 'not-allowed' : 'pointer',
+                cursor: 'pointer',
                 whiteSpace: 'nowrap',
                 flex: 1,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
               }}
             >
-              {isExpanded ? 'Already expanded' : `Expand ${node.name}'s network`}
+              {isExpanded ? 'Shrink network' : `Expand ${node.name}'s network`}
             </span>
           </div>
         )}
