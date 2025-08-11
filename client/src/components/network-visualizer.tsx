@@ -143,6 +143,7 @@ export default function NetworkVisualizer({
     svgRef,
     visible,
     filterState,
+    disableFilter: Boolean(fullNetworkData),
   });
 
   // Error handling and retry logic
@@ -397,7 +398,7 @@ export default function NetworkVisualizer({
             mainArtistNode={mainArtistNode}
           />
           
-          {/* Reset button for expanded mode */}
+          {/* Shrink network button for expanded mode */}
           {isExpandedMode && (
             <button
               onClick={() => {
@@ -411,7 +412,7 @@ export default function NetworkVisualizer({
               style={{ fontSize: '14px', fontWeight: '500' }}
               data-testid="reset-button"
             >
-              ← Back to {mainArtistNode?.name || 'Main Artist'}
+              Shrink network
             </button>
           )}
           

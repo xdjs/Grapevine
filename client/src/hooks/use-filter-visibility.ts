@@ -9,6 +9,8 @@ export interface UseFilterVisibilityProps {
   visible: boolean;
   /** Current filter state controlling visibility */
   filterState: FilterState;
+  /** If true, disables role-based filtering and shows everything */
+  disableFilter?: boolean;
 }
 
 export interface UseFilterVisibilityReturn {
@@ -28,7 +30,8 @@ export interface UseFilterVisibilityReturn {
 export function useFilterVisibility({
   svgRef,
   visible,
-  filterState
+  filterState,
+  disableFilter = false,
 }: UseFilterVisibilityProps): UseFilterVisibilityReturn {
 
   /**
@@ -59,6 +62,14 @@ export function useFilterVisibility({
 
     const svg = d3.select(svgRef.current);
 
+    if (disableFilter) {
+      // Show everything
+      svg.selectAll(".node-group").style("display", null);
+      svg.selectAll(".label").style("display", null);
+      svg.selectAll(".link").style("display", null);
+      return;
+    }
+
     // Hide/show nodes based on filter state
     svg.selectAll(".node-group").style("display", function () {
       const d = d3.select(this).datum() as NetworkNode;
@@ -82,7 +93,7 @@ export function useFilterVisibility({
       
       return sourceVisible && targetVisible ? null : "none";
     });
-  }, [filterState, visible, isNodeVisible]);
+  }, [filterState, visible, isNodeVisible, disableFilter]);
 
   return {
     isNodeVisible
