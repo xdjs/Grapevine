@@ -293,6 +293,14 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
         networkGroup.attr("transform", transform);
         setCurrentZoom(transform.k);
         onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
+        // Guard against accidental hiding during active zoom
+        try {
+          svg.selectAll('.node-group,.label,.link').each(function() {
+            const el = d3.select(this);
+            if (el.style('display') === 'none') el.style('display', null);
+            if (el.style('visibility') === 'hidden') el.style('visibility', null);
+          });
+        } catch {}
       })
       .on("end", () => {
         // Visibility watchdog: ensure elements are visible and transform is valid after pan/zoom end

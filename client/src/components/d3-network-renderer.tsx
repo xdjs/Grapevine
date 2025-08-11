@@ -1015,11 +1015,15 @@ export default function D3NetworkRenderer({
 
     // Filter out links where either node doesn't exist or is isolated
     const nodeSet = new Set(data.nodes.map(n => n.id));
-    const validLinks = data.links.filter(link => {
+    let validLinks = data.links.filter(link => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       return nodeSet.has(sourceId) && nodeSet.has(targetId);
     });
+    // If all added links disappeared due to transform/DOM glitch, ensure at least base connectivity is preserved
+    if (validLinks.length === 0 && data.links.length > 0) {
+      validLinks = data.links;
+    }
 
     // Start optimized batch preloading of profile pictures
     // Only preload for nodes we haven't already batch-preloaded in this session
@@ -1063,6 +1067,8 @@ export default function D3NetworkRenderer({
         tooltip.hideTooltip();
       }
     });
+    // Prevent background drag from clearing the graph by disabling default drag on svg
+    svg.on('mousedown.drag', null);
 
     // Find connected components for cluster positioning
     const components = findConnectedComponents(data.nodes, validLinks);
