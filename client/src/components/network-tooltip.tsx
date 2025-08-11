@@ -244,22 +244,22 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
           role="button"
           aria-label={`View ${node.name}'s network`}
         >
-            <img
-              src={networkIconPath}
-              alt="Network"
-              style={{
-                width: `${iconSize}px`,
-                height: `${iconSize}px`,
-                minWidth: `${iconSize}px`,
-                minHeight: `${iconSize}px`,
-                maxWidth: `${iconSize}px`,
-                maxHeight: `${iconSize}px`,
-                borderRadius: '50%',
-                cursor: 'pointer',
-                objectFit: 'contain',
-                flexShrink: 0,
-              }}
-            />
+          <img
+            src={networkIconPath}
+            alt="Network"
+            style={{
+              width: `${iconSize}px`,
+              height: `${iconSize}px`,
+              minWidth: `${iconSize}px`,
+              minHeight: `${iconSize}px`,
+              maxWidth: `${iconSize}px`,
+              maxHeight: `${iconSize}px`,
+              borderRadius: '50%',
+              cursor: 'pointer',
+              objectFit: 'contain',
+              flexShrink: 0,
+            }}
+          />
           <span
             style={{
               fontSize: linkFontSize,
@@ -299,36 +299,31 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             role="button"
             aria-label={isExpanded ? `Shrink network` : `Expand ${node.name}'s network`}
           >
-            <div
+            <svg
+              width={iconSize}
+              height={iconSize}
+              viewBox="0 0 24 24"
+              aria-label={isExpanded ? 'Shrink icon' : 'Expand icon'}
+              xmlns="http://www.w3.org/2000/svg"
               style={{
-                width: `${iconSize}px`,
-                height: `${iconSize}px`,
                 minWidth: `${iconSize}px`,
                 minHeight: `${iconSize}px`,
                 maxWidth: `${iconSize}px`,
                 maxHeight: `${iconSize}px`,
-                borderRadius: '12px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #FF0ACF 0%, #8A2BE2 100%)',
-                boxShadow: '0 6px 16px rgba(255, 10, 207, 0.25)',
-                border: '1px solid rgba(255,255,255,0.12)',
+                display: 'block',
                 flexShrink: 0,
               }}
             >
-              <span
-                style={{
-                  color: 'white',
-                  fontSize: '16px',
-                  fontWeight: 800,
-                  textShadow: '0 1px 2px rgba(0,0,0,0.4)'
-                }}
-              >
-                {isExpanded ? '−' : '+'}
-              </span>
-            </div>
+              <circle cx="12" cy="12" r="10" stroke="#ff69b4" strokeWidth="2" fill="none" />
+              {isExpanded ? (
+                <line x1="7" y1="12" x2="17" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
+              ) : (
+                <>
+                  <line x1="12" y1="7" x2="12" y2="17" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
+                  <line x1="7" y1="12" x2="17" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
+                </>
+              )}
+            </svg>
             <span
               style={{
                 fontSize: linkFontSize,
