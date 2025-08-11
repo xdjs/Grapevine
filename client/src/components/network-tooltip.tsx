@@ -364,7 +364,9 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             role="button"
             aria-label={`View ${node.name}'s Music Nerd profile`}
           >
-            <div
+            <img
+              src={artistIconPath}
+              alt="Artist Page"
               style={{
                 width: `${iconSize}px`,
                 height: `${iconSize}px`,
@@ -372,28 +374,12 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                 minHeight: `${iconSize}px`,
                 maxWidth: `${iconSize}px`,
                 maxHeight: `${iconSize}px`,
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #AE53FF 0%, #1E1E1E 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 6px 16px rgba(174, 83, 255, 0.25)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                overflow: 'hidden',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                objectFit: 'contain',
+                flexShrink: 0,
               }}
-              aria-label="Artist Page"
-            >
-              <img
-                src={artistIconPath}
-                alt="Artist Page"
-                style={{
-                  width: `${Math.max(12, iconSize - 10)}px`,
-                  height: `${Math.max(12, iconSize - 10)}px`,
-                  objectFit: 'contain',
-                  filter: 'brightness(1.05) drop-shadow(0 1px 2px rgba(0,0,0,0.4))',
-                }}
-              />
-            </div>
+            />
             <span
               style={{
                 fontSize: linkFontSize,
