@@ -299,31 +299,60 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             role="button"
             aria-label={isExpanded ? `Shrink network` : `Expand ${node.name}'s network`}
           >
-            <svg
-              width={iconSize}
-              height={iconSize}
-              viewBox="0 0 24 24"
-              aria-label={isExpanded ? 'Shrink icon' : 'Expand icon'}
-              xmlns="http://www.w3.org/2000/svg"
-              style={{
-                minWidth: `${iconSize}px`,
-                minHeight: `${iconSize}px`,
-                maxWidth: `${iconSize}px`,
-                maxHeight: `${iconSize}px`,
-                display: 'block',
-                flexShrink: 0,
-              }}
-            >
-              <circle cx="12" cy="12" r="10" stroke="#ff69b4" strokeWidth="2" fill="none" />
-              {isExpanded ? (
-                <line x1="7" y1="12" x2="17" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
-              ) : (
-                <>
-                  <line x1="12" y1="7" x2="12" y2="17" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
+            {isMobile ? (
+              // Mobile: ultra-compact, no circle – just a crisp plus/minus
+              <svg
+                width={14}
+                height={14}
+                viewBox="0 0 24 24"
+                aria-label={isExpanded ? 'Shrink icon' : 'Expand icon'}
+                xmlns="http://www.w3.org/2000/svg"
+                style={{
+                  minWidth: `14px`,
+                  minHeight: `14px`,
+                  maxWidth: `14px`,
+                  maxHeight: `14px`,
+                  display: 'block',
+                  flexShrink: 0,
+                }}
+              >
+                {isExpanded ? (
+                  <line x1="5" y1="12" x2="19" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                ) : (
+                  <>
+                    <line x1="12" y1="5" x2="12" y2="19" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                    <line x1="5" y1="12" x2="19" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                  </>
+                )}
+              </svg>
+            ) : (
+              // Desktop: outlined circle with plus/minus
+              <svg
+                width={iconSize}
+                height={iconSize}
+                viewBox="0 0 24 24"
+                aria-label={isExpanded ? 'Shrink icon' : 'Expand icon'}
+                xmlns="http://www.w3.org/2000/svg"
+                style={{
+                  minWidth: `${iconSize}px`,
+                  minHeight: `${iconSize}px`,
+                  maxWidth: `${iconSize}px`,
+                  maxHeight: `${iconSize}px`,
+                  display: 'block',
+                  flexShrink: 0,
+                }}
+              >
+                <circle cx="12" cy="12" r="10" stroke="#ff69b4" strokeWidth="2" fill="none" />
+                {isExpanded ? (
                   <line x1="7" y1="12" x2="17" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
-                </>
-              )}
-            </svg>
+                ) : (
+                  <>
+                    <line x1="12" y1="7" x2="12" y2="17" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="7" y1="12" x2="17" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
+                  </>
+                )}
+              </svg>
+            )}
             <span
               style={{
                 fontSize: linkFontSize,
