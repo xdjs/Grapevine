@@ -379,12 +379,23 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     const contribution = contributionsRef.current.get(keyToRemove);
     if (!contribution) return;
 
-    // Remove contributed links
+    // Build preservation set: nodes that belong to other expansions (anchors and their added nodes)
+    const preserveNodeIds = new Set<string>();
+    contributionsRef.current.forEach((c, k) => {
+      if (k === keyToRemove) return;
+      preserveNodeIds.add(k); // other expansion anchors
+      c.addedNodeIds.forEach(id => preserveNodeIds.add(id));
+    });
+
+    // Remove contributed links, but preserve links that keep other expansions attached
     const remainingLinks = fullNetworkData.links.filter(l => {
       const s = typeof l.source === 'string' ? l.source : l.source.id;
       const t = typeof l.target === 'string' ? l.target : l.target.id;
       const key = (s.toLowerCase() < t.toLowerCase()) ? `${s.toLowerCase()}|${t.toLowerCase()}` : `${t.toLowerCase()}|${s.toLowerCase()}`;
-      return !contribution.addedLinkKeys.has(key);
+      if (!contribution.addedLinkKeys.has(key)) return true;
+      // Preserve if this link connects to nodes belonging to other expansions
+      if (preserveNodeIds.has(s) || preserveNodeIds.has(t)) return true;
+      return false;
     });
 
     // Build keep sets
