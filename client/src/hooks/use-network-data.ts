@@ -242,22 +242,26 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         }
       }
 
-      // Select up to three neighbors not already present as nodes (prioritize new nodes)
+      // Select up to three neighbors that are NEW nodes only (do not connect to existing nodes)
+      // Also filter out the main artist if present in the collaborator network
+      const mainIdCandidates = [mainArtistNode?.id, mainArtistNode?.name].filter(Boolean).map(String);
+      const isMain = (id: string) => mainIdCandidates.some(mid => toKey(mid) === toKey(id));
       const selectedNeighborIds: string[] = [];
       for (const nid of neighborIds) {
         if (selectedNeighborIds.length >= 3) break;
+        if (isMain(nid)) continue;
         if (!existingNodeIdsNormalized.has(normalizeId(nid))) {
           selectedNeighborIds.push(nid);
         }
       }
-      // If fewer than 3 new ones, allow existing ones to ensure up to 3 visible connections
-      if (selectedNeighborIds.length < 3) {
-        for (const nid of neighborIds) {
-          if (selectedNeighborIds.length >= 3) break;
-          if (!selectedNeighborIds.includes(nid)) {
-            selectedNeighborIds.push(nid);
-          }
+
+      // If no new neighbors found, notify and exit gracefully
+      if (selectedNeighborIds.length === 0) {
+        vlog(`ℹ️ No new neighbors found to add for ${nodeName}`);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('network-toast', { detail: { message: `No new collaborators found for ${nodeName}.`, type: 'info' } }));
         }
+        return;
       }
 
       // Add selected neighbor nodes (from returned data only; no fabrication)
@@ -270,7 +274,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         }
       }
 
-      // Add only the links that connect the clicked node to the selected neighbors
+      // Add only the links that connect the clicked node to the selected NEW neighbors
       for (const link of collaboratorNetwork.links) {
         const s = getId(link.source as any);
         const t = getId(link.target as any);
