@@ -367,7 +367,7 @@ export default function NetworkVisualizer({
           )}
 
           {/* Expand Loading Overlay */}
-          <ExpandLoading isVisible={Boolean((tooltip as any).isExpandLoading)} artistName={(tooltip as any).currentNode?.name} />
+          <ExpandLoading isVisible={Boolean((tooltip as any).isExpandLoading)} artistName={(tooltip as any).expandTargetName || (tooltip as any).currentNode?.name} />
 
           {/* Enhanced Zoom Controls - Hidden on mobile */}
           {!isMobile && (
