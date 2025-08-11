@@ -71,6 +71,36 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
 
   const maxWidth = isMobile ? '320px' : '380px';
   const iconSize = isMobile ? 14 : 32; // Much smaller icons on mobile
+  // Mobile-only bitmap icon (pre-rendered to PNG on the fly for crisp scaling)
+  const mobileIconPx = 14;
+  const mobileIconSrc = useMemo(() => {
+    if (!isMobile) return '';
+    if (typeof document === 'undefined') return '';
+    const canvas = document.createElement('canvas');
+    const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
+    const size = mobileIconPx * dpr;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, mobileIconPx, mobileIconPx);
+    ctx.strokeStyle = '#ff69b4';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    const pad = 4;
+    ctx.beginPath();
+    // horizontal
+    ctx.moveTo(pad, mobileIconPx / 2);
+    ctx.lineTo(mobileIconPx - pad, mobileIconPx / 2);
+    // vertical for plus
+    if (!isExpanded) {
+      ctx.moveTo(mobileIconPx / 2, pad);
+      ctx.lineTo(mobileIconPx / 2, mobileIconPx - pad);
+    }
+    ctx.stroke();
+    return canvas.toDataURL('image/png');
+  }, [isMobile, isExpanded]);
   const titleFontSize = isMobile ? '14px' : '16px';
   const roleFontSize = isMobile ? '11px' : '12px';
   const linkFontSize = isMobile ? '11px' : '12px';
@@ -299,60 +329,52 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             role="button"
             aria-label={isExpanded ? `Shrink network` : `Expand ${node.name}'s network`}
           >
-            {(() => {
-              const targetPx = isMobile ? 14 : iconSize;
-              const iconSrc = useMemo(() => {
-                if (typeof document === 'undefined') return '';
-                const canvas = document.createElement('canvas');
-                const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
-                const size = targetPx * dpr;
-                canvas.width = size;
-                canvas.height = size;
-                const ctx = canvas.getContext('2d');
-                if (!ctx) return '';
-                ctx.scale(dpr, dpr);
-                ctx.clearRect(0, 0, targetPx, targetPx);
-                ctx.strokeStyle = '#ff69b4';
-                ctx.lineWidth = 2;
-                ctx.lineCap = 'round';
-                // Desktop circle outline; mobile has no circle
-                if (!isMobile) {
-                  ctx.beginPath();
-                  ctx.arc(targetPx / 2, targetPx / 2, (targetPx / 2) - 2, 0, Math.PI * 2);
-                  ctx.stroke();
-                }
-                // Draw plus or minus
-                const pad = 4;
-                ctx.beginPath();
-                // horizontal
-                ctx.moveTo(pad, targetPx / 2);
-                ctx.lineTo(targetPx - pad, targetPx / 2);
-                // vertical for plus
-                if (!isExpanded) {
-                  ctx.moveTo(targetPx / 2, pad);
-                  ctx.lineTo(targetPx / 2, targetPx - pad);
-                }
-                ctx.stroke();
-                return canvas.toDataURL('image/png');
-              }, [isExpanded, isMobile, targetPx]);
-              return (
-                <img
-                  src={iconSrc}
-                  alt={isExpanded ? 'Shrink icon' : 'Expand icon'}
+            {isMobile ? (
+              <img
+                src={mobileIconSrc}
+                alt={isExpanded ? 'Shrink icon' : 'Expand icon'}
+                style={{
+                  width: `${mobileIconPx}px`,
+                  height: `${mobileIconPx}px`,
+                  minWidth: `${mobileIconPx}px`,
+                  minHeight: `${mobileIconPx}px`,
+                  maxWidth: `${mobileIconPx}px`,
+                  maxHeight: `${mobileIconPx}px`,
+                  display: 'block',
+                  flexShrink: 0,
+                  background: 'transparent',
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: `${iconSize}px`,
+                  height: `${iconSize}px`,
+                  minWidth: `${iconSize}px`,
+                  minHeight: `${iconSize}px`,
+                  maxWidth: `${iconSize}px`,
+                  maxHeight: `${iconSize}px`,
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#4CAF50',
+                  flexShrink: 0,
+                }}
+              >
+                <span
                   style={{
-                    width: `${targetPx}px`,
-                    height: `${targetPx}px`,
-                    minWidth: `${targetPx}px`,
-                    minHeight: `${targetPx}px`,
-                    maxWidth: `${targetPx}px`,
-                    maxHeight: `${targetPx}px`,
-                    display: 'block',
-                    flexShrink: 0,
-                    background: 'transparent',
+                    color: 'white',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    lineHeight: 1,
                   }}
-                />
-              );
-            })()}
+                >
+                  {isExpanded ? '−' : '+'}
+                </span>
+              </div>
+            )}
             <span
               style={{
                 fontSize: linkFontSize,
