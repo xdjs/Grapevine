@@ -8,7 +8,11 @@ export const artists = pgTable("artists", {
   type: text("type").notNull(), // 'artist', 'producer', 'songwriter'
   imageUrl: text("image_url"),
   spotifyId: text("spotify_id"),
+  nodePfp: text("node_pfp"), // Cache for profile picture URLs or image IDs
   webmapdata: jsonb("webmapdata"), // Cache for network visualization data
+  x: text("x"), // X/Twitter username (without @)
+  instagramUsername: text("instagram_username"), // Instagram username (without @)
+  facebookUsername: text("facebook_username"), // Facebook username/page name
 });
 
 export const collaborations = pgTable("collaborations", {
@@ -43,6 +47,9 @@ export const networkNodeSchema = z.object({
   spotifyId: z.string().nullable().optional(),
   artistId: z.string().nullable().optional(), // MusicNerd artist ID for linking
   musicNerdUrl: z.string().optional(), // Direct URL to MusicNerd artist page
+  xUsername: z.string().nullable().optional(), // X/Twitter username (without @)
+  instagramUsername: z.string().nullable().optional(), // Instagram username (without @)
+  facebookUsername: z.string().nullable().optional(), // Facebook username/page name
 });
 
 export const networkLinkSchema = z.object({

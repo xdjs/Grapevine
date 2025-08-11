@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import SearchInterface from "@/components/search-interface";
 import NetworkVisualizer from "@/components/network-visualizer";
-import ZoomControls from "@/components/zoom-controls";
+
 import FilterControls from "@/components/filter-controls";
 import MobileControls from "@/components/mobile-controls";
 import LoadingScreen from "@/components/loading-screen";
@@ -18,6 +18,7 @@ export default function ArtistNetwork() {
   const [networkData, setNetworkData] = useState<NetworkData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentArtistName, setCurrentArtistName] = useState<string>("");
+  const [currentArtistId, setCurrentArtistId] = useState<string | null>(null);
   const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
   const [clearSearchField, setClearSearchField] = useState(false);
   const [filterState, setFilterState] = useState<FilterState>({
@@ -26,10 +27,14 @@ export default function ArtistNetwork() {
     showArtists: true,
   });
   const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
+  const saveToHistoryRef = useRef<((artistName: string, artistId: string | null) => void) | null>(null);
   const isMobile = useIsMobile();
 
-  const handleNetworkData = useCallback((data: NetworkData) => {
+  const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
     setNetworkData(data);
+    // Extract the artist ID from the network data
+    const finalArtistId = artistId || data.nodes.find(node => node.size === 30)?.artistId || null;
+    setCurrentArtistId(finalArtistId);
   }, []);
 
   // Navigate back to home
@@ -62,6 +67,10 @@ export default function ArtistNetwork() {
     }
   };
 
+  const handleHistorySave = (saveHistoryFn: (artistName: string, artistId: string | null) => void) => {
+    saveToHistoryRef.current = saveHistoryFn;
+  };
+
   // Handle node click to load new artist network
   const handleArtistNodeClick = useCallback(async (artistName: string, artistId?: string) => {
     console.log(`🔗 [Artist Network] Artist node clicked: ${artistName} (ID: ${artistId})`);
@@ -81,7 +90,13 @@ export default function ArtistNetwork() {
         // Normal network data - pass to parent
         const mainArtist = data.nodes.find((node: NetworkNode) => node.size === 30 && node.type === 'artist');
         const finalArtistId = mainArtist?.artistId || mainArtist?.id || artistId;
-        handleNetworkData(data);
+
+        handleNetworkData(data, finalArtistId);
+        // Save to search history
+        if (saveToHistoryRef.current) {
+          saveToHistoryRef.current(artistName, finalArtistId || null);
+        }
+
       } else {
         // Handle no collaborators response
         console.warn(`No network data found for ${artistName}`);
@@ -114,6 +129,7 @@ export default function ArtistNetwork() {
     setNetworkData(null);
     setIsLoading(false);
     setCurrentArtistName("");
+    setCurrentArtistId(null);
     setClearSearchField(true);
     // Clear the URL to remove artist ID
     setLocation('/');
@@ -144,6 +160,7 @@ export default function ArtistNetwork() {
           triggerSearchRef.current = searchFn;
         }}
         onClearAll={handleClearNetwork}
+        onHistorySave={handleHistorySave}
       />
 
       {/* Network Visualization - Only show when network data exists */}
@@ -157,6 +174,7 @@ export default function ArtistNetwork() {
             onZoomChange={handleZoomChange}
             onArtistSearch={handleArtistSearch}
             onArtistNodeClick={handleArtistNodeClick}
+            onClearAll={handleClearNetwork}
           />
         </div>
       )}
@@ -169,12 +187,6 @@ export default function ArtistNetwork() {
         {/* Desktop Controls */}
         {!isMobile && (
           <>
-            <ZoomControls
-              onZoomIn={handleZoomIn}
-              onZoomOut={handleZoomOut}
-              onZoomReset={handleZoomReset}
-              onClearAll={handleClearNetwork}
-            />
             <FilterControls
               filterState={filterState}
               onFilterChange={setFilterState}
@@ -188,6 +200,7 @@ export default function ArtistNetwork() {
           onZoomOut={handleZoomOut}
           onZoomReset={handleZoomReset}
           onClearAll={handleClearNetwork}
+          artistId={currentArtistId}
         />
       </>
     </div>

@@ -2,15 +2,16 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import SearchInterface from "@/components/search-interface";
 import NetworkVisualizer from "@/components/network-visualizer";
-import ZoomControls from "@/components/zoom-controls";
+
 import FilterControls from "@/components/filter-controls";
 import MobileControls from "@/components/mobile-controls";
 import HelpButton from "@/components/help-button";
 import ShareButton from "@/components/share-button";
 import LoadingScreen from "@/components/loading-screen";
 import { Button } from "@/components/ui/button";
+import { useModals } from "@/hooks/use-modals";
 
-import { NetworkData, FilterState } from "@/types/network";
+import { NetworkData, FilterState, NoCollaboratorsResponse, NetworkResponse } from "@/types/network";
 import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
 import { useIsMobile } from "@/hooks/use-mobile.tsx";
 
@@ -111,6 +112,7 @@ export default function Home() {
   const [showNetworkView, setShowNetworkView] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentArtistName, setCurrentArtistName] = useState<string>("");
+  const [currentArtistId, setCurrentArtistId] = useState<string | null>(null);
   const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
   const [clearSearchField, setClearSearchField] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
@@ -120,8 +122,12 @@ export default function Home() {
     showArtists: true,
   });
   const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
+  const saveToHistoryRef = useRef<((artistName: string, artistId: string | null) => void) | null>(null);
   const isMobile = useIsMobile();
   const spacing = useDynamicSpacing();
+
+  // Read popup visibility so we can hide mobile controls when collaboration popup is open
+  const { showCollaborationPopup } = useModals();
 
   // Manage body overflow classes based on network view state
   useEffect(() => {
@@ -148,6 +154,11 @@ export default function Home() {
     };
   }, [showNetworkView]);
 
+  // Helper function to check if response indicates no collaborators
+  const isNoCollaboratorsResponse = (response: NetworkResponse): response is NoCollaboratorsResponse => {
+    return 'noCollaborators' in response && response.noCollaborators === true;
+  };
+
   // Load artist network if artistId is in URL
   useEffect(() => {
     const loadArtistFromUrl = async () => {
@@ -156,16 +167,29 @@ export default function Home() {
           setIsLoading(true);
           console.log(`🔗 Loading artist network from URL: ${params.artistId}`);
           
-          // Try to fetch network data by ID
-          const response = await fetch(`/api/network-by-id/${params.artistId}`);
-          if (response.ok) {
-            const data = await response.json();
+          // Use the fetchNetworkDataById function which returns proper NetworkResponse
+          const data = await fetchNetworkDataById(params.artistId);
+          
+          // Check if this is a no-collaborators response that needs the popup
+          if (isNoCollaboratorsResponse(data)) {
+            console.log(`🎭 [Home] Artist ${params.artistId} needs hallucination popup, triggering search`);
+            
+            // Instead of handling the popup here, trigger a search through the SearchInterface
+            // which already has all the popup logic implemented
+            if (triggerSearchRef.current) {
+              // Use the artist name from the response to trigger the search
+              triggerSearchRef.current(data.artistName);
+            } else {
+              // Fallback: set the single node network and show it
+              setNetworkData(data.singleNodeNetwork);
+              setShowNetworkView(true);
+            }
+          } else {
+            // Normal network data - proceed as usual
             setNetworkData(data);
             setShowNetworkView(true);
-          } else {
-            console.error(`Failed to load artist ${params.artistId}:`, response.status);
-            // Redirect to home if artist not found
-            setLocation('/');
+
+            setCurrentArtistId(params.artistId);
           }
         } catch (error) {
           console.error(`Error loading artist ${params.artistId}:`, error);
@@ -184,6 +208,10 @@ export default function Home() {
     setNetworkData(data);
     setShowNetworkView(true);
     setIsLoading(false);
+    
+    // Extract or use the provided artist ID
+    const finalArtistId = artistId || data.nodes.find(node => node.size === 30)?.artistId || null;
+    setCurrentArtistId(finalArtistId);
     
     // Update URL to reflect the artist being displayed
     if (artistId) {
@@ -221,6 +249,7 @@ export default function Home() {
     setNetworkData(null);
     setIsLoading(false);
     setCurrentArtistName("");
+    setCurrentArtistId(null);
     setClearSearchField(true);
     // Clear the URL to remove artist ID
     setLocation('/');
@@ -240,6 +269,10 @@ export default function Home() {
     if (triggerSearchRef.current) {
       triggerSearchRef.current(artistName);
     }
+  };
+
+  const handleHistorySave = (saveHistoryFn: (artistName: string, artistId: string | null) => void) => {
+    saveToHistoryRef.current = saveHistoryFn;
   };
 
   const handleArtistNodeClick = useCallback(async (artistName: string, artistId?: string) => {
@@ -262,6 +295,11 @@ export default function Home() {
         const mainArtist = data.nodes.find(node => node.size === 30 && node.type === 'artist');
         const finalArtistId = mainArtist?.artistId || mainArtist?.id || artistId;
         handleNetworkData(data, finalArtistId);
+        
+        // Save to search history
+        if (saveToHistoryRef.current) {
+          saveToHistoryRef.current(artistName, finalArtistId || null);
+        }
       } else {
         // Handle no collaborators response
         console.warn(`No network data found for ${artistName}`);
@@ -302,6 +340,7 @@ export default function Home() {
           triggerSearchRef.current = searchFn;
         }}
         onClearAll={handleReset}
+        onHistorySave={handleHistorySave}
       />
 
       {/* Attribution Content - Only visible when not showing network */}
@@ -374,6 +413,7 @@ export default function Home() {
             onZoomChange={handleZoomChange}
             onArtistSearch={handleArtistSearch}
             onArtistNodeClick={handleArtistNodeClick}
+            onClearAll={handleClearNetwork}
           />
         </div>
       )}
@@ -384,31 +424,24 @@ export default function Home() {
       {/* Controls - Only show when network is visible */}
       {showNetworkView && (
         <>
-          {/* Desktop Controls */}
-          {!isMobile && (
-            <>
-              <ZoomControls
-                onZoomIn={handleZoomIn}
-                onZoomOut={handleZoomOut}
-                onZoomReset={handleZoomReset}
-                onClearAll={handleClearNetwork}
-              />
-            </>
-          )}
-          
           {/* Mobile Controls */}
-          <MobileControls
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onZoomReset={handleZoomReset}
-            onClearAll={handleClearNetwork}
-          />
+          {!showCollaborationPopup && (
+            <MobileControls
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+              onZoomReset={handleZoomReset}
+              onClearAll={handleClearNetwork}
+              artistId={currentArtistId}
+            />
+          )}
         </>
       )}
 
 
+
       {/* Share Button - Only visible when network is shown and not on mobile */}
-      {showNetworkView && !isMobile && <ShareButton />}
+      {showNetworkView && !isMobile && <ShareButton artistId={currentArtistId} />}
+
 
       {/* Help Button - Hide on mobile when network view is shown */}
       {(!showNetworkView || !isMobile) && <HelpButton />}

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { NetworkData, NetworkNode } from "@/types/network";
 import {
   Plus,
   Minus,
@@ -22,6 +23,15 @@ import html2canvas from "html2canvas";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+// Interface for artist social media data
+interface ArtistSocialData {
+  artistId: string;
+  name: string;
+  xUsername?: string | null;
+  instagramUsername?: string | null;
+  facebookUsername?: string | null;
+}
+
 // Custom SVG icons for social media platforms
 const XIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -40,6 +50,9 @@ interface MobileControlsProps {
   onZoomOut: () => void;
   onZoomReset: () => void;
   onClearAll: () => void;
+
+  artistId?: string | null;
+
 }
 
 export default function MobileControls({
@@ -47,6 +60,9 @@ export default function MobileControls({
   onZoomOut,
   onZoomReset,
   onClearAll,
+
+  artistId,
+
 }: MobileControlsProps) {
   const [showControls, setShowControls] = useState(false); // existing zoom / clear panel
   const [showMenu, setShowMenu] = useState(false); // new three-dot options menu
@@ -55,22 +71,83 @@ export default function MobileControls({
   const [currentUrl, setCurrentUrl] = useState("");
   const [isCapturing, setIsCapturing] = useState(false);
   const [snapshotDataUrl, setSnapshotDataUrl] = useState<string | null>(null);
+
+  const [artistXUsername, setArtistXUsername] = useState<string | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  // Fetch artist X username when artistId changes
+  useEffect(() => {
+    const fetchArtistXUsername = async () => {
+      if (!artistId) {
+        setArtistXUsername(null);
+
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/artist-social/${artistId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setArtistXUsername(data.xUsername);
+        } else {
+          setArtistXUsername(null);
+        }
+      } catch (error) {
+        console.error('Error fetching artist X username:', error);
+        setArtistXUsername(null);
+      }
+    };
+
+    fetchArtistXUsername();
+  }, [artistId]);
+
 
   if (!isMobile) return null;
 
   // Platform-specific share functions - direct URL sharing
   const shareToFacebook = () => {
     const url = encodeURIComponent(window.location.href);
-    const text = encodeURIComponent("Check out this artist collaboration network! Discover how your favorite artists are connected.");
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${text}`;
+    let text = "Check out this artist's collaboration network! Explore music connections 👇";
+    
+    // Use Facebook username if available from Supabase
+    if (artistSocialData && artistSocialData.facebookUsername) {
+      text = `Check out @${artistSocialData.facebookUsername}'s artist collaboration network! Explore music connections 👇`;
+    } else if (artistSocialData && artistSocialData.name) {
+      text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇`;
+    } else if (networkData) {
+      // Find main artist from network data as fallback
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+      if (mainArtist) {
+        text = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇`;
+      }
+    }
+    
+    const encodedText = encodeURIComponent(text);
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${encodedText}`;
     window.open(facebookUrl, '_blank', 'width=600,height=400');
   };
   
   const shareToInstagram = () => {
     // Instagram doesn't support direct URL sharing, so we'll copy to clipboard and open Instagram's posting interface
-    const text = `🎵 Artist collaboration network 🎵\n\nDiscover music connections at ${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    let text = `Check out this artist's collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    
+    // Use Instagram username if available from Supabase
+    if (artistSocialData && artistSocialData.instagramUsername) {
+      text = `Check out @${artistSocialData.instagramUsername}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    } else if (artistSocialData && artistSocialData.name) {
+      text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+    } else if (networkData) {
+      // Find main artist from network data as fallback
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+      if (mainArtist) {
+        text = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
+      }
+    }
     
     navigator.clipboard.writeText(text).then(() => {
       toast({
@@ -134,17 +211,41 @@ export default function MobileControls({
   };
   
   const shareToX = () => {
-    const text = encodeURIComponent(`Check out this artist collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+
+    let text;
+    if (artistXUsername) {
+      // Use artist's X username if available
+      text = encodeURIComponent(`Check out @${artistXUsername}'s collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+    } else {
+      // Fallback to generic message
+      text = encodeURIComponent(`Check out this artist collaboration network! 🎵\n\nExplore music connections 👇\n\n#music #artists #collaboration`);
+    }
+
     const url = encodeURIComponent(window.location.href);
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodedText}&url=${url}`;
     window.open(twitterUrl, '_blank', 'width=600,height=400');
   };
   
   const shareToPinterest = () => {
     const url = encodeURIComponent(window.location.href);
-    const description = encodeURIComponent("Artist Collaboration Network - Discover how your favorite artists are connected! Explore music connections and collaborations.");
+    let description = "Check out this artist's collaboration network! Explore music connections 👇";
+    
+    // Add artist information if available (Pinterest doesn't have specific usernames)
+    if (artistSocialData && artistSocialData.name) {
+      description = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇`;
+    } else if (networkData) {
+      // Find main artist from network data as fallback
+      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
+        node.size === 30 && node.type === 'artist'
+      );
+      if (mainArtist) {
+        description = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇`;
+      }
+    }
+    
+    const encodedDescription = encodeURIComponent(description);
     // Pinterest doesn't support data URLs, so we'll share without the image
-    const pinterestUrl = `https://pinterest.com/pin/create/button/?url=${url}&description=${description}`;
+    const pinterestUrl = `https://pinterest.com/pin/create/button/?url=${url}&description=${encodedDescription}`;
     window.open(pinterestUrl, '_blank', 'width=600,height=400');
   };
 
@@ -202,7 +303,78 @@ export default function MobileControls({
         throw new Error('Network visualization not found');
       }
 
-      // Temporarily hide UI controls but keep the current share dialog
+      // STEP 1: Convert all external profile picture URLs to data URLs
+      const svg = networkContainer.querySelector('svg');
+      const originalImageHrefs = new Map<HTMLImageElement, string>();
+      
+      if (svg) {
+        console.log('🖼️ [Snapshot] Converting profile pictures to data URLs...');
+        const imageElements = svg.querySelectorAll('image[href*="http"]') as NodeListOf<SVGImageElement>;
+        
+        if (imageElements.length > 0) {
+          console.log(`🖼️ [Snapshot] Found ${imageElements.length} external images to convert`);
+          
+          // Convert each external image to a data URL
+          const imageConversions = Array.from(imageElements).map(async (img) => {
+            const originalHref = img.getAttribute('href');
+            if (!originalHref || !originalHref.startsWith('http')) return;
+            
+            try {
+              // Create a canvas to convert the image
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              if (!ctx) return;
+              
+              // Load the image
+              const tempImg = new Image();
+              tempImg.crossOrigin = 'anonymous';
+              
+              return new Promise<void>((resolve) => {
+                tempImg.onload = () => {
+                  try {
+                    // Set canvas dimensions to match the image
+                    canvas.width = tempImg.naturalWidth;
+                    canvas.height = tempImg.naturalHeight;
+                    
+                    // Draw the image to canvas
+                    ctx.drawImage(tempImg, 0, 0);
+                    
+                    // Convert to data URL
+                    const dataUrl = canvas.toDataURL('image/png', 0.9);
+                    
+                    // Store original href for restoration
+                    originalImageHrefs.set(img as any, originalHref);
+                    
+                    // Update the SVG image element with data URL
+                    img.setAttribute('href', dataUrl);
+                    
+                    console.log(`✅ [Snapshot] Converted image: ${originalHref.substring(0, 50)}...`);
+                  } catch (error) {
+                    console.warn(`⚠️ [Snapshot] Failed to convert image ${originalHref}:`, error);
+                  }
+                  resolve();
+                };
+                
+                tempImg.onerror = () => {
+                  console.warn(`⚠️ [Snapshot] Failed to load image for conversion: ${originalHref}`);
+                  resolve();
+                };
+                
+                tempImg.src = originalHref;
+              });
+              
+            } catch (error) {
+              console.warn(`⚠️ [Snapshot] Error converting image ${originalHref}:`, error);
+            }
+          });
+          
+          // Wait for all images to be converted
+          await Promise.all(imageConversions);
+          console.log('✅ [Snapshot] All profile pictures converted to data URLs');
+        }
+      }
+
+      // STEP 2: Temporarily hide UI controls but keep the current share dialog
       currentDialog = document.querySelector('[data-state="open"][role="dialog"]') as HTMLElement;
       const controls = document.querySelectorAll('.fixed:not([role="dialog"]):not([data-radix-portal])') as NodeListOf<HTMLElement>;
       const tooltips = document.querySelectorAll('[data-radix-tooltip-content]') as NodeListOf<HTMLElement>;
@@ -224,13 +396,14 @@ export default function MobileControls({
         }
       });
 
-      // Wait a brief moment for elements to hide
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait a brief moment for elements to hide and DOM to settle
+      await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Capture only the network visualization at high quality
+      // STEP 3: Capture the network visualization at high quality
       const devicePixelRatio = window.devicePixelRatio || 1;
       const highScale = Math.max(2, devicePixelRatio); // At least 2x, or device pixel ratio
       
+      console.log('📸 [Snapshot] Starting html2canvas capture...');
       const canvas = await html2canvas(networkContainer, {
         useCORS: true,
         allowTaint: true,
@@ -240,6 +413,14 @@ export default function MobileControls({
         width: networkContainer.offsetWidth,
         height: networkContainer.offsetHeight,
       });
+      
+      // STEP 4: Restore original image URLs
+      if (originalImageHrefs.size > 0) {
+        console.log('🔄 [Snapshot] Restoring original image URLs...');
+        originalImageHrefs.forEach((originalHref, img) => {
+          img.setAttribute('href', originalHref);
+        });
+      }
 
       // Restore original display values
       elementsToHide.forEach((element, index) => {
@@ -254,7 +435,6 @@ export default function MobileControls({
       }
 
       // Find the bounds of the network content by analyzing the SVG
-      const svg = networkContainer.querySelector('svg');
       let networkBounds = { minX: 0, minY: 0, maxX: canvas.width, maxY: canvas.height };
       
       if (svg) {
@@ -414,6 +594,14 @@ export default function MobileControls({
         currentDialog.style.display = dialogDisplay;
       }
       
+      // Restore original image URLs if they were changed
+      if (originalImageHrefs && originalImageHrefs.size > 0) {
+        console.log('🔄 [Snapshot] Restoring original image URLs after error...');
+        originalImageHrefs.forEach((originalHref, img) => {
+          img.setAttribute('href', originalHref);
+        });
+      }
+      
       setIsCapturing(false);
       console.error('Failed to create snapshot:', error);
       throw error;
@@ -472,7 +660,10 @@ export default function MobileControls({
       {!showMenu && (
         <Button
           onClick={() => setShowMenu(true)}
-          className="fixed bottom-6 sm:bottom-4 right-4 z-40 w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg"
+          className="fixed bottom-6 sm:bottom-4 right-4 z-40 w-12 h-12 rounded-full shadow-lg border-2"
+          style={{ backgroundColor: '#b427b4', borderColor: '#b427b4' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#9a239a'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#b427b4'}
           size="icon"
           title="Options"
         >
@@ -487,7 +678,8 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+            style={{ borderColor: '#b427b4' }}
             title="Share"
             onClick={handleShareClick}
             disabled={isCapturing}
@@ -503,7 +695,8 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+            style={{ borderColor: '#b427b4' }}
             title="Settings"
             onClick={() => {
               setShowControls(true);
@@ -517,7 +710,8 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+            style={{ borderColor: '#b427b4' }}
             title="Help"
             onClick={() => {
               setShowHelp(true);
@@ -531,7 +725,8 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="destructive"
-            className="w-12 h-12 bg-red-900/90 backdrop-blur hover:bg-red-800 border border-red-700 rounded-full shadow-lg"
+            className="w-12 h-12 bg-red-900/90 backdrop-blur hover:bg-red-800 border-2 rounded-full shadow-lg"
+            style={{ borderColor: '#b427b4' }}
             title="Close Menu"
             onClick={() => setShowMenu(false)}
           >

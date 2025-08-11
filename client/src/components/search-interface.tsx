@@ -18,6 +18,7 @@ interface SearchInterfaceProps {
   onLoadingChange?: (loading: boolean, artistName?: string) => void;
   onSearchFunction?: (searchFn: (artistName: string) => void) => void;
   onClearAll?: () => void;
+  onHistorySave?: (saveHistoryFn: (artistName: string, artistId: string | null) => void) => void;
 }
 
 interface ArtistOption {
@@ -126,7 +127,7 @@ const useDynamicSpacing = () => {
   return spacing;
 };
 
-function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction, onClearAll }: SearchInterfaceProps) {
+function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction, onClearAll, onHistorySave }: SearchInterfaceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentSearch, setCurrentSearch] = useState("");
   const [artistOptions, setArtistOptions] = useState<ArtistOption[]>([]);
@@ -584,6 +585,13 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     }
   }, [onSearchFunction, onNetworkData, onLoadingChange, toast, saveToSearchHistory]);
 
+  // Register history save function with parent
+  useEffect(() => {
+    if (onHistorySave) {
+      onHistorySave(saveToSearchHistory);
+    }
+  }, [onHistorySave, saveToSearchHistory]);
+
   return (
     <>
       {/* Centered Search - Initial View */}
@@ -628,7 +636,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               (window.visualViewport ? window.visualViewport.height : window.innerHeight) < 650 ? 'text-sm' :
               'text-xs sm:text-sm md:text-base'
             }`}>
-              <span className="font-medium">Tip:</span> Try searching for Taylor Swift, Drake, or Ariana Grande.
+              <span className="font-medium">Tip:</span> Try searching for Taylor Swift, The Weeknd, or Bruno Mars.
             </p>
           </div>
           

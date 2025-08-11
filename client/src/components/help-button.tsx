@@ -13,13 +13,33 @@ export default function HelpButton() {
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border border-gray-700 rounded-full shadow-lg"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+            style={{ borderColor: '#b427b4' }}
             title="Help"
           >
             <HelpCircle className="w-6 h-6" />
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-md bg-gray-900 border-gray-700">
+        <DialogContent 
+          className="max-w-md bg-gray-900 border-gray-700"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => {
+            // Only allow ESC to close if it's a deliberate key press
+            if (e.currentTarget === document.activeElement) {
+              return; // Allow normal ESC behavior when dialog is focused
+            }
+            e.preventDefault(); // Prevent ESC from closing on other events
+          }}
+          onOpenAutoFocus={(e) => {
+            // Prevent focus issues that might cause unwanted closing
+            e.preventDefault();
+          }}
+          onCloseAutoFocus={(e) => {
+            // Prevent focus issues when closing
+            e.preventDefault();
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="text-white">How To Use</DialogTitle>
           </DialogHeader>
