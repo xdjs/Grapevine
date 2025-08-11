@@ -155,9 +155,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
         left: `${position.x}px`,
         top: `${position.y}px`,
         maxWidth,
-        // Full-tooltip purple aesthetic background
-        background: 'linear-gradient(135deg, rgba(168,85,247,0.15) 0%, rgba(255,105,180,0.08) 100%)',
-        border: '1px solid rgba(168,85,247,0.35)',
+        background: 'rgba(0, 0, 0, 0.9)',
         color: 'white',
         borderRadius: '8px',
         padding: '12px',
@@ -165,7 +163,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
         fontSize: '14px',
         lineHeight: '1.4',
         zIndex: 1000,
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
         pointerEvents: 'auto',
         paddingRight,
         minWidth: isMobile ? '280px' : '300px',
@@ -246,22 +244,36 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
           role="button"
           aria-label={`View ${node.name}'s network`}
         >
-          <img
-            src={networkIconPath}
-            alt="Network"
-            style={{
-              width: `${iconSize}px`,
-              height: `${iconSize}px`,
-              minWidth: `${iconSize}px`,
-              minHeight: `${iconSize}px`,
-              maxWidth: `${iconSize}px`,
-              maxHeight: `${iconSize}px`,
-              borderRadius: '50%',
-              cursor: 'pointer',
-              objectFit: 'contain',
-              flexShrink: 0,
-            }}
-          />
+            <div
+              style={{
+                width: `${iconSize}px`,
+                height: `${iconSize}px`,
+                minWidth: `${iconSize}px`,
+                minHeight: `${iconSize}px`,
+                maxWidth: `${iconSize}px`,
+                maxHeight: `${iconSize}px`,
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #67D1F8 0%, #355367 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 6px 16px rgba(103, 209, 248, 0.25)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                overflow: 'hidden',
+              }}
+              aria-label="Network"
+            >
+              <img
+                src={networkIconPath}
+                alt="Network"
+                style={{
+                  width: `${Math.max(12, iconSize - 10)}px`,
+                  height: `${Math.max(12, iconSize - 10)}px`,
+                  objectFit: 'contain',
+                  filter: 'brightness(1.05) drop-shadow(0 1px 2px rgba(0,0,0,0.4))',
+                }}
+              />
+            </div>
           <span
             style={{
               fontSize: linkFontSize,
@@ -290,10 +302,6 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
               width: '100%',
               overflow: 'hidden',
               opacity: 1,
-              padding: isMobile ? '6px 8px' : '8px 10px',
-              borderRadius: '10px',
-              border: `1px solid ${isExpanded ? 'rgba(244,63,94,0.35)' : 'rgba(168,85,247,0.25)'}`,
-              background: 'transparent',
             }}
             onClick={(e) => {
               handleActionClick(e, () => (isExpanded ? onShrinkAction(node) : onExpandAction(node)));
@@ -313,23 +321,23 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                 minHeight: `${iconSize}px`,
                 maxWidth: `${iconSize}px`,
                 maxHeight: `${iconSize}px`,
-                borderRadius: '50%',
+                borderRadius: '12px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: isExpanded
-                  ? 'linear-gradient(135deg, #f43f5e 0%, #fb7185 100%)' // rose-500 -> rose-400
-                  : 'linear-gradient(135deg, #ff69b4 0%, #a855f7 100%)', // pink -> purple
+                background: 'linear-gradient(135deg, #FF0ACF 0%, #8A2BE2 100%)',
+                boxShadow: '0 6px 16px rgba(255, 10, 207, 0.25)',
+                border: '1px solid rgba(255,255,255,0.12)',
                 flexShrink: 0,
-                boxShadow: '0 2px 6px rgba(0,0,0,0.25)'
               }}
             >
               <span
                 style={{
                   color: 'white',
                   fontSize: '16px',
-                  fontWeight: 'bold',
+                  fontWeight: 800,
+                  textShadow: '0 1px 2px rgba(0,0,0,0.4)'
                 }}
               >
                 {isExpanded ? '−' : '+'}
@@ -345,8 +353,6 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                 flex: 1,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                color: isExpanded ? '#fecaca' : '#e9d5ff', // rose-200 / purple-200
-                fontWeight: 600,
               }}
             >
               {isExpanded ? 'Shrink network' : `Expand ${node.name}'s network`}
@@ -372,9 +378,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             role="button"
             aria-label={`View ${node.name}'s Music Nerd profile`}
           >
-            <img
-              src={artistIconPath}
-              alt="Artist Page"
+            <div
               style={{
                 width: `${iconSize}px`,
                 height: `${iconSize}px`,
@@ -382,12 +386,28 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                 minHeight: `${iconSize}px`,
                 maxWidth: `${iconSize}px`,
                 maxHeight: `${iconSize}px`,
-                borderRadius: '50%',
-                cursor: 'pointer',
-                objectFit: 'contain',
-                flexShrink: 0,
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #AE53FF 0%, #1E1E1E 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 6px 16px rgba(174, 83, 255, 0.25)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                overflow: 'hidden',
               }}
-            />
+              aria-label="Artist Page"
+            >
+              <img
+                src={artistIconPath}
+                alt="Artist Page"
+                style={{
+                  width: `${Math.max(12, iconSize - 10)}px`,
+                  height: `${Math.max(12, iconSize - 10)}px`,
+                  objectFit: 'contain',
+                  filter: 'brightness(1.05) drop-shadow(0 1px 2px rgba(0,0,0,0.4))',
+                }}
+              />
+            </div>
             <span
               style={{
                 fontSize: linkFontSize,
