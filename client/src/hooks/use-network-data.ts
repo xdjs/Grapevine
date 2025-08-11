@@ -209,6 +209,14 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         mergedLinks.map(l => undirectedKey(getId(l.source), getId(l.target)))
       );
 
+      // Fast lookup of existing/base nodes by case-insensitive keys (id and name)
+      const existingNodeByKey = new Map<string, NetworkNode>();
+      const keyify = (s?: string) => (s || '').toLowerCase();
+      for (const n of mergedNodes) {
+        existingNodeByKey.set(keyify(n.id), n);
+        if (n.name) existingNodeByKey.set(keyify(n.name), n);
+      }
+
       // Build quick lookup for nodes returned by the collaborator network (case-insensitive keys)
       const returnedNodeByKey = new Map<string, NetworkNode>();
       const toKey = (v?: string) => (v || '').toLowerCase();
@@ -231,9 +239,17 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       // Last resort: use provided id or name directly
       if (!clickedCanonicalId) clickedCanonicalId = nodeId || nodeName;
 
-      // Normalize to a canonical id from returned data if possible
-      const clickedCanonicalNode = returnedNodeByKey.get(toKey(clickedCanonicalId));
-      const clickedCanonicalFinalId = clickedCanonicalNode?.id || clickedCanonicalId;
+      // Normalize to a canonical id present in the merged/base graph if possible
+      const getCanonicalId = (raw: string) => {
+        const fromReturned = returnedNodeByKey.get(toKey(raw))?.id;
+        if (fromReturned && existingNodeByKey.has(keyify(fromReturned))) {
+          return existingNodeByKey.get(keyify(fromReturned))!.id;
+        }
+        if (existingNodeByKey.has(keyify(raw))) return existingNodeByKey.get(keyify(raw))!.id;
+        return fromReturned || raw;
+      };
+
+      const clickedCanonicalFinalId = getCanonicalId(clickedCanonicalId);
 
       // Find direct neighbors of the clicked node in the collaborator's network
       const neighborIds: string[] = [];
@@ -274,6 +290,8 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         if (nodeToAdd && !existingNodeIdsNormalized.has(normalizeId(nodeToAdd.id))) {
           mergedNodes.push(nodeToAdd);
           existingNodeIdsNormalized.add(normalizeId(nodeToAdd.id));
+          existingNodeByKey.set(keyify(nodeToAdd.id), nodeToAdd);
+          if (nodeToAdd.name) existingNodeByKey.set(keyify(nodeToAdd.name), nodeToAdd);
           vlog(`➕ [Expand] Added node: ${nodeToAdd.name} (id=${nodeToAdd.id})`);
         }
       }
@@ -285,9 +303,9 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         const connectsClicked = (toKey(s) === toKey(clickedCanonicalFinalId) && selectedNeighborIds.map(toKey).includes(toKey(t))) ||
                                (toKey(t) === toKey(clickedCanonicalFinalId) && selectedNeighborIds.map(toKey).includes(toKey(s)));
         if (!connectsClicked) continue;
-        // Map to canonical ids from returned data when possible, then normalize undirected
-        const sCanon = returnedNodeByKey.get(toKey(s))?.id || s;
-        const tCanon = returnedNodeByKey.get(toKey(t))?.id || t;
+        // Map to canonical ids present in merged/base graph when possible, then normalize undirected
+        const sCanon = getCanonicalId(s);
+        const tCanon = getCanonicalId(t);
         const key = undirectedKey(sCanon, tCanon);
         if (!existingLinkKeys.has(key)) {
           mergedLinks.push({ source: sCanon, target: tCanon });
