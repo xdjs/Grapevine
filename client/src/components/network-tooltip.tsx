@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import { NetworkNode } from '@/types/network';
 
 export interface NetworkTooltipProps {
@@ -299,60 +299,60 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             role="button"
             aria-label={isExpanded ? `Shrink network` : `Expand ${node.name}'s network`}
           >
-            {isMobile ? (
-              // Mobile: ultra-compact, no circle – just a crisp plus/minus
-              <svg
-                width={14}
-                height={14}
-                viewBox="0 0 24 24"
-                aria-label={isExpanded ? 'Shrink icon' : 'Expand icon'}
-                xmlns="http://www.w3.org/2000/svg"
-                style={{
-                  minWidth: `14px`,
-                  minHeight: `14px`,
-                  maxWidth: `14px`,
-                  maxHeight: `14px`,
-                  display: 'block',
-                  flexShrink: 0,
-                }}
-              >
-                {isExpanded ? (
-                  <line x1="5" y1="12" x2="19" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-                ) : (
-                  <>
-                    <line x1="12" y1="5" x2="12" y2="19" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-                    <line x1="5" y1="12" x2="19" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-                  </>
-                )}
-              </svg>
-            ) : (
-              // Desktop: outlined circle with plus/minus
-              <svg
-                width={iconSize}
-                height={iconSize}
-                viewBox="0 0 24 24"
-                aria-label={isExpanded ? 'Shrink icon' : 'Expand icon'}
-                xmlns="http://www.w3.org/2000/svg"
-                style={{
-                  minWidth: `${iconSize}px`,
-                  minHeight: `${iconSize}px`,
-                  maxWidth: `${iconSize}px`,
-                  maxHeight: `${iconSize}px`,
-                  display: 'block',
-                  flexShrink: 0,
-                }}
-              >
-                <circle cx="12" cy="12" r="10" stroke="#ff69b4" strokeWidth="2" fill="none" />
-                {isExpanded ? (
-                  <line x1="7" y1="12" x2="17" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
-                ) : (
-                  <>
-                    <line x1="12" y1="7" x2="12" y2="17" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
-                    <line x1="7" y1="12" x2="17" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
-                  </>
-                )}
-              </svg>
-            )}
+            {(() => {
+              const targetPx = isMobile ? 14 : iconSize;
+              const iconSrc = useMemo(() => {
+                if (typeof document === 'undefined') return '';
+                const canvas = document.createElement('canvas');
+                const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
+                const size = targetPx * dpr;
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return '';
+                ctx.scale(dpr, dpr);
+                ctx.clearRect(0, 0, targetPx, targetPx);
+                ctx.strokeStyle = '#ff69b4';
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                // Desktop circle outline; mobile has no circle
+                if (!isMobile) {
+                  ctx.beginPath();
+                  ctx.arc(targetPx / 2, targetPx / 2, (targetPx / 2) - 2, 0, Math.PI * 2);
+                  ctx.stroke();
+                }
+                // Draw plus or minus
+                const pad = 4;
+                ctx.beginPath();
+                // horizontal
+                ctx.moveTo(pad, targetPx / 2);
+                ctx.lineTo(targetPx - pad, targetPx / 2);
+                // vertical for plus
+                if (!isExpanded) {
+                  ctx.moveTo(targetPx / 2, pad);
+                  ctx.lineTo(targetPx / 2, targetPx - pad);
+                }
+                ctx.stroke();
+                return canvas.toDataURL('image/png');
+              }, [isExpanded, isMobile, targetPx]);
+              return (
+                <img
+                  src={iconSrc}
+                  alt={isExpanded ? 'Shrink icon' : 'Expand icon'}
+                  style={{
+                    width: `${targetPx}px`,
+                    height: `${targetPx}px`,
+                    minWidth: `${targetPx}px`,
+                    minHeight: `${targetPx}px`,
+                    maxWidth: `${targetPx}px`,
+                    maxHeight: `${targetPx}px`,
+                    display: 'block',
+                    flexShrink: 0,
+                    background: 'transparent',
+                  }}
+                />
+              );
+            })()}
             <span
               style={{
                 fontSize: linkFontSize,
