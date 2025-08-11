@@ -288,6 +288,13 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
               width: '100%',
               overflow: 'hidden',
               opacity: 1,
+              padding: isMobile ? '6px 8px' : '8px 10px',
+              borderRadius: '10px',
+              border: `1px solid ${isExpanded ? 'rgba(244,63,94,0.35)' : 'rgba(168,85,247,0.35)'}`, // rose-500 / purple-500
+              background: isExpanded
+                ? 'linear-gradient(135deg, rgba(244,63,94,0.12) 0%, rgba(244,63,94,0.08) 100%)'
+                : 'linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(168,85,247,0.08) 100%)',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.25)',
             }}
             onClick={(e) => {
               handleActionClick(e, () => (isExpanded ? onShrinkAction(node) : onExpandAction(node)));
@@ -312,8 +319,11 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: '#4CAF50',
+                background: isExpanded
+                  ? 'linear-gradient(135deg, #f43f5e 0%, #fb7185 100%)' // rose-500 -> rose-400
+                  : 'linear-gradient(135deg, #ff69b4 0%, #a855f7 100%)', // pink -> purple
                 flexShrink: 0,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.25)'
               }}
             >
               <span
@@ -336,6 +346,8 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                 flex: 1,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
+                color: isExpanded ? '#fecaca' : '#e9d5ff', // rose-200 / purple-200
+                fontWeight: 600,
               }}
             >
               {isExpanded ? 'Shrink network' : `Expand ${node.name}'s network`}
