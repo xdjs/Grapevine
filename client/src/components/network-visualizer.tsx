@@ -474,6 +474,7 @@ export default function NetworkVisualizer({
               onShrinkAction={(node) => {
                 try {
                   collapseNodeNetwork(node.name, node.artistId || undefined);
+                  tooltip.hideTooltip();
                 } catch (error) {
                   handleError(error as Error, 'shrink network');
                 }
