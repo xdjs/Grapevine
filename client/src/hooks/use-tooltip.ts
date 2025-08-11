@@ -122,11 +122,13 @@ export function useTooltip({
 
   // Core tooltip functions
   const showTooltip = useCallback((event: MouseEvent, node: NetworkNode) => {
+    // Do not show tooltip while expand is loading
+    if (isExpandLoading) return;
     const position = calculatePosition(event);
     setTooltipPosition(position);
     setIsTooltipVisible(true);
     setCurrentNode(node);
-  }, [calculatePosition]);
+  }, [calculatePosition, isExpandLoading]);
 
   // Node highlighting functions
   const resetNodeHighlight = useCallback(() => {
@@ -221,11 +223,12 @@ export function useTooltip({
     }
     try {
       setIsExpandLoading(true);
+      // Hide tooltip immediately while loading overlay is visible
+      hideTooltip();
       await networkDataHook.expandNodeNetwork(node.name, node.artistId);
     } finally {
       setIsExpandLoading(false);
     }
-    hideTooltip();
   }, [networkDataHook.expandNodeNetwork, hideTooltip, isExpandLoading]);
 
   const handleProfileAction = useCallback(async (node: NetworkNode) => {
