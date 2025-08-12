@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { NetworkData, NetworkNode, NetworkLink } from '@/types/network';
 
 interface UseNetworkDataProps {
