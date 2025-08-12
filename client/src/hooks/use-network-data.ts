@@ -362,6 +362,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       setFullNetworkData(mergedNetworkData);
       setExpandedNodes(prev => new Set([...prev, clickedCanonicalFinalId]));
       setIsExpandedMode(true);
+      console.log(`[Expand] Completed for ${nodeName} (id=${clickedCanonicalFinalId}). Added nodes=${addedNodeCount} links=${addedLinkCount}`);
       // Record contribution for surgical shrink
       // Merge contributions instead of overwriting to preserve previous expansions
       const prev = contributionsRef.current.get(clickedCanonicalFinalId);
@@ -614,7 +615,10 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     try {
       const logState = (where: string) => {
         const count = fullNetworkData?.nodes?.length ?? 0;
-        console.log(`[ExpandPersist] save@${where} main="${mainArtistNode?.name || ''}" expanded=${isExpandedMode} nodes=${count} expandedSet=${expandedNodes.size}`);
+        const anchors = Array.from(contributionsRef.current.keys());
+        console.log(
+          `[ExpandPersist] save@${where} main="${mainArtistNode?.name || ''}" anchors=[${anchors.join(', ')}] expanded=${isExpandedMode} nodes=${count} expandedSet=${expandedNodes.size}`
+        );
       };
       const mainName = mainArtistNode?.name || '';
       const payload = {
