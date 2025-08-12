@@ -490,13 +490,36 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
           addedLinkKeys: Array.from(v.addedLinkKeys),
         })),
       };
-      // Save to window for fast rehydrate across remounts/tab switches
-      if (typeof window !== 'undefined') {
-        window.grapevineExpandedState = payload;
-        logState('memory');
+      // Decide if we should overwrite saved state. Never overwrite an existing expanded state with a collapsed one.
+      let existing: any = undefined;
+      if (typeof window !== 'undefined' && window.grapevineExpandedState) existing = window.grapevineExpandedState;
+      if (!existing) {
+        const raw = sessionStorage.getItem(PERSIST_KEY);
+        existing = raw ? JSON.parse(raw) : undefined;
       }
-      sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
-      logState('session');
+      const currentCount = payload.fullNetworkData?.nodes?.length ?? 0;
+      const existingCount = existing?.fullNetworkData?.nodes?.length ?? 0;
+      const sameMain = existing && existing.main === mainName;
+      const existingExpanded = Boolean(existing?.isExpandedMode);
+      const shouldPersist = () => {
+        if (!mainName) return false;
+        if (isExpandedMode && currentCount > 0) return true;
+        if (!existing) return true;
+        if (!sameMain) return true;
+        if (existingExpanded) return false; // keep expanded snapshot
+        // Both collapsed; avoid thrashing saved state
+        return false;
+      };
+      if (shouldPersist()) {
+        if (typeof window !== 'undefined') {
+          window.grapevineExpandedState = payload;
+          logState('memory');
+        }
+        sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
+        logState('session');
+      } else {
+        console.log('[ExpandPersist] skip-save (preserve existing expanded state)');
+      }
     } catch {}
   }, [isExpandedMode, fullNetworkData, expandedNodes, mainArtistNode?.name]);
 
