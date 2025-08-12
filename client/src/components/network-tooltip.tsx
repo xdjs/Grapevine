@@ -6,11 +6,13 @@ export interface NetworkTooltipProps {
   position: { x: number; y: number };
   visible: boolean;
   isMainArtist: boolean;
+
   isFirstDegreeCollaborator: boolean;
   isExpanded?: boolean;
   onNetworkAction: (node: NetworkNode) => void;
   onExpandAction: (node: NetworkNode) => void;
   onShrinkAction: (node: NetworkNode) => void;
+
   onProfileAction: (node: NetworkNode) => void;
   onCollaborationAction: (node: NetworkNode) => void;
   onClose: () => void;
@@ -21,11 +23,13 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
   position,
   visible,
   isMainArtist,
+
   isFirstDegreeCollaborator,
   isExpanded,
   onNetworkAction,
   onExpandAction,
   onShrinkAction,
+
   onProfileAction,
   onCollaborationAction,
   onClose,
@@ -290,7 +294,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
               flexShrink: 0,
             }}
           />
-          <span
+            <span
             style={{
               fontSize: linkFontSize,
               fontStyle: 'italic',
@@ -305,6 +309,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             {node.name}&apos;s network
           </span>
         </div>
+
 
         {/* Expand action - available for any non-main-artist node */}
         {!isMainArtist && (
@@ -388,6 +393,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             </span>
           </div>
         )}
+
 
         {/* Music Nerd profile action - only for artists */}
         {isArtist && (
