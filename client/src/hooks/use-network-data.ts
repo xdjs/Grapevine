@@ -452,6 +452,18 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
   const visibleNodes = useMemo(() => getVisibleNodes(), [getVisibleNodes]);
   const visibleLinks = useMemo(() => getVisibleLinks(), [getVisibleLinks]);
 
+  // Ensure expanded data persists visually across background interactions
+  useEffect(() => {
+    const handler = () => {
+      if (isExpandedMode && fullNetworkData) {
+        // Reassert current expanded data to force consumers to keep rendering it
+        setFullNetworkData(prev => prev ? { nodes: [...prev.nodes], links: [...prev.links] } : fullNetworkData);
+      }
+    };
+    window.addEventListener('network-ensure-expanded', handler);
+    return () => window.removeEventListener('network-ensure-expanded', handler);
+  }, [isExpandedMode, fullNetworkData]);
+
   // Get the data to display (either filtered or full)
   const displayData = useMemo(() => {
     const baseData = fullNetworkData || {

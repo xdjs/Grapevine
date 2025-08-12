@@ -1070,6 +1070,13 @@ export default function D3NetworkRenderer({
     // Prevent background drag from clearing the graph by disabling default drag on svg
     svg.on('mousedown.drag', null);
 
+    // On any background pointer move/end, reassert expanded state to prevent accidental resets
+    const reassert = () => {
+      window.dispatchEvent(new CustomEvent('network-ensure-expanded'));
+    };
+    svg.on('pointerup.reassert', reassert);
+    svg.on('pointercancel.reassert', reassert);
+
     // Find connected components for cluster positioning
     const components = findConnectedComponents(data.nodes, validLinks);
     
