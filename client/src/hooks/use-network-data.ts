@@ -496,6 +496,8 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
 
   // Rehydrate on mount if same main artist (sync before first paint to avoid flicker/reset)
   useLayoutEffect(() => {
+    // Wait until base data is present and main artist identified
+    if (!mainArtistNode || !Array.isArray(data?.nodes) || data.nodes.length === 0) return;
     try {
       let saved: any = undefined;
       if (typeof window !== 'undefined' && window.grapevineExpandedState) {
