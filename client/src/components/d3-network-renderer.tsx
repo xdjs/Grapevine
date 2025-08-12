@@ -1020,10 +1020,7 @@ export default function D3NetworkRenderer({
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       return nodeSet.has(sourceId) && nodeSet.has(targetId);
     });
-    // If all added links disappeared due to transform/DOM glitch, ensure at least base connectivity is preserved
-    if (validLinks.length === 0 && data.links.length > 0) {
-      validLinks = data.links;
-    }
+    // Do NOT override with data.links; when validLinks is empty, render no links.
 
     // Start optimized batch preloading of profile pictures
     // Only preload for nodes we haven't already batch-preloaded in this session
@@ -1067,15 +1064,6 @@ export default function D3NetworkRenderer({
         tooltip.hideTooltip();
       }
     });
-    // Prevent background drag from clearing the graph by disabling default drag on svg
-    svg.on('mousedown.drag', null);
-
-    // On any background pointer move/end, reassert expanded state to prevent accidental resets
-    const reassert = () => {
-      window.dispatchEvent(new CustomEvent('network-ensure-expanded'));
-    };
-    svg.on('pointerup.reassert', reassert);
-    svg.on('pointercancel.reassert', reassert);
 
     // Find connected components for cluster positioning
     const components = findConnectedComponents(data.nodes, validLinks);

@@ -445,7 +445,6 @@ export default function NetworkVisualizer({
                   return false;
                 }
               })()}
-
               isExpanded={(() => {
                 try {
                   const nodeId = tooltip.currentNode?.id;
@@ -480,7 +479,6 @@ export default function NetworkVisualizer({
                   handleError(error as Error, 'shrink network');
                 }
               }}
-
               onProfileAction={tooltip.handleProfileAction}
               onCollaborationAction={tooltip.handleCollaborationAction}
               onClose={tooltip.hideTooltip}

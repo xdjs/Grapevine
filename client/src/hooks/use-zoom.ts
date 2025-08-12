@@ -293,14 +293,7 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
         networkGroup.attr("transform", transform);
         setCurrentZoom(transform.k);
         onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
-        // Guard against accidental hiding during active zoom
-        try {
-          svg.selectAll('.node-group,.label,.link').each(function() {
-            const el = d3.select(this);
-            if (el.style('display') === 'none') el.style('display', null);
-            if (el.style('visibility') === 'hidden') el.style('visibility', null);
-          });
-        } catch {}
+        // No DOM resets here to avoid flicker; watchdog runs on zoom end
       })
       .on("end", () => {
         // Visibility watchdog: ensure elements are visible and transform is valid after pan/zoom end
@@ -313,6 +306,11 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
               const disp = el.style('display');
               if (disp === 'none') el.style('display', null);
             });
+            // If validLinks collapsed to zero in the DOM, trigger a lightweight redraw by toggling visibility
+            const linkCount = svg.selectAll('.link').size();
+            if (linkCount === 0) {
+              svg.selectAll('.node-group,.label').style('display', null);
+            }
           }
           // Guard against non-finite transform values
           const m = (g.node() as SVGGElement)?.getCTM();
