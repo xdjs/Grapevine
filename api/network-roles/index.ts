@@ -69,15 +69,21 @@ Rules:
 - Include ALL roles each person has.
 - Return ONLY the JSON object, no extra text.`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: 'You are a precise music industry data assistant. Output strict JSON only.' },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.1,
-      max_tokens: 1200,
-    });
+    // Hard timeout to avoid long hangs
+    const timeoutMs = 6000;
+    const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('OpenAI timeout')), timeoutMs));
+    const response = await Promise.race([
+      openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: 'You are a precise music industry data assistant. Output strict JSON only.' },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.1,
+        max_tokens: 700,
+      }) as Promise<any>,
+      timeoutPromise,
+    ]);
 
     const content = response.choices[0]?.message?.content?.trim() || '';
     let jsonContent = content.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();

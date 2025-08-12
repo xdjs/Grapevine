@@ -175,15 +175,21 @@ Rules:
       let collaborationData: CollaborationData = { collaborators: [] };
 
       try {
-        const completion = await openai.chat.completions.create({
-          model: 'gpt-4o',
-          messages: [
-            { role: 'system', content: 'You are a precise music industry data assistant. Output strict JSON.' },
-            { role: 'user', content: prompt },
-          ],
-          temperature: 0.1,
-          max_tokens: 1200,
-        });
+        // Enforce a hard timeout to avoid Vercel function timeouts
+        const timeoutMs = 8000;
+        const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('OpenAI timeout')), timeoutMs));
+        const completion = await Promise.race([
+          openai.chat.completions.create({
+            model: 'gpt-4o',
+            messages: [
+              { role: 'system', content: 'You are a precise music industry data assistant. Output strict JSON.' },
+              { role: 'user', content: prompt },
+            ],
+            temperature: 0.1,
+            max_tokens: 700,
+          }) as Promise<any>,
+          timeoutPromise,
+        ]);
 
         const content = completion.choices[0]?.message?.content?.trim() || '';
         let jsonContent = content.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();

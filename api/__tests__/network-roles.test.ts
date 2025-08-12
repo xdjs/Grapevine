@@ -91,6 +91,23 @@ describe('/api/network-roles', () => {
       expect.objectContaining({ roles: {}, unresolved: expect.arrayContaining(['Taylor Swift', 'Jack Antonoff']) })
     );
   });
+
+  it('handles OpenAI timeout gracefully with unresolved names', async () => {
+    // Simulate hang
+    mockOpenAI.chat.completions.create.mockImplementation(() => new Promise(() => {}));
+
+    const originalSetTimeout = global.setTimeout;
+    (global as any).setTimeout = (fn: any) => { fn(); return 0 as any; };
+    await handler(req as VercelRequest, res as VercelResponse);
+    (global as any).setTimeout = originalSetTimeout;
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        roles: {},
+        unresolved: expect.arrayContaining(['Taylor Swift', 'Jack Antonoff'])
+      })
+    );
+  });
 });
 
 

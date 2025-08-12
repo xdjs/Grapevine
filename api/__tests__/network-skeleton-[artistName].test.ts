@@ -130,6 +130,33 @@ describe('/api/network-skeleton/:artistName', () => {
       [expect.any(String), 'Taylor Swift']
     );
   });
+
+  it('times out OpenAI and returns single-node fallback', async () => {
+    // find
+    mockClient.query
+      .mockResolvedValueOnce({ rows: [{ id: 1, name: 'Taylor Swift' }] })
+      // cache lookup (none)
+      .mockResolvedValueOnce({ rows: [{ webmapdata: null }] });
+
+    // Simulate a hanging OpenAI by returning a promise that never resolves within test timeframe
+    mockOpenAI.chat.completions.create.mockImplementation(() => new Promise(() => {}));
+
+    // Use real timers but set a generous test timeout
+    const resultPromise = handler(req as VercelRequest, res as VercelResponse);
+    // Advance fake timers is not used; rely on function's 8s timeout; shorten by mocking setTimeout
+    const originalSetTimeout = global.setTimeout;
+    (global as any).setTimeout = (fn: any) => { fn(); return 0 as any; };
+    await resultPromise;
+    (global as any).setTimeout = originalSetTimeout;
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nodes: expect.arrayContaining([expect.objectContaining({ name: 'Taylor Swift' })]),
+        links: [],
+        metadata: expect.objectContaining({ partial: true, source: 'openai-error' }),
+      })
+    );
+  });
 });
 
 
