@@ -103,6 +103,7 @@ export default function NetworkVisualizer({
     expandedNodes,
     fullNetworkData, 
     isExpandedMode,
+    rehydrateReady,
     mainArtistNode,
     visibleNodes,
     visibleLinks,
@@ -344,8 +345,8 @@ export default function NetworkVisualizer({
       {/* Show error state if there's a component error */}
       {componentError && <ErrorState error={componentError} />}
       
-      {/* Main visualization - only render when not loading and no errors */}
-      {!isInitializing && !componentError && (
+      {/* Main visualization - only render when not loading, no errors, and rehydration check ran */}
+      {!isInitializing && !componentError && rehydrateReady && (
         <>
           <svg 
             ref={svgRef} 

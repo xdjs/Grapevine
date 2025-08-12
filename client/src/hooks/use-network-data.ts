@@ -10,6 +10,7 @@ interface UseNetworkDataReturn {
   expandedNodes: Set<string>;
   fullNetworkData: NetworkData | null;
   isExpandedMode: boolean;
+  rehydrateReady: boolean;
   
   // Computed values
   mainArtistNode: NetworkNode | undefined;
@@ -30,6 +31,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
   const [fullNetworkData, setFullNetworkData] = useState<NetworkData | null>(null);
   const [isExpandedMode, setIsExpandedMode] = useState(false);
   const expandingNodeIdsRef = useRef<Set<string>>(new Set());
+  const [rehydrateReady, setRehydrateReady] = useState(false);
   // Track base (first-degree) graph when entering expanded mode
   const baseGraphRef = useRef<NetworkData | null>(null);
   // Track per-node contributions so we can surgically remove them later
@@ -534,6 +536,9 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         contributionsRef.current = map;
       }
     } catch {}
+    finally {
+      setRehydrateReady(true);
+    }
   }, [mainArtistNode?.name, data?.nodes?.length]);
 
   // Only clear expansions when the main artist actually changes (not on visibility/tab switches)
@@ -556,6 +561,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     expandedNodes,
     fullNetworkData,
     isExpandedMode,
+    rehydrateReady,
     
     // Computed values
     mainArtistNode,
