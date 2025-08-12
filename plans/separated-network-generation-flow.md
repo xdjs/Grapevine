@@ -163,13 +163,87 @@ Behavior
 
 - Skeleton endpoint
   - On DB connection error: 500 with message
-  - On OpenAI error: return single-node network or a graceful 503 with retry-after hint
+  - On OpenAI error or timeout: return single-node network immediately or a graceful 503 with retry-after hint (see Timeouts section)
 
 - Roles endpoint
-  - Validate names list size (e.g., max 100). On OpenAI parse errors, return empty mapping and let client retain white borders.
+  - Validate names list size (e.g., max 100). On OpenAI parse errors or timeout, return partial/empty mapping and let client retain white borders.
 
 - Pictures endpoint
   - Already handles cache and Spotify failures per-artist; client keeps placeholders on missing images.
+
+## Timeouts, Performance, and Reliability
+
+- Server time budgets
+  - Skeleton: target < 6–8s total; if exceeded, return single-node network and set `metadata.partial=true`.
+  - Roles: target < 4–6s; if list > 60 names, split into batches of 40–60 with sequential fallback; cap total processing at 10s with partial results.
+  - Pictures: reuse existing batching (currently batchSize=5 with short delay) to respect Spotify rate limits.
+
+- OpenAI request strategy
+  - Use low temperature (0–0.2) and constrain max tokens.
+  - Wrap OpenAI calls with an `AbortController` timeout (e.g., 5s for roles, 8s for skeleton) and catch aborts.
+  - For roles, prefer a single batch call for up to 60 names; if > 60, split into multiple calls and merge results; return `unresolved` for names not returned.
+
+- Retries and backoff
+  - Roles: up to 1 retry with exponential backoff (500ms → 1s) on 5xx/timeout, then return partial mapping.
+  - Skeleton: do not retry OpenAI; instead degrade to single-node.
+  - Pictures: existing logic already tolerates misses; no global retry needed.
+
+- Circuit breakers and fallbacks
+  - If OpenAI repeatedly fails in a 5-minute window (e.g., >3 failures), short-circuit roles endpoint to return empty mapping with `metadata.serviceDegraded=true` to avoid timeouts.
+  - If DB cache is present, always return cache quickly and allow background refresh via a separate admin path in the future.
+
+- Rate limiting
+  - Add simple per-IP rate limit headers for roles endpoint (e.g., 60/min), returning 429 with `Retry-After`.
+  - Keep Spotify batching conservative to avoid 429 responses.
+
+## Naming, Normalization, and Mapping Consistency
+
+- Always normalize incoming names for DB lookups (remove parentheticals, trim, collapse whitespace) but preserve the canonical DB `name` for keys in responses.
+- Roles endpoint must echo keys exactly as the client sent them OR include a `nameMap: Record<original, canonical>` so the client can map back safely if casing/spacing differs.
+- Pictures batch already uses the provided `artistNames`; align with the same canonicalization approach.
+
+## Response Metadata (for observability and client decisions)
+
+- Skeleton response `metadata` (extend as needed):
+  ```json
+  {
+    "rolesIncluded": false,
+    "imagesIncluded": false,
+    "partial": false,
+    "source": "cache|openai",
+    "elapsedMs": 1234,
+    "requestId": "uuid"
+  }
+  ```
+
+- Roles response extras:
+  ```json
+  {
+    "roles": { "Name": ["artist"] },
+    "unresolved": ["Unknown Name"],
+    "errors": [{ "name": "X", "message": "parse error" }],
+    "requestId": "uuid",
+    "elapsedMs": 987
+  }
+  ```
+
+## Client Timeout and Retry Policy
+
+- Skeleton request: client timeout ~9s. On timeout, render single-node fallback and surface a non-blocking toast; allow manual retry.
+- Roles request: client timeout ~6–8s. If partial, apply what’s available; retry once on user action or next navigation.
+- Pictures: already resilient; keep placeholders if missing.
+
+## Observability & Logging
+
+- Add `requestId` (UUID) to all responses for correlation; log timings for DB connect, cache fetch, OpenAI call, and total.
+- Structure logs with clear prefixes (e.g., `[Skeleton]`, `[Roles]`, `[Pics]`) to simplify tracing in Vercel logs.
+
+## Security and Cost Controls
+
+- Ensure OpenAI prompts are minimal to reduce tokens; avoid echoing long collaborator lists unnecessarily.
+- Cap collaborator count in skeleton (e.g., 10 primary, limited branching) to bound graph size and subsequent role/picture loads.
+- Validate inputs strictly (names length, array sizes, dedupe) to prevent abuse.
+
 
 ## Client Integration Checklist
 
@@ -185,11 +259,16 @@ Behavior
   - Cache hit returns cached data with `cached: true`
   - Cache miss constructs nodes without roles and links are correct
   - Single-node no-collaborators path
+  - OpenAI timeout returns single-node network with `metadata.partial=true`
+  - Name normalization preserves canonical DB names in response
 
 - Roles endpoint unit tests
   - Valid batch request returns correct mapping
   - Invalid/extra roles are filtered out
   - Large inputs are rejected with 400
+  - Timeout returns partial/empty mapping with `unresolved`
+  - Retry-once behavior on transient 5xx
+  - Mapping preserves original-to-canonical name mapping when casing differs
 
 - Pictures batch (existing tests) + integration
   - Given node names, images are applied to nodes when available
@@ -197,10 +276,12 @@ Behavior
 - Client integration (component tests)
   - Renders skeleton with white borders, then updates to colored borders, then images
   - Idempotent updates if roles arrive before pictures and vice versa
+  - Honors client timeouts; shows fallback borders and placeholders; applies late-arriving role/image updates
 
 ## Rollout Notes
 
 - Keep existing `GET /api/network/:artistName` and `GET /api/network-by-id/:artistId` for backward-compatibility during transition.
 - Once the staged flow is stable, consider routing the main UI to the new skeleton+roles+images pipeline.
+ - Gate the new flow behind a feature flag (env var) for safe rollout; monitor logs and error rates before defaulting to new flow.
 
 
