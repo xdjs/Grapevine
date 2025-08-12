@@ -80,16 +80,25 @@ export default function ArtistNetwork() {
     setCurrentArtistName(artistName);
     
     try {
-      // Use artist ID if available, otherwise fall back to name
-      const data = artistId 
-        ? await fetchNetworkDataById(artistId)
-        : await fetchNetworkData(artistName.trim());
+      // Prefer skeleton-by-id when we have a DB ID for fastest normalization; fallback to skeleton-by-name
+      let data: any;
+      if (artistId) {
+        const resp = await fetch(`/api/network-skeleton-by-id/${encodeURIComponent(artistId)}?allowHallucinations=false`, { cache: 'no-store' });
+        if (resp.ok) {
+          data = await resp.json();
+        } else {
+          console.warn(`[Artist Network] skeleton-by-id failed (${resp.status}), falling back to skeleton-by-name`);
+          data = await fetchNetworkData(artistName.trim());
+        }
+      } else {
+        data = await fetchNetworkData(artistName.trim());
+      }
       
       // Handle the response (might be network data or no-collaborators response)
       if (data && 'nodes' in data) {
         // Normal network data - pass to parent
-        const mainArtist = data.nodes.find((node: NetworkNode) => node.size === 30 && node.type === 'artist');
-        const finalArtistId = mainArtist?.artistId || mainArtist?.id || artistId;
+        const mainArtist = data.nodes.find((node: NetworkNode) => node.size === 30 && (node.type === 'artist' || node.types?.includes('artist')));
+        const finalArtistId = mainArtist?.artistId || (artistId ?? (mainArtist as any)?.id);
 
         handleNetworkData(data, finalArtistId);
         // Save to search history
@@ -100,7 +109,6 @@ export default function ArtistNetwork() {
       } else {
         // Handle no collaborators response
         console.warn(`No network data found for ${artistName}`);
-        // You might want to show a message or handle this case differently
       }
     } catch (error) {
       console.error(`Error loading network for ${artistName}:`, error);
