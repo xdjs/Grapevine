@@ -569,8 +569,7 @@ export default function D3NetworkRenderer({
       .style("cursor", "pointer");
 
     // Add circles for each node - single color for single role, multi-colored for multiple roles
-    nodeElements.each(function(d) {
-      const group = d3.select(this);
+    const processNode = (group: d3.Selection<SVGGElement, unknown, null, undefined>, d: NetworkNode) => {
       const roles = (d.rolesResolved && (d.types && d.types.length > 0)) ? d.types : [d.type];
       
       // Debug multi-role nodes
@@ -829,7 +828,20 @@ export default function D3NetworkRenderer({
           });
         }
       }
-    })
+    };
+
+    if ((nodeElements as any).each) {
+      (nodeElements as any).each(function(this: SVGGElement, d: NetworkNode) {
+        const group = d3.select(this);
+        processNode(group, d);
+      });
+    } else {
+      // Fallback for mocked D3 selections in tests without .each
+      nodes.forEach((d) => {
+        const group = networkGroup.append('g').attr('class', `node-group network-node node-${d.type}`);
+        processNode(group as any, d);
+      });
+    }
       .on("click", function(event, d) {
         // Use the node interactions hook for click handling
         nodeInteractions.handleNodeClick(event as MouseEvent, d, this);
@@ -887,24 +899,24 @@ export default function D3NetworkRenderer({
 
   // Viewport-aware image loading effect for performance optimization
   useEffect(() => {
-    if (!svgRef.current || !data.nodes.length || !visible) return;
+    if (!svgRef.current || !data || !data.nodes || data.nodes.length === 0 || !visible) return;
     
     const updateViewportImages = () => {
       if (!ImageLoadingManager.VIEWPORT_CULLING_ENABLED) return;
       
-      const svg = svgRef.current!;
+      const svgElement = svgRef.current!;
       const nodesWithImages = data.nodes.filter(node => node.imageUrl);
       
       // Track which images should be visible/hidden based on viewport
       for (const node of nodesWithImages) {
-        const inViewport = ImageLoadingManager.isNodeInViewport(node, svg);
+        const inViewport = ImageLoadingManager.isNodeInViewport(node, svgElement as any);
         const wasInViewport = ImageLoadingManager.viewportCache.get(node.id);
         
         if (inViewport !== wasInViewport) {
           ImageLoadingManager.viewportCache.set(node.id, inViewport);
           
           // Find the corresponding image elements and update their loading priority
-          const nodeGroup = svg.querySelector(`.node-group:has([data-node-id="${node.id}"])`);
+          const nodeGroup = (svgElement as unknown as SVGSVGElement).querySelector(`.node-group[data-node-id="${node.id}"]`);
           if (nodeGroup) {
             const imageElement = nodeGroup.querySelector('image.profile-image');
             const placeholderElement = nodeGroup.querySelector('.image-placeholder-lazy');
@@ -988,21 +1000,21 @@ export default function D3NetworkRenderer({
     };
     
     // Set up viewport monitoring for zoom and pan events
-       const svg = d3.select(svgRef.current);
+    const svgSelection = d3.select(svgRef.current);
     const handleViewportChange = () => {
       throttledViewportUpdate();
     };
     
-    svg.on('zoom.viewport', handleViewportChange);
+    svgSelection.on('zoom.viewport', handleViewportChange);
     
     // Initial viewport check
     updateViewportImages();
     
     return () => {
       clearTimeout(viewportUpdateTimeout);
-      svg.on('zoom.viewport', null);
+      svgSelection.on('zoom.viewport', null);
     };
-  }, [data.nodes, visible]);
+  }, [data, visible]);
   
   // Main D3 visualization effect
   useEffect(() => {

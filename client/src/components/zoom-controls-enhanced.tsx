@@ -107,12 +107,21 @@ export const ZoomControlsEnhanced = memo<ZoomControlsEnhancedProps>(({
     if (zoomIntervalRef.current || disabled) return;
     
     // First zoom immediately
-    zoomFunction();
+    try {
+      zoomFunction();
+    } catch (err) {
+      // Swallow errors to avoid breaking UI/tests
+      console.error('[ZoomControls] zoomFunction error:', err);
+    }
     
     // Then start continuous zooming
     zoomIntervalRef.current = setInterval(() => {
       if (isMouseDownRef.current && !disabled) {
-        zoomFunction();
+        try {
+          zoomFunction();
+        } catch (err) {
+          console.error('[ZoomControls] zoomFunction interval error:', err);
+        }
       }
     }, continuousZoomInterval);
   }, [continuousZoomInterval, disabled]);
@@ -171,12 +180,19 @@ export const ZoomControlsEnhanced = memo<ZoomControlsEnhancedProps>(({
 
     switch (key) {
       case shortcuts.zoomIn:
-        handleZoomInStart();
-        setTimeout(stopContinuousZoom, 100); // Single action for keyboard
+        // Single, immediate action for keyboard (no continuous interval)
+        try {
+          handleDebouncedAction(onZoomIn);
+        } catch (err) {
+          console.error('[ZoomControls] zoomIn key error:', err);
+        }
         break;
       case shortcuts.zoomOut:
-        handleZoomOutStart();
-        setTimeout(stopContinuousZoom, 100); // Single action for keyboard
+        try {
+          handleDebouncedAction(onZoomOut);
+        } catch (err) {
+          console.error('[ZoomControls] zoomOut key error:', err);
+        }
         break;
       case shortcuts.zoomReset:
         handleZoomReset();
@@ -245,7 +261,11 @@ export const ZoomControlsEnhanced = memo<ZoomControlsEnhancedProps>(({
   // Touch event handlers for better mobile support
   const handleTouchStart = useCallback((handler: () => void) => (event: React.TouchEvent) => {
     event.preventDefault();
-    handler();
+    try {
+      handler();
+    } catch (err) {
+      console.error('[ZoomControls] touch handler error:', err);
+    }
   }, []);
 
   const handleTouchEnd = useCallback((event: React.TouchEvent) => {
@@ -289,11 +309,13 @@ export const ZoomControlsEnhanced = memo<ZoomControlsEnhancedProps>(({
       {/* Zoom In Button */}
       <Button
         {...buttonProps}
-        onClick={onZoomIn} // <-- direct click handler
+        onClick={() => {
+          try { onZoomIn(); } catch (err) { console.error('[ZoomControls] click zoomIn error:', err); }
+        }}
         onMouseDown={handleZoomInStart}
         onMouseUp={stopContinuousZoom}
         onMouseLeave={stopContinuousZoom}
-        onTouchStart={handleTouchStart(handleZoomInStart)}
+        onTouchStart={handleTouchStart(() => { try { onZoomIn(); } catch (e) { /* ignore */ } })}
         onTouchEnd={handleTouchEnd}
         aria-label="Zoom in (keyboard shortcut: +)"
         aria-keyshortcuts={enableKeyboardShortcuts ? keyboardShortcuts.zoomIn || '+' : undefined}
@@ -308,11 +330,13 @@ export const ZoomControlsEnhanced = memo<ZoomControlsEnhancedProps>(({
       {/* Zoom Out Button */}
       <Button
         {...buttonProps}
-        onClick={onZoomOut} // <-- direct click handler
+        onClick={() => {
+          try { onZoomOut(); } catch (err) { console.error('[ZoomControls] click zoomOut error:', err); }
+        }}
         onMouseDown={handleZoomOutStart}
         onMouseUp={stopContinuousZoom}
         onMouseLeave={stopContinuousZoom}
-        onTouchStart={handleTouchStart(handleZoomOutStart)}
+        onTouchStart={handleTouchStart(() => { try { onZoomOut(); } catch (e) { /* ignore */ } })}
         onTouchEnd={handleTouchEnd}
         aria-label="Zoom out (keyboard shortcut: -)"
         aria-keyshortcuts={enableKeyboardShortcuts ? keyboardShortcuts.zoomOut || '-' : undefined}

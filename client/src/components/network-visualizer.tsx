@@ -132,15 +132,19 @@ export default function NetworkVisualizer({
           }
           return { ...node, rolesResolved: true };
         });
-        // Shallow replace to trigger rerender in React by updating reference
-        (data as any).nodes = updatedNodes;
+        // Avoid mutating props directly; local state via fullNetworkData if available
+        if (fullNetworkData) {
+          (fullNetworkData as any).nodes = updatedNodes;
+        } else {
+          (data as any).nodes = updatedNodes;
+        }
       } catch (e) {
         // Non-blocking: ignore role errors
       }
     };
     main();
     return () => { cancelled = true; };
-  }, [data]);
+  }, [data, fullNetworkData]);
 
   // Profile picture management hook
   const profilePictures = useProfilePictures({
