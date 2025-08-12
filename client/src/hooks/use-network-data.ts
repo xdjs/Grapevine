@@ -195,12 +195,32 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         return;
       }
 
-      // Start from the currently VISIBLE graph (accumulate expansions)
-      // If we already have an accumulated expanded graph, use it; otherwise use first-degree visible subset
-      const baseData: NetworkData = fullNetworkData ?? {
-        nodes: getVisibleNodes(),
-        links: getVisibleLinks(),
-      };
+      // Start from the best available expanded snapshot
+      // Priority: in-memory expanded graph > persisted expanded snapshot > visible first-degree subset
+      let baseData: NetworkData | null = fullNetworkData ?? null;
+      if (!baseData) {
+        try {
+          const currentMain = mainArtistNode?.name || '';
+          let saved: any = undefined;
+          if (typeof window !== 'undefined' && (window as any).grapevineExpandedState) {
+            saved = (window as any).grapevineExpandedState;
+          }
+          if (!saved) {
+            const raw = sessionStorage.getItem(PERSIST_KEY);
+            saved = raw ? JSON.parse(raw) : undefined;
+          }
+          if (saved && saved.main === currentMain && saved.isExpandedMode && Array.isArray(saved.fullNetworkData?.nodes) && saved.fullNetworkData.nodes.length > 0) {
+            baseData = saved.fullNetworkData as NetworkData;
+            vlog(`[ExpandPersist] expand base from saved snapshot nodes=${baseData.nodes.length}`);
+          }
+        } catch {}
+      }
+      if (!baseData) {
+        baseData = {
+          nodes: getVisibleNodes(),
+          links: getVisibleLinks(),
+        };
+      }
       if (!fullNetworkData && !baseGraphRef.current) {
         baseGraphRef.current = baseData;
       }
@@ -338,10 +358,17 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       setExpandedNodes(prev => new Set([...prev, clickedCanonicalFinalId]));
       setIsExpandedMode(true);
       // Record contribution for surgical shrink
-      contributionsRef.current.set(clickedCanonicalFinalId, {
-        addedNodeIds: addedNodeIdsForThisExpansion,
-        addedLinkKeys: addedLinkKeysForThisExpansion,
-      });
+      // Merge contributions instead of overwriting to preserve previous expansions
+      const prev = contributionsRef.current.get(clickedCanonicalFinalId);
+      if (prev) {
+        addedNodeIdsForThisExpansion.forEach(id => prev.addedNodeIds.add(id));
+        addedLinkKeysForThisExpansion.forEach(k => prev.addedLinkKeys.add(k));
+      } else {
+        contributionsRef.current.set(clickedCanonicalFinalId, {
+          addedNodeIds: addedNodeIdsForThisExpansion,
+          addedLinkKeys: addedLinkKeysForThisExpansion,
+        });
+      }
 
       const addedNodeCount = mergedNodes.length - baseData.nodes.length;
       const addedLinkCount = mergedLinks.length - baseData.links.length;
