@@ -504,12 +504,32 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         if (kl === idKey || kl === nameKey) contributionsRef.current.delete(k);
       }
 
-      // If no expansions remain, exit expanded mode
-      if (contributionsRef.current.size === 0 && (Array.from(expandedNodes).length <= 1)) {
-        setIsExpandedMode(false);
-        setFullNetworkData(null);
-        baseGraphRef.current = null;
-      }
+      // Persist new state immediately to avoid resurrecting stale snapshot
+      try {
+        const payload = {
+          main: mainArtistNode?.name || '',
+          isExpandedMode: contributionsRef.current.size > 0 || Array.from(expandedNodes).length > 1,
+          fullNetworkData: contributionsRef.current.size > 0 ? nextDataHeuristic : null,
+          expandedNodes: Array.from(expandedNodes),
+          baseGraph: baseGraphRef.current,
+          contributions: Array.from(contributionsRef.current.entries()).map(([k, v]) => ({
+            key: k,
+            addedNodeIds: Array.from(v.addedNodeIds),
+            addedLinkKeys: Array.from(v.addedLinkKeys),
+            neighborIds: Array.from(v.neighborIds || []),
+          })),
+        } as any;
+        if (payload.isExpandedMode) {
+          (window as any).grapevineExpandedState = payload;
+          sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
+        } else {
+          delete (window as any).grapevineExpandedState;
+          sessionStorage.removeItem(PERSIST_KEY);
+          setIsExpandedMode(false);
+          setFullNetworkData(null);
+          baseGraphRef.current = null;
+        }
+      } catch {}
 
       console.log(`[Shrink] Heuristic removed nodes=${Array.from(toRemove).join(', ')}; updated expanded state`);
       return;
@@ -577,12 +597,32 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     setExpandedNodes(newExpanded);
     contributionsRef.current.delete(keyToRemove);
 
-    // If no expansions remain, exit expanded mode and return to base
-    if (contributionsRef.current.size === 0) {
-      setIsExpandedMode(false);
-      setFullNetworkData(null);
-      baseGraphRef.current = null;
-    }
+    // Persist new state immediately to avoid resurrecting stale snapshot
+    try {
+      const payload = {
+        main: mainArtistNode?.name || '',
+        isExpandedMode: contributionsRef.current.size > 0,
+        fullNetworkData: contributionsRef.current.size > 0 ? nextData : null,
+        expandedNodes: Array.from(newExpanded),
+        baseGraph: baseGraphRef.current,
+        contributions: Array.from(contributionsRef.current.entries()).map(([k, v]) => ({
+          key: k,
+          addedNodeIds: Array.from(v.addedNodeIds),
+          addedLinkKeys: Array.from(v.addedLinkKeys),
+          neighborIds: Array.from(v.neighborIds || []),
+        })),
+      } as any;
+      if (payload.isExpandedMode) {
+        (window as any).grapevineExpandedState = payload;
+        sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
+      } else {
+        delete (window as any).grapevineExpandedState;
+        sessionStorage.removeItem(PERSIST_KEY);
+        setIsExpandedMode(false);
+        setFullNetworkData(null);
+        baseGraphRef.current = null;
+      }
+    } catch {}
     console.log(`[Shrink] Removed expansion for key=${keyToRemove}. Nodes now=${nextData.nodes.length} links=${nextData.links.length}`);
   }, [expandedNodes, fullNetworkData]);
 
