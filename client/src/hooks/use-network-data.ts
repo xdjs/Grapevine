@@ -846,7 +846,21 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
             setFullNetworkData(saved.fullNetworkData);
             setIsExpandedMode(true);
             if (Array.isArray(saved.expandedNodes)) setExpandedNodes(new Set<string>(saved.expandedNodes));
-            console.log(`[ExpandPersist] re-applied on visible nodes=${savedCount}`);
+            // Restore baseGraph and contributions so shrink works after tab switch
+            if (saved.baseGraph) baseGraphRef.current = saved.baseGraph as NetworkData;
+            if (Array.isArray(saved.contributions)) {
+              const map = new Map<string, { addedNodeIds: Set<string>; addedLinkKeys: Set<string>; neighborIds: Set<string> }>();
+              for (const c of saved.contributions) {
+                map.set(String(c.key), {
+                  addedNodeIds: new Set<string>(c.addedNodeIds || []),
+                  addedLinkKeys: new Set<string>(c.addedLinkKeys || []),
+                  neighborIds: new Set<string>(c.neighborIds || []),
+                });
+              }
+              contributionsRef.current = map;
+            }
+            const anchors = Array.from(contributionsRef.current.keys());
+            console.log(`[ExpandPersist] re-applied on visible nodes=${savedCount}; anchors=[${anchors.join(', ')}]`);
           }
         } catch {}
       }
