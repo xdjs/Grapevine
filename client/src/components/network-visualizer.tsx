@@ -9,6 +9,7 @@ import { useNodeInteractions } from "@/hooks/use-node-interactions";
 import { useModals } from "@/hooks/use-modals";
 import { useFilterVisibility } from "@/hooks/use-filter-visibility";
 import { useProfilePictures } from "@/hooks/use-profile-pictures";
+import { useRoles } from "@/hooks/use-roles";
 import D3NetworkRenderer from "./d3-network-renderer";
 import ExpandLoading from "./expand-loading";
 import ArtistSelectionModal from "./artist-selection-modal";
@@ -98,12 +99,6 @@ export default function NetworkVisualizer({
     }
   });
 
-  // Roles enrichment state: we will enrich incoming data with roles ASAP after initial render
-  const [rolesEnhancedData, setRolesEnhancedData] = useState<NetworkData | null>(null);
-
-  // Decide which data to render (raw vs roles-enhanced)
-  const effectiveData: NetworkData = rolesEnhancedData ?? data;
-
   // Use network data management hook
   const {
     expandedNodes,
@@ -116,7 +111,7 @@ export default function NetworkVisualizer({
     expandNodeNetwork,
     collapseNodeNetwork,
     resetToFirstDegree
-  } = useNetworkData({ data: effectiveData });
+  } = useNetworkData({ data });
 
   // Profile picture management hook
   const profilePictures = useProfilePictures({
@@ -125,9 +120,12 @@ export default function NetworkVisualizer({
     batchSize: 20
   });
 
+  // Roles fetching hook
+  const rolesHook = useRoles({ autoFetch: true });
+
   // Tooltip management hook
   const tooltip = useTooltip({
-    networkData: effectiveData,
+    networkData: data,
     config: { musicNerdBaseUrl, getFreshConfig },
     networkDataHook: { finalDisplayData, expandNodeNetwork },
     callbacks: {
@@ -150,6 +148,25 @@ export default function NetworkVisualizer({
     visible,
     filterState,
   });
+
+  // As soon as the base graph is rendered (data changes), fetch roles for nodes missing roles
+  useEffect(() => {
+    if (!finalDisplayData?.nodes?.length) return;
+    // Fire and forget; updates will be handled by state consumers if needed
+    rolesHook.fetchRolesForNodes(finalDisplayData.nodes)
+      .then((rolesMap) => {
+        if (!rolesMap || Object.keys(rolesMap).length === 0) return;
+        // Apply roles to in-memory data so stroke colors update on next render
+        for (const node of finalDisplayData.nodes) {
+          const r = rolesMap[node.name];
+          if (r && r.length > 0) {
+            node.types = r as any;
+            node.type = (r[0] as any);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [finalDisplayData]);
 
   // Error handling and retry logic
   const handleError = useCallback((error: Error, context: string) => {
@@ -225,52 +242,6 @@ export default function NetworkVisualizer({
 
     initializeComponent();
   }, [data, configError, handleError]); // Remove configLoading dependency
-
-  // Immediately fetch roles after initial render using the new roles API
-  useEffect(() => {
-    if (isInitializing) return;
-    try {
-      const names = Array.from(new Set((data?.nodes || []).map((n) => n.name).filter(Boolean)));
-      if (names.length === 0) return;
-
-      const controller = new AbortController();
-      const signal = controller.signal;
-
-      // Fire-and-update: fetch roles, then merge into local data copy without mutating props
-      (async () => {
-        try {
-          const resp = await fetch('/api/network-roles', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ names }),
-            signal,
-          });
-          if (!resp.ok) return; // silent fail → keep placeholder borders
-          const json = await resp.json();
-          const rolesMap: Record<string, Array<'artist'|'producer'|'songwriter'>> = json.roles || {};
-          if (!rolesMap || Object.keys(rolesMap).length === 0) return;
-
-          const updatedNodes = data.nodes.map((node) => {
-            const roles = rolesMap[node.name];
-            if (Array.isArray(roles) && roles.length > 0) {
-              const nextTypes = Array.from(new Set(roles));
-              // Preserve existing primary type when present; else derive from roles
-              const nextType = node.type ?? nextTypes[0];
-              return { ...node, type: nextType, types: nextTypes } as NetworkNode;
-            }
-            return node;
-          });
-          setRolesEnhancedData({ nodes: updatedNodes, links: data.links, cached: data.cached });
-        } catch (e) {
-          // Ignore errors; UI stays with placeholder borders
-        }
-      })();
-
-      return () => controller.abort();
-    } catch {
-      // no-op
-    }
-  }, [isInitializing, data]);
 
   // Toast event listener for messages from hooks
   useEffect(() => {
