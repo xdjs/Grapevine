@@ -280,7 +280,8 @@ Guidelines:
       }
 
       // Staged rendering mode: return skeleton immediately (no roles, no images)
-      const staged = req.query.staged === 'true';
+      // Default to staged skeleton behavior unless explicitly disabled with staged=false
+      const staged = req.query.staged !== 'false';
       const allowHallucinations = req.query.allowHallucinations === 'true';
       if (staged) {
         // Build collaborator list
