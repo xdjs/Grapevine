@@ -138,6 +138,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
   const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([]);
   const [showNoCollaboratorsPopup, setShowNoCollaboratorsPopup] = useState(false);
   const [pendingArtistInfo, setPendingArtistInfo] = useState<{ name: string; id: string; singleNodeNetwork: NetworkData } | null>(null);
+  const [expandedBioIds, setExpandedBioIds] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -744,9 +745,27 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                               )}
                             </div>
                             {artist.bio && (
-                              <CardDescription className="text-xs text-gray-400 line-clamp-2">
-                                {artist.bio}
-                              </CardDescription>
+                              <div className="mt-1">
+                                <CardDescription
+                                  className={`text-xs text-gray-400 ${expandedBioIds[artist.id] ? '' : 'line-clamp-2'}`}
+                                >
+                                  {artist.bio}
+                                </CardDescription>
+                                {artist.bio.length > 120 && (
+                                  <button
+                                    className="text-[10px] text-blue-400 hover:underline mt-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setExpandedBioIds((prev) => ({
+                                        ...prev,
+                                        [artist.id]: !prev[artist.id]
+                                      }));
+                                    }}
+                                  >
+                                    {expandedBioIds[artist.id] ? 'Show less' : 'Read more'}
+                                  </button>
+                                )}
+                              </div>
                             )}
                           </CardHeader>
                         </Card>
@@ -944,9 +963,27 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                                 )}
                               </div>
                               {artist.bio && (
-                                <CardDescription className="text-xs text-gray-400 line-clamp-1">
-                                  {artist.bio}
-                                </CardDescription>
+                                <div className="mt-0.5">
+                                  <CardDescription
+                                    className={`text-xs text-gray-400 ${expandedBioIds[artist.id] ? '' : 'line-clamp-1'}`}
+                                  >
+                                    {artist.bio}
+                                  </CardDescription>
+                                  {artist.bio.length > 120 && (
+                                    <button
+                                      className="text-[10px] text-blue-400 hover:underline mt-0.5"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setExpandedBioIds((prev) => ({
+                                          ...prev,
+                                          [artist.id]: !prev[artist.id]
+                                        }));
+                                      }}
+                                    >
+                                      {expandedBioIds[artist.id] ? 'Show less' : 'Read more'}
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </CardHeader>
                           </Card>
