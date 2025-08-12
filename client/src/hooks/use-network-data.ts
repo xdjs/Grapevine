@@ -404,7 +404,32 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
 
   // Function to surgically collapse a node's expansion
   const collapseNodeNetwork = useCallback((nodeName: string, nodeId?: string) => {
-    if (!fullNetworkData) return;
+    // Ensure we have a working expanded graph even after tab switches
+    let workingData: NetworkData | null = fullNetworkData;
+    if (!workingData) {
+      try {
+        const currentMain = mainArtistNode?.name || '';
+        let saved: any = undefined;
+        if (typeof window !== 'undefined' && (window as any).grapevineExpandedState) {
+          saved = (window as any).grapevineExpandedState;
+        }
+        if (!saved) {
+          const raw = sessionStorage.getItem(PERSIST_KEY);
+          saved = raw ? JSON.parse(raw) : undefined;
+        }
+        if (saved && saved.main === currentMain && saved.isExpandedMode && Array.isArray(saved.fullNetworkData?.nodes)) {
+          workingData = saved.fullNetworkData as NetworkData;
+          setFullNetworkData(workingData);
+          setIsExpandedMode(true);
+          if (Array.isArray(saved.expandedNodes)) setExpandedNodes(new Set<string>(saved.expandedNodes));
+          console.log('[Shrink] Hydrated working graph from saved snapshot for collapse');
+        }
+      } catch {}
+    }
+    if (!workingData) {
+      console.log('[Shrink] No working expanded graph available; aborting');
+      return;
+    }
     const toKey = (v?: string) => (v || '').toLowerCase();
     // Find the contribution key (canonical id) for this node
     let keyToRemove: string | undefined;
@@ -429,7 +454,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       // Heuristic fallback: remove up to 3 degree-1 neighbor nodes attached only to this node (and their links)
       const clickedId = nodeId || nodeName;
       const neighborSet = new Set<string>();
-      for (const l of fullNetworkData.links) {
+      for (const l of workingData.links) {
         const s = typeof l.source === 'string' ? l.source : l.source.id;
         const t = typeof l.target === 'string' ? l.target : l.target.id;
         if (toKey(s) === toKey(clickedId)) neighborSet.add(t);
@@ -437,7 +462,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       }
       // Compute degree for neighbors
       const degree = new Map<string, number>();
-      for (const l of fullNetworkData.links) {
+      for (const l of workingData.links) {
         const s = typeof l.source === 'string' ? l.source : l.source.id;
         const t = typeof l.target === 'string' ? l.target : l.target.id;
         degree.set(s, (degree.get(s) || 0) + 1);
@@ -455,12 +480,12 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         return;
       }
       // Remove links to those nodes and the nodes themselves if detached
-      const remainingLinksHeuristic = fullNetworkData.links.filter(l => {
+      const remainingLinksHeuristic = workingData.links.filter(l => {
         const s = typeof l.source === 'string' ? l.source : l.source.id;
         const t = typeof l.target === 'string' ? l.target : l.target.id;
         return !(toRemove.has(s) || toRemove.has(t));
       });
-      const remainingNodesHeuristic = fullNetworkData.nodes.filter(n => !toRemove.has(n.id));
+      const remainingNodesHeuristic = workingData.nodes.filter(n => !toRemove.has(n.id));
       const nextDataHeuristic: NetworkData = { nodes: remainingNodesHeuristic, links: remainingLinksHeuristic };
       setFullNetworkData(nextDataHeuristic);
 
@@ -502,7 +527,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     });
 
     // Remove contributed links, but preserve links that keep other expansions attached
-    const remainingLinks = fullNetworkData.links.filter(l => {
+    const remainingLinks = workingData.links.filter(l => {
       const s = typeof l.source === 'string' ? l.source : l.source.id;
       const t = typeof l.target === 'string' ? l.target : l.target.id;
       const key = (s.toLowerCase() < t.toLowerCase()) ? `${s.toLowerCase()}|${t.toLowerCase()}` : `${t.toLowerCase()}|${s.toLowerCase()}`;
@@ -529,7 +554,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     }
 
     // Remove nodes that were added by this contribution and are no longer referenced elsewhere
-    const remainingNodes = fullNetworkData.nodes.filter(n => {
+    const remainingNodes = workingData.nodes.filter(n => {
       // Keep base and other contributions explicitly
       if (baseNodeIds.has(n.id)) return true;
       if (otherContributionNodeIds.has(n.id)) return true;
