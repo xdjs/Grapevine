@@ -37,6 +37,10 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
   const contributionsRef = useRef<Map<string, Contribution>>(new Map());
   const PERSIST_KEY = 'gv_expanded_state_v1';
 
+  declare global {
+    interface Window { grapevineExpandedState?: any }
+  }
+
   // Verbose logging toggle (set window.__GRAPEVINE_DEBUG__ = true in console to enable)
   const isVerbose = typeof window !== 'undefined' && (window as any).__GRAPEVINE_DEBUG__ === true;
   const vlog = (...args: any[]) => { if (isVerbose) console.log(...args); };
@@ -480,6 +484,10 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
           addedLinkKeys: Array.from(v.addedLinkKeys),
         })),
       };
+      // Save to window for fast rehydrate across remounts/tab switches
+      if (typeof window !== 'undefined') {
+        window.grapevineExpandedState = payload;
+      }
       sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
     } catch {}
   }, [isExpandedMode, fullNetworkData, expandedNodes, mainArtistNode?.name]);
@@ -487,9 +495,14 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
   // Rehydrate on mount if same main artist (sync before first paint to avoid flicker/reset)
   useLayoutEffect(() => {
     try {
-      const raw = sessionStorage.getItem(PERSIST_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw);
+      let saved: any = undefined;
+      if (typeof window !== 'undefined' && window.grapevineExpandedState) {
+        saved = window.grapevineExpandedState;
+      }
+      if (!saved) {
+        const raw = sessionStorage.getItem(PERSIST_KEY);
+        saved = raw ? JSON.parse(raw) : undefined;
+      }
       const currentMain = mainArtistNode?.name || '';
       if (!saved || saved.main !== currentMain) return;
       // Validate saved data before applying
