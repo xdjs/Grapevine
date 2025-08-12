@@ -217,36 +217,38 @@ Guidelines:
 - Be confident about well-documented collaborations for commercially successful artists
 - Focus on collaborations from official album/song credits, not rumors or speculation`;
 
+      // Retry OpenAI generation up to 2 times on timeout/errors
+      const tryCompletion = async (): Promise<any> => {
+        return Promise.race([
+          openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+              { role: "system", content: "You are a music industry database expert. For mainstream/well-known artists, confidently provide all documented collaborations. For lesser-known artists, be more selective but still inclusive of authentic collaborations. Prioritize accuracy while being comprehensive for well-documented artists." },
+              { role: "user", content: prompt },
+            ],
+            temperature: 0.1,
+            max_tokens: 1200,
+          }) as Promise<any>,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('OpenAI timeout')), 8000)),
+        ]);
+      };
+
       let completion: any;
-      try {
-        completion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: "You are a music industry database expert. For mainstream/well-known artists, confidently provide all documented collaborations. For lesser-known artists, be more selective but still inclusive of authentic collaborations. Prioritize accuracy while being comprehensive for well-documented artists."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.1,
-        max_tokens: 2000,
-        });
-      } catch (e) {
-        // On OpenAI failure, return single-node network
-        const mainNode = {
-          id: correctArtistName,
-          name: correctArtistName,
-          type: 'artist',
-          types: ['artist'],
-          color: '#FF69B4',
-          size: 30,
-          artistId: artistMatch.id
-        };
+      let lastError: any;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          completion = await tryCompletion();
+          lastError = null;
+          break;
+        } catch (err) {
+          lastError = err;
+          console.warn(`⚠️ [Vercel] OpenAI generation attempt ${attempt} failed:`, err instanceof Error ? err.message : err);
+          await new Promise((r) => setTimeout(r, attempt * 500));
+        }
+      }
+      if (!completion) {
         await client.end();
-        return res.json({ nodes: [mainNode], links: [] });
+        return res.status(503).json({ message: 'Failed to generate network data', error: lastError instanceof Error ? lastError.message : 'Unknown error', timestamp: new Date().toISOString() });
       }
 
       let collaborationData: CollaborationData;
@@ -289,17 +291,12 @@ Guidelines:
         }
         console.log(`✅ [Vercel] Parsed collaboration data with ${collaborationData.collaborators?.length || collaborationData.artists?.length || 0} collaborators`);
       } catch (parseError) {
-        const mainNode = {
-          id: correctArtistName,
-          name: correctArtistName,
-          type: 'artist',
-          types: ['artist'],
-          color: '#FF69B4',
-          size: 30,
-          artistId: artistMatch.id
-        };
         await client.end();
-        return res.json({ nodes: [mainNode], links: [] });
+        return res.status(503).json({ 
+          message: 'Failed to generate network data',
+          error: parseError instanceof Error ? parseError.message : 'OpenAI parse error',
+          timestamp: new Date().toISOString()
+        });
       }
 
       // Staged rendering mode: return skeleton immediately (no roles, no images)
