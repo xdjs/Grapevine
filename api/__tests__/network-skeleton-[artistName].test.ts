@@ -1,74 +1,56 @@
+import 'dotenv/config';
 import handler from '../network-skeleton/[artistName]';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const mockClient = {
-  connect: vi.fn(),
-  query: vi.fn(),
-  end: vi.fn()
-};
+vi.mock('pg');
+vi.mock('openai');
 
-vi.mock('pg', () => ({
-  Client: vi.fn(() => mockClient)
-}));
+const mockClient = { connect: vi.fn(), query: vi.fn(), end: vi.fn() };
+vi.doMock('pg', () => ({ Client: vi.fn(() => mockClient) }));
+
+const mockOpenAI = { chat: { completions: { create: vi.fn() } } };
+vi.doMock('openai', () => ({ default: vi.fn(() => mockOpenAI) }));
 
 describe('/api/network-skeleton/[artistName]', () => {
   let req: Partial<VercelRequest>;
-  let res: Partial<VercelResponse> & { statusCode?: number; body?: any };
+  let res: Partial<VercelResponse>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.CONNECTION_STRING = 'postgres://test';
-    req = { method: 'GET', query: { artistName: 'Main' } } as any;
-    res = {
-      status(code: number) { this.statusCode = code; return this as any; },
-      json(payload: any) { this.body = payload; return this as any; },
-      setHeader: vi.fn(),
-      end: vi.fn()
-    } as any;
-  });
-
-  afterEach(() => { delete process.env.CONNECTION_STRING; });
-
-  it('returns first-degree skeleton from cached webmapdata', async () => {
-    const cached = {
-      nodes: [
-        { id: 'Main', name: 'Main', size: 30 },
-        { id: 'A', name: 'A', size: 20 },
-        { id: 'B', name: 'B', size: 20 },
-        { id: 'C', name: 'C', size: 16 },
-      ],
-      links: [
-        { source: 'Main', target: 'A' },
-        { source: 'Main', target: 'B' },
-        { source: 'A', target: 'C' },
-      ]
-    };
+    process.env.OPENAI_API_KEY = 'key';
 
     mockClient.query
-      .mockResolvedValueOnce({ rows: [{ id: 1, name: 'Main', webmapdata: cached }] });
+      .mockResolvedValueOnce({ rows: [{ id: 1, name: 'Taylor Swift' }] }) // findArtistInDatabase
+      .mockResolvedValue({ rows: [] });
 
-    await handler(req as VercelRequest, res as VercelResponse);
-    expect(res.body.nodes.map((n: any) => n.id).sort()).toEqual(['A', 'B', 'Main']);
-    expect(res.body.links).toEqual([
-      { source: 'Main', target: 'A' },
-      { source: 'Main', target: 'B' }
-    ]);
+    mockOpenAI.chat.completions.create.mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify({ collaborators: [{ name: 'Jack Antonoff', roles: ['producer'] }] }) } }]
+    });
+
+    req = { method: 'GET', query: { artistName: 'Taylor Swift' }, headers: {} };
+    res = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis(), setHeader: vi.fn().mockReturnThis(), end: vi.fn().mockReturnThis() };
   });
 
-  it('falls back to single-node when artist not cached', async () => {
-    mockClient.query
-      .mockResolvedValueOnce({ rows: [{ id: 1, name: 'Main', webmapdata: null }] });
-
-    await handler(req as VercelRequest, res as VercelResponse);
-    expect(res.body.nodes).toHaveLength(1);
-    expect(res.body.nodes[0]).toMatchObject({ name: 'Main', size: 30 });
+  afterEach(() => {
+    delete process.env.CONNECTION_STRING;
+    delete process.env.OPENAI_API_KEY;
   });
 
-  it('404 for missing artist', async () => {
-    mockClient.query.mockResolvedValueOnce({ rows: [] });
+  it('returns skeleton nodes and links quickly', async () => {
     await handler(req as VercelRequest, res as VercelResponse);
-    expect(res.statusCode).toBe(404);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nodes: expect.arrayContaining([
+          expect.objectContaining({ name: 'Taylor Swift', size: 30 }),
+          expect.objectContaining({ name: 'Jack Antonoff', size: 20 })
+        ]),
+        links: expect.arrayContaining([
+          expect.objectContaining({ source: 'Taylor Swift', target: expect.any(String) })
+        ]),
+        _metadata: expect.objectContaining({ skeleton: true })
+      })
+    );
   });
 });
 

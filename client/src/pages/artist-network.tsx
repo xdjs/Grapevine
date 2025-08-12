@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft } from "lucide-react";
 
 import { NetworkData, NetworkNode, FilterState } from "@/types/network";
-import { fetchNetworkData, fetchNetworkDataById, fetchSkeletonById, fetchSkeletonByName, fetchRoles } from "@/lib/network-data";
+import { fetchNetworkData, fetchNetworkDataById, fetchNetworkSkeleton, fetchRoles } from "@/lib/network-data";
 import { useProfilePictures } from "@/hooks/use-profile-pictures";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -30,7 +30,6 @@ export default function ArtistNetwork() {
   const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
   const saveToHistoryRef = useRef<((artistName: string, artistId: string | null) => void) | null>(null);
   const isMobile = useIsMobile();
-  const { updateNodesWithImages } = useProfilePictures({ autoFetch: true, useCache: true, batchSize: 25 });
 
   const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
     setNetworkData(data);
@@ -38,22 +37,6 @@ export default function ArtistNetwork() {
     const finalArtistId = artistId || data.nodes.find(node => node.size === 30)?.artistId || null;
     setCurrentArtistId(finalArtistId);
   }, []);
-
-  // Hydrate a skeleton graph with images and roles in parallel
-  const hydrateSkeleton = useCallback(async (base: NetworkData): Promise<NetworkData> => {
-    const names = base.nodes.map(n => n.name);
-    const [withImages, roleMap] = await Promise.all([
-      updateNodesWithImages(base.nodes),
-      fetchRoles(names)
-    ]);
-    const colored = withImages.map(n => {
-      const types = roleMap[n.name] ?? n.types ?? (n.type ? [n.type] : ['artist']);
-      const type = types[0];
-      const color = types.includes('producer') ? '#8A2BE2' : (types.includes('artist') ? '#FF69B4' : '#00CED1');
-      return { ...n, types, type, color } as NetworkNode;
-    });
-    return { nodes: colored, links: base.links };
-  }, [updateNodesWithImages]);
 
   // Navigate back to home
   const handleGoHome = () => {
@@ -89,7 +72,40 @@ export default function ArtistNetwork() {
     saveToHistoryRef.current = saveHistoryFn;
   };
 
-  // Handle node click to load new artist network
+  // Smooth enrichment helper: apply roles and pictures to current network
+  const applyEnrichmentSmoothly = useCallback(async (baseData: NetworkData) => {
+    try {
+      const names = baseData.nodes.map(n => n.name);
+      const [rolesMap] = await Promise.all([
+        fetchRoles(names).catch(() => ({} as Record<string, string[]>)),
+      ]);
+
+      // Apply roles
+      const withRoles: NetworkData = {
+        ...baseData,
+        nodes: baseData.nodes.map(n => {
+          const roles = rolesMap[n.name];
+          if (!roles || roles.length === 0) return n;
+          const unique = Array.from(new Set([...(n.types || [n.type]), ...roles]));
+          return {
+            ...n,
+            type: (unique[0] as any) || n.type,
+            types: unique as any,
+          };
+        })
+      };
+
+      // Fetch pictures in batches and update nodes
+      const updatedNodes = await profilePictures.updateNodesWithImages(withRoles.nodes as any);
+      setNetworkData({ ...withRoles, nodes: updatedNodes });
+    } catch (e) {
+      console.warn('Enrichment failed, showing skeleton only:', e);
+    }
+  }, []);
+
+  const profilePictures = useProfilePictures({ autoFetch: true, useCache: true, batchSize: 20 });
+
+  // Handle node click to load new artist network (skeleton-first)
   const handleArtistNodeClick = useCallback(async (artistName: string, artistId?: string) => {
     console.log(`🔗 [Artist Network] Artist node clicked: ${artistName} (ID: ${artistId})`);
     
@@ -98,49 +114,40 @@ export default function ArtistNetwork() {
     setCurrentArtistName(artistName);
     
     try {
-      // Fetch skeleton first for faster first paint
-      const skeleton = artistId
-        ? await fetchSkeletonById(artistId)
-        : await fetchSkeletonByName(artistName.trim());
+      // Try skeleton first for faster initial render
+      const skeleton = await fetchNetworkSkeleton(artistName.trim());
+      const mainArtist = skeleton.nodes.find((node: NetworkNode) => node.size === 30 && node.type === 'artist');
+      const finalArtistId = mainArtist?.artistId || mainArtist?.id || artistId || null;
 
-      if (skeleton && skeleton.nodes?.length) {
-        setNetworkData(skeleton);
-
-        // Hydrate in background
-        hydrateSkeleton(skeleton).then(enriched => {
-          setNetworkData(prev => {
-            // Avoid flashing if user navigated away
-            if (!prev) return enriched;
-            return enriched;
-          });
-        }).catch(() => {});
-
-        // Also kick off full data fetch to expand beyond first degree when ready
-        const fullData = artistId
-          ? await fetchNetworkDataById(artistId)
-          : await fetchNetworkData(artistName.trim());
-
-        if (fullData && 'nodes' in fullData) {
-          
-          const mainArtist = fullData.nodes.find((node: NetworkNode) => node.size === 30 && node.type === 'artist');
-          const finalArtistId = mainArtist?.artistId || mainArtist?.id || artistId;
-
-          handleNetworkData(fullData, finalArtistId);
-          if (saveToHistoryRef.current) {
-            saveToHistoryRef.current(artistName, finalArtistId || null);
-          }
-        }
-      } else {
-        // Normal network data - pass to parent
-        // Handle no collaborators response
-        console.warn(`No network data found for ${artistName}`);
-        // You might want to show a message or handle this case differently
+      handleNetworkData(skeleton, finalArtistId || undefined);
+      // Save to search history
+      if (saveToHistoryRef.current) {
+        saveToHistoryRef.current(artistName, finalArtistId || null);
       }
-    } catch (error) {
-      console.error(`Error loading network for ${artistName}:`, error);
-      // Handle error - maybe show a toast or reset state
+      // Enrich in background (roles + pictures)
+      void applyEnrichmentSmoothly(skeleton);
+      // Hide loading overlay once skeleton is shown
       setIsLoading(false);
       setCurrentArtistName("");
+      
+    } catch (error) {
+      console.warn('Skeleton failed, falling back to full network fetch...', error);
+      try {
+        const data = artistId 
+          ? await fetchNetworkDataById(artistId)
+          : await fetchNetworkData(artistName.trim());
+        if (data && 'nodes' in data) {
+          const mainArtist = data.nodes.find((node: NetworkNode) => node.size === 30 && node.type === 'artist');
+          const finalArtistId = mainArtist?.artistId || mainArtist?.id || artistId;
+          handleNetworkData(data, finalArtistId);
+          if (saveToHistoryRef.current) saveToHistoryRef.current(artistName, finalArtistId || null);
+        } else {
+          console.warn(`No network data found for ${artistName}`);
+        }
+      } finally {
+        setIsLoading(false);
+        setCurrentArtistName("");
+      }
     }
   }, [handleNetworkData]);
 

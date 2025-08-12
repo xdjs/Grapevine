@@ -71,7 +71,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     if (!mainArtistNode) return data.nodes;
     
     const firstDegreeIds = getFirstDegreeCollaborators();
-    const visibleIds = new Set<string>();
+    const visibleIds = new Set([mainArtistNode.id]);
     
     // Always include main artist
     visibleIds.add(mainArtistNode.id);
@@ -96,9 +96,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       });
     });
     
-    // Never include nodes beyond first-degree unless they were explicitly expanded in this session
-    // This ensures initial render and non-expanded mode stay first-degree only
-    return data.nodes.filter(node => visibleIds.has(node.id) || expandedNodes.has(node.id));
+    return data.nodes.filter(node => visibleIds.has(node.id));
   }, [mainArtistNode, data.nodes, data.links, expandedNodes, getFirstDegreeCollaborators]);
 
   // Get visible links based on visible nodes

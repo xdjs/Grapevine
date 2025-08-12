@@ -1,30 +1,23 @@
 import { apiRequest } from "./queryClient";
 import { NetworkData, NetworkResponse, NoCollaboratorsResponse } from "../types/network";
 
-export async function fetchSkeletonByName(artistName: string): Promise<NetworkData> {
+export async function fetchNetworkSkeleton(artistName: string): Promise<NetworkData> {
   const url = `/api/network-skeleton/${encodeURIComponent(artistName)}`;
   const response = await apiRequest("GET", url);
-  if (!response.ok) throw new Error(`Skeleton request failed: HTTP ${response.status}`);
-  return response.json();
-}
-
-export async function fetchSkeletonById(artistId: string): Promise<NetworkData> {
-  const url = `/api/network-skeleton-by-id/${encodeURIComponent(artistId)}`;
-  const response = await apiRequest("GET", url);
-  if (!response.ok) throw new Error(`Skeleton by id failed: HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`Skeleton HTTP ${response.status}`);
   return response.json();
 }
 
 export async function fetchRoles(names: string[]): Promise<Record<string, string[]>> {
   if (names.length === 0) return {};
-  const resp = await fetch('/api/network-roles', {
+  const response = await fetch('/api/network-roles', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ names })
   });
-  if (!resp.ok) return {};
-  const data = await resp.json();
-  return data?.roles ?? {};
+  if (!response.ok) throw new Error(`Roles HTTP ${response.status}`);
+  const data = await response.json();
+  return data.roles || {};
 }
 
 export async function fetchNetworkData(artistName: string, allowHallucinations?: boolean): Promise<NetworkResponse> {
