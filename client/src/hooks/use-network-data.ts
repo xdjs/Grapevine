@@ -597,10 +597,29 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     const onVis = () => {
       const cnt = fullNetworkData?.nodes?.length ?? 0;
       console.log(`[ExpandPersist] visibility=${document.visibilityState} expanded=${isExpandedMode} nodes=${cnt}`);
+      if (document.visibilityState === 'visible') {
+        try {
+          // Attempt soft rehydrate if we have a stronger saved snapshot
+          const currentMain = mainArtistNode?.name || '';
+          let saved: any = undefined;
+          if (typeof window !== 'undefined' && window.grapevineExpandedState) saved = window.grapevineExpandedState;
+          if (!saved) {
+            const raw = sessionStorage.getItem(PERSIST_KEY);
+            saved = raw ? JSON.parse(raw) : undefined;
+          }
+          const savedCount = saved?.fullNetworkData?.nodes?.length ?? 0;
+          if (saved && saved.main === currentMain && saved.isExpandedMode && savedCount > cnt) {
+            setFullNetworkData(saved.fullNetworkData);
+            setIsExpandedMode(true);
+            if (Array.isArray(saved.expandedNodes)) setExpandedNodes(new Set<string>(saved.expandedNodes));
+            console.log(`[ExpandPersist] re-applied on visible nodes=${savedCount}`);
+          }
+        } catch {}
+      }
     };
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
-  }, [isExpandedMode, fullNetworkData?.nodes?.length]);
+  }, [isExpandedMode, fullNetworkData?.nodes?.length, mainArtistNode?.name]);
 
   return {
     // State
