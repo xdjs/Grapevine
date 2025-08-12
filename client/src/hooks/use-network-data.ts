@@ -461,6 +461,18 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
 
   // Get the data to display (either filtered or full)
   const displayData = useMemo(() => {
+    // If expanded state not in React yet, but a saved snapshot exists for this artist, prefer it
+    try {
+      if (!isExpandedMode && !fullNetworkData && typeof window !== 'undefined') {
+        const saved = (window as any).grapevineExpandedState || (sessionStorage.getItem(PERSIST_KEY) ? JSON.parse(sessionStorage.getItem(PERSIST_KEY) as string) : null);
+        const currentMain = mainArtistNode?.name || '';
+        if (saved && saved.main === currentMain && saved.isExpandedMode && Array.isArray(saved.fullNetworkData?.nodes) && saved.fullNetworkData.nodes.length > 0) {
+          console.log(`[ExpandPersist] displayData using saved snapshot nodes=${saved.fullNetworkData.nodes.length}`);
+          return saved.fullNetworkData as NetworkData;
+        }
+      }
+    } catch {}
+
     const baseData = fullNetworkData || {
       nodes: visibleNodes,
       links: visibleLinks
