@@ -473,6 +473,10 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
   // Persist expanded state to sessionStorage to survive tab switches/remounts
   useEffect(() => {
     try {
+      const logState = (where: string) => {
+        const count = fullNetworkData?.nodes?.length ?? 0;
+        console.log(`[ExpandPersist] save@${where} main="${mainArtistNode?.name || ''}" expanded=${isExpandedMode} nodes=${count} expandedSet=${expandedNodes.size}`);
+      };
       const mainName = mainArtistNode?.name || '';
       const payload = {
         main: mainName,
@@ -489,8 +493,10 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       // Save to window for fast rehydrate across remounts/tab switches
       if (typeof window !== 'undefined') {
         window.grapevineExpandedState = payload;
+        logState('memory');
       }
       sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
+      logState('session');
     } catch {}
   }, [isExpandedMode, fullNetworkData, expandedNodes, mainArtistNode?.name]);
 
@@ -502,10 +508,13 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       let saved: any = undefined;
       if (typeof window !== 'undefined' && window.grapevineExpandedState) {
         saved = window.grapevineExpandedState;
+        console.log('[ExpandPersist] rehydrate source=memory');
       }
       if (!saved) {
         const raw = sessionStorage.getItem(PERSIST_KEY);
         saved = raw ? JSON.parse(raw) : undefined;
+        if (saved) console.log('[ExpandPersist] rehydrate source=session');
+        else console.log('[ExpandPersist] rehydrate source=none');
       }
       const currentMain = mainArtistNode?.name || '';
       if (!saved || saved.main !== currentMain) return;
@@ -520,6 +529,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       if (saved.isExpandedMode) {
         setFullNetworkData(saved.fullNetworkData);
         setIsExpandedMode(true);
+        console.log(`[ExpandPersist] applied nodes=${saved.fullNetworkData.nodes.length} links=${saved.fullNetworkData.links?.length ?? 0}`);
       }
       if (Array.isArray(saved.expandedNodes)) {
         setExpandedNodes(new Set<string>(saved.expandedNodes));
@@ -554,9 +564,20 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       contributionsRef.current.clear();
       baseGraphRef.current = null;
       try { sessionStorage.removeItem(PERSIST_KEY); } catch {}
+      console.log('[ExpandPersist] cleared due to main artist change');
     }
     prevMainRef.current = currentMain;
   }, [mainArtistNode?.name]);
+
+  // Visibility change log
+  useEffect(() => {
+    const onVis = () => {
+      const cnt = fullNetworkData?.nodes?.length ?? 0;
+      console.log(`[ExpandPersist] visibility=${document.visibilityState} expanded=${isExpandedMode} nodes=${cnt}`);
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [isExpandedMode, fullNetworkData?.nodes?.length]);
 
   return {
     // State
