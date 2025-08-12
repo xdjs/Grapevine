@@ -563,9 +563,14 @@ export default function D3NetworkRenderer({
     networkGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
     nodes: NetworkNode[]
   ) => {
-    const nodeElements = networkGroup
-      .selectAll(".node")
-      .data(nodes)
+    // Stable join by node id so updated roles/images don't recreate nodes
+    const nodeJoin = networkGroup
+      .selectAll<SVGGElement, NetworkNode>(".node-group")
+      .data(nodes, (d: any) => d.id);
+
+    nodeJoin.exit().remove();
+
+    const nodeElements = nodeJoin
       .enter()
       .append("g")
       .attr("class", (d) => `node-group network-node node-${d.type}`)
@@ -843,9 +848,13 @@ export default function D3NetworkRenderer({
     networkGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
     links: NetworkLink[]
   ) => {
-    return networkGroup
-      .selectAll(".link")
-      .data(links)
+    const linkJoin = networkGroup
+      .selectAll<SVGLineElement, NetworkLink>(".link")
+      .data(links, (d: any) => `${typeof d.source === 'string' ? d.source : d.source.id}-${typeof d.target === 'string' ? d.target : d.target.id}`);
+
+    linkJoin.exit().remove();
+
+    return linkJoin
       .enter()
       .append("line")
       .attr("class", "link network-link")
@@ -860,9 +869,13 @@ export default function D3NetworkRenderer({
     networkGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
     nodes: NetworkNode[]
   ) => {
-    return networkGroup
-      .selectAll(".label")
-      .data(nodes)
+    const labelJoin = networkGroup
+      .selectAll<SVGTextElement, NetworkNode>(".label")
+      .data(nodes, (d: any) => d.id);
+
+    labelJoin.exit().remove();
+
+    return labelJoin
       .enter()
       .append("text")
       .attr("class", "label")

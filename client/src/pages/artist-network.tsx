@@ -29,12 +29,23 @@ export default function ArtistNetwork() {
   });
   const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
   const saveToHistoryRef = useRef<((artistName: string, artistId: string | null) => void) | null>(null);
+  // Track latest node positions to preserve layout across enrichment updates
+  const nodePositionsRef = useRef<Map<string, { x?: number; y?: number; vx?: number; vy?: number }>>(new Map());
   const isMobile = useIsMobile();
 
   const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
-    setNetworkData(data);
+    // Preserve positions from current graph if available
+    const prevPositions = new Map(nodePositionsRef.current);
+    const nextData: NetworkData = {
+      ...data,
+      nodes: data.nodes.map((n) => {
+        const p = prevPositions.get(n.id) || prevPositions.get(n.name);
+        return p ? { ...n, x: p.x, y: p.y, vx: (p as any).vx, vy: (p as any).vy } : n;
+      }),
+    };
+    setNetworkData(nextData);
     // Extract the artist ID from the network data
-    const finalArtistId = artistId || data.nodes.find(node => node.size === 30)?.artistId || null;
+    const finalArtistId = artistId || nextData.nodes.find(node => node.size === 30)?.artistId || null;
     setCurrentArtistId(finalArtistId);
   }, []);
 
@@ -72,6 +83,18 @@ export default function ArtistNetwork() {
     saveToHistoryRef.current = saveHistoryFn;
   };
 
+  // Keep nodePositionsRef up to date whenever the network renders/updates
+  useEffect(() => {
+    if (!networkData) return;
+    const map = new Map<string, { x?: number; y?: number; vx?: number; vy?: number }>();
+    networkData.nodes.forEach((n) => {
+      map.set(n.id, { x: n.x, y: n.y, vx: (n as any).vx, vy: (n as any).vy });
+      // Also map by name for older data shapes
+      if (n.name) map.set(n.name, { x: n.x, y: n.y, vx: (n as any).vx, vy: (n as any).vy });
+    });
+    nodePositionsRef.current = map;
+  }, [networkData]);
+
   // Smooth enrichment helper: apply roles and pictures to current network
   const applyEnrichmentSmoothly = useCallback(async (baseData: NetworkData) => {
     try {
@@ -97,7 +120,14 @@ export default function ArtistNetwork() {
 
       // Fetch pictures in batches and update nodes
       const updatedNodes = await profilePictures.updateNodesWithImages(withRoles.nodes as any);
-      setNetworkData({ ...withRoles, nodes: updatedNodes });
+      // Apply preserved positions
+      const prev = new Map(nodePositionsRef.current);
+      const positioned = updatedNodes.map((n) => {
+        const p = prev.get(n.id) || prev.get(n.name);
+        return p ? { ...n, x: p.x, y: p.y, vx: (p as any).vx, vy: (p as any).vy } : n;
+        
+      });
+      setNetworkData({ ...withRoles, nodes: positioned });
     } catch (e) {
       console.warn('Enrichment failed, showing skeleton only:', e);
     }
@@ -208,7 +238,6 @@ export default function ArtistNetwork() {
       {networkData && (
         <div className="mobile-network-container network-visible">
           <NetworkVisualizer
-            key={`network-${Date.now()}`}
             data={networkData}
             visible={true}
             filterState={filterState}
