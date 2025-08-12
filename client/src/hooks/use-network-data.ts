@@ -423,7 +423,47 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         if (toKey(k) === toKey(nodeName)) { keyToRemove = k; break; }
       }
     }
-    if (!keyToRemove) return;
+    if (!keyToRemove) {
+      console.log(`[Shrink] No matching contribution key for ${nodeName} (id=${nodeId}). Using heuristic.`);
+      // Heuristic fallback: remove up to 3 degree-1 neighbor nodes attached only to this node (and their links)
+      const clickedId = nodeId || nodeName;
+      const neighborSet = new Set<string>();
+      for (const l of fullNetworkData.links) {
+        const s = typeof l.source === 'string' ? l.source : l.source.id;
+        const t = typeof l.target === 'string' ? l.target : l.target.id;
+        if (toKey(s) === toKey(clickedId)) neighborSet.add(t);
+        else if (toKey(t) === toKey(clickedId)) neighborSet.add(s);
+      }
+      // Compute degree for neighbors
+      const degree = new Map<string, number>();
+      for (const l of fullNetworkData.links) {
+        const s = typeof l.source === 'string' ? l.source : l.source.id;
+        const t = typeof l.target === 'string' ? l.target : l.target.id;
+        degree.set(s, (degree.get(s) || 0) + 1);
+        degree.set(t, (degree.get(t) || 0) + 1);
+      }
+      const baseIds = new Set<string>((baseGraphRef.current?.nodes || []).map(n => n.id));
+      const candidates: string[] = [];
+      neighborSet.forEach(nid => {
+        if (baseIds.has(nid)) return; // don't remove base
+        if ((degree.get(nid) || 0) <= 1) candidates.push(nid);
+      });
+      const toRemove = new Set(candidates.slice(0, 3));
+      if (toRemove.size === 0) {
+        console.log('[Shrink] Heuristic found nothing to remove. Aborting.');
+        return;
+      }
+      // Remove links to those nodes and the nodes themselves if detached
+      const remainingLinksHeuristic = fullNetworkData.links.filter(l => {
+        const s = typeof l.source === 'string' ? l.source : l.source.id;
+        const t = typeof l.target === 'string' ? l.target : l.target.id;
+        return !(toRemove.has(s) || toRemove.has(t));
+      });
+      const remainingNodesHeuristic = fullNetworkData.nodes.filter(n => !toRemove.has(n.id));
+      setFullNetworkData({ nodes: remainingNodesHeuristic, links: remainingLinksHeuristic });
+      console.log(`[Shrink] Heuristic removed nodes=${Array.from(toRemove).join(', ')}`);
+      return;
+    }
 
     const contribution = contributionsRef.current.get(keyToRemove);
     if (!contribution) return;
@@ -493,6 +533,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       setFullNetworkData(null);
       baseGraphRef.current = null;
     }
+    console.log(`[Shrink] Removed expansion for key=${keyToRemove}. Nodes now=${nextData.nodes.length} links=${nextData.links.length}`);
   }, [expandedNodes, fullNetworkData]);
 
   // Function to reset to first-degree view
