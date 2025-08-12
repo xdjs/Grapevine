@@ -4,9 +4,8 @@ import { NetworkData, NetworkResponse, NoCollaboratorsResponse } from "../types/
 export async function fetchNetworkData(artistName: string, allowHallucinations?: boolean): Promise<NetworkResponse> {
   try {
     console.log(`🔍 [Frontend] Fetching network data for: "${artistName}"`);
-    const url = allowHallucinations 
-      ? `/api/network/${encodeURIComponent(artistName)}?allowHallucinations=true`
-      : `/api/network/${encodeURIComponent(artistName)}`;
+    // Prefer skeleton endpoint to avoid server timeouts
+    const url = `/api/network-skeleton/${encodeURIComponent(artistName)}${allowHallucinations ? '?allowHallucinations=true' : ''}`;
     console.log(`🔍 [Frontend] Request URL: ${url}`);
     
     const response = await apiRequest("GET", url);
@@ -49,12 +48,23 @@ export async function fetchNetworkData(artistName: string, allowHallucinations?:
 export async function fetchNetworkDataById(artistId: string, allowHallucinations?: boolean): Promise<NetworkResponse> {
   try {
     console.log(`🔍 [Frontend] Fetching network data for artist ID: "${artistId}"`);
-    const url = allowHallucinations 
-      ? `/api/network-by-id/${encodeURIComponent(artistId)}?allowHallucinations=true`
-      : `/api/network-by-id/${encodeURIComponent(artistId)}`;
+    // Prefer skeleton by resolving name on server via ID in the future; for now, call legacy but fall back to skeleton on 500/timeout
+    const url = `/api/network-by-id/${encodeURIComponent(artistId)}${allowHallucinations ? '?allowHallucinations=true' : ''}`;
     console.log(`🔍 [Frontend] Request URL: ${url}`);
     
-    const response = await apiRequest("GET", url);
+    let response = await apiRequest("GET", url);
+    if (!response.ok && response.status >= 500) {
+      console.warn('⚠️ Falling back to skeleton endpoint due to server error');
+      // Attempt to fetch artist options to get name, else fail over gracefully
+      try {
+        const optionsResp = await apiRequest('GET', `/api/artist-options/${encodeURIComponent(artistId)}`);
+        const options = await optionsResp.json();
+        const name = options?.options?.[0]?.name;
+        if (name) {
+          return await fetchNetworkData(name, allowHallucinations);
+        }
+      } catch {}
+    }
     
     console.log(`🔍 [Frontend] Response status: ${response.status}`);
     console.log(`🔍 [Frontend] Response ok: ${response.ok}`);

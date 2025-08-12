@@ -123,6 +123,13 @@ export default function NetworkVisualizer({
   // Roles fetching hook
   const rolesHook = useRoles({ autoFetch: true });
 
+  // Local render snapshot to allow incremental updates (roles/images) without mutating source props
+  const [renderData, setRenderData] = useState<NetworkData>(finalDisplayData);
+  useEffect(() => {
+    // Take a shallow copy so reference changes and D3 effect re-runs
+    setRenderData({ nodes: [...finalDisplayData.nodes], links: [...finalDisplayData.links] });
+  }, [finalDisplayData]);
+
   // Tooltip management hook
   const tooltip = useTooltip({
     networkData: data,
@@ -151,22 +158,34 @@ export default function NetworkVisualizer({
 
   // As soon as the base graph is rendered (data changes), fetch roles for nodes missing roles
   useEffect(() => {
-    if (!finalDisplayData?.nodes?.length) return;
+    if (!renderData?.nodes?.length) return;
     // Fire and forget; updates will be handled by state consumers if needed
-    rolesHook.fetchRolesForNodes(finalDisplayData.nodes)
+    rolesHook.fetchRolesForNodes(renderData.nodes)
       .then((rolesMap) => {
         if (!rolesMap || Object.keys(rolesMap).length === 0) return;
-        // Apply roles to in-memory data so stroke colors update on next render
-        for (const node of finalDisplayData.nodes) {
+        // Apply roles into render snapshot and bump reference
+        const updatedNodes = renderData.nodes.map((node) => {
           const r = rolesMap[node.name];
-          if (r && r.length > 0) {
-            node.types = r as any;
-            node.type = (r[0] as any);
-          }
-        }
+          if (r && r.length > 0) return { ...node, types: r as any, type: (r[0] as any) } as NetworkNode;
+          return node;
+        });
+        setRenderData({ nodes: updatedNodes, links: renderData.links });
       })
       .catch(() => {});
-  }, [finalDisplayData]);
+  }, [renderData]);
+
+  // After skeleton, fetch profile pictures and apply to nodes
+  useEffect(() => {
+    if (!renderData?.nodes?.length) return;
+    profilePictures.fetchProfilePictures(renderData.nodes).then((imageMap) => {
+      if (!imageMap || imageMap.size === 0) return;
+      const updated = renderData.nodes.map((n) => {
+        const url = imageMap.get(n.name);
+        return url && url !== n.imageUrl ? { ...n, imageUrl: url } : n;
+      });
+      setRenderData({ nodes: updated, links: renderData.links });
+    }).catch(() => {});
+  }, [renderData]);
 
   // Error handling and retry logic
   const handleError = useCallback((error: Error, context: string) => {
@@ -409,7 +428,7 @@ export default function NetworkVisualizer({
 
           {/* D3 Network Renderer Component */}
           <D3NetworkRenderer
-            data={finalDisplayData}
+            data={renderData}
             visible={visible}
             filterState={filterState}
             svgRef={svgRef}
