@@ -699,6 +699,43 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     return isExpandedMode && fullNetworkData ? fullNetworkData : baseData;
   }, [fullNetworkData, visibleNodes, visibleLinks, isExpandedMode]);
 
+  // Promote saved snapshot to state if we rendered with it (ensures buttons/shrink reflect expanded)
+  useEffect(() => {
+    if (isExpandedMode || fullNetworkData) return;
+    try {
+      const currentMain = mainArtistNode?.name || '';
+      let saved: any = undefined;
+      if (typeof window !== 'undefined' && (window as any).grapevineExpandedState) {
+        saved = (window as any).grapevineExpandedState;
+      }
+      if (!saved) {
+        const raw = sessionStorage.getItem(PERSIST_KEY);
+        saved = raw ? JSON.parse(raw) : undefined;
+      }
+      if (
+        saved && saved.main === currentMain && saved.isExpandedMode &&
+        Array.isArray(saved.fullNetworkData?.nodes) && saved.fullNetworkData.nodes.length > 0
+      ) {
+        setFullNetworkData(saved.fullNetworkData as NetworkData);
+        setIsExpandedMode(true);
+        if (Array.isArray(saved.expandedNodes)) setExpandedNodes(new Set<string>(saved.expandedNodes));
+        if (saved.baseGraph) baseGraphRef.current = saved.baseGraph as NetworkData;
+        if (Array.isArray(saved.contributions)) {
+          const map = new Map<string, { addedNodeIds: Set<string>; addedLinkKeys: Set<string>; neighborIds: Set<string> }>();
+          for (const c of saved.contributions) {
+            map.set(String(c.key), {
+              addedNodeIds: new Set<string>(c.addedNodeIds || []),
+              addedLinkKeys: new Set<string>(c.addedLinkKeys || []),
+              neighborIds: new Set<string>(c.neighborIds || []),
+            });
+          }
+          contributionsRef.current = map;
+        }
+        console.log('[ExpandPersist] promoted saved snapshot to state');
+      }
+    } catch {}
+  }, [isExpandedMode, fullNetworkData, mainArtistNode?.name]);
+
   // Persist expanded state to sessionStorage to survive tab switches/remounts
   useEffect(() => {
     try {
