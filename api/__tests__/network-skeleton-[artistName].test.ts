@@ -54,8 +54,8 @@ describe('/api/network-skeleton/:artistName', () => {
     // findArtistInDatabase
     mockClient.query
       .mockResolvedValueOnce({ rows: [{ id: 1, name: 'Taylor Swift' }] })
-      // cache lookup
-      .mockResolvedValueOnce({ rows: [{ webmapdata: { nodes: [{ id: 'Taylor Swift', name: 'Taylor Swift' }], links: [] } }] });
+      // cache lookup -> multi-node to avoid single-node special-case
+      .mockResolvedValueOnce({ rows: [{ webmapdata: { nodes: [{ id: 'Taylor Swift', name: 'Taylor Swift' }, { id: 'Jack Antonoff', name: 'Jack Antonoff' }], links: [{ source: 'Taylor Swift', target: 'Jack Antonoff' }] } }] });
 
     await handler(req as VercelRequest, res as VercelResponse);
     expect(res.json).toHaveBeenCalledWith(
