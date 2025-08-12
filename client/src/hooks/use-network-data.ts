@@ -523,6 +523,30 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     } catch {}
   }, [mainArtistNode?.name, data?.nodes?.length]);
 
+  // If incoming data changes to a different main artist, clear expansion state to avoid stale blank view
+  useEffect(() => {
+    // When base data updates and there is no persisted match, ensure we are in non-expanded mode
+    if (!mainArtistNode) return;
+    try {
+      const raw = sessionStorage.getItem(PERSIST_KEY);
+      const saved = raw ? JSON.parse(raw) : null;
+      const currentMain = mainArtistNode.name;
+      if (!saved || saved.main !== currentMain) {
+        setFullNetworkData(null);
+        setIsExpandedMode(false);
+        setExpandedNodes(new Set());
+        contributionsRef.current.clear();
+        baseGraphRef.current = null;
+      }
+    } catch {
+      setFullNetworkData(null);
+      setIsExpandedMode(false);
+      setExpandedNodes(new Set());
+      contributionsRef.current.clear();
+      baseGraphRef.current = null;
+    }
+  }, [mainArtistNode?.name]);
+
   return {
     // State
     expandedNodes,
