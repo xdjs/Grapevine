@@ -10,6 +10,7 @@ import { useModals } from "@/hooks/use-modals";
 import { useFilterVisibility } from "@/hooks/use-filter-visibility";
 import { useProfilePictures } from "@/hooks/use-profile-pictures";
 import D3NetworkRenderer from "./d3-network-renderer";
+import { fetchNetworkRoles } from "@/lib/network-data";
 import ArtistSelectionModal from "./artist-selection-modal";
 import CollaborationDetailsPopup from "./collaboration-details-popup";
 import NetworkTooltip from "./network-tooltip";
@@ -109,6 +110,37 @@ export default function NetworkVisualizer({
     collapseNodeNetwork,
     resetToFirstDegree
   } = useNetworkData({ data });
+
+  // After initial render, fetch roles asynchronously and update data to trigger role-border updates
+  useEffect(() => {
+    let cancelled = false;
+    const main = async () => {
+      try {
+        const mainArtist = data.nodes.find(n => n.size === 30);
+        const artistId = mainArtist?.artistId;
+        const rolesMap = await fetchNetworkRoles(artistId ? { artistId } : { artistName: mainArtist?.name });
+        if (cancelled) return;
+        const updatedNodes = data.nodes.map(node => {
+          const roles = rolesMap[node.name];
+          if (roles && roles.length > 0) {
+            return {
+              ...node,
+              rolesResolved: true,
+              types: Array.from(new Set(roles)) as ('artist' | 'producer' | 'songwriter')[],
+              type: (Array.isArray(roles) && roles.length > 0 ? roles[0] : node.type) as 'artist'|'producer'|'songwriter',
+            };
+          }
+          return { ...node, rolesResolved: true };
+        });
+        // Shallow replace to trigger rerender in React by updating reference
+        (data as any).nodes = updatedNodes;
+      } catch (e) {
+        // Non-blocking: ignore role errors
+      }
+    };
+    main();
+    return () => { cancelled = true; };
+  }, [data]);
 
   // Profile picture management hook
   const profilePictures = useProfilePictures({

@@ -73,7 +73,7 @@ export function useProfilePictures(options: UseProfilePicturesOptions = {}): Use
     try {
       // Filter out nodes that already have images (unless we're forcing a refresh)
       const artistNames = nodes
-        .filter(node => !node.imageUrl || !useCache)
+        .filter(node => (!node.imageUrl || !useCache) && node.name)
         .map(node => node.name);
 
       if (artistNames.length === 0) {

@@ -95,3 +95,19 @@ export async function searchArtist(query: string) {
   const response = await apiRequest("GET", `/api/search?q=${encodeURIComponent(query)}`);
   return response.json();
 }
+
+/**
+ * Fetch roles for an existing network, returning a map of node name -> roles
+ * without blocking initial network render.
+ */
+export async function fetchNetworkRoles(artistIdOrName: { artistId?: string; artistName?: string }): Promise<Record<string, ('artist'|'producer'|'songwriter')[]>> {
+  const { artistId, artistName } = artistIdOrName;
+  const url = artistId
+    ? `/api/network-roles/${encodeURIComponent(artistId)}`
+    : `/api/network-roles/${encodeURIComponent(artistName || '')}`;
+  const res = await apiRequest('GET', url);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch roles: HTTP ${res.status}`);
+  }
+  return res.json();
+}

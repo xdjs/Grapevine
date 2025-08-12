@@ -12,6 +12,12 @@ export interface NetworkNode {
   xUsername?: string | null;
   instagramUsername?: string | null;
   facebookUsername?: string | null;
+  /**
+   * Indicates whether role information (type/types) has been fully resolved.
+   * When false (or undefined), the UI should render placeholder white borders
+   * and avoid applying role-based colors until roles are fetched separately.
+   */
+  rolesResolved?: boolean;
   x?: number;
   y?: number;
   fx?: number | null;

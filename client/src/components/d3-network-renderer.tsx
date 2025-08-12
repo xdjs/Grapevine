@@ -248,14 +248,14 @@ export default function D3NetworkRenderer({
       
       let cleanedCount = 0;
       
-      for (const patternId of this.cleanupQueue) {
+      this.cleanupQueue.forEach((patternId) => {
         const pattern = defs.querySelector(`#${patternId}`);
         if (pattern) {
           pattern.remove();
           this.patterns.delete(patternId);
           cleanedCount++;
         }
-      }
+      });
       
       this.cleanupQueue.clear();
       
@@ -571,14 +571,21 @@ export default function D3NetworkRenderer({
     // Add circles for each node - single color for single role, multi-colored for multiple roles
     nodeElements.each(function(d) {
       const group = d3.select(this);
-      const roles = d.types || [d.type];
+      const roles = (d.rolesResolved && (d.types && d.types.length > 0)) ? d.types : [d.type];
       
       // Debug multi-role nodes
       if (roles.length > 1) {
         console.log(`🎭 [D3Renderer] Multi-role node "${d.name}": roles = [${roles.join(', ')}]`);
       }
       
-      if (roles.length === 1) {
+      if (!d.rolesResolved) {
+        // Placeholder border until roles are resolved
+        group.append('circle')
+          .attr('r', d.size)
+          .attr('fill', 'transparent')
+          .attr('stroke', 'white')
+          .attr('stroke-width', 4);
+      } else if (roles.length === 1) {
         // Single role - simple circle
         group.append("circle")
           .attr("r", d.size)
@@ -606,7 +613,7 @@ export default function D3NetworkRenderer({
             .endAngle(endAngle);
           
           group.append("path")
-            .attr("d", arcPath)
+            .attr("d", (arcPath as unknown as string))
             .attr("fill", () => {
               if (role === 'artist') return '#FF0ACF';       // Magenta Pink
               if (role === 'producer') return '#AE53FF';     // Bright Purple  
@@ -690,7 +697,8 @@ export default function D3NetworkRenderer({
           // Image is already loaded - display immediately with optimal sizing
           const optimalSize = ImageLoadingManager.getOptimalImageSize(d, svgRef.current || undefined);
           
-          const image = group.append("image")
+              const imageUrl = d.imageUrl as string;
+              const image = group.append("image")
             .attr("class", "profile-image")
             .attr("data-quality", optimalSize.quality)
             .attr("x", -profileImageSize)
@@ -698,7 +706,7 @@ export default function D3NetworkRenderer({
             .attr("width", profileImageSize * 2)
             .attr("height", profileImageSize * 2)
             .attr("clip-path", `url(#${clipId})`)
-            .attr("href", d.imageUrl)
+                .attr("href", imageUrl)
             .attr("crossorigin", "anonymous")
             .style("opacity", 1)
             .style("image-rendering", optimalSize.quality === 'low' ? 'pixelated' : 'auto');
@@ -754,12 +762,12 @@ export default function D3NetworkRenderer({
           const priority = nodeIndex < ImageLoadingManager.LAZY_LOADING_THRESHOLD ? 'high' : 
                           d.type === 'artist' ? 'normal' : 'low';
           
-          ImageLoadingManager.preloadImage(d.imageUrl, priority).then((success) => {
+           ImageLoadingManager.preloadImage(d.imageUrl as string, priority).then((success) => {
             if (success) {
               // Image loaded successfully - transition to display with optimal sizing
               const optimalSize = ImageLoadingManager.getOptimalImageSize(d, svgRef.current || undefined);
               
-              const image = group.append("image")
+               const image = group.append("image")
                 .attr("class", "profile-image")
                 .attr("data-quality", optimalSize.quality)
                 .attr("x", -profileImageSize)
@@ -767,7 +775,7 @@ export default function D3NetworkRenderer({
                 .attr("width", profileImageSize * 2)
                 .attr("height", profileImageSize * 2)
                 .attr("clip-path", `url(#${clipId})`)
-                .attr("href", d.imageUrl)
+                 .attr("href", d.imageUrl as string)
                 .attr("crossorigin", "anonymous")
                 .style("opacity", 0)
                 .style("image-rendering", optimalSize.quality === 'low' ? 'pixelated' : 'auto');
@@ -925,7 +933,7 @@ export default function D3NetworkRenderer({
                         .attr("width", profileImageSize * 2)
                         .attr("height", profileImageSize * 2)
                         .attr("clip-path", `url(#${clipId})`)
-                        .attr("href", node.imageUrl)
+                        .attr("href", node.imageUrl as string)
                         .attr("crossorigin", "anonymous")
                         .style("opacity", 0);
                       
@@ -980,7 +988,7 @@ export default function D3NetworkRenderer({
     };
     
     // Set up viewport monitoring for zoom and pan events
-    const svg = d3.select(svgRef.current);
+       const svg = d3.select(svgRef.current);
     const handleViewportChange = () => {
       throttledViewportUpdate();
     };
@@ -1063,7 +1071,7 @@ export default function D3NetworkRenderer({
 
     // Create and configure D3 simulation
     const simulation = createSimulation(data.nodes, validLinks, width, height, mainArtistNode);
-    simulationRef.current = simulation;
+    (simulationRef as unknown as { current: typeof simulation | null }).current = simulation;
 
     // Add resize listener to handle orientation changes
     const handleResize = () => {
