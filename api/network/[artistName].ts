@@ -148,11 +148,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const cacheCheck = await client.query('SELECT webmapdata FROM artists WHERE LOWER(name) = LOWER($1)', [correctArtistName]);
         const cached = cacheCheck.rows?.[0]?.webmapdata || null;
         if (cached && Array.isArray(cached.nodes) && cached.nodes.length > 0) {
+          const rolesIncluded = cached.nodes.some((n: any) => (Array.isArray(n?.types) && n.types.length > 0) || typeof n?.type === 'string');
+          const imagesIncluded = cached.nodes.some((n: any) => !!n?.imageUrl);
           const response = {
             ...cached,
             _metadata: {
               profilePicturesAPI: '/api/artist-profile-pictures-batch',
               profilePicturesNote: 'Profile pictures should be fetched separately using the batch API for better performance'
+            },
+            metadata: {
+              rolesIncluded,
+              imagesIncluded
             }
           };
           await client.end();
