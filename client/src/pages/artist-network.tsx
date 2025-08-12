@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft } from "lucide-react";
 
 import { NetworkData, NetworkNode, FilterState } from "@/types/network";
-import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
+import { fetchNetworkData, fetchNetworkDataById, fetchNetworkSkeletonById } from "@/lib/network-data";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function ArtistNetwork() {
@@ -81,18 +81,9 @@ export default function ArtistNetwork() {
     
     try {
       // Prefer skeleton-by-id when we have a DB ID for fastest normalization; fallback to skeleton-by-name
-      let data: any;
-      if (artistId) {
-        const resp = await fetch(`/api/network-skeleton-by-id/${encodeURIComponent(artistId)}?allowHallucinations=false`, { cache: 'no-store' });
-        if (resp.ok) {
-          data = await resp.json();
-        } else {
-          console.warn(`[Artist Network] skeleton-by-id failed (${resp.status}), falling back to skeleton-by-name`);
-          data = await fetchNetworkData(artistName.trim());
-        }
-      } else {
-        data = await fetchNetworkData(artistName.trim());
-      }
+      const data = artistId
+        ? await fetchNetworkSkeletonById(artistId)
+        : await fetchNetworkData(artistName.trim());
       
       // Handle the response (might be network data or no-collaborators response)
       if (data && 'nodes' in data) {

@@ -1,6 +1,28 @@
 import { apiRequest } from "./queryClient";
 import { NetworkData, NetworkResponse, NoCollaboratorsResponse } from "../types/network";
 
+export async function fetchNetworkSkeletonById(artistId: string, allowHallucinations?: boolean): Promise<NetworkResponse> {
+  try {
+    console.log(`🔍 [Frontend] Fetching SKELETON network for artist ID: "${artistId}"`);
+    const url = `/api/network-skeleton-by-id/${encodeURIComponent(artistId)}${allowHallucinations ? '?allowHallucinations=true' : ''}`;
+    const response = await apiRequest("GET", url);
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch {}
+      throw new Error(`Network request failed: ${errorMessage}`);
+    }
+    const data = await response.json();
+    console.log(`✅ [Frontend] Received skeleton network (by ID) with ${data.nodes?.length || 0} nodes`);
+    return data;
+  } catch (error) {
+    console.error(`❌ [Frontend] Error fetching skeleton network by ID:`, error);
+    throw error;
+  }
+}
+
 export async function fetchNetworkData(artistName: string, allowHallucinations?: boolean): Promise<NetworkResponse> {
   try {
     console.log(`🔍 [Frontend] Fetching network data for: "${artistName}"`);
