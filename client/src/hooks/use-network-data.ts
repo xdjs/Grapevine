@@ -36,7 +36,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
   // Track base (first-degree) graph when entering expanded mode
   const baseGraphRef = useRef<NetworkData | null>(null);
   // Track per-node contributions so we can surgically remove them later
-  type Contribution = { addedNodeIds: Set<string>; addedLinkKeys: Set<string> };
+  type Contribution = { addedNodeIds: Set<string>; addedLinkKeys: Set<string>; neighborIds: Set<string> };
   const contributionsRef = useRef<Map<string, Contribution>>(new Map());
   const PERSIST_KEY = 'gv_expanded_state_v1';
 
@@ -322,6 +322,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
 
       // Add selected neighbor nodes (from returned data only; no fabrication)
       const addedNodeIdsForThisExpansion = new Set<string>();
+      const neighborIdsForThisExpansion = new Set<string>();
       for (const nid of selectedNeighborIds) {
         const nodeToAdd = returnedNodeByKey.get(toKey(nid));
         if (nodeToAdd && !existingNodeIdsNormalized.has(normalizeId(nodeToAdd.id))) {
@@ -351,6 +352,9 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
           existingLinkKeys.add(key);
           vlog(`➕ [Expand] Added link: ${sCanon} -- ${tCanon}`);
           addedLinkKeysForThisExpansion.add(key);
+          // Track selected neighbors canonically
+          const neighborCanon = toKey(sCanon) === toKey(clickedCanonicalFinalId) ? tCanon : sCanon;
+          neighborIdsForThisExpansion.add(neighborCanon);
         }
       }
 
@@ -364,10 +368,12 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       if (prev) {
         addedNodeIdsForThisExpansion.forEach(id => prev.addedNodeIds.add(id));
         addedLinkKeysForThisExpansion.forEach(k => prev.addedLinkKeys.add(k));
+        neighborIdsForThisExpansion.forEach(n => prev.neighborIds.add(n));
       } else {
         contributionsRef.current.set(clickedCanonicalFinalId, {
           addedNodeIds: addedNodeIdsForThisExpansion,
           addedLinkKeys: addedLinkKeysForThisExpansion,
+          neighborIds: neighborIdsForThisExpansion,
         });
       }
 
@@ -459,11 +465,17 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
 
     // Remove nodes that were added by this contribution and are no longer referenced elsewhere
     const remainingNodes = fullNetworkData.nodes.filter(n => {
-      if (!contribution.addedNodeIds.has(n.id)) return true; // not added by this node
-      if (baseNodeIds.has(n.id)) return true; // part of base
-      if (otherContributionNodeIds.has(n.id)) return true; // used by others
-      if (attachedNodeIds.has(n.id)) return true; // still attached by remaining links
-      return false; // safe to remove
+      // Keep base and other contributions explicitly
+      if (baseNodeIds.has(n.id)) return true;
+      if (otherContributionNodeIds.has(n.id)) return true;
+      // If this node was a neighbor added by this expansion, remove it and anything exclusively under it
+      if (contribution.addedNodeIds.has(n.id) || contribution.neighborIds.has(n.id)) {
+        if (!attachedNodeIds.has(n.id)) return false; // dangling
+        // If still attached, keep it
+        return true;
+      }
+      // Nodes we didn't add are kept
+      return true;
     });
 
     const nextData: NetworkData = { nodes: remainingNodes, links: remainingLinks };
@@ -574,6 +586,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
           key: k,
           addedNodeIds: Array.from(v.addedNodeIds),
           addedLinkKeys: Array.from(v.addedLinkKeys),
+          neighborIds: Array.from(v.neighborIds || []),
         })),
       };
       // Decide if we should overwrite saved state. Never overwrite an existing expanded state with a collapsed one.
@@ -652,6 +665,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
           map.set(String(c.key), {
             addedNodeIds: new Set<string>(c.addedNodeIds || []),
             addedLinkKeys: new Set<string>(c.addedLinkKeys || []),
+            neighborIds: new Set<string>(c.neighborIds || []),
           });
         }
         contributionsRef.current = map;
