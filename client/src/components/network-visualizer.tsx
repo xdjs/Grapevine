@@ -103,6 +103,8 @@ export default function NetworkVisualizer({
     expandedNodes,
     fullNetworkData, 
     isExpandedMode,
+    rehydrateReady,
+    isNodeExpanded,
     mainArtistNode,
     visibleNodes,
     visibleLinks,
@@ -344,8 +346,8 @@ export default function NetworkVisualizer({
       {/* Show error state if there's a component error */}
       {componentError && <ErrorState error={componentError} />}
       
-      {/* Main visualization - only render when not loading and no errors */}
-      {!isInitializing && !componentError && (
+      {/* Main visualization - only render when not loading, no errors, and rehydration check ran */}
+      {!isInitializing && !componentError && rehydrateReady && (
         <>
           <svg 
             ref={svgRef} 
@@ -445,17 +447,7 @@ export default function NetworkVisualizer({
                   return false;
                 }
               })()}
-
-              isExpanded={(() => {
-                try {
-                  const nodeId = tooltip.currentNode?.id;
-                  if (!nodeId) return false;
-                  return expandedNodes.has(nodeId);
-                } catch (error) {
-                  handleError(error as Error, 'tooltip isExpanded calculation');
-                  return false;
-                }
-              })()}
+              isExpanded={isNodeExpanded(tooltip.currentNode?.id, tooltip.currentNode?.name)}
               isFirstDegreeCollaborator={(() => {
                 try {
                   const mainArtistNode = finalDisplayData.nodes.find(node => node.size === 30 && node.type === 'artist');
@@ -471,16 +463,27 @@ export default function NetworkVisualizer({
                 }
               })()}
               onNetworkAction={tooltip.handleNetworkAction}
-              onExpandAction={tooltip.handleExpandAction}
+              onExpandAction={(node) => {
+                if (isNodeExpanded(node.id, node.name)) {
+                  try {
+                    collapseNodeNetwork(node.name, node.id || undefined);
+                    tooltip.hideTooltip();
+                    return;
+                  } catch (error) {
+                    handleError(error as Error, 'implicit shrink on expand click');
+                  }
+                }
+                return tooltip.handleExpandAction(node);
+              }}
               onShrinkAction={(node) => {
                 try {
-                  collapseNodeNetwork(node.name, node.artistId || undefined);
+                  // Use node.id for precise match with contributions keys; name fallback handled inside
+                  collapseNodeNetwork(node.name, node.id || undefined);
                   tooltip.hideTooltip();
                 } catch (error) {
                   handleError(error as Error, 'shrink network');
                 }
               }}
-
               onProfileAction={tooltip.handleProfileAction}
               onCollaborationAction={tooltip.handleCollaborationAction}
               onClose={tooltip.hideTooltip}
