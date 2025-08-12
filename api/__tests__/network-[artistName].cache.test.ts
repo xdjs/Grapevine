@@ -90,6 +90,52 @@ describe('/api/network/:artistName cache behavior', () => {
     // Ensure OpenAI was never invoked
     expect(mockOpenAI.chat.completions.create).not.toHaveBeenCalled();
   });
+
+  it('returns staged skeleton when staged=true and no roles/images included', async () => {
+    // findArtistInDatabase
+    mockClient.query
+      .mockResolvedValueOnce({ rows: [{ id: 1, name: 'Taylor Swift' }] })
+      // cache lookup -> no cache
+      .mockResolvedValueOnce({ rows: [{ webmapdata: null }] })
+      // cache update of skeleton
+      .mockResolvedValueOnce({ rows: [] });
+
+    // OpenAI collaborator list
+    mockOpenAI.chat.completions.create.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              collaborators: [
+                { name: 'Jack Antonoff', roles: ['producer','songwriter'], topCollaborators: ['Lorde'] },
+                { name: 'Max Martin', roles: ['producer'], topCollaborators: ['The Weeknd'] },
+              ],
+            }),
+          },
+        },
+      ],
+    });
+
+    (req as any).query = { artistName: 'Taylor Swift', staged: 'true' };
+
+    await handler(req as VercelRequest, res as VercelResponse);
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nodes: expect.arrayContaining([
+          expect.objectContaining({ name: 'Taylor Swift', size: 30 }),
+          expect.objectContaining({ name: 'Jack Antonoff', size: 20 }),
+          expect.objectContaining({ name: 'Max Martin', size: 20 }),
+        ]),
+        metadata: expect.objectContaining({ rolesIncluded: false, imagesIncluded: false }),
+      })
+    );
+
+    const payload = (res.json as any).mock.calls[0][0];
+    const collab = payload.nodes.find((n: any) => n.name === 'Jack Antonoff');
+    expect(collab.type).toBeUndefined();
+    expect(collab.types).toBeUndefined();
+  });
 });
 
 

@@ -279,6 +279,64 @@ Guidelines:
         });
       }
 
+      // Staged rendering mode: return skeleton immediately (no roles, no images)
+      const staged = req.query.staged === 'true';
+      const allowHallucinations = req.query.allowHallucinations === 'true';
+      if (staged) {
+        // Build collaborator list
+        const collaboratorList: string[] = [];
+        if (Array.isArray((collaborationData as any)?.collaborators)) {
+          for (const person of (collaborationData as any).collaborators) {
+            if (person?.name && typeof person.name === 'string') collaboratorList.push(person.name);
+          }
+        } else if (Array.isArray((collaborationData as any)?.artists)) {
+          for (const person of (collaborationData as any).artists) {
+            if (person?.name && typeof person.name === 'string') collaboratorList.push(person.name);
+          }
+        }
+
+        // Handle no collaborators path
+        if (collaboratorList.length === 0 && !allowHallucinations) {
+          const singleNodeData = { nodes: [{ id: correctArtistName, name: correctArtistName, size: 30, artistId: artistMatch.id }], links: [] };
+          await client.end();
+          res.json({
+            noCollaborators: true,
+            artistName: correctArtistName,
+            artistId: artistMatch.id,
+            singleNodeNetwork: singleNodeData
+          });
+          return;
+        }
+
+        // Build skeleton nodes/links
+        const nodes: any[] = [{ id: correctArtistName, name: correctArtistName, size: 30, artistId: artistMatch.id }];
+        const links: { source: string; target: string }[] = [];
+        for (const name of collaboratorList) {
+          if (!nodes.find(n => n.id === name)) nodes.push({ id: name, name, size: 20, artistId: null });
+          if (!links.find(l => l.source === correctArtistName && l.target === name)) links.push({ source: correctArtistName, target: name });
+        }
+
+        const networkData = { nodes, links };
+        try {
+          const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE LOWER(name) = LOWER($2)';
+          await client.query(updateQuery, [JSON.stringify(networkData), correctArtistName]);
+        } catch (cacheError) {
+          console.warn('⚠️ [Vercel] Failed to cache skeleton data:', cacheError);
+        }
+
+        await client.end();
+        const response = {
+          ...networkData,
+          _metadata: {
+            profilePicturesAPI: '/api/artist-profile-pictures-batch',
+            profilePicturesNote: 'Profile pictures should be fetched separately using the batch API for better performance'
+          },
+          metadata: { rolesIncluded: false, imagesIncluded: false }
+        };
+        res.json(response);
+        return;
+      }
+
       // Build network data structure with comprehensive role consistency
       const nodeMap = new Map<string, NetworkNode>();
       const links: NetworkLink[] = [];
