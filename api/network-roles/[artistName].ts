@@ -19,10 +19,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    // Support either artistName (string) or artistId (string) as the dynamic segment
+    // Vercel will pass the segment under the bracket name; we named file [artistName], but the caller can send an ID too.
     const { artistName } = req.query;
-    if (!artistName || typeof artistName !== 'string') {
-      return res.status(400).json({ message: 'Artist name is required' });
-    }
+    const idOrName = String(artistName);
+    const isUuidLike = /^[0-9a-fA-F-]{8,}$/.test(idOrName);
 
     const CONNECTION_STRING = process.env.CONNECTION_STRING;
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -40,11 +41,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
     await client.connect();
 
-    // Load existing webmapdata by name (case-insensitive)
-    const artistResult = await client.query('SELECT id, name, webmapdata FROM artists WHERE LOWER(name) = LOWER($1)', [artistName]);
+    // Load existing webmapdata; if looks like an ID, query by id, else by name
+    const artistResult = isUuidLike
+      ? await client.query('SELECT id, name, webmapdata FROM artists WHERE id = $1', [idOrName])
+      : await client.query('SELECT id, name, webmapdata FROM artists WHERE LOWER(name) = LOWER($1)', [idOrName]);
     if (artistResult.rows.length === 0) {
       await client.end();
-      return res.status(404).json({ message: `Artist "${artistName}" not found in database.` });
+      return res.status(404).json({ message: `Artist "${idOrName}" not found in database.` });
     }
 
     const webmap: { nodes?: Array<{ name: string }>} = artistResult.rows[0].webmapdata || { nodes: [] };
