@@ -497,8 +497,32 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
 
   const isNodeExpanded = useCallback((nodeId?: string, nodeName?: string) => {
     const toKey = (v?: string) => (v || '').toLowerCase();
+    // Prefer contribution-based determination: expanded if we recorded any nodes/links added for this anchor
+    if (contributionsRef.current.size > 0) {
+      // Exact id match
+      if (nodeId && contributionsRef.current.has(nodeId)) {
+        const c = contributionsRef.current.get(nodeId)!;
+        return (c.addedNodeIds.size > 0) || (c.addedLinkKeys.size > 0);
+      }
+      // Case-insensitive id match
+      if (nodeId) {
+        for (const [k, c] of contributionsRef.current.entries()) {
+          if (toKey(k) === toKey(nodeId)) {
+            return (c.addedNodeIds.size > 0) || (c.addedLinkKeys.size > 0);
+          }
+        }
+      }
+      // Name match
+      if (nodeName) {
+        for (const [k, c] of contributionsRef.current.entries()) {
+          if (toKey(k) === toKey(nodeName)) {
+            return (c.addedNodeIds.size > 0) || (c.addedLinkKeys.size > 0);
+          }
+        }
+      }
+    }
+    // Fallback to set-based heuristic
     if (nodeId && expandedNodes.has(nodeId)) return true;
-    // Try case-insensitive against contributions keys
     for (const k of expandedNodes) {
       if (toKey(k) === toKey(nodeId)) return true;
     }
