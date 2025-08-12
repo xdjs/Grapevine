@@ -461,8 +461,32 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         return !(toRemove.has(s) || toRemove.has(t));
       });
       const remainingNodesHeuristic = fullNetworkData.nodes.filter(n => !toRemove.has(n.id));
-      setFullNetworkData({ nodes: remainingNodesHeuristic, links: remainingLinksHeuristic });
-      console.log(`[Shrink] Heuristic removed nodes=${Array.from(toRemove).join(', ')}`);
+      const nextDataHeuristic: NetworkData = { nodes: remainingNodesHeuristic, links: remainingLinksHeuristic };
+      setFullNetworkData(nextDataHeuristic);
+
+      // Update expanded bookkeeping so UI toggles back to Expand
+      setExpandedNodes(prev => {
+        const ns = new Set(prev);
+        if (nodeId) ns.delete(nodeId);
+        ns.delete(nodeName);
+        return ns;
+      });
+      // Remove any stale contribution entries matching this node by id/name (case-insensitive)
+      const idKey = (nodeId || '').toLowerCase();
+      const nameKey = (nodeName || '').toLowerCase();
+      for (const k of Array.from(contributionsRef.current.keys())) {
+        const kl = k.toLowerCase();
+        if (kl === idKey || kl === nameKey) contributionsRef.current.delete(k);
+      }
+
+      // If no expansions remain, exit expanded mode
+      if (contributionsRef.current.size === 0 && (Array.from(expandedNodes).length <= 1)) {
+        setIsExpandedMode(false);
+        setFullNetworkData(null);
+        baseGraphRef.current = null;
+      }
+
+      console.log(`[Shrink] Heuristic removed nodes=${Array.from(toRemove).join(', ')}; updated expanded state`);
       return;
     }
 
