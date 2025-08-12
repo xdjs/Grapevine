@@ -492,7 +492,15 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       const saved = JSON.parse(raw);
       const currentMain = mainArtistNode?.name || '';
       if (!saved || saved.main !== currentMain) return;
-      if (saved.fullNetworkData && saved.isExpandedMode) {
+      // Validate saved data before applying
+      const valid = saved.fullNetworkData &&
+        Array.isArray(saved.fullNetworkData.nodes) && saved.fullNetworkData.nodes.length > 0 &&
+        Array.isArray(saved.fullNetworkData.links) &&
+        Array.isArray(saved.expandedNodes) &&
+        // Saved expansion should be at least as large as initial graph
+        (Array.isArray(data?.nodes) ? saved.fullNetworkData.nodes.length >= data.nodes.length : true);
+      if (!valid) return;
+      if (saved.isExpandedMode) {
         setFullNetworkData(saved.fullNetworkData);
         setIsExpandedMode(true);
       }
@@ -513,7 +521,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         contributionsRef.current = map;
       }
     } catch {}
-  }, [mainArtistNode?.name]);
+  }, [mainArtistNode?.name, data?.nodes?.length]);
 
   return {
     // State
