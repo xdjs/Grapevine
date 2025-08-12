@@ -23,6 +23,7 @@ interface UseNetworkDataReturn {
   expandNodeNetwork: (nodeName: string, nodeId?: string) => Promise<void>;
   collapseNodeNetwork: (nodeName: string, nodeId?: string) => void;
   resetToFirstDegree: () => void;
+  isNodeExpanded: (nodeId?: string, nodeName?: string) => boolean;
 }
 
 export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataReturn {
@@ -494,6 +495,20 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
   const visibleNodes = useMemo(() => getVisibleNodes(), [getVisibleNodes]);
   const visibleLinks = useMemo(() => getVisibleLinks(), [getVisibleLinks]);
 
+  const isNodeExpanded = useCallback((nodeId?: string, nodeName?: string) => {
+    const toKey = (v?: string) => (v || '').toLowerCase();
+    if (nodeId && expandedNodes.has(nodeId)) return true;
+    // Try case-insensitive against contributions keys
+    for (const k of expandedNodes) {
+      if (toKey(k) === toKey(nodeId)) return true;
+    }
+    if (nodeName && expandedNodes.has(nodeName)) return true;
+    for (const k of expandedNodes) {
+      if (toKey(k) === toKey(nodeName)) return true;
+    }
+    return false;
+  }, [expandedNodes]);
+
   // Get the data to display (either filtered or full)
   const displayData = useMemo(() => {
     // If expanded state not in React yet, but a saved snapshot exists for this artist, prefer it
@@ -686,5 +701,6 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     expandNodeNetwork,
     collapseNodeNetwork,
     resetToFirstDegree,
+    isNodeExpanded,
   };
 } 
