@@ -144,6 +144,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const networkSearchInputRef = useRef<HTMLInputElement>(null);
+  const interactingWithDropdownRef = useRef(false);
   const viewportHeight = useViewportHeight();
   const spacing = useDynamicSpacing();
   
@@ -664,6 +665,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               }}
               onBlur={() => {
                 setTimeout(() => {
+                  if (interactingWithDropdownRef.current) return;
                   setIsSearchFocused(false);
                   setShowDropdown(false);
                 }, 150);
@@ -695,7 +697,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 e.currentTarget.style.backgroundColor = '#ffa2e3';
               }}
               disabled={isLoading}
-            >
+              >
               {isLoading ? (
                 <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
@@ -707,6 +709,8 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
             {(showDropdown || isLoadingOptions) && !showNetworkView && (
               <div 
                 ref={dropdownRef}
+                onMouseDown={() => { interactingWithDropdownRef.current = true; }}
+                onMouseUp={() => { setTimeout(() => { interactingWithDropdownRef.current = false; }, 0); }}
                 className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll dropdown-height-constraint"
                 style={{ 
                   maxHeight: '95px !important', // Height to align with red line position - forced
@@ -883,6 +887,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                 }}
                 onBlur={() => {
                   setTimeout(() => {
+                    if (interactingWithDropdownRef.current) return;
                     setIsSearchFocused(false);
                     setShowDropdown(false);
                   }, 150);
@@ -931,7 +936,11 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                     bottom: 'auto'
                   }}
                 >
-                  <div className="p-1">
+                  <div
+                    className="p-1"
+                    onMouseDown={() => { interactingWithDropdownRef.current = true; }}
+                    onMouseUp={() => { setTimeout(() => { interactingWithDropdownRef.current = false; }, 0); }}
+                  >
                     {isLoadingOptions && (
                       <div className="flex items-center justify-center py-2">
                         <div className="w-3 h-3 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mr-2" />
