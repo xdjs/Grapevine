@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import { NetworkData, NetworkNode, NetworkLink } from '@/types/network';
 
 interface UseNetworkDataProps {
@@ -484,8 +484,8 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     } catch {}
   }, [isExpandedMode, fullNetworkData, expandedNodes, mainArtistNode?.name]);
 
-  // Rehydrate on mount if same main artist
-  useEffect(() => {
+  // Rehydrate on mount if same main artist (sync before first paint to avoid flicker/reset)
+  useLayoutEffect(() => {
     try {
       const raw = sessionStorage.getItem(PERSIST_KEY);
       if (!raw) return;
