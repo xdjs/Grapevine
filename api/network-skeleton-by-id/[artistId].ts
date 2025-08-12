@@ -1,4 +1,4 @@
-// Replace file content with a fast, cache-first skeleton (no OpenAI)
+// Replace file content with a fast, cache-first skeleton (no OpenA
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 interface NetworkNode { id: string; name: string; size: number; artistId?: string | null }

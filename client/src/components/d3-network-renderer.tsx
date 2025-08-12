@@ -52,6 +52,8 @@ export default function D3NetworkRenderer({
   
   // Track which node IDs we've already batch-preloaded to avoid re-preloading on small expansions
   const preloadedNodeIdsRef = useRef<Set<string>>(new Set());
+  // Persist node positions across renders to prevent drifting and layout resets
+  const previousPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
 
   // Use filter visibility management hook
   const { isNodeVisible } = useFilterVisibility({
@@ -184,12 +186,17 @@ export default function D3NetworkRenderer({
           .forceLink<NetworkNode, NetworkLink>(links)
           .id((d) => d.id)
           .distance(80)
+          .strength(0.6)
       )
-      .force("charge", d3.forceManyBody().strength(-150))
+      .force("charge", d3.forceManyBody().strength(-90))
       .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
       .force("boundary", boundaryForce)
-      .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtist ? 0.1 : 0))
-      .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtist ? 0.1 : 0));
+      // Gently pull all nodes toward center to avoid the graph drifting apart over time
+      .force("centerXAll", d3.forceX(width / 2).strength(0.02))
+      .force("centerYAll", d3.forceY(height / 2).strength(0.02))
+      // Stronger centering for the main artist to keep it near the middle
+      .force("centerX", d3.forceX(width / 2).strength((d) => (d === mainArtist ? 0.12 : 0)))
+      .force("centerY", d3.forceY(height / 2).strength((d) => (d === mainArtist ? 0.12 : 0)));
   };
 
   /**
@@ -1073,8 +1080,18 @@ export default function D3NetworkRenderer({
     // Find connected components for cluster positioning
     const components = findConnectedComponents(data.nodes, validLinks);
     
-    // Position components in a grid layout to prevent overlap
+    // Position components in a grid layout to prevent overlap.
+    // Preserve previous positions to reduce jitter/drift across updates.
     positionComponents(components, width, height, mainArtistNode);
+    data.nodes.forEach((node) => {
+      const prev = previousPositionsRef.current.get(node.id);
+      if (prev && typeof prev.x === 'number' && typeof prev.y === 'number') {
+        node.x = prev.x;
+        node.y = prev.y;
+        (node as any).vx = 0;
+        (node as any).vy = 0;
+      }
+    });
 
     // Create and configure D3 simulation
     const simulation = createSimulation(data.nodes, validLinks, width, height, mainArtistNode);
@@ -1119,6 +1136,13 @@ export default function D3NetworkRenderer({
 
     // Enhanced cleanup function with comprehensive memory optimization
     return () => {
+      // Save positions for next render to keep layout stable
+      previousPositionsRef.current.clear();
+      data.nodes.forEach((n) => {
+        if (typeof n.x === 'number' && typeof n.y === 'number') {
+          previousPositionsRef.current.set(n.id, { x: n.x, y: n.y });
+        }
+      });
       simulation.stop();
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
