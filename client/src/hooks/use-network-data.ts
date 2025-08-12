@@ -523,28 +523,19 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     } catch {}
   }, [mainArtistNode?.name, data?.nodes?.length]);
 
-  // If incoming data changes to a different main artist, clear expansion state to avoid stale blank view
+  // Only clear expansions when the main artist actually changes (not on visibility/tab switches)
+  const prevMainRef = useRef<string | null>(null);
   useEffect(() => {
-    // When base data updates and there is no persisted match, ensure we are in non-expanded mode
-    if (!mainArtistNode) return;
-    try {
-      const raw = sessionStorage.getItem(PERSIST_KEY);
-      const saved = raw ? JSON.parse(raw) : null;
-      const currentMain = mainArtistNode.name;
-      if (!saved || saved.main !== currentMain) {
-        setFullNetworkData(null);
-        setIsExpandedMode(false);
-        setExpandedNodes(new Set());
-        contributionsRef.current.clear();
-        baseGraphRef.current = null;
-      }
-    } catch {
+    const currentMain = mainArtistNode?.name || null;
+    if (currentMain && prevMainRef.current && prevMainRef.current !== currentMain) {
       setFullNetworkData(null);
       setIsExpandedMode(false);
       setExpandedNodes(new Set());
       contributionsRef.current.clear();
       baseGraphRef.current = null;
+      try { sessionStorage.removeItem(PERSIST_KEY); } catch {}
     }
+    prevMainRef.current = currentMain;
   }, [mainArtistNode?.name]);
 
   return {
