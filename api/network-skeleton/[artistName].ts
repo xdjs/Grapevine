@@ -210,7 +210,7 @@ Rules:
           // keep empty collaborators on parse failure
         }
       } catch {
-        // OpenAI error → degrade to single-node
+        // OpenAI error → degrade to single-node (no 500)
         const mainNode: NetworkNodeSkeleton = {
           id: correctArtistName,
           name: correctArtistName,

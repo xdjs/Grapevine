@@ -217,7 +217,9 @@ Guidelines:
 - Be confident about well-documented collaborations for commercially successful artists
 - Focus on collaborations from official album/song credits, not rumors or speculation`;
 
-      const completion = await openai.chat.completions.create({
+      let completion: any;
+      try {
+        completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
@@ -231,7 +233,21 @@ Guidelines:
         ],
         temperature: 0.1,
         max_tokens: 2000,
-      });
+        });
+      } catch (e) {
+        // On OpenAI failure, return single-node network
+        const mainNode = {
+          id: correctArtistName,
+          name: correctArtistName,
+          type: 'artist',
+          types: ['artist'],
+          color: '#FF69B4',
+          size: 30,
+          artistId: artistMatch.id
+        };
+        await client.end();
+        return res.json({ nodes: [mainNode], links: [] });
+      }
 
       let collaborationData: CollaborationData;
       try {
@@ -273,16 +289,17 @@ Guidelines:
         }
         console.log(`✅ [Vercel] Parsed collaboration data with ${collaborationData.collaborators?.length || collaborationData.artists?.length || 0} collaborators`);
       } catch (parseError) {
-        console.error('❌ [Vercel] Failed to parse OpenAI response:', parseError);
-        console.error('❌ [Vercel] Raw OpenAI content:', completion.choices[0]?.message?.content);
+        const mainNode = {
+          id: correctArtistName,
+          name: correctArtistName,
+          type: 'artist',
+          types: ['artist'],
+          color: '#FF69B4',
+          size: 30,
+          artistId: artistMatch.id
+        };
         await client.end();
-        return res.status(503).json({ 
-          error: 'Failed to parse OpenAI response',
-          message: 'OpenAI returned invalid JSON format',
-          artist: artistName,
-          parseError: parseError instanceof Error ? parseError.message : 'Unknown parse error',
-          timestamp: new Date().toISOString()
-        });
+        return res.json({ nodes: [mainNode], links: [] });
       }
 
       // Staged rendering mode: return skeleton immediately (no roles, no images)

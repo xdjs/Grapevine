@@ -165,8 +165,10 @@ Requirements:
 - Be confident about well-documented collaborations for commercially successful artists
 - Focus on collaborations from official album/song credits, not rumors or speculation`;
 
-      const completion = await Promise.race([
-        openai.chat.completions.create({
+      let completion: any;
+      try {
+        completion = await Promise.race([
+          openai.chat.completions.create({
           model: "gpt-4o",
           messages: [
             {
@@ -180,9 +182,23 @@ Requirements:
           ],
           temperature: 0.1,
           max_tokens: 900,
-        }) as Promise<any>,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('OpenAI timeout')), 7000)),
-      ]);
+          }) as Promise<any>,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('OpenAI timeout')), 7000)),
+        ]);
+      } catch (e) {
+        // Graceful fallback: return single-node network to avoid 500s
+        const mainNode = {
+          id: artist.name,
+          name: artist.name,
+          type: 'artist',
+          types: ['artist'],
+          color: '#FF69B4',
+          size: 30,
+          artistId: artist.id,
+        };
+        await client.end();
+        return res.json({ nodes: [mainNode], links: [] });
+      }
 
       let collaborationData: CollaborationData;
       try {
@@ -224,16 +240,18 @@ Requirements:
         }
         console.log(`✅ [Vercel] Parsed collaboration data with ${collaborationData.artists?.length || 0} artists`);
       } catch (parseError) {
-        console.error('❌ [Vercel] Failed to parse OpenAI response:', parseError);
-        console.error('❌ [Vercel] Raw OpenAI content:', completion.choices[0]?.message?.content);
+        // Fallback to single-node network instead of 503
+        const mainNode = {
+          id: artist.name,
+          name: artist.name,
+          type: 'artist',
+          types: ['artist'],
+          color: '#FF69B4',
+          size: 30,
+          artistId: artist.id,
+        };
         await client.end();
-        return res.status(503).json({ 
-          error: 'Failed to parse OpenAI response',
-          message: 'OpenAI returned invalid JSON format',
-          artistId: artistId,
-          parseError: parseError instanceof Error ? parseError.message : 'Unknown parse error',
-          timestamp: new Date().toISOString()
-        });
+        return res.json({ nodes: [mainNode], links: [] });
       }
 
       // Build network data structure with multi-role consolidation
