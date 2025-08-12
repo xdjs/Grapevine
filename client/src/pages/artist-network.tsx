@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft } from "lucide-react";
 
 import { NetworkData, NetworkNode, FilterState } from "@/types/network";
-import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
+import { fetchNetworkData, fetchNetworkDataById, fetchSkeletonById, fetchSkeletonByName, fetchRoles } from "@/lib/network-data";
+import { useProfilePictures } from "@/hooks/use-profile-pictures";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function ArtistNetwork() {
@@ -29,6 +30,7 @@ export default function ArtistNetwork() {
   const triggerSearchRef = useRef<((artistName: string) => void) | null>(null);
   const saveToHistoryRef = useRef<((artistName: string, artistId: string | null) => void) | null>(null);
   const isMobile = useIsMobile();
+  const { updateNodesWithImages } = useProfilePictures({ autoFetch: true, useCache: true, batchSize: 25 });
 
   const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
     setNetworkData(data);
@@ -36,6 +38,22 @@ export default function ArtistNetwork() {
     const finalArtistId = artistId || data.nodes.find(node => node.size === 30)?.artistId || null;
     setCurrentArtistId(finalArtistId);
   }, []);
+
+  // Hydrate a skeleton graph with images and roles in parallel
+  const hydrateSkeleton = useCallback(async (base: NetworkData): Promise<NetworkData> => {
+    const names = base.nodes.map(n => n.name);
+    const [withImages, roleMap] = await Promise.all([
+      updateNodesWithImages(base.nodes),
+      fetchRoles(names)
+    ]);
+    const colored = withImages.map(n => {
+      const types = roleMap[n.name] ?? n.types ?? (n.type ? [n.type] : ['artist']);
+      const type = types[0];
+      const color = types.includes('producer') ? '#8A2BE2' : (types.includes('artist') ? '#FF69B4' : '#00CED1');
+      return { ...n, types, type, color } as NetworkNode;
+    });
+    return { nodes: colored, links: base.links };
+  }, [updateNodesWithImages]);
 
   // Navigate back to home
   const handleGoHome = () => {
@@ -80,24 +98,40 @@ export default function ArtistNetwork() {
     setCurrentArtistName(artistName);
     
     try {
-      // Use artist ID if available, otherwise fall back to name
-      const data = artistId 
-        ? await fetchNetworkDataById(artistId)
-        : await fetchNetworkData(artistName.trim());
-      
-      // Handle the response (might be network data or no-collaborators response)
-      if (data && 'nodes' in data) {
-        // Normal network data - pass to parent
-        const mainArtist = data.nodes.find((node: NetworkNode) => node.size === 30 && node.type === 'artist');
-        const finalArtistId = mainArtist?.artistId || mainArtist?.id || artistId;
+      // Fetch skeleton first for faster first paint
+      const skeleton = artistId
+        ? await fetchSkeletonById(artistId)
+        : await fetchSkeletonByName(artistName.trim());
 
-        handleNetworkData(data, finalArtistId);
-        // Save to search history
-        if (saveToHistoryRef.current) {
-          saveToHistoryRef.current(artistName, finalArtistId || null);
+      if (skeleton && skeleton.nodes?.length) {
+        setNetworkData(skeleton);
+
+        // Hydrate in background
+        hydrateSkeleton(skeleton).then(enriched => {
+          setNetworkData(prev => {
+            // Avoid flashing if user navigated away
+            if (!prev) return enriched;
+            return enriched;
+          });
+        }).catch(() => {});
+
+        // Also kick off full data fetch to expand beyond first degree when ready
+        const fullData = artistId
+          ? await fetchNetworkDataById(artistId)
+          : await fetchNetworkData(artistName.trim());
+
+        if (fullData && 'nodes' in fullData) {
+          
+          const mainArtist = fullData.nodes.find((node: NetworkNode) => node.size === 30 && node.type === 'artist');
+          const finalArtistId = mainArtist?.artistId || mainArtist?.id || artistId;
+
+          handleNetworkData(fullData, finalArtistId);
+          if (saveToHistoryRef.current) {
+            saveToHistoryRef.current(artistName, finalArtistId || null);
+          }
         }
-
       } else {
+        // Normal network data - pass to parent
         // Handle no collaborators response
         console.warn(`No network data found for ${artistName}`);
         // You might want to show a message or handle this case differently

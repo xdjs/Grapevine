@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
+import { fetchNetworkData, fetchNetworkDataById, fetchSkeletonById, fetchSkeletonByName, fetchRoles } from "@/lib/network-data";
+import { useProfilePictures } from "@/hooks/use-profile-pictures";
 import { NetworkData, SearchHistoryEntry, NetworkResponse, NoCollaboratorsResponse } from "@/types/network";
 import NoCollaboratorsPopup from "@/components/no-collaborators-popup";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -128,6 +129,22 @@ const useDynamicSpacing = () => {
 };
 
 function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadingChange, onSearchFunction, onClearAll, onHistorySave }: SearchInterfaceProps) {
+  const { updateNodesWithImages } = useProfilePictures({ autoFetch: true, useCache: true, batchSize: 25 });
+
+  const hydrateSkeleton = useCallback(async (base: NetworkData) => {
+    const names = base.nodes.map(n => n.name);
+    const [withImages, roleMap] = await Promise.all([
+      updateNodesWithImages(base.nodes),
+      fetchRoles(names)
+    ]);
+    const colored = withImages.map(n => {
+      const types = roleMap[n.name] ?? n.types ?? (n.type ? [n.type] : ['artist']);
+      const type = types[0];
+      const color = types.includes('producer') ? '#8A2BE2' : (types.includes('artist') ? '#FF69B4' : '#00CED1');
+      return { ...n, types, type, color } as any;
+    });
+    return { nodes: colored, links: base.links } as NetworkData;
+  }, [updateNodesWithImages]);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentSearch, setCurrentSearch] = useState("");
   const [artistOptions, setArtistOptions] = useState<ArtistOption[]>([]);
@@ -357,8 +374,19 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       setIsLoading(true);
       onLoadingChange?.(true, artist.name);
       
-      // Use artist ID if available, otherwise fall back to name
-      const data = artist.artistId 
+      // Stage 1: skeleton for fast paint
+      const skeleton = artist.artistId
+        ? await fetchSkeletonById(artist.artistId)
+        : await fetchSkeletonByName(artist.name.trim());
+
+      if (skeleton?.nodes?.length) {
+        onNetworkData(skeleton, artist.artistId || artist.id);
+        // Hydrate asynchronously
+        hydrateSkeleton(skeleton).then(enriched => onNetworkData(enriched, artist.artistId || artist.id)).catch(() => {});
+      }
+
+      // Stage 2: full network
+      const data = artist.artistId
         ? await fetchNetworkDataById(artist.artistId)
         : await fetchNetworkData(artist.name.trim());
       
@@ -408,6 +436,14 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       setIsLoading(true);
       onLoadingChange?.(true, searchQuery.trim());
       
+      const skeleton = await fetchSkeletonByName(searchQuery.trim());
+
+      if (skeleton?.nodes?.length) {
+        const main = skeleton.nodes.find(n => n.size === 30);
+        onNetworkData(skeleton, (main as any)?.artistId || (main as any)?.id);
+        hydrateSkeleton(skeleton).then(enriched => onNetworkData(enriched, (main as any)?.artistId || (main as any)?.id)).catch(() => {});
+      }
+
       const data = await fetchNetworkData(searchQuery.trim());
       
       // Handle the response (might be network data or no-collaborators response)
@@ -468,6 +504,15 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
       onLoadingChange?.(true, historyEntry.artistName);
       
       // Use artist ID if available, otherwise fall back to name
+      const skeleton = historyEntry.artistId
+        ? await fetchSkeletonById(historyEntry.artistId)
+        : await fetchSkeletonByName(historyEntry.artistName);
+
+      if (skeleton?.nodes?.length) {
+        onNetworkData(skeleton, historyEntry.artistId || null);
+        hydrateSkeleton(skeleton).then(enriched => onNetworkData(enriched, historyEntry.artistId || null)).catch(() => {});
+      }
+
       const data = historyEntry.artistId 
         ? await fetchNetworkDataById(historyEntry.artistId)
         : await fetchNetworkData(historyEntry.artistName);
@@ -540,6 +585,14 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
           setIsLoading(true);
           onLoadingChange?.(true, artistName.trim());
           
+          const skeleton = await fetchSkeletonByName(artistName.trim());
+
+          if (skeleton?.nodes?.length) {
+            const main = skeleton.nodes.find(n => n.size === 30);
+            onNetworkData(skeleton, (main as any)?.artistId || (main as any)?.id);
+            hydrateSkeleton(skeleton).then(enriched => onNetworkData(enriched, (main as any)?.artistId || (main as any)?.id)).catch(() => {});
+          }
+
           const data = await fetchNetworkData(artistName.trim());
           
           // Handle the response (might be network data or no-collaborators response)
