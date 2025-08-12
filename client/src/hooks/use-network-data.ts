@@ -35,6 +35,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
   // Track per-node contributions so we can surgically remove them later
   type Contribution = { addedNodeIds: Set<string>; addedLinkKeys: Set<string> };
   const contributionsRef = useRef<Map<string, Contribution>>(new Map());
+  const PERSIST_KEY = 'gv_expanded_state_v1';
 
   // Verbose logging toggle (set window.__GRAPEVINE_DEBUG__ = true in console to enable)
   const isVerbose = typeof window !== 'undefined' && (window as any).__GRAPEVINE_DEBUG__ === true;
@@ -462,6 +463,57 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     // When in expanded mode, show all nodes from the full network data
     return isExpandedMode && fullNetworkData ? fullNetworkData : baseData;
   }, [fullNetworkData, visibleNodes, visibleLinks, isExpandedMode]);
+
+  // Persist expanded state to sessionStorage to survive tab switches/remounts
+  useEffect(() => {
+    try {
+      const mainName = mainArtistNode?.name || '';
+      const payload = {
+        main: mainName,
+        isExpandedMode,
+        fullNetworkData,
+        expandedNodes: Array.from(expandedNodes),
+        baseGraph: baseGraphRef.current,
+        contributions: Array.from(contributionsRef.current.entries()).map(([k, v]) => ({
+          key: k,
+          addedNodeIds: Array.from(v.addedNodeIds),
+          addedLinkKeys: Array.from(v.addedLinkKeys),
+        })),
+      };
+      sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
+    } catch {}
+  }, [isExpandedMode, fullNetworkData, expandedNodes, mainArtistNode?.name]);
+
+  // Rehydrate on mount if same main artist
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(PERSIST_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      const currentMain = mainArtistNode?.name || '';
+      if (!saved || saved.main !== currentMain) return;
+      if (saved.fullNetworkData && saved.isExpandedMode) {
+        setFullNetworkData(saved.fullNetworkData);
+        setIsExpandedMode(true);
+      }
+      if (Array.isArray(saved.expandedNodes)) {
+        setExpandedNodes(new Set<string>(saved.expandedNodes));
+      }
+      if (saved.baseGraph) {
+        baseGraphRef.current = saved.baseGraph;
+      }
+      if (Array.isArray(saved.contributions)) {
+        const map = new Map<string, Contribution>();
+        for (const c of saved.contributions) {
+          map.set(String(c.key), {
+            addedNodeIds: new Set<string>(c.addedNodeIds || []),
+            addedLinkKeys: new Set<string>(c.addedLinkKeys || []),
+          });
+        }
+        contributionsRef.current = map;
+      }
+    } catch {}
+  }, [mainArtistNode?.name]);
 
   return {
     // State
