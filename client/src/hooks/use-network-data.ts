@@ -400,8 +400,16 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     const toKey = (v?: string) => (v || '').toLowerCase();
     // Find the contribution key (canonical id) for this node
     let keyToRemove: string | undefined;
-    if (nodeId && contributionsRef.current.has(nodeId)) {
-      keyToRemove = nodeId;
+    if (nodeId) {
+      // Prefer id match; also try case-insensitive match if keys differ by case
+      const direct = contributionsRef.current.has(nodeId) ? nodeId : undefined;
+      if (!direct) {
+        for (const k of contributionsRef.current.keys()) {
+          if (toKey(k) === toKey(nodeId)) { keyToRemove = k; break; }
+        }
+      } else {
+        keyToRemove = direct;
+      }
     } else {
       // Match by name against keys
       for (const k of contributionsRef.current.keys()) {

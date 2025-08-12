@@ -450,7 +450,8 @@ export default function NetworkVisualizer({
                 try {
                   const nodeId = tooltip.currentNode?.id;
                   if (!nodeId) return false;
-                  return expandedNodes.has(nodeId);
+                  const nodeName = tooltip.currentNode?.name || '';
+                  return expandedNodes.has(nodeId) || expandedNodes.has(nodeName);
                 } catch (error) {
                   handleError(error as Error, 'tooltip isExpanded calculation');
                   return false;
@@ -474,7 +475,8 @@ export default function NetworkVisualizer({
               onExpandAction={tooltip.handleExpandAction}
               onShrinkAction={(node) => {
                 try {
-                  collapseNodeNetwork(node.name, node.artistId || undefined);
+                  // Use node.id for precise match with contributions keys; name fallback handled inside
+                  collapseNodeNetwork(node.name, node.id || undefined);
                   tooltip.hideTooltip();
                 } catch (error) {
                   handleError(error as Error, 'shrink network');
