@@ -143,8 +143,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Use the correct artist name from database (with proper capitalization)
       const correctArtistName = artistMatch.name;
       
-      // Skip cache and force fresh generation for all artists with data-only approach
-      console.log(`🔄 [Vercel] Skipping cache and forcing fresh generation for ${artistName} with data-only approach`);
+      // Check for cached full network and return immediately if present
+      try {
+        const cacheCheck = await client.query('SELECT webmapdata FROM artists WHERE LOWER(name) = LOWER($1)', [correctArtistName]);
+        const cached = cacheCheck.rows?.[0]?.webmapdata || null;
+        if (cached && Array.isArray(cached.nodes) && cached.nodes.length > 0) {
+          const response = {
+            ...cached,
+            _metadata: {
+              profilePicturesAPI: '/api/artist-profile-pictures-batch',
+              profilePicturesNote: 'Profile pictures should be fetched separately using the batch API for better performance'
+            }
+          };
+          await client.end();
+          return res.json(response);
+        }
+      } catch (cacheErr) {
+        console.warn('⚠️ [Vercel] Cache lookup failed, proceeding with generation:', cacheErr);
+      }
       
       // If no cached data and no OpenAI key, return error
       if (!OPENAI_API_KEY) {
@@ -696,7 +712,7 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
               console.log(`⚠️ [Vercel] Role detection failed for "${branchingArtist}", using default`);
             }
 
-            const branchNode = {
+            const branchNode: NetworkNode = {
               id: branchingArtist,
               name: branchingArtist,
               type: branchingRoles[0],
