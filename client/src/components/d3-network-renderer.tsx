@@ -58,6 +58,21 @@ export default function D3NetworkRenderer({
   // Track which node IDs we've already batch-preloaded to avoid re-preloading on small expansions
   const preloadedNodeIdsRef = useRef<Set<string>>(new Set());
 
+  // Timing helper to log granular render milestones
+  const pushTimingStep = (label: string) => {
+    try {
+      const ts = new Date().toISOString();
+      const win: any = typeof window !== 'undefined' ? window : {};
+      const steps: Array<{ step: string; ts: string; deltaMs: number }> = win.__GV_TIMING_STEPS || [];
+      const prevTs = steps.length > 0 ? steps[steps.length - 1].ts : undefined;
+      const deltaMs = prevTs ? (new Date(ts).getTime() - new Date(prevTs).getTime()) : 0;
+      const entry = { step: label, ts, deltaMs };
+      steps.push(entry);
+      win.__GV_TIMING_STEPS = steps;
+      if (console.table) console.table([entry]); else console.log('[Grapevine Timings]', entry);
+    } catch {}
+  };
+
   // Use filter visibility management hook
   const { isNodeVisible } = useFilterVisibility({
     svgRef,
@@ -1008,8 +1023,10 @@ export default function D3NetworkRenderer({
   useEffect(() => {
     if (!svgRef.current || !data || !visible) return;
 
+    pushTimingStep('D3 render start');
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
+    pushTimingStep('Measured container');
     
     // Use container dimensions instead of window dimensions to avoid browser UI areas
     const width = container ? container.clientWidth : window.innerWidth;
@@ -1017,6 +1034,7 @@ export default function D3NetworkRenderer({
 
     // Clear existing content
     svg.selectAll("*").remove();
+    pushTimingStep('SVG cleared');
 
     // Filter out links where either node doesn't exist or is isolated
     const nodeSet = new Set(data.nodes.map(n => n.id));
@@ -1026,6 +1044,7 @@ export default function D3NetworkRenderer({
       return nodeSet.has(sourceId) && nodeSet.has(targetId);
     });
     // Do NOT override with data.links; when validLinks is empty, render no links.
+    pushTimingStep('Prepared data');
 
     // Start optimized batch preloading of profile pictures
     // Only preload for nodes we haven't already batch-preloaded in this session
@@ -1047,6 +1066,7 @@ export default function D3NetworkRenderer({
       ImageLoadingManager.batchPreloadImages(imagesToLoad).then(() => {
         console.log(`✅ [D3Renderer] Optimized batch preload complete`);
         console.log(`📊 [D3Renderer] Performance stats after loading:`, ImageLoadingManager.getPerformanceStats());
+        pushTimingStep('Image batch preload complete');
         // Mark these nodes as preloaded to prevent future batch preloads for the same set
         for (const { node } of imagesToLoad) {
           preloadedNodeIdsRef.current.add(node.id);
@@ -1058,9 +1078,11 @@ export default function D3NetworkRenderer({
 
     // Create network group
     const networkGroup = svg.append("g").attr("class", "network-group");
+    pushTimingStep('Created network group');
 
     // Setup zoom behavior using the zoom hook
     zoom.setupZoomBehavior(networkGroup);
+    pushTimingStep('Zoom setup complete');
 
     // Add background click handler to hide tooltip and reset highlighting
     svg.on("click", function(event) {
@@ -1069,16 +1091,20 @@ export default function D3NetworkRenderer({
         tooltip.hideTooltip();
       }
     });
+    pushTimingStep('Background handler attached');
 
     // Find connected components for cluster positioning
     const components = findConnectedComponents(data.nodes, validLinks);
+    pushTimingStep('Found connected components');
     
     // Position components in a grid layout to prevent overlap
     positionComponents(components, width, height, mainArtistNode);
+    pushTimingStep('Positioned components');
 
     // Create and configure D3 simulation
     const simulation = createSimulation(data.nodes, validLinks, width, height, mainArtistNode);
     simulationRef.current = simulation;
+    pushTimingStep('Created simulation');
 
     // Add resize listener to handle orientation changes
     const handleResize = () => {
@@ -1098,13 +1124,19 @@ export default function D3NetworkRenderer({
 
     window.addEventListener('resize', handleResize);
     window.addEventListener('orientationchange', handleResize);
+    pushTimingStep('Resize handlers attached');
 
     // Render visualization elements
     const linkElements = renderLinks(networkGroup, validLinks);
+    pushTimingStep('Links rendered');
     const nodeElements = renderNodes(networkGroup, data.nodes);
+    pushTimingStep('Nodes rendered');
     const labelElements = renderLabels(networkGroup, data.nodes);
+    pushTimingStep('Labels rendered');
 
     // Update positions on tick
+    let firstTickLogged = false;
+    let stableLogged = false;
     simulation.on("tick", () => {
       linkElements
         .attr("x1", (d) => (d.source as NetworkNode).x!)
@@ -1115,6 +1147,14 @@ export default function D3NetworkRenderer({
       nodeElements.attr("transform", (d) => `translate(${d.x!}, ${d.y!})`);
 
       labelElements.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
+      if (!firstTickLogged) {
+        pushTimingStep('Simulation first tick');
+        firstTickLogged = true;
+      }
+      if (!stableLogged && simulation.alpha() < 0.05) {
+        pushTimingStep('Map layout stabilized');
+        stableLogged = true;
+      }
     });
 
     // Enhanced cleanup function with comprehensive memory optimization
