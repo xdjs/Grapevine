@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { NetworkNode } from '@/types/network';
 
 interface ProfilePictureResult {
@@ -9,13 +9,7 @@ interface ProfilePictureResult {
   error?: string;
 }
 
-interface ProfilePictureBatchResponse {
-  results: ProfilePictureResult[];
-  totalRequested: number;
-  totalFound: number;
-  totalCached: number;
-  processingTimeMs: number;
-}
+// No longer using batch endpoint; we aggregate per-artist results into stats
 
 interface UseProfilePicturesOptions {
   /** Whether to automatically fetch images for nodes that don't have them */
@@ -58,6 +52,8 @@ export function useProfilePictures(options: UseProfilePicturesOptions = {}): Use
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<UseProfilePicturesReturn['stats']>(null);
+  // Track which artist names we've already retried once to avoid infinite retries across calls
+  const retriedOnceRef = useRef<Set<string>>(new Set());
 
   /**
    * Fetch profile pictures for a batch of artists
@@ -84,60 +80,82 @@ export function useProfilePictures(options: UseProfilePicturesOptions = {}): Use
 
       console.log(`🖼️ [ProfilePictures] Fetching images for ${artistNames.length} artists`);
 
-      // Process in batches to avoid overwhelming the API
+      // Per-artist retrieval (no batch). Sequential with one retry per artist.
       const imageMap = new Map<string, string>();
-      let totalStats = {
-        totalRequested: 0,
+      const startAll = Date.now();
+      const totals = {
+        totalRequested: artistNames.length,
         totalFound: 0,
         totalCached: 0,
-        processingTimeMs: 0
+        processingTimeMs: 0,
       };
 
-      for (let i = 0; i < artistNames.length; i += batchSize) {
-        const batch = artistNames.slice(i, i + batchSize);
-        
-        console.log(`🖼️ [ProfilePictures] Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(artistNames.length/batchSize)}`);
+      for (const artistName of artistNames) {
+        const urlBase = `/api/artist-profile-pictures/${encodeURIComponent(artistName)}`;
+        const refreshParam = useCache ? '' : '&refresh=true';
+        const url = `${urlBase}?size=medium${refreshParam}`;
 
-        const response = await fetch('/api/artist-profile-pictures-batch', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            artistNames: batch,
-            useCache
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data: ProfilePictureBatchResponse = await response.json();
-        
-        // Update running totals
-        totalStats.totalRequested += data.totalRequested;
-        totalStats.totalFound += data.totalFound;
-        totalStats.totalCached += data.totalCached;
-        totalStats.processingTimeMs += data.processingTimeMs;
-
-        // Process results
-        data.results.forEach(result => {
-          if (result.imageUrl) {
-            imageMap.set(result.artistName, result.imageUrl);
+        const attemptFetch = async (): Promise<ProfilePictureResult | null> => {
+          const resp = await fetch(url, { method: 'GET' });
+          // Best-effort parse JSON for richer error context
+          if (!resp.ok) {
+            let reason = '';
+            try {
+              const j = await resp.json();
+              reason = j?.reason ? ` - ${j.reason}` : '';
+            } catch {}
+            throw new Error(`HTTP ${resp.status}: ${resp.statusText}${reason}`);
           }
-        });
+          const data = await resp.json();
+          if (!data || data.available === false || !data.imageUrl) {
+            if (data?.reason) {
+              console.warn(`⚠️ [ProfilePictures] No image for ${artistName}: ${data.reason}`);
+            }
+            return null;
+          }
+          return {
+            artistName,
+            imageUrl: data.imageUrl as string,
+            spotifyId: data.spotifyId ?? null,
+            cached: Boolean(data.fromCache),
+          };
+        };
 
-        // Add delay between batches to be respectful to the API
-        if (i + batchSize < artistNames.length) {
-          await new Promise(resolve => setTimeout(resolve, 200));
+        const perStart = Date.now();
+        try {
+          // First attempt
+          let result = await attemptFetch();
+          if (!result && !retriedOnceRef.current.has(artistName)) {
+            retriedOnceRef.current.add(artistName);
+            console.log(`🔁 [ProfilePictures] Retrying once for ${artistName}`);
+            try {
+              result = await attemptFetch();
+            } catch (retryError) {
+              // Swallow retry error, continue to next artist
+            }
+          }
+
+          if (result && result.imageUrl) {
+            imageMap.set(artistName, result.imageUrl);
+            totals.totalFound += 1;
+            if (result.cached) totals.totalCached += 1;
+          }
+        } catch (err) {
+          // Log and continue; do not set global error for partial failures
+          console.warn(`⚠️ [ProfilePictures] Failed to fetch image for ${artistName}:`, err);
+        } finally {
+          totals.processingTimeMs += (Date.now() - perStart);
         }
       }
 
-      setStats(totalStats);
-      
-      console.log(`✅ [ProfilePictures] Batch fetch complete: ${totalStats.totalFound}/${totalStats.totalRequested} images found, ${totalStats.totalCached} from cache`);
-      
+      // Use wall clock time as an approximation too
+      const totalElapsed = Date.now() - startAll;
+      if (totals.processingTimeMs < totalElapsed) {
+        totals.processingTimeMs = totalElapsed;
+      }
+
+      setStats(totals);
+      console.log(`✅ [ProfilePictures] Per-artist fetch complete: ${totals.totalFound}/${totals.totalRequested} images found, ${totals.totalCached} from cache`);
       return imageMap;
 
     } catch (err) {
