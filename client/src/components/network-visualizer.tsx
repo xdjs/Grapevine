@@ -121,33 +121,41 @@ export default function NetworkVisualizer({
     batchSize: 20
   });
 
-  // Local render state that can be updated with fetched image URLs immediately
-  const [renderData, setRenderData] = useState<NetworkData>(data);
+  // Maintain a local, image-augmented copy of the display data so images appear ASAP
+  const [imageAugmentedData, setImageAugmentedData] = useState<NetworkData>(data);
 
-  // Keep local render data in sync with upstream computed display data
+  // Trigger batch image fetch almost immediately when display data becomes available/changes
   useEffect(() => {
-    setRenderData(finalDisplayData);
-  }, [finalDisplayData]);
-
-  // As soon as display data is ready, kick off an immediate image fetch and update nodes
-  useEffect(() => {
-    let cancelled = false;
+    let isCancelled = false;
     const run = async () => {
       try {
-        if (!finalDisplayData?.nodes?.length) return;
-        const updatedNodes = await profilePictures.updateNodesWithImages(finalDisplayData.nodes);
-        if (!cancelled) {
-          setRenderData({ ...finalDisplayData, nodes: updatedNodes });
+        // Guard: wait until initial init/rehydration are done and nodes exist
+        if (!rehydrateReady || isInitializing || !finalDisplayData?.nodes?.length) return;
+
+        // Start from current display data
+        const baseNodes = finalDisplayData.nodes;
+        const baseLinks = finalDisplayData.links;
+
+        // Kick off batch fetch; hook filters nodes that already have images
+        const updatedNodes = await profilePictures.updateNodesWithImages(baseNodes);
+        if (isCancelled) return;
+
+        // Only update if something actually changed
+        const changed = updatedNodes.some((n, i) => n.imageUrl !== baseNodes[i]?.imageUrl);
+        if (changed) {
+          setImageAugmentedData({ nodes: updatedNodes, links: baseLinks });
+        } else {
+          setImageAugmentedData({ nodes: baseNodes, links: baseLinks });
         }
-      } catch (e) {
-        // Non-fatal; render without images
+      } catch (error) {
+        // Non-blocking: keep the original data if images fail
+        setImageAugmentedData(finalDisplayData);
       }
     };
     run();
-    return () => {
-      cancelled = true;
-    };
-  }, [finalDisplayData, profilePictures]);
+
+    return () => { isCancelled = true; };
+  }, [finalDisplayData, rehydrateReady, isInitializing, profilePictures]);
 
   // Tooltip management hook
   const tooltip = useTooltip({
@@ -416,7 +424,7 @@ export default function NetworkVisualizer({
 
           {/* D3 Network Renderer Component */}
           <D3NetworkRenderer
-            data={renderData}
+            data={imageAugmentedData || finalDisplayData}
             visible={visible}
             filterState={filterState}
             svgRef={svgRef}
