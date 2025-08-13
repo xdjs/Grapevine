@@ -50,6 +50,11 @@ export default function D3NetworkRenderer({
   mainArtistNode,
 }: D3NetworkRendererProps) {
   
+  // Mark time when D3 renderer mounts for map render timing
+  useEffect(() => {
+    (window as any).__GV_D3_MOUNTED_AT = new Date().toISOString();
+  }, []);
+
   // Track which node IDs we've already batch-preloaded to avoid re-preloading on small expansions
   const preloadedNodeIdsRef = useRef<Set<string>>(new Set());
 

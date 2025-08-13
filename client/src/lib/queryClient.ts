@@ -12,9 +12,22 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  // Minimal header enrichment for tracing without altering behavior
+  const defaultHeaders: Record<string, string> = {};
+  if (typeof window !== 'undefined') {
+    const gvTraceId = (window as any).__GV_TRACE_ID as string | undefined;
+    if (gvTraceId) {
+      defaultHeaders['x-trace-id'] = gvTraceId;
+    }
+    defaultHeaders['x-client-start'] = new Date().toISOString();
+  }
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: {
+      ...(data ? { "Content-Type": "application/json" } : {}),
+      ...defaultHeaders,
+    },
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });

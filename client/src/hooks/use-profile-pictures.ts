@@ -57,6 +57,7 @@ export function useProfilePictures(options: UseProfilePicturesOptions = {}): Use
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<{ totalRequested: number; totalFound: number; totalCached: number; processingTimeMs: number } | null>(null);
   const [stats, setStats] = useState<UseProfilePicturesReturn['stats']>(null);
 
   /**
@@ -137,6 +138,14 @@ export function useProfilePictures(options: UseProfilePicturesOptions = {}): Use
       setStats(totalStats);
       
       console.log(`✅ [ProfilePictures] Batch fetch complete: ${totalStats.totalFound}/${totalStats.totalRequested} images found, ${totalStats.totalCached} from cache`);
+      try {
+        const ts = new Date().toISOString();
+        const previous = (window as any).__GV_LAST_MAP_TS as string | undefined;
+        const delta = previous ? (new Date(ts).getTime() - new Date(previous).getTime()) : 0;
+        const entry = { step: 'Spotify images loaded', ts, deltaMs: delta };
+        console.log('[Grapevine Timings] Images:', JSON.stringify(entry));
+        console.table?.([entry]);
+      } catch {}
       
       return imageMap;
 

@@ -95,6 +95,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    // Lightweight timing instrumentation for key server-side steps
+    const timings: any = {
+      traceId: req.headers['x-trace-id'] || undefined,
+      requestReceived: new Date().toISOString(),
+    };
     const { artistName } = req.query;
     
     if (!artistName || typeof artistName !== 'string') {
@@ -102,7 +107,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     console.log(`🎵 [Vercel] Network data request for: ${artistName}`);
-    console.log(`🎵 [Vercel] Function started at:`, new Date().toISOString());
+    console.log(`🎵 [Vercel] Function started at:`, timings.requestReceived);
     console.log(`🎵 [Vercel] Environment check - CONNECTION_STRING exists:`, !!process.env.CONNECTION_STRING);
     console.log(`🎵 [Vercel] Environment check - OPENAI_API_KEY exists:`, !!process.env.OPENAI_API_KEY);
     console.log(`🎵 [Vercel] Node.js version:`, process.version);
@@ -119,7 +124,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-      // First, check if we have cached data
+      // First, connect to DB
       const { Client } = await import('pg');
       const client = new Client({
         connectionString: CONNECTION_STRING,
@@ -127,8 +132,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           rejectUnauthorized: false
         }
       });
-      
+      timings.dbConnectStart = new Date().toISOString();
       await client.connect();
+      timings.dbConnectEnd = new Date().toISOString();
       
       // First check if artist exists in database and get the correct capitalization
       const artistMatch = await findArtistInDatabase(client, artistName);
@@ -143,7 +149,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Use the correct artist name from database (with proper capitalization)
       const correctArtistName = artistMatch.name;
       
-      // Skip cache and force fresh generation for all artists with data-only approach
+      // Perform a lightweight cache check (non-intrusive) for timing/observability only
+      try {
+        timings.cacheCheckStart = new Date().toISOString();
+        const cacheCheckQuery = 'SELECT webmapdata IS NOT NULL AS has_cache FROM artists WHERE LOWER(name) = LOWER($1) LIMIT 1';
+        const cacheCheckResult = await client.query(cacheCheckQuery, [correctArtistName]);
+        const hasCache = cacheCheckResult.rows[0]?.has_cache === true;
+        timings.cacheCheckEnd = new Date().toISOString();
+        timings.cacheStatus = hasCache ? 'present' : 'absent';
+      } catch (cacheCheckErr) {
+        timings.cacheCheckEnd = new Date().toISOString();
+        timings.cacheStatus = 'error';
+        console.warn('⚠️ [Vercel] Cache check failed (non-blocking):', cacheCheckErr);
+      }
+      
+      // Skip using cache and force fresh generation (existing behavior)
       console.log(`🔄 [Vercel] Skipping cache and forcing fresh generation for ${artistName} with data-only approach`);
       
       // If no cached data and no OpenAI key, return error
@@ -195,6 +215,7 @@ Guidelines:
 - Be confident about well-documented collaborations for commercially successful artists
 - Focus on collaborations from official album/song credits, not rumors or speculation`;
 
+      timings.openAIRequestStart = new Date().toISOString();
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
@@ -215,6 +236,7 @@ Guidelines:
       try {
         const openaiContent = completion.choices[0]?.message?.content;
         console.log(`🤖 [Vercel] OpenAI response length: ${openaiContent?.length || 0} characters`);
+        timings.openAIRequestEnd = new Date().toISOString();
         
         if (!openaiContent) {
           console.error('❌ [Vercel] OpenAI returned empty response');
@@ -696,7 +718,7 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
               console.log(`⚠️ [Vercel] Role detection failed for "${branchingArtist}", using default`);
             }
 
-            const branchNode = {
+            const branchNode: NetworkNode = {
               id: branchingArtist,
               name: branchingArtist,
               type: branchingRoles[0],
@@ -728,9 +750,10 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
       // Convert nodeMap to nodes array
       const nodes = Array.from(nodeMap.values());
 
-      // Profile picture fetching is now handled by separate API endpoint
+       // Profile picture fetching is now handled by separate API endpoint
       // Check database cache for existing profile pictures
       console.log(`🖼️ [Vercel] Checking cached profile pictures for ${nodes.length} nodes...`);
+       const imageCacheStart = Date.now();
       try {
         for (const node of nodes) {
           if (node.artistId) {
@@ -745,12 +768,13 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
           }
         }
         
-        const cachedImageCount = nodes.filter(n => n.imageUrl).length;
+         const cachedImageCount = nodes.filter(n => n.imageUrl).length;
         console.log(`📦 [Vercel] Profile picture cache check complete: ${cachedImageCount}/${nodes.length} images loaded from cache`);
       } catch (cacheError) {
         console.warn(`⚠️ [Vercel] Failed to check profile picture cache:`, cacheError);
         // Continue without cached images - this is not a breaking error
       }
+       timings.imageCacheCheckMs = Date.now() - imageCacheStart;
 
       const networkData = { nodes, links };
 
@@ -776,9 +800,11 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
         _metadata: {
           profilePicturesAPI: '/api/artist-profile-pictures-batch',
           profilePicturesNote: 'Profile pictures should be fetched separately using the batch API for better performance'
-        }
+        },
+        _timings: timings
       };
       
+      timings.responseSent = new Date().toISOString();
       res.json(response);
       
     } catch (dbError) {

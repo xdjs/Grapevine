@@ -78,6 +78,13 @@ export default function ArtistNetwork() {
     // Immediately show loading state
     setIsLoading(true);
     setCurrentArtistName(artistName);
+    // Mark search initiated from node click
+    try {
+      const nowIso = new Date().toISOString();
+      (window as any).__GV_TRACE_ID = (Math.random().toString(36).slice(2) + Date.now().toString(36));
+      (window as any).__GV_TIMING_STEPS = [];
+      console.table?.([{ step: 'Search initiated', ts: nowIso, deltaMs: 0 }]);
+    } catch {}
     
     try {
       // Use artist ID if available, otherwise fall back to name

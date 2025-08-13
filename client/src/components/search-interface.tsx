@@ -356,6 +356,12 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     try {
       setIsLoading(true);
       onLoadingChange?.(true, artist.name);
+      try {
+        const nowIso = new Date().toISOString();
+        (window as any).__GV_TRACE_ID = (Math.random().toString(36).slice(2) + Date.now().toString(36));
+        (window as any).__GV_TIMING_STEPS = [];
+        console.table?.([{ step: 'Search initiated', ts: nowIso, deltaMs: 0 }]);
+      } catch {}
       
       // Use artist ID if available, otherwise fall back to name
       const data = artist.artistId 
@@ -407,6 +413,13 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
     try {
       setIsLoading(true);
       onLoadingChange?.(true, searchQuery.trim());
+      // Mark search initiated
+      try {
+        const nowIso = new Date().toISOString();
+        (window as any).__GV_TRACE_ID = (Math.random().toString(36).slice(2) + Date.now().toString(36));
+        (window as any).__GV_TIMING_STEPS = [];
+        console.table?.([{ step: 'Search initiated', ts: nowIso, deltaMs: 0 }]);
+      } catch {}
       
       const data = await fetchNetworkData(searchQuery.trim());
       

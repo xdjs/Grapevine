@@ -48,6 +48,7 @@ export default function NetworkVisualizer({
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
   const isMobile = useIsMobile();
+  const timingRef = useRef<{ steps: Array<{ step: string; ts: string; deltaMs: number }> }>({ steps: [] });
   
   // Component error and loading state
   const [componentError, setComponentError] = useState<ComponentError | null>(null);
@@ -221,6 +222,37 @@ export default function NetworkVisualizer({
 
     initializeComponent();
   }, [data, configError, handleError]); // Remove configLoading dependency
+
+  // Mark map rendered once visible nodes are present and svg is mounted
+  useEffect(() => {
+    if (!visible || !finalDisplayData || !finalDisplayData.nodes?.length) return;
+    const ts = new Date().toISOString();
+    const stepsArr: Array<{ step: string; ts: string; deltaMs: number }> = (window as any).__GV_TIMING_STEPS || [];
+    const prev = stepsArr.length > 0 ? stepsArr[stepsArr.length - 1].ts : undefined;
+    const delta = prev ? (new Date(ts).getTime() - new Date(prev).getTime()) : 0;
+    const entry = { step: 'Map rendered', ts, deltaMs: delta };
+    stepsArr.push(entry);
+    (window as any).__GV_TIMING_STEPS = stepsArr;
+    console.log('[Grapevine Timings] Map render:', JSON.stringify(entry));
+    console.table?.(stepsArr);
+  }, [visible, finalDisplayData]);
+
+  // Log when profile pictures finished fetching (best effort via hook state changes)
+  useEffect(() => {
+    // When profile picture hook transitions from loading to not loading after initial mount, consider images loaded
+    // We assume autoFetch=true and it runs after data is set
+    if (profilePictures && profilePictures.isLoading === false && finalDisplayData?.nodes?.length) {
+      const ts = new Date().toISOString();
+      const stepsArr: Array<{ step: string; ts: string; deltaMs: number }> = (window as any).__GV_TIMING_STEPS || [];
+      const prev = stepsArr.length > 0 ? stepsArr[stepsArr.length - 1].ts : undefined;
+      const delta = prev ? (new Date(ts).getTime() - new Date(prev).getTime()) : 0;
+      const entry = { step: 'Spotify images loaded', ts, deltaMs: delta };
+      stepsArr.push(entry);
+      (window as any).__GV_TIMING_STEPS = stepsArr;
+      console.log('[Grapevine Timings] Images:', JSON.stringify(entry));
+      console.table?.(stepsArr);
+    }
+  }, [profilePictures?.isLoading, finalDisplayData?.nodes?.length]);
 
   // Toast event listener for messages from hooks
   useEffect(() => {
