@@ -769,17 +769,39 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         }
       }
     }
-    // Structural fallback: if this node has any neighbor that is not part of the base graph, consider it expanded
+    // Structural fallback (scoped):
+    // Treat a node as expanded if EITHER it's a base-graph node OR it is a known expansion anchor,
+    // AND it has any neighbor that is not part of the base graph. This avoids marking newly-added
+    // leaf nodes as expanded before they themselves are expanded.
     try {
       if (fullNetworkData && baseGraphRef.current) {
-        const baseIds = new Set<string>((baseGraphRef.current.nodes || []).map(n => n.id.toLowerCase()));
-        const anchor = (nodeId || nodeName || '').toLowerCase();
+        const toLower = (v?: string) => (v || '').toLowerCase();
+        const baseIdsOnly = new Set<string>((baseGraphRef.current.nodes || []).map(n => toLower(n.id)));
+        const baseKeys = new Set<string>();
+        for (const n of baseGraphRef.current.nodes || []) {
+          baseKeys.add(toLower(n.id));
+          // name may equal id for some nodes; harmless duplicate
+          // use as any to read optional name defensively
+          const nm = (n as any).name as string | undefined;
+          if (nm) baseKeys.add(toLower(nm));
+        }
+        const anchor = toLower(nodeId) || toLower(nodeName);
         if (anchor) {
-          for (const l of fullNetworkData.links) {
-            const s = (typeof l.source === 'string' ? l.source : l.source.id).toLowerCase();
-            const t = (typeof l.target === 'string' ? l.target : l.target.id).toLowerCase();
-            if (s === anchor && !baseIds.has(t)) return true;
-            if (t === anchor && !baseIds.has(s)) return true;
+          // Is this node base or a recorded expansion anchor?
+          let isExpansionAnchor = false;
+          if (contributionsRef.current.size > 0) {
+            for (const k of contributionsRef.current.keys()) {
+              if (toLower(k) === anchor) { isExpansionAnchor = true; break; }
+            }
+          }
+          const isBase = baseKeys.has(anchor);
+          if (isBase || isExpansionAnchor) {
+            for (const l of fullNetworkData.links) {
+              const s = toLower(typeof l.source === 'string' ? l.source : l.source.id);
+              const t = toLower(typeof l.target === 'string' ? l.target : l.target.id);
+              if (s === anchor && !baseIdsOnly.has(t)) return true;
+              if (t === anchor && !baseIdsOnly.has(s)) return true;
+            }
           }
         }
       }
