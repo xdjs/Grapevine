@@ -536,7 +536,18 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     }
 
     const contribution = contributionsRef.current.get(keyToRemove);
-    if (!contribution) return;
+    if (!contribution) {
+      // If we have no recorded contribution for this anchor, ensure UI treats it as collapsed
+      setExpandedNodes(prev => {
+        const ns = new Set(prev);
+        ns.delete(keyToRemove!);
+        ns.delete(nodeName);
+        if (nodeId) ns.delete(nodeId);
+        return ns;
+      });
+      console.log(`[Shrink] No contribution found for key=${keyToRemove}; cleaned expanded state`);
+      return;
+    }
 
     // Build preservation set: nodes that belong to other expansions (anchors and their added nodes)
     const preserveNodeIds = new Set<string>();
@@ -640,41 +651,16 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
 
   const isNodeExpanded = useCallback((nodeId?: string, nodeName?: string) => {
     const toKey = (v?: string) => (v || '').toLowerCase();
-    // Prefer contribution-based determination: expanded if we recorded any nodes/links added for this anchor
-    if (contributionsRef.current.size > 0) {
-      // Exact id match
-      if (nodeId && contributionsRef.current.has(nodeId)) {
-        const c = contributionsRef.current.get(nodeId)!;
+    // Authoritative source: contributions we recorded for this anchor
+    for (const [k, c] of contributionsRef.current.entries()) {
+      const isMatch = (nodeId && toKey(k) === toKey(nodeId)) || (nodeName && toKey(k) === toKey(nodeName));
+      if (isMatch) {
         return (c.addedNodeIds.size > 0) || (c.addedLinkKeys.size > 0);
       }
-      // Case-insensitive id match
-      if (nodeId) {
-        for (const [k, c] of contributionsRef.current.entries()) {
-          if (toKey(k) === toKey(nodeId)) {
-            return (c.addedNodeIds.size > 0) || (c.addedLinkKeys.size > 0);
-          }
-        }
-      }
-      // Name match
-      if (nodeName) {
-        for (const [k, c] of contributionsRef.current.entries()) {
-          if (toKey(k) === toKey(nodeName)) {
-            return (c.addedNodeIds.size > 0) || (c.addedLinkKeys.size > 0);
-          }
-        }
-      }
     }
-    // Fallback to set-based heuristic
-    if (nodeId && expandedNodes.has(nodeId)) return true;
-    for (const k of expandedNodes) {
-      if (toKey(k) === toKey(nodeId)) return true;
-    }
-    if (nodeName && expandedNodes.has(nodeName)) return true;
-    for (const k of expandedNodes) {
-      if (toKey(k) === toKey(nodeName)) return true;
-    }
+    // If no contribution exists, the node is not expanded
     return false;
-  }, [expandedNodes]);
+  }, []);
 
   // Get the data to display (either filtered or full)
   const displayData = useMemo(() => {
