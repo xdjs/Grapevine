@@ -548,6 +548,8 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
 
     // Remove contributed links, but preserve links that keep other expansions attached
     const preservedLinkKeys = new Set<string>();
+    const anchorLower = toKey(keyToRemove);
+    const baseNodeIds = new Set<string>((baseGraphRef.current?.nodes || []).map(n => n.id));
     const remainingLinks = workingData.links.filter(l => {
       const s = typeof l.source === 'string' ? l.source : l.source.id;
       const t = typeof l.target === 'string' ? l.target : l.target.id;
@@ -558,11 +560,18 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         preservedLinkKeys.add(key);
         return true;
       }
+      // Also never remove a link that ties the anchor to a base-graph node (e.g., parent like Ed -> Justin)
+      const connectsAnchor = toKey(s) === anchorLower || toKey(t) === anchorLower;
+      const other = toKey(s) === anchorLower ? t : (toKey(t) === anchorLower ? s : null);
+      if (connectsAnchor && other && baseNodeIds.has(other)) {
+        preservedLinkKeys.add(key);
+        return true;
+      }
       return false;
     });
 
     // Build keep sets
-    const baseNodeIds = new Set<string>((baseGraphRef.current?.nodes || []).map(n => n.id));
+    // baseNodeIds already computed above
     const otherContributionNodeIds = new Set<string>();
     contributionsRef.current.forEach((c, k) => {
       if (k === keyToRemove) return;
@@ -582,6 +591,8 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       // Keep base and other contributions explicitly
       if (baseNodeIds.has(n.id)) return true;
       if (otherContributionNodeIds.has(n.id)) return true;
+      // Never remove the anchor node itself during its own collapse
+      if (toKey(n.id) === anchorLower) return true;
       // If this node was a neighbor added by this expansion, remove it and anything exclusively under it
       if (contribution.addedNodeIds.has(n.id) || contribution.neighborIds.has(n.id)) {
         if (!attachedNodeIds.has(n.id)) return false; // dangling
