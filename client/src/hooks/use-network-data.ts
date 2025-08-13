@@ -228,16 +228,8 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       const mergedNodes: NetworkNode[] = [...baseData.nodes];
       const mergedLinks: NetworkLink[] = [...baseData.links];
 
-      // Early exit if this node appears to be already expanded (best-effort)
-      const existingIdForName = baseData.nodes.find(n => n.name === nodeName)?.id;
-      const candidateId = nodeId || existingIdForName;
-      if (candidateId && expandedNodes.has(candidateId)) {
-        vlog(`ℹ️ Node already expanded id=${candidateId}; skipping expansion`);
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('network-toast', { detail: { message: `${nodeName} is already expanded.`, type: 'info' } }));
-        }
-        return;
-      }
+      // Allow repeated expansions on the same node to progressively add more collaborators.
+      // We keep the lock to prevent concurrent requests, but do not block subsequent clicks.
 
       // Track existing nodes by normalized id, and links by undirected, normalized key
       const existingNodeIdsNormalized = new Set<string>(mergedNodes.map(n => normalizeId(n.id)));
@@ -298,14 +290,17 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         }
       }
 
-      // Select up to three neighbors that are NEW nodes only (do not connect to existing nodes)
-      // Also filter out the main artist if present in the collaborator network
+      // Select up to three neighbors per request that are NEW nodes only (do not connect to existing nodes)
+      // Also filter out the main artist if present in the collaborator network.
+      // To enable progressive expansion, skip neighbors we've already added for this anchor previously.
       const mainIdCandidates = [mainArtistNode?.id, mainArtistNode?.name].filter(Boolean).map(String);
       const isMain = (id: string) => mainIdCandidates.some(mid => toKey(mid) === toKey(id));
       const selectedNeighborIds: string[] = [];
+      const previouslyAdded = contributionsRef.current.get(clickedCanonicalFinalId)?.addedNodeIds || new Set<string>();
       for (const nid of neighborIds) {
         if (selectedNeighborIds.length >= 3) break;
         if (isMain(nid)) continue;
+        if (previouslyAdded.has(nid)) continue;
         if (!existingNodeIdsNormalized.has(normalizeId(nid))) {
           selectedNeighborIds.push(nid);
         }
@@ -388,9 +383,9 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       // Toast: success or no new neighbors
       if (typeof window !== 'undefined') {
         if (addedNodeCount === 0 && addedLinkCount === 0) {
-          window.dispatchEvent(new CustomEvent('network-toast', { detail: { message: `No new collaborators found for ${nodeName}.`, type: 'info' } }));
+          window.dispatchEvent(new CustomEvent('network-toast', { detail: { message: `No more collaborators to add for ${nodeName}.`, type: 'info' } }));
         } else {
-          window.dispatchEvent(new CustomEvent('network-toast', { detail: { message: `Expanded ${nodeName} with up to 3 collaborators.`, type: 'success' } }));
+          window.dispatchEvent(new CustomEvent('network-toast', { detail: { message: `Expanded ${nodeName} with up to 3 more collaborators.`, type: 'success' } }));
         }
       }
     } catch (error) {
