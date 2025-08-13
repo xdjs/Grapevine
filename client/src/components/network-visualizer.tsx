@@ -121,18 +121,29 @@ export default function NetworkVisualizer({
     batchSize: 20
   });
 
-  // Immediately trigger image fetch and apply results in-place to avoid re-simulating
+  // Immediately trigger image fetch and apply results in place to avoid D3 re-simulation
   useEffect(() => {
     (async () => {
       try {
         if (!finalDisplayData?.nodes || finalDisplayData.nodes.length === 0) return;
         const updatedNodes = await profilePictures.updateNodesWithImages(finalDisplayData.nodes);
-        // Update nodes in-place so the D3 renderer doesn't tear down/rebuild the simulation
-        for (let i = 0; i < updatedNodes.length; i++) {
-          const newUrl = updatedNodes[i]?.imageUrl;
-          if (newUrl && finalDisplayData.nodes[i]) {
-            (finalDisplayData.nodes[i] as any).imageUrl = newUrl;
+        // Apply image URLs to existing node objects to keep simulation object identity intact
+        let changed = false;
+        const byIdOrName = new Map<string, NetworkNode>();
+        for (const n of finalDisplayData.nodes) {
+          byIdOrName.set(n.id || n.name, n);
+        }
+        for (const n of updatedNodes) {
+          const key = (n.id || n.name);
+          const target = byIdOrName.get(key);
+          if (target && n.imageUrl && target.imageUrl !== n.imageUrl) {
+            (target as any).imageUrl = n.imageUrl;
+            changed = true;
           }
+        }
+        // Trigger the D3 viewport image loader effect without rebuilding the whole graph
+        if (changed) {
+          (finalDisplayData as any).nodes = [...finalDisplayData.nodes];
         }
       } catch (error) {
         handleError(error as Error, 'initial profile picture fetch');
@@ -407,7 +418,7 @@ export default function NetworkVisualizer({
 
           {/* D3 Network Renderer Component */}
           <D3NetworkRenderer
-            data={renderData}
+            data={finalDisplayData}
             visible={visible}
             filterState={filterState}
             svgRef={svgRef}
