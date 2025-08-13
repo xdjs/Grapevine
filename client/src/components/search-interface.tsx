@@ -143,8 +143,15 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const networkSearchInputRef = useRef<HTMLInputElement>(null);
+  const networkDropdownRef = useRef<HTMLDivElement>(null);
   const viewportHeight = useViewportHeight();
   const spacing = useDynamicSpacing();
+  const [expandedBios, setExpandedBios] = useState<Record<string, boolean>>({});
+  const toggleBioExpansion = (artistId: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setExpandedBios(prev => ({ ...prev, [artistId]: !prev[artistId] }));
+  };
   
   // Calculate dynamic dropdown height based on available space
   const calculateDropdownHeight = useCallback((baseHeight: number, isNetworkView: boolean = false) => {
@@ -663,6 +670,12 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               }}
               onBlur={() => {
                 setTimeout(() => {
+                  const activeEl = document.activeElement as Node | null;
+                  const insideHomeDropdown = dropdownRef.current?.contains(activeEl || null);
+                  const insideNetworkDropdown = networkDropdownRef.current?.contains(activeEl || null);
+                  if (insideHomeDropdown || insideNetworkDropdown) {
+                    return;
+                  }
                   setIsSearchFocused(false);
                   setShowDropdown(false);
                 }, 150);
@@ -728,11 +741,20 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                       {artistOptions.map((artist, index) => (
                         <Card
                           key={artist.id}
-                          className="mb-2 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4"
+                          className="mb-2 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4 w-full"
                           style={{
                             borderLeftColor: '#FF69B4'
                           }}
                           onClick={() => handleArtistSelect(artist)}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Open network for ${artist.name}`}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              handleArtistSelect(artist);
+                            }
+                          }}
                         >
                           <CardHeader className="pb-2 pt-3 px-4">
                             <div className="flex items-center justify-between">
@@ -744,9 +766,21 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                               )}
                             </div>
                             {artist.bio && (
-                              <CardDescription className="text-xs text-gray-400 line-clamp-2">
-                                {artist.bio}
-                              </CardDescription>
+                              <div>
+                                <CardDescription className={`text-xs text-gray-400 ${expandedBios[artist.id] ? '' : 'line-clamp-2'}`}>
+                                  {artist.bio}
+                                </CardDescription>
+                                {artist.bio.length > 100 && (
+                                  <button
+                                    className="text-[10px] text-pink-400 hover:underline mt-1"
+                                    onClick={(e) => toggleBioExpansion(artist.id, e)}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    aria-label={`Read ${expandedBios[artist.id] ? 'less' : 'more'} about ${artist.name}`}
+                                  >
+                                    {expandedBios[artist.id] ? 'Read less' : 'Read more'}
+                                  </button>
+                                )}
+                              </div>
                             )}
                           </CardHeader>
                         </Card>
@@ -906,6 +940,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               {/* Artist Options Dropdown - Network View */}
               {(showDropdown || isLoadingOptions) && showNetworkView && isSearchFocused && (
                 <div 
+                  ref={networkDropdownRef}
                   className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll dropdown-height-constraint"
                   style={{ 
                     maxHeight: '85px', // Height to align with similar position in network view
@@ -928,11 +963,20 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                         {artistOptions.map((artist, index) => (
                           <Card
                             key={artist.id}
-                            className="mb-1 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4"
+                            className="mb-1 cursor-pointer hover:bg-gray-700 transition-colors bg-gray-900 border-l-4 w-full"
                             style={{
                               borderLeftColor: '#FF69B4'
                             }}
                             onClick={() => handleArtistSelect(artist)}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Open network for ${artist.name}`}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleArtistSelect(artist);
+                              }
+                            }}
                           >
                             <CardHeader className="pb-1 pt-2 px-3">
                               <div className="flex items-center justify-between">
@@ -944,9 +988,21 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                                 )}
                               </div>
                               {artist.bio && (
-                                <CardDescription className="text-xs text-gray-400 line-clamp-1">
-                                  {artist.bio}
-                                </CardDescription>
+                                <div>
+                                  <CardDescription className={`text-xs text-gray-400 ${expandedBios[artist.id] ? '' : 'line-clamp-1'}`}>
+                                    {artist.bio}
+                                  </CardDescription>
+                                  {artist.bio.length > 100 && (
+                                  <button
+                                      className="text-[10px] text-pink-400 hover:underline mt-0.5"
+                                      onClick={(e) => toggleBioExpansion(artist.id, e)}
+                                      onMouseDown={(e) => e.preventDefault()}
+                                      aria-label={`Read ${expandedBios[artist.id] ? 'less' : 'more'} about ${artist.name}`}
+                                    >
+                                      {expandedBios[artist.id] ? 'Read less' : 'Read more'}
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </CardHeader>
                           </Card>
