@@ -1,4 +1,4 @@
 import 'dotenv/config';
-export { spotifyService } from '../server/spotify';
+export { spotifyService } from '../../server/spotify.js';
 
 
