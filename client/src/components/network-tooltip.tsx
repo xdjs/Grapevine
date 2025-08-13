@@ -320,19 +320,19 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
               opacity: 1,
             }}
             onClick={(e) => {
-              handleActionClick(e, () => (isExpanded ? onShrinkAction(node) : onExpandAction(node)));
+              handleActionClick(e, () => onExpandAction(node));
             }}
             onKeyDown={(e) => {
-              handleKeyPress(e, () => (isExpanded ? onShrinkAction(node) : onExpandAction(node)));
+              handleKeyPress(e, () => onExpandAction(node));
             }}
             tabIndex={0}
             role="button"
-            aria-label={isExpanded ? `Shrink network` : `Expand ${node.name}'s network`}
+            aria-label={`Expand ${node.name}'s network`}
           >
             {isMobile ? (
               <img
                 src={mobileIconSrc}
-                alt={isExpanded ? 'Shrink icon' : 'Expand icon'}
+                alt={'Expand icon'}
                 style={{
                   width: `${mobileIconPx}px`,
                   height: `${mobileIconPx}px`,
@@ -350,7 +350,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                 width={iconSize}
                 height={iconSize}
                 viewBox="0 0 24 24"
-                aria-label={isExpanded ? 'Shrink icon' : 'Expand icon'}
+                 aria-label={'Expand icon'}
                 xmlns="http://www.w3.org/2000/svg"
                 style={{
                   minWidth: `${iconSize}px`,
@@ -362,14 +362,10 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                 }}
               >
                 <circle cx="12" cy="12" r="10" stroke="#ff69b4" strokeWidth="2" fill="none" />
-                {isExpanded ? (
+                <>
+                  <line x1="12" y1="7" x2="12" y2="17" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
                   <line x1="7" y1="12" x2="17" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
-                ) : (
-                  <>
-                    <line x1="12" y1="7" x2="12" y2="17" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
-                    <line x1="7" y1="12" x2="17" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
-                  </>
-                )}
+                </>
               </svg>
             )}
             <span
@@ -384,7 +380,78 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                 textOverflow: 'ellipsis',
               }}
             >
-              {isExpanded ? 'Shrink network' : `Expand ${node.name}'s network`}
+              {`Expand ${node.name}'s network`}
+            </span>
+          </div>
+        )}
+
+        {/* Shrink action - show only when node is expanded */}
+        {!isMainArtist && isExpanded && (
+          <div
+            data-testid="shrink-action"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap,
+              cursor: 'pointer',
+              width: '100%',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => handleActionClick(e, () => onShrinkAction(node))}
+            onKeyDown={(e) => handleKeyPress(e, () => onShrinkAction(node))}
+            tabIndex={0}
+            role="button"
+            aria-label={`Shrink ${node.name}'s network`}
+          >
+            {isMobile ? (
+              <img
+                src={mobileIconSrc}
+                alt={'Shrink icon'}
+                style={{
+                  width: `${mobileIconPx}px`,
+                  height: `${mobileIconPx}px`,
+                  minWidth: `${mobileIconPx}px`,
+                  minHeight: `${mobileIconPx}px`,
+                  maxWidth: `${mobileIconPx}px`,
+                  maxHeight: `${mobileIconPx}px`,
+                  display: 'block',
+                  flexShrink: 0,
+                  background: 'transparent',
+                }}
+              />
+            ) : (
+              <svg
+                width={iconSize}
+                height={iconSize}
+                viewBox="0 0 24 24"
+                aria-label={'Shrink icon'}
+                xmlns="http://www.w3.org/2000/svg"
+                style={{
+                  minWidth: `${iconSize}px`,
+                  minHeight: `${iconSize}px`,
+                  maxWidth: `${iconSize}px`,
+                  maxHeight: `${iconSize}px`,
+                  display: 'block',
+                  flexShrink: 0,
+                }}
+              >
+                <circle cx="12" cy="12" r="10" stroke="#ff69b4" strokeWidth="2" fill="none" />
+                <line x1="7" y1="12" x2="17" y2="12" stroke="#ff69b4" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            )}
+            <span
+              style={{
+                fontSize: linkFontSize,
+                fontStyle: 'italic',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flex: 1,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              Shrink network
             </span>
           </div>
         )}

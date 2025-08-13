@@ -464,15 +464,7 @@ export default function NetworkVisualizer({
               })()}
               onNetworkAction={tooltip.handleNetworkAction}
               onExpandAction={(node) => {
-                if (isNodeExpanded(node.id, node.name)) {
-                  try {
-                    collapseNodeNetwork(node.name, node.id || undefined);
-                    tooltip.hideTooltip();
-                    return;
-                  } catch (error) {
-                    handleError(error as Error, 'implicit shrink on expand click');
-                  }
-                }
+                // Always perform an expand when pressing the expand button
                 return tooltip.handleExpandAction(node);
               }}
               onShrinkAction={(node) => {
