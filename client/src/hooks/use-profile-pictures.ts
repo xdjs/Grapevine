@@ -9,13 +9,7 @@ interface ProfilePictureResult {
   error?: string;
 }
 
-interface ProfilePictureBatchResponse {
-  results: ProfilePictureResult[];
-  totalRequested: number;
-  totalFound: number;
-  totalCached: number;
-  processingTimeMs: number;
-}
+// No longer using batch endpoint; we aggregate per-artist results into stats
 
 interface UseProfilePicturesOptions {
   /** Whether to automatically fetch images for nodes that don't have them */
@@ -86,108 +80,73 @@ export function useProfilePictures(options: UseProfilePicturesOptions = {}): Use
 
       console.log(`🖼️ [ProfilePictures] Fetching images for ${artistNames.length} artists`);
 
-      // Process in batches to avoid overwhelming the API
+      // Per-artist retrieval (no batch). Sequential with one retry per artist.
       const imageMap = new Map<string, string>();
-      let totalStats = {
-        totalRequested: 0,
+      const startAll = Date.now();
+      const totals = {
+        totalRequested: artistNames.length,
         totalFound: 0,
         totalCached: 0,
-        processingTimeMs: 0
+        processingTimeMs: 0,
       };
 
-      for (let i = 0; i < artistNames.length; i += batchSize) {
-        const batch = artistNames.slice(i, i + batchSize);
-        
-        console.log(`🖼️ [ProfilePictures] Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(artistNames.length/batchSize)}`);
-        // Helper to post a batch request
-        const postBatch = async (names: string[], attempt: number) => {
-          const response = await fetch('/api/artist-profile-pictures-batch', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              artistNames: names,
-              useCache
-            }),
-          });
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText} (attempt ${attempt})`);
+      for (const artistName of artistNames) {
+        const urlBase = `/api/artist-profile-pictures/${encodeURIComponent(artistName)}`;
+        const refreshParam = useCache ? '' : '&refresh=true';
+        const url = `${urlBase}?size=medium${refreshParam}`;
+
+        const attemptFetch = async (): Promise<ProfilePictureResult | null> => {
+          const resp = await fetch(url, { method: 'GET' });
+          if (!resp.ok) {
+            throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
           }
-          const json: ProfilePictureBatchResponse = await response.json();
-          return json;
+          const data = await resp.json();
+          if (!data || data.available === false || !data.imageUrl) {
+            return null;
+          }
+          return {
+            artistName,
+            imageUrl: data.imageUrl as string,
+            spotifyId: data.spotifyId ?? null,
+            cached: Boolean(data.fromCache),
+          };
         };
 
-        // First attempt for this batch
-        let data: ProfilePictureBatchResponse;
+        const perStart = Date.now();
         try {
-          data = await postBatch(batch, 1);
-        } catch (err) {
-          // Single retry for the whole batch on transport/HTTP failure
-          console.warn('⚠️ [ProfilePictures] Batch request failed, retrying once...', err);
-          data = await postBatch(batch, 2);
-        }
-        
-        // Update running totals
-        totalStats.totalRequested += data.totalRequested;
-        totalStats.totalFound += data.totalFound;
-        totalStats.totalCached += data.totalCached;
-        totalStats.processingTimeMs += data.processingTimeMs;
-
-        // Process results
-        data.results.forEach(result => {
-          if (result.imageUrl) {
-            imageMap.set(result.artistName, result.imageUrl);
-          }
-        });
-
-        // Prepare a one-time retry for artists that failed in content-level (no imageUrl)
-        const failedArtistNames = data.results
-          .filter(r => !r.imageUrl)
-          .map(r => r.artistName)
-          .filter(name => !retriedOnceRef.current.has(name));
-
-        if (failedArtistNames.length > 0) {
-          console.log(`🔁 [ProfilePictures] Retrying once for ${failedArtistNames.length} artists with missing images`);
-          // Mark as retried to prevent future attempts across calls
-          failedArtistNames.forEach(n => retriedOnceRef.current.add(n));
-
-          try {
-            const retryResponse = await fetch('/api/artist-profile-pictures-batch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ artistNames: failedArtistNames, useCache })
-            });
-            if (retryResponse.ok) {
-              const retryData: ProfilePictureBatchResponse = await retryResponse.json();
-              // Update totals to reflect retry work as well
-              totalStats.totalRequested += retryData.totalRequested;
-              totalStats.totalFound += retryData.totalFound;
-              totalStats.totalCached += retryData.totalCached;
-              totalStats.processingTimeMs += retryData.processingTimeMs;
-              retryData.results.forEach(result => {
-                if (result.imageUrl) {
-                  imageMap.set(result.artistName, result.imageUrl);
-                }
-              });
-            } else {
-              console.warn(`⚠️ [ProfilePictures] Retry batch failed with HTTP ${retryResponse.status}`);
+          // First attempt
+          let result = await attemptFetch();
+          if (!result && !retriedOnceRef.current.has(artistName)) {
+            retriedOnceRef.current.add(artistName);
+            console.log(`🔁 [ProfilePictures] Retrying once for ${artistName}`);
+            try {
+              result = await attemptFetch();
+            } catch (retryError) {
+              // Swallow retry error, continue to next artist
             }
-          } catch (retryErr) {
-            console.warn('⚠️ [ProfilePictures] Retry batch threw error; giving up for these artists:', retryErr);
           }
-        }
 
-        // Add delay between batches to be respectful to the API
-        if (i + batchSize < artistNames.length) {
-          await new Promise(resolve => setTimeout(resolve, 200));
+          if (result && result.imageUrl) {
+            imageMap.set(artistName, result.imageUrl);
+            totals.totalFound += 1;
+            if (result.cached) totals.totalCached += 1;
+          }
+        } catch (err) {
+          // Log and continue; do not set global error for partial failures
+          console.warn(`⚠️ [ProfilePictures] Failed to fetch image for ${artistName}:`, err);
+        } finally {
+          totals.processingTimeMs += (Date.now() - perStart);
         }
       }
 
-      setStats(totalStats);
-      
-      console.log(`✅ [ProfilePictures] Batch fetch complete: ${totalStats.totalFound}/${totalStats.totalRequested} images found, ${totalStats.totalCached} from cache`);
-      
+      // Use wall clock time as an approximation too
+      const totalElapsed = Date.now() - startAll;
+      if (totals.processingTimeMs < totalElapsed) {
+        totals.processingTimeMs = totalElapsed;
+      }
+
+      setStats(totals);
+      console.log(`✅ [ProfilePictures] Per-artist fetch complete: ${totals.totalFound}/${totals.totalRequested} images found, ${totals.totalCached} from cache`);
       return imageMap;
 
     } catch (err) {
