@@ -514,12 +514,18 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       setFullNetworkData(nextDataHeuristic);
 
       // Update expanded bookkeeping so UI toggles back to Expand
-      setExpandedNodes(prev => {
-        const ns = new Set(prev);
-        if (nodeId) ns.delete(nodeId);
-        ns.delete(nodeName);
-        return ns;
-      });
+      const newExpanded = new Set(expandedNodes);
+      // Robust case-insensitive removal of the anchor from expanded set
+      const toLower = (v?: string) => (v || '').toLowerCase();
+      const idLower = toLower(nodeId);
+      const nameLower = toLower(nodeName);
+      for (const k of Array.from(newExpanded)) {
+        const kl = toLower(k);
+        if ((idLower && kl === idLower) || (nameLower && kl === nameLower)) {
+          newExpanded.delete(k);
+        }
+      }
+      setExpandedNodes(newExpanded);
       // Remove any stale contribution entries matching this node by id/name (case-insensitive)
       const idKey = (nodeId || '').toLowerCase();
       const nameKey = (nodeName || '').toLowerCase();
@@ -532,9 +538,9 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       try {
         const payload = {
           main: mainArtistNode?.name || '',
-          isExpandedMode: contributionsRef.current.size > 0 || Array.from(expandedNodes).length > 1,
-          fullNetworkData: contributionsRef.current.size > 0 ? nextDataHeuristic : null,
-          expandedNodes: Array.from(expandedNodes),
+          isExpandedMode: contributionsRef.current.size > 0 || newExpanded.size > 0,
+          fullNetworkData: (contributionsRef.current.size > 0 || newExpanded.size > 0) ? nextDataHeuristic : null,
+          expandedNodes: Array.from(newExpanded),
           baseGraph: baseGraphRef.current,
           contributions: Array.from(contributionsRef.current.entries()).map(([k, v]) => ({
             key: k,
@@ -688,8 +694,8 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     try {
       const payload = {
         main: mainArtistNode?.name || '',
-        isExpandedMode: contributionsRef.current.size > 0,
-        fullNetworkData: contributionsRef.current.size > 0 ? nextData : null,
+        isExpandedMode: contributionsRef.current.size > 0 || newExpanded.size > 0,
+        fullNetworkData: (contributionsRef.current.size > 0 || newExpanded.size > 0) ? nextData : null,
         expandedNodes: Array.from(newExpanded),
         baseGraph: baseGraphRef.current,
         contributions: Array.from(contributionsRef.current.entries()).map(([k, v]) => ({
