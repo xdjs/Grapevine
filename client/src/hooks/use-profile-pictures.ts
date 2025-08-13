@@ -97,11 +97,20 @@ export function useProfilePictures(options: UseProfilePicturesOptions = {}): Use
 
         const attemptFetch = async (): Promise<ProfilePictureResult | null> => {
           const resp = await fetch(url, { method: 'GET' });
+          // Best-effort parse JSON for richer error context
           if (!resp.ok) {
-            throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+            let reason = '';
+            try {
+              const j = await resp.json();
+              reason = j?.reason ? ` - ${j.reason}` : '';
+            } catch {}
+            throw new Error(`HTTP ${resp.status}: ${resp.statusText}${reason}`);
           }
           const data = await resp.json();
           if (!data || data.available === false || !data.imageUrl) {
+            if (data?.reason) {
+              console.warn(`⚠️ [ProfilePictures] No image for ${artistName}: ${data.reason}`);
+            }
             return null;
           }
           return {
