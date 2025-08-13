@@ -534,7 +534,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         if (kl === idKey || kl === nameKey) contributionsRef.current.delete(k);
       }
 
-      // Persist new state immediately to avoid resurrecting stale snapshot
+      // Persist new state, but DO NOT overwrite an existing expanded snapshot with a collapsed one
       try {
         const payload = {
           main: mainArtistNode?.name || '',
@@ -549,15 +549,21 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
             neighborIds: Array.from(v.neighborIds || []),
           })),
         } as any;
-        if (payload.isExpandedMode) {
-          (window as any).grapevineExpandedState = payload;
-          sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
-        } else {
-          delete (window as any).grapevineExpandedState;
-          sessionStorage.removeItem(PERSIST_KEY);
-          setIsExpandedMode(false);
-          setFullNetworkData(null);
-          baseGraphRef.current = null;
+        const existing = (typeof window !== 'undefined' && (window as any).grapevineExpandedState) || (sessionStorage.getItem(PERSIST_KEY) ? JSON.parse(sessionStorage.getItem(PERSIST_KEY) as string) : null);
+        const sameMain = existing && existing.main === payload.main;
+        const existingExpanded = Boolean(existing?.isExpandedMode);
+        const canOverwrite = payload.isExpandedMode || !existing || !sameMain || !existingExpanded;
+        if (canOverwrite) {
+          if (payload.isExpandedMode) {
+            (window as any).grapevineExpandedState = payload;
+            sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
+          } else {
+            delete (window as any).grapevineExpandedState;
+            sessionStorage.removeItem(PERSIST_KEY);
+            setIsExpandedMode(false);
+            setFullNetworkData(null);
+            baseGraphRef.current = null;
+          }
         }
       } catch {}
 
@@ -690,7 +696,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     }
     setExpandedNodes(newExpanded);
 
-    // Persist new state immediately to avoid resurrecting stale snapshot
+    // Persist new state, but DO NOT overwrite an existing expanded snapshot with a collapsed one
     try {
       const payload = {
         main: mainArtistNode?.name || '',
@@ -705,15 +711,21 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
           neighborIds: Array.from(v.neighborIds || []),
         })),
       } as any;
-      if (payload.isExpandedMode) {
-        (window as any).grapevineExpandedState = payload;
-        sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
-      } else {
-        delete (window as any).grapevineExpandedState;
-        sessionStorage.removeItem(PERSIST_KEY);
-        setIsExpandedMode(false);
-        setFullNetworkData(null);
-        baseGraphRef.current = null;
+      const existing = (typeof window !== 'undefined' && (window as any).grapevineExpandedState) || (sessionStorage.getItem(PERSIST_KEY) ? JSON.parse(sessionStorage.getItem(PERSIST_KEY) as string) : null);
+      const sameMain = existing && existing.main === payload.main;
+      const existingExpanded = Boolean(existing?.isExpandedMode);
+      const canOverwrite = payload.isExpandedMode || !existing || !sameMain || !existingExpanded;
+      if (canOverwrite) {
+        if (payload.isExpandedMode) {
+          (window as any).grapevineExpandedState = payload;
+          sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
+        } else {
+          delete (window as any).grapevineExpandedState;
+          sessionStorage.removeItem(PERSIST_KEY);
+          setIsExpandedMode(false);
+          setFullNetworkData(null);
+          baseGraphRef.current = null;
+        }
       }
     } catch {}
     console.log(`[Shrink] Removed expansion for key=${keyToRemove}. Nodes now=${nextData.nodes.length} links=${nextData.links.length}`);
