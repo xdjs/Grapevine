@@ -33,6 +33,12 @@ export default function ArtistSelectionModal({
   const [options, setOptions] = useState<ArtistOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [musicNerdBaseUrl, setMusicNerdBaseUrl] = useState("");
+  const [expandedBios, setExpandedBios] = useState<Record<string, boolean>>({});
+  const toggleBioExpansion = (artistId: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setExpandedBios(prev => ({ ...prev, [artistId]: !prev[artistId] }));
+  };
 
   // Fetch configuration on component mount
   useEffect(() => {
@@ -117,11 +123,20 @@ export default function ArtistSelectionModal({
               {options.map((option, index) => (
                 <Card
                   key={option.id}
-                  className="cursor-pointer hover:bg-accent transition-colors border-l-4"
+                  className="cursor-pointer hover:bg-accent transition-colors border-l-4 w-full"
                   style={{
                     borderLeftColor: '#FF69B4'
                   }}
                   onClick={() => handleSelectArtist(option.artistId || option.id)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Open network for ${option.name}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSelectArtist(option.artistId || option.id);
+                    }
+                  }}
                 >
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
@@ -133,9 +148,20 @@ export default function ArtistSelectionModal({
                       )}
                     </div>
                     {option.bio && (
-                      <CardDescription className="text-sm line-clamp-2">
-                        {option.bio}
-                      </CardDescription>
+                      <div>
+                        <CardDescription className={`text-sm ${expandedBios[option.id] ? '' : 'line-clamp-2'}`}>
+                          {option.bio}
+                        </CardDescription>
+                        {option.bio.length > 100 && (
+                          <button
+                            className="text-xs text-pink-500 hover:underline mt-1"
+                            onClick={(e) => toggleBioExpansion(option.id, e)}
+                            aria-label={`Read ${expandedBios[option.id] ? 'less' : 'more'} about ${option.name}`}
+                          >
+                            {expandedBios[option.id] ? 'Read less' : 'Read more'}
+                          </button>
+                        )}
+                      </div>
                     )}
                   </CardHeader>
                 </Card>
