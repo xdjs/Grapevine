@@ -745,56 +745,25 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
 
   const isNodeExpanded = useCallback((nodeId?: string, nodeName?: string) => {
     const toKey = (v?: string) => (v || '').toLowerCase();
-    // Prefer contribution-based determination: expanded if we recorded any nodes/links added for this anchor
-    if (contributionsRef.current.size > 0) {
-      // Exact id match
-      if (nodeId && contributionsRef.current.has(nodeId)) {
-        const c = contributionsRef.current.get(nodeId)!;
-        return (c.addedNodeIds.size > 0) || (c.addedLinkKeys.size > 0);
+    // Strictly determine expansion by contribution tracking for this exact node (id or name)
+    const findContribution = (): { addedNodeIds: Set<string>; addedLinkKeys: Set<string>; neighborIds: Set<string> } | undefined => {
+      if (nodeId && contributionsRef.current.has(nodeId)) return contributionsRef.current.get(nodeId);
+      const idLower = toKey(nodeId);
+      const nameLower = toKey(nodeName);
+      for (const [k, c] of contributionsRef.current.entries()) {
+        const kl = toKey(k);
+        if ((idLower && kl === idLower) || (nameLower && kl === nameLower)) return c;
       }
-      // Case-insensitive id match
-      if (nodeId) {
-        for (const [k, c] of contributionsRef.current.entries()) {
-          if (toKey(k) === toKey(nodeId)) {
-            return (c.addedNodeIds.size > 0) || (c.addedLinkKeys.size > 0);
-          }
-        }
-      }
-      // Name match
-      if (nodeName) {
-        for (const [k, c] of contributionsRef.current.entries()) {
-          if (toKey(k) === toKey(nodeName)) {
-            return (c.addedNodeIds.size > 0) || (c.addedLinkKeys.size > 0);
-          }
-        }
-      }
+      return undefined;
+    };
+    const c = findContribution();
+    if (c) {
+      // Expanded if it has added nodes/links OR preserved neighbor ties from child expansions
+      return c.addedNodeIds.size > 0 || c.addedLinkKeys.size > 0 || c.neighborIds.size > 0;
     }
-    // Structural fallback: if this node has any neighbor that is not part of the base graph, consider it expanded
-    try {
-      if (fullNetworkData && baseGraphRef.current) {
-        const baseIds = new Set<string>((baseGraphRef.current.nodes || []).map(n => n.id.toLowerCase()));
-        const anchor = (nodeId || nodeName || '').toLowerCase();
-        if (anchor) {
-          for (const l of fullNetworkData.links) {
-            const s = (typeof l.source === 'string' ? l.source : l.source.id).toLowerCase();
-            const t = (typeof l.target === 'string' ? l.target : l.target.id).toLowerCase();
-            if (s === anchor && !baseIds.has(t)) return true;
-            if (t === anchor && !baseIds.has(s)) return true;
-          }
-        }
-      }
-    } catch {}
-    // Fallback to set-based heuristic
-    if (nodeId && expandedNodes.has(nodeId)) return true;
-    for (const k of expandedNodes) {
-      if (toKey(k) === toKey(nodeId)) return true;
-    }
-    if (nodeName && expandedNodes.has(nodeName)) return true;
-    for (const k of expandedNodes) {
-      if (toKey(k) === toKey(nodeName)) return true;
-    }
+    // Otherwise, this node is not considered expanded
     return false;
-  }, [expandedNodes]);
+  }, []);
 
   // Get the data to display (either filtered or full)
   const displayData = useMemo(() => {
