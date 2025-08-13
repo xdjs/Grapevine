@@ -806,6 +806,34 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         }
       }
     } catch {}
+    // Degree-based fallback: treat as expanded if node has at least two neighbors total
+    // and at least one neighbor is not part of the base graph. This makes added parents
+    // (e.g., Benny with a child) shrinkable, while newly added leaves (degree=1) remain expandable.
+    try {
+      const toLower = (v?: string) => (v || '').toLowerCase();
+      const anchor = toLower(nodeId) || toLower(nodeName);
+      if (!anchor) return false;
+      const srcData = fullNetworkData || { nodes: getVisibleNodes(), links: getVisibleLinks() };
+      let degree = 0;
+      const neighbors = new Set<string>();
+      for (const l of srcData.links) {
+        const s = toLower(typeof l.source === 'string' ? l.source : l.source.id);
+        const t = toLower(typeof l.target === 'string' ? l.target : l.target.id);
+        if (s === anchor) { degree++; neighbors.add(t); }
+        else if (t === anchor) { degree++; neighbors.add(s); }
+      }
+      if (degree <= 1) return false;
+      const baseKeys = new Set<string>();
+      const baseSrc = baseGraphRef.current || { nodes: data.nodes, links: data.links };
+      for (const n of baseSrc.nodes || []) {
+        baseKeys.add(toLower(n.id));
+        const nm = (n as any).name as string | undefined;
+        if (nm) baseKeys.add(toLower(nm));
+      }
+      for (const n of neighbors) {
+        if (!baseKeys.has(n)) return true;
+      }
+    } catch {}
     // Fallback to set-based heuristic
     if (nodeId && expandedNodes.has(nodeId)) return true;
     for (const k of expandedNodes) {
