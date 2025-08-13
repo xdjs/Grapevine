@@ -121,16 +121,30 @@ export default function NetworkVisualizer({
     batchSize: 20
   });
 
-  // Immediately trigger image fetch for visible nodes right after data becomes available
+  // Local render data that we can enhance with image URLs
+  const [renderData, setRenderData] = useState<NetworkData>(finalDisplayData);
+
+  // Keep local render data in sync when the base graph changes
   useEffect(() => {
-    try {
-      if (!finalDisplayData?.nodes || finalDisplayData.nodes.length === 0) return;
-      // Fire and forget; hook manages internal loading/error state
-      profilePictures.updateNodesWithImages(finalDisplayData.nodes);
-    } catch (error) {
-      handleError(error as Error, 'initial profile picture fetch');
-    }
-  }, [finalDisplayData?.nodes]);
+    setRenderData(finalDisplayData);
+  }, [finalDisplayData]);
+
+  // Immediately trigger image fetch and apply results to render data
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!finalDisplayData?.nodes || finalDisplayData.nodes.length === 0) return;
+        const updatedNodes = await profilePictures.updateNodesWithImages(finalDisplayData.nodes);
+        // Only update if we actually received any new image URLs
+        const changed = updatedNodes.some((n, i) => n.imageUrl !== finalDisplayData.nodes[i]?.imageUrl);
+        if (changed) {
+          setRenderData({ nodes: updatedNodes, links: finalDisplayData.links });
+        }
+      } catch (error) {
+        handleError(error as Error, 'initial profile picture fetch');
+      }
+    })();
+  }, [finalDisplayData?.nodes, finalDisplayData?.links]);
 
   // Tooltip management hook
   const tooltip = useTooltip({
