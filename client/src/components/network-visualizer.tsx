@@ -121,6 +121,34 @@ export default function NetworkVisualizer({
     batchSize: 20
   });
 
+  // Local render state that can be updated with fetched image URLs immediately
+  const [renderData, setRenderData] = useState<NetworkData>(data);
+
+  // Keep local render data in sync with upstream computed display data
+  useEffect(() => {
+    setRenderData(finalDisplayData);
+  }, [finalDisplayData]);
+
+  // As soon as display data is ready, kick off an immediate image fetch and update nodes
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        if (!finalDisplayData?.nodes?.length) return;
+        const updatedNodes = await profilePictures.updateNodesWithImages(finalDisplayData.nodes);
+        if (!cancelled) {
+          setRenderData({ ...finalDisplayData, nodes: updatedNodes });
+        }
+      } catch (e) {
+        // Non-fatal; render without images
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [finalDisplayData, profilePictures]);
+
   // Tooltip management hook
   const tooltip = useTooltip({
     networkData: data,
@@ -388,7 +416,7 @@ export default function NetworkVisualizer({
 
           {/* D3 Network Renderer Component */}
           <D3NetworkRenderer
-            data={finalDisplayData}
+            data={renderData}
             visible={visible}
             filterState={filterState}
             svgRef={svgRef}
