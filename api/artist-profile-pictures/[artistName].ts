@@ -140,7 +140,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       let spotifyErrorMessage: string | undefined;
       if (spotifyConfigured) {
         try {
-          const data = await fetchFromSpotifyWithRetry(decodedArtistName, size || 'medium', 3);
+          // Import through adapter so the path is stable in serverless bundles
+          const { spotifyService } = await import('../_shared/spotify-adapter');
+          // Inline fetch with retries using the shared service instance
+          let data: { imageUrl: string; spotifyId: string } | null = null;
+          let lastErr: any = null;
+          for (let attempt = 0; attempt <= 3; attempt++) {
+            try {
+              const resultMap = await spotifyService.batchGetArtistProfileImages([decodedArtistName], size || 'medium');
+              const d = resultMap.get(decodedArtistName);
+              if (d && d.imageUrl) {
+                data = { imageUrl: d.imageUrl, spotifyId: d.spotifyId };
+                break;
+              }
+              // no match
+              break;
+            } catch (err: any) {
+              lastErr = err;
+              const status = err?.response?.status || err?.code;
+              const retryAfterHeader = err?.response?.headers?.['retry-after'] || err?.response?.headers?.['Retry-After'];
+              let delayMs = 0;
+              if (retryAfterHeader) {
+                const sec = Number(retryAfterHeader);
+                if (!Number.isNaN(sec) && sec > 0) delayMs = sec * 1000;
+              }
+              const backoffMs = 500 * Math.pow(2, attempt);
+              delayMs = Math.max(delayMs, backoffMs);
+              const isRateLimited = status === 429;
+              const isTransient = status === 500 || status === 502 || status === 503 || status === 504 || status === 'ECONNRESET' || status === 'ETIMEDOUT';
+              if ((isRateLimited || isTransient) && attempt < 3) {
+                if (delayMs > 0) await new Promise(r => setTimeout(r, delayMs));
+                continue;
+              }
+              throw err;
+            }
+          }
           if (data && data.imageUrl) {
             // Update cache best-effort
             if (client) {
