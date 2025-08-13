@@ -14,14 +14,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method !== 'GET') {
-    res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed', reason: 'invalid_method' });
     return;
   }
 
   const artistNameParam = req.query.artistName;
   const artistName = Array.isArray(artistNameParam) ? artistNameParam[0] : artistNameParam;
   if (!artistName || typeof artistName !== 'string') {
-    res.status(400).json({ error: 'Artist name is required' });
+    res.status(400).json({ error: 'Artist name is required', reason: 'missing_param' });
     return;
   }
 
@@ -36,12 +36,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
 
     if (!CONNECTION_STRING) {
-      res.status(500).json({ error: 'Database connection not configured', available: false, artist: decodedArtistName });
+      res.status(500).json({ error: 'Database connection not configured', available: false, artist: decodedArtistName, reason: 'db_not_configured' });
       return;
     }
-    if (!SPOTIFY_CLIENT_ID || !SPOTIFY_CLIENT_SECRET) {
-      console.warn('⚠️ [ProfilePics:single] Spotify credentials not configured; will only serve cache');
-    }
+    const spotifyConfigured = Boolean(SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET);
+    if (!spotifyConfigured) console.warn('⚠️ [ProfilePics:single] Spotify credentials not configured; will only serve cache');
 
     // Parse query params
     const forceRefresh = String(req.query.refresh || '').toLowerCase() === 'true';
@@ -62,6 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
       // Cache-first unless forceRefresh, only if DB connected
+      let notFoundReason: string = 'unknown';
       if (client && !forceRefresh) {
         try {
           const cacheQuery = 'SELECT node_pfp, spotify_id FROM artists WHERE LOWER(name) = LOWER($1) AND node_pfp IS NOT NULL';
@@ -78,13 +78,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
             return;
           }
+          notFoundReason = 'cache_miss';
         } catch (cacheErr) {
           console.warn('⚠️ [ProfilePics:single] Cache query failed; falling back to Spotify', cacheErr);
+          notFoundReason = 'cache_query_failed';
         }
       }
 
       // Miss or refresh: fetch from Spotify if configured
-      if (SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET) {
+      if (spotifyConfigured) {
         try {
           const { spotifyService } = await import('../../server/spotify');
           const resultMap = await spotifyService.batchGetArtistProfileImages([decodedArtistName], size || 'medium');
@@ -109,13 +111,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
             return;
           }
+          notFoundReason = 'spotify_no_match_or_no_image';
         } catch (spErr) {
           console.warn(`⚠️ [ProfilePics:single] Spotify fetch error for ${decodedArtistName}:`, spErr);
+          notFoundReason = 'spotify_fetch_error';
+        }
+      }
+      else {
+        // Spotify not configured and cache miss
+        if (!client || forceRefresh) {
+          notFoundReason = 'spotify_not_configured';
+        } else if (notFoundReason === 'unknown') {
+          notFoundReason = 'spotify_not_configured_cache_miss';
         }
       }
 
       // If we reach here, no image
-      res.status(404).json({ artist: decodedArtistName, available: false, error: 'Profile picture not found' });
+      res.status(404).json({ artist: decodedArtistName, available: false, error: 'Profile picture not found', reason: notFoundReason });
     } finally {
       if (client) {
         try { await client.end(); } catch {}
@@ -123,6 +135,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (error) {
     console.error(`❌ [ProfilePics:single] Error for "${decodedArtistName}":`, error);
-    res.status(500).json({ artist: decodedArtistName, available: false, error: 'Internal server error' });
+    res.status(500).json({ artist: decodedArtistName, available: false, error: 'Internal server error', reason: 'unhandled_exception' });
   }
 }
