@@ -85,12 +85,62 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
+      // Helper: Spotify fetch with retries, exponential backoff, and Retry-After support
+      const fetchFromSpotifyWithRetry = async (
+        name: string,
+        preferredSize: 'small' | 'medium' | 'large',
+        maxRetries: number = 3
+      ): Promise<{
+        imageUrl: string;
+        spotifyId: string;
+      } | null> => {
+        const { spotifyService } = await import('../../server/spotify');
+        let lastErr: any = null;
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+          try {
+            const resultMap = await spotifyService.batchGetArtistProfileImages([name], preferredSize);
+            const data = resultMap.get(name);
+            if (data && data.imageUrl) {
+              return { imageUrl: data.imageUrl, spotifyId: data.spotifyId };
+            }
+            // No match is not an error; break early
+            return null;
+          } catch (err: any) {
+            lastErr = err;
+            const status = err?.response?.status || err?.code;
+            const retryAfterHeader = err?.response?.headers?.['retry-after'] || err?.response?.headers?.['Retry-After'];
+            // Determine delay
+            let delayMs = 0;
+            if (retryAfterHeader) {
+              const sec = Number(retryAfterHeader);
+              if (!Number.isNaN(sec) && sec > 0) delayMs = sec * 1000;
+            }
+            // Exponential backoff if not given or to extend wait
+            const backoffMs = 500 * Math.pow(2, attempt);
+            delayMs = Math.max(delayMs, backoffMs);
+
+            // Retry only on rate limit or transient errors; stop on final attempt
+            const isRateLimited = status === 429;
+            const isTransient = status === 500 || status === 502 || status === 503 || status === 504 || status === 'ECONNRESET' || status === 'ETIMEDOUT';
+            if ((isRateLimited || isTransient) && attempt < maxRetries) {
+              if (delayMs > 0) {
+                await new Promise(r => setTimeout(r, delayMs));
+              }
+              continue;
+            }
+            // Non-retryable or exhausted
+            throw err;
+          }
+        }
+        throw lastErr; // should not reach here
+      };
+
       // Miss or refresh: fetch from Spotify if configured
+      let spotifyErrorStatus: number | string | undefined;
+      let spotifyErrorMessage: string | undefined;
       if (spotifyConfigured) {
         try {
-          const { spotifyService } = await import('../../server/spotify');
-          const resultMap = await spotifyService.batchGetArtistProfileImages([decodedArtistName], size || 'medium');
-          const data = resultMap.get(decodedArtistName);
+          const data = await fetchFromSpotifyWithRetry(decodedArtistName, size || 'medium', 3);
           if (data && data.imageUrl) {
             // Update cache best-effort
             if (client) {
@@ -115,6 +165,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         } catch (spErr) {
           console.warn(`⚠️ [ProfilePics:single] Spotify fetch error for ${decodedArtistName}:`, spErr);
           notFoundReason = 'spotify_fetch_error';
+          try {
+            // Extract status/message if axios-style error
+            // @ts-ignore
+            spotifyErrorStatus = spErr?.response?.status || spErr?.code || 'unknown';
+            // @ts-ignore
+            spotifyErrorMessage = spErr?.response?.data?.error_description || spErr?.message || 'unknown';
+          } catch {}
         }
       }
       else {
@@ -127,7 +184,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // If we reach here, no image
-      res.status(404).json({ artist: decodedArtistName, available: false, error: 'Profile picture not found', reason: notFoundReason });
+      const payload: any = { artist: decodedArtistName, available: false, error: 'Profile picture not found', reason: notFoundReason };
+      if (notFoundReason === 'spotify_fetch_error') {
+        if (spotifyErrorStatus !== undefined) payload.spotifyStatus = spotifyErrorStatus;
+        if (spotifyErrorMessage) payload.spotifyMessage = spotifyErrorMessage;
+      }
+      res.status(404).json(payload);
     } finally {
       if (client) {
         try { await client.end(); } catch {}
