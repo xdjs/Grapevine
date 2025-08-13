@@ -156,6 +156,7 @@ export default function ArtistSelectionModal({
                           <button
                             className="text-xs text-pink-500 hover:underline mt-1"
                             onClick={(e) => toggleBioExpansion(option.id, e)}
+                            onMouseDown={(e) => e.preventDefault()}
                             aria-label={`Read ${expandedBios[option.id] ? 'less' : 'more'} about ${option.name}`}
                           >
                             {expandedBios[option.id] ? 'Read less' : 'Read more'}

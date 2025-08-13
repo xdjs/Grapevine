@@ -143,6 +143,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const networkSearchInputRef = useRef<HTMLInputElement>(null);
+  const networkDropdownRef = useRef<HTMLDivElement>(null);
   const viewportHeight = useViewportHeight();
   const spacing = useDynamicSpacing();
   const [expandedBios, setExpandedBios] = useState<Record<string, boolean>>({});
@@ -669,6 +670,12 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               }}
               onBlur={() => {
                 setTimeout(() => {
+                  const activeEl = document.activeElement as Node | null;
+                  const insideHomeDropdown = dropdownRef.current?.contains(activeEl || null);
+                  const insideNetworkDropdown = networkDropdownRef.current?.contains(activeEl || null);
+                  if (insideHomeDropdown || insideNetworkDropdown) {
+                    return;
+                  }
                   setIsSearchFocused(false);
                   setShowDropdown(false);
                 }, 150);
@@ -767,6 +774,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                                   <button
                                     className="text-[10px] text-pink-400 hover:underline mt-1"
                                     onClick={(e) => toggleBioExpansion(artist.id, e)}
+                                    onMouseDown={(e) => e.preventDefault()}
                                     aria-label={`Read ${expandedBios[artist.id] ? 'less' : 'more'} about ${artist.name}`}
                                   >
                                     {expandedBios[artist.id] ? 'Read less' : 'Read more'}
@@ -932,6 +940,7 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
               {/* Artist Options Dropdown - Network View */}
               {(showDropdown || isLoadingOptions) && showNetworkView && isSearchFocused && (
                 <div 
+                  ref={networkDropdownRef}
                   className="absolute top-full left-0 right-14 sm:right-20 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto artist-dropdown-scroll dropdown-height-constraint"
                   style={{ 
                     maxHeight: '85px', // Height to align with similar position in network view
@@ -984,9 +993,10 @@ function SearchInterface({ onNetworkData, showNetworkView, clearSearch, onLoadin
                                     {artist.bio}
                                   </CardDescription>
                                   {artist.bio.length > 100 && (
-                                    <button
+                                  <button
                                       className="text-[10px] text-pink-400 hover:underline mt-0.5"
                                       onClick={(e) => toggleBioExpansion(artist.id, e)}
+                                      onMouseDown={(e) => e.preventDefault()}
                                       aria-label={`Read ${expandedBios[artist.id] ? 'less' : 'more'} about ${artist.name}`}
                                     >
                                       {expandedBios[artist.id] ? 'Read less' : 'Read more'}
