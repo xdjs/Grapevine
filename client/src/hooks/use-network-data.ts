@@ -605,7 +605,39 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       return true;
     });
 
-    const nextData: NetworkData = { nodes: remainingNodes, links: remainingLinks };
+    // Safety: ensure the anchor node remains present after collapsing its own expansion
+    let ensuredNodes = remainingNodes;
+    const anchorExists = ensuredNodes.some(n => toKey(n.id) === anchorLower);
+    if (!anchorExists) {
+      const anchorFromWorking = workingData.nodes.find(n => toKey(n.id) === anchorLower || toKey(n.name) === anchorLower);
+      if (anchorFromWorking) ensuredNodes = [...ensuredNodes, anchorFromWorking];
+    }
+
+    // Safety: ensure the anchor retains its connection to any base or preserved nodes if such a link existed before
+    let ensuredLinks = remainingLinks;
+    const linkKey = (a: string, b: string) => {
+      const al = a.toLowerCase();
+      const bl = b.toLowerCase();
+      return al < bl ? `${al}|${bl}` : `${bl}|${al}`;
+    };
+    const existingKeys = new Set<string>(ensuredLinks.map(l => linkKey(typeof l.source === 'string' ? l.source : l.source.id, typeof l.target === 'string' ? l.target : l.target.id)));
+    // Identify parent candidates: base nodes or nodes preserved due to other expansions
+    const parentCandidates = new Set<string>([...baseNodeIds, ...preserveNodeIds]);
+    for (const l of workingData.links) {
+      const s = typeof l.source === 'string' ? l.source : l.source.id;
+      const t = typeof l.target === 'string' ? l.target : l.target.id;
+      const connectsAnchor = toKey(s) === anchorLower || toKey(t) === anchorLower;
+      if (!connectsAnchor) continue;
+      const other = toKey(s) === anchorLower ? t : s;
+      if (!parentCandidates.has(other)) continue;
+      const k = linkKey(s, t);
+      if (!existingKeys.has(k)) {
+        ensuredLinks = [...ensuredLinks, { source: s, target: t }];
+        existingKeys.add(k);
+      }
+    }
+
+    const nextData: NetworkData = { nodes: ensuredNodes, links: ensuredLinks };
     setFullNetworkData(nextData);
 
     // Determine if any neighbor relationships were preserved due to child expansions
