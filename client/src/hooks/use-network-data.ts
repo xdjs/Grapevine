@@ -769,20 +769,12 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         }
       }
     }
-    // Structural fallback: Only for base-graph anchors (e.g., main artist's first-degree collaborators)
-    // If a BASE node has any neighbor that is not part of the base graph, consider it expanded.
-    // Newly added nodes (not in base) should NOT be considered expanded by this rule.
+    // Structural fallback: if this node has any neighbor that is not part of the base graph, consider it expanded
     try {
       if (fullNetworkData && baseGraphRef.current) {
         const baseIds = new Set<string>((baseGraphRef.current.nodes || []).map(n => n.id.toLowerCase()));
-        const baseKeys = new Set<string>();
-        for (const n of baseGraphRef.current.nodes || []) {
-          baseKeys.add(String(n.id).toLowerCase());
-          if ((n as any).name) baseKeys.add(String((n as any).name).toLowerCase());
-        }
         const anchor = (nodeId || nodeName || '').toLowerCase();
-        const isAnchorInBase = anchor && baseKeys.has(anchor);
-        if (anchor && isAnchorInBase) {
+        if (anchor) {
           for (const l of fullNetworkData.links) {
             const s = (typeof l.source === 'string' ? l.source : l.source.id).toLowerCase();
             const t = (typeof l.target === 'string' ? l.target : l.target.id).toLowerCase();
