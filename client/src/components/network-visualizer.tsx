@@ -413,7 +413,7 @@ export default function NetworkVisualizer({
 
           {/* D3 Network Renderer Component */}
           <D3NetworkRenderer
-            data={finalDisplayData}
+            data={renderData}
             visible={visible}
             filterState={filterState}
             svgRef={svgRef}
