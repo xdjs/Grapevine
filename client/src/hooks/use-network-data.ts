@@ -769,32 +769,40 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         }
       }
     }
-    // Structural fallback (degree delta): compare current neighbors vs base neighbors
+    // Structural fallback (scoped):
+    // Treat a node as expanded if EITHER it's a base-graph node OR it is a known expansion anchor,
+    // AND it has any neighbor that is not part of the base graph. This avoids marking newly-added
+    // leaf nodes as expanded before they themselves are expanded.
     try {
-      const toLower = (v?: string) => (v || '').toLowerCase();
-      const anchor = toLower(nodeId) || toLower(nodeName);
-      if (anchor) {
-        // Build current neighbor set from current display graph (fullNetworkData if present, else visible)
-        const srcData = fullNetworkData || { nodes: getVisibleNodes(), links: getVisibleLinks() };
-        const currentNeighbors = new Set<string>();
-        for (const l of srcData.links) {
-          const s = toLower(typeof l.source === 'string' ? l.source : l.source.id);
-          const t = toLower(typeof l.target === 'string' ? l.target : l.target.id);
-          if (s === anchor) currentNeighbors.add(t);
-          else if (t === anchor) currentNeighbors.add(s);
+      if (fullNetworkData && baseGraphRef.current) {
+        const toLower = (v?: string) => (v || '').toLowerCase();
+        const baseIdsOnly = new Set<string>((baseGraphRef.current.nodes || []).map(n => toLower(n.id)));
+        const baseKeys = new Set<string>();
+        for (const n of baseGraphRef.current.nodes || []) {
+          baseKeys.add(toLower(n.id));
+          // name may equal id for some nodes; harmless duplicate
+          // use as any to read optional name defensively
+          const nm = (n as any).name as string | undefined;
+          if (nm) baseKeys.add(toLower(nm));
         }
-        // Build base neighbor set from the original base graph (initial data) or saved baseGraph snapshot
-        const baseSrc = baseGraphRef.current || { nodes: data.nodes, links: data.links };
-        const baseNeighbors = new Set<string>();
-        for (const l of baseSrc.links) {
-          const s = toLower(typeof l.source === 'string' ? l.source : (l.source as any).id);
-          const t = toLower(typeof l.target === 'string' ? l.target : (l.target as any).id);
-          if (s === anchor) baseNeighbors.add(t);
-          else if (t === anchor) baseNeighbors.add(s);
-        }
-        // If there exists any neighbor in current that is not in base, treat as expanded
-        for (const n of currentNeighbors) {
-          if (!baseNeighbors.has(n)) return true;
+        const anchor = toLower(nodeId) || toLower(nodeName);
+        if (anchor) {
+          // Is this node base or a recorded expansion anchor?
+          let isExpansionAnchor = false;
+          if (contributionsRef.current.size > 0) {
+            for (const k of contributionsRef.current.keys()) {
+              if (toLower(k) === anchor) { isExpansionAnchor = true; break; }
+            }
+          }
+          const isBase = baseKeys.has(anchor);
+          if (isBase || isExpansionAnchor) {
+            for (const l of fullNetworkData.links) {
+              const s = toLower(typeof l.source === 'string' ? l.source : l.source.id);
+              const t = toLower(typeof l.target === 'string' ? l.target : l.target.id);
+              if (s === anchor && !baseKeys.has(t)) return true;
+              if (t === anchor && !baseKeys.has(s)) return true;
+            }
+          }
         }
       }
     } catch {}
