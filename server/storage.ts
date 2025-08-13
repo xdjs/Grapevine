@@ -3,6 +3,17 @@ import { spotifyService } from "./spotify.js";
 import { musicBrainzService } from "./musicbrainz.js";
 import { wikipediaService } from "./wikipedia.js";
 import { musicNerdService } from "./musicnerd-service.js";
+import { performance } from "node:perf_hooks";
+
+async function logTime<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  const start = performance.now();
+  try {
+    return await fn();
+  } finally {
+    const duration = performance.now() - start;
+    console.log(`⏱️ [TIMING] ${label} took ${duration.toFixed(2)}ms`);
+  }
+}
 
 export interface IStorage {
   // Artist methods
@@ -134,6 +145,7 @@ export class MemStorage implements IStorage {
   }
 
   private async generateRealCollaborationNetwork(artistName: string): Promise<NetworkData> {
+    const overallStart = performance.now();
     console.log(`🚀 [DEBUG] STARTING generateRealCollaborationNetwork for "${artistName}"`);
     const nodes: NetworkNode[] = [];
     const links: NetworkLink[] = [];
@@ -141,16 +153,24 @@ export class MemStorage implements IStorage {
     try {
       // Get real collaboration data from MusicBrainz
       console.log(`🎵 [DEBUG] Fetching MusicBrainz collaboration data for "${artistName}"`);
-      const collaborationData = await musicBrainzService.getArtistCollaborations(artistName);
-      console.log(`🎵 [DEBUG] MusicBrainz returned ${collaborationData.artists.length} artist collaborators and ${collaborationData.works.length} works for "${artistName}"`);
-      
+      const collaborationData = await logTime(
+        `musicBrainzService.getArtistCollaborations(${artistName})`,
+        () => musicBrainzService.getArtistCollaborations(artistName)
+      );
+      console.log(
+        `🎵 [DEBUG] MusicBrainz returned ${collaborationData.artists.length} artist collaborators and ${collaborationData.works.length} works for "${artistName}"`
+      );
+
       // Get Spotify image for main artist
       let mainArtistImage = null;
       let mainArtistSpotifyId = null;
-      
+
       if (spotifyService.isConfigured()) {
         try {
-          const spotifyArtist = await spotifyService.searchArtist(artistName);
+          const spotifyArtist = await logTime(
+            `spotifyService.searchArtist(main: ${artistName})`,
+            () => spotifyService.searchArtist(artistName)
+          );
           if (spotifyArtist) {
             mainArtistImage = spotifyService.getArtistImageUrl(spotifyArtist, 'medium');
             mainArtistSpotifyId = spotifyArtist.id;
@@ -164,7 +184,10 @@ export class MemStorage implements IStorage {
       console.log(`🔍 [DEBUG] Looking up MusicNerd artist ID for main artist: "${artistName}"`);
       let mainArtistMusicNerdId = null;
       try {
-        mainArtistMusicNerdId = await musicNerdService.getArtistId(artistName);
+        mainArtistMusicNerdId = await logTime(
+          `musicNerdService.getArtistId(main: ${artistName})`,
+          () => musicNerdService.getArtistId(artistName)
+        );
         console.log(`✅ [DEBUG] MusicNerd artist ID for "${artistName}": ${mainArtistMusicNerdId}`);
       } catch (error) {
         console.log(`❌ [DEBUG] Could not fetch MusicNerd ID for ${artistName}:`, error);
@@ -185,12 +208,16 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
             apiKey: process.env.OPENAI_API_KEY,
           });
 
-          const roleCompletion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [{ role: "user", content: mainArtistRolePrompt }],
-            temperature: 0.1,
-            max_tokens: 100,
-          });
+          const roleCompletion = await logTime(
+            `openai.mainArtistRoles(${artistName})`,
+            () =>
+              openai.chat.completions.create({
+                model: "gpt-4o",
+                messages: [{ role: "user", content: mainArtistRolePrompt }],
+                temperature: 0.1,
+                max_tokens: 100,
+              })
+          );
 
           const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
           if (roleContent) {
@@ -241,7 +268,10 @@ Investigate thoroughly for multiple roles on ${artistName} - check if they are a
           for (const collaborator of collaborationData.artists) {
             if (collaborator.type === 'producer' || collaborator.type === 'songwriter') {
               try {
-                const producerCollaborations = await musicBrainzService.getArtistCollaborations(collaborator.name);
+                const producerCollaborations = await logTime(
+                  `musicBrainzService.getArtistCollaborations(branching: ${collaborator.name})`,
+                  () => musicBrainzService.getArtistCollaborations(collaborator.name)
+                );
                 if (producerCollaborations && producerCollaborations.artists.length > 0) {
                   const branchingArtists = producerCollaborations.artists
                     .filter(c => c.name !== collaborator.name && c.name !== artistName)
@@ -277,12 +307,16 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
             apiKey: process.env.OPENAI_API_KEY,
           });
 
-          const roleCompletion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [{ role: "user", content: batchRolePrompt }],
-            temperature: 0.1,
-            max_tokens: 1000,
-          });
+          const roleCompletion = await logTime(
+            `openai.batchRoleDetection(${artistName})`,
+            () =>
+              openai.chat.completions.create({
+                model: "gpt-4o",
+                messages: [{ role: "user", content: batchRolePrompt }],
+                temperature: 0.1,
+                max_tokens: 1000,
+              })
+          );
 
           const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
           if (roleContent) {
@@ -312,14 +346,18 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
       const enhancedCollaborators = collaborationData.artists;
       
       for (const collaborator of enhancedCollaborators) {
-        console.log(`👤 [DEBUG] Processing collaborator: "${collaborator.name}" (type: ${collaborator.type})`);
-        // Get Spotify image for collaborator
-        let collaboratorImage = null;
+        await logTime(`process collaborator ${collaborator.name}`, async () => {
+          console.log(`👤 [DEBUG] Processing collaborator: "${collaborator.name}" (type: ${collaborator.type})`);
+          // Get Spotify image for collaborator
+          let collaboratorImage = null;
         let collaboratorSpotifyId = null;
         
         if (spotifyService.isConfigured()) {
           try {
-            const spotifyCollaborator = await spotifyService.searchArtist(collaborator.name);
+            const spotifyCollaborator = await logTime(
+              `spotifyService.searchArtist(collaborator: ${collaborator.name})`,
+              () => spotifyService.searchArtist(collaborator.name)
+            );
             if (spotifyCollaborator) {
               collaboratorImage = spotifyService.getArtistImageUrl(spotifyCollaborator, 'medium');
               collaboratorSpotifyId = spotifyCollaborator.id;
@@ -333,7 +371,10 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         let collaboratorMusicNerdId = null;
         if (collaborator.type === 'artist') {
           try {
-            collaboratorMusicNerdId = await musicNerdService.getArtistId(collaborator.name);
+            collaboratorMusicNerdId = await logTime(
+              `musicNerdService.getArtistId(collaborator: ${collaborator.name})`,
+              () => musicNerdService.getArtistId(collaborator.name)
+            );
           } catch (error) {
             console.log(`Could not fetch MusicNerd ID for ${collaborator.name}`);
           }
@@ -344,7 +385,10 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         if (collaborator.type === 'producer' || collaborator.type === 'songwriter') {
           try {
             console.log(`🔍 [DEBUG] Fetching authentic collaborations for ${collaborator.type} "${collaborator.name}"`);
-            const producerCollaborations = await musicBrainzService.getArtistCollaborations(collaborator.name);
+            const producerCollaborations = await logTime(
+              `musicBrainzService.getArtistCollaborations(collaborator: ${collaborator.name})`,
+              () => musicBrainzService.getArtistCollaborations(collaborator.name)
+            );
             if (producerCollaborations && producerCollaborations.artists.length > 0) {
               const authenticCollaborators = producerCollaborations.artists
                 .filter(c => c.name !== collaborator.name)
@@ -398,22 +442,25 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         if (topCollaborators && topCollaborators.length > 0) {
           const maxBranching = 3;
           const branchingCount = Math.min(topCollaborators.length, maxBranching);
-          
+
           for (let i = 0; i < branchingCount; i++) {
             const branchingArtistName = topCollaborators[i];
-            
+
             // Skip if it's the main artist or already exists
             if (branchingArtistName === artistName || nodes.some(n => n.name === branchingArtistName)) {
               continue;
             }
-            
+
             // Get enhanced roles from batch detection, fallback to default
             const branchingArtistRoles = collaboratorRoleMap.get(branchingArtistName) || ['artist'];
 
             // Get MusicNerd artist ID for branching artist
             let branchingArtistMusicNerdId = null;
             try {
-              branchingArtistMusicNerdId = await musicNerdService.getArtistId(branchingArtistName);
+              branchingArtistMusicNerdId = await logTime(
+                `musicNerdService.getArtistId(branching: ${branchingArtistName})`,
+                () => musicNerdService.getArtistId(branchingArtistName)
+              );
             } catch (error) {
               console.log(`Could not fetch MusicNerd ID for branching artist ${branchingArtistName}`);
             }
@@ -427,7 +474,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
               size: 16, // Smaller size for branching artists
               artistId: branchingArtistMusicNerdId,
             };
-            
+
             console.log(`🎭 [MemStorage] Enhanced branching artist "${branchingArtistName}" to roles:`, branchingArtistRoles);
             nodes.push(branchingArtistNode);
 
@@ -438,6 +485,7 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
             });
           }
         }
+        });
       }
 
       // If no real collaborations found, try Wikipedia
@@ -445,18 +493,25 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         console.log(`No MusicBrainz collaborations found for ${artistName}, trying Wikipedia`);
         
         try {
-          const wikipediaCollaborators = await wikipediaService.getArtistCollaborations(artistName);
+          const wikipediaCollaborators = await logTime(
+            `wikipediaService.getArtistCollaborations(${artistName})`,
+            () => wikipediaService.getArtistCollaborations(artistName)
+          );
           
           if (wikipediaCollaborators.length > 0) {
             // Add Wikipedia collaborators to the network
             for (const collaborator of wikipediaCollaborators) {
-              // Get Spotify image for collaborator
-              let collaboratorImage = null;
-              let collaboratorSpotifyId = null;
+              await logTime(`process wikipedia collaborator ${collaborator.name}`, async () => {
+                // Get Spotify image for collaborator
+                let collaboratorImage = null;
+                let collaboratorSpotifyId = null;
               
               if (spotifyService.isConfigured()) {
                 try {
-                  const spotifyCollaborator = await spotifyService.searchArtist(collaborator.name);
+                  const spotifyCollaborator = await logTime(
+                    `spotifyService.searchArtist(wiki: ${collaborator.name})`,
+                    () => spotifyService.searchArtist(collaborator.name)
+                  );
                   if (spotifyCollaborator) {
                     collaboratorImage = spotifyService.getArtistImageUrl(spotifyCollaborator, 'medium');
                     collaboratorSpotifyId = spotifyCollaborator.id;
@@ -470,7 +525,10 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
               let collaboratorMusicNerdId = null;
               if (collaborator.type === 'artist') {
                 try {
-                  collaboratorMusicNerdId = await musicNerdService.getArtistId(collaborator.name);
+                  collaboratorMusicNerdId = await logTime(
+                    `musicNerdService.getArtistId(wiki: ${collaborator.name})`,
+                    () => musicNerdService.getArtistId(collaborator.name)
+                  );
                 } catch (error) {
                   console.log(`Could not fetch MusicNerd ID for ${collaborator.name}`);
                 }
@@ -491,12 +549,16 @@ Investigate thoroughly for multiple roles on ${collaborator.name}, whether they 
                     apiKey: process.env.OPENAI_API_KEY,
                   });
 
-                  const roleCompletion = await openai.chat.completions.create({
-                    model: "gpt-4o",
-                    messages: [{ role: "user", content: singleRolePrompt }],
-                    temperature: 0.1,
-                    max_tokens: 100,
-                  });
+                  const roleCompletion = await logTime(
+                    `openai.wikipediaRoles(${collaborator.name})`,
+                    () =>
+                      openai.chat.completions.create({
+                        model: "gpt-4o",
+                        messages: [{ role: "user", content: singleRolePrompt }],
+                        temperature: 0.1,
+                        max_tokens: 100,
+                      })
+                  );
 
                   const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
                   if (roleContent) {
@@ -534,11 +596,12 @@ Investigate thoroughly for multiple roles on ${collaborator.name}, whether they 
                 source: artistName,
                 target: collaborator.name,
               });
-            }
-            
-            console.log(`Found ${wikipediaCollaborators.length} collaborators from Wikipedia for ${artistName}`);
-            return { nodes, links };
+            });
           }
+
+          console.log(`Found ${wikipediaCollaborators.length} collaborators from Wikipedia for ${artistName}`);
+          return { nodes, links };
+        }
         } catch (error) {
           console.error('Error fetching Wikipedia collaborations:', error);
         }
@@ -553,6 +616,11 @@ Investigate thoroughly for multiple roles on ${collaborator.name}, whether they 
       console.error('Error generating real collaboration network:', error);
       // Return just the main artist if everything fails
       return { nodes, links };
+    } finally {
+      const total = performance.now() - overallStart;
+      console.log(
+        `⏱️ [TIMING] generateRealCollaborationNetwork for "${artistName}" took ${total.toFixed(2)}ms`
+      );
     }
   }
 
