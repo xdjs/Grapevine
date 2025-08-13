@@ -485,7 +485,31 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         const t = typeof l.target === 'string' ? l.target : l.target.id;
         return !(toRemove.has(s) || toRemove.has(t));
       });
-      const remainingNodesHeuristic = workingData.nodes.filter(n => !toRemove.has(n.id));
+      // Never remove the clicked/anchor node itself
+      const anchorLower = toKey(clickedId);
+      let remainingNodesHeuristic = workingData.nodes.filter(n => !toRemove.has(n.id) || toKey(n.id) === anchorLower);
+
+      // Ensure the anchor's link to any base-graph node remains
+      const baseIdsArr = Array.from(baseIds);
+      const linkKey = (a: string, b: string) => {
+        const al = a.toLowerCase();
+        const bl = b.toLowerCase();
+        return al < bl ? `${al}|${bl}` : `${bl}|${al}`;
+      };
+      const existingKeys = new Set<string>(remainingLinksHeuristic.map(l => linkKey(typeof l.source === 'string' ? l.source : l.source.id, typeof l.target === 'string' ? l.target : l.target.id)));
+      for (const l of workingData.links) {
+        const s = typeof l.source === 'string' ? l.source : l.source.id;
+        const t = typeof l.target === 'string' ? l.target : l.target.id;
+        const connectsAnchor = toKey(s) === anchorLower || toKey(t) === anchorLower;
+        if (!connectsAnchor) continue;
+        const other = toKey(s) === anchorLower ? t : s;
+        if (!baseIdsArr.includes(other)) continue;
+        const k = linkKey(s, t);
+        if (!existingKeys.has(k)) {
+          remainingLinksHeuristic.push({ source: s, target: t });
+          existingKeys.add(k);
+        }
+      }
       const nextDataHeuristic: NetworkData = { nodes: remainingNodesHeuristic, links: remainingLinksHeuristic };
       setFullNetworkData(nextDataHeuristic);
 
