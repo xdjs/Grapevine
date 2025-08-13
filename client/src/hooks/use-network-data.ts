@@ -228,16 +228,8 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       const mergedNodes: NetworkNode[] = [...baseData.nodes];
       const mergedLinks: NetworkLink[] = [...baseData.links];
 
-      // Early exit if this node appears to be already expanded (best-effort)
-      const existingIdForName = baseData.nodes.find(n => n.name === nodeName)?.id;
-      const candidateId = nodeId || existingIdForName;
-      if (candidateId && expandedNodes.has(candidateId)) {
-        vlog(`ℹ️ Node already expanded id=${candidateId}; skipping expansion`);
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('network-toast', { detail: { message: `${nodeName} is already expanded.`, type: 'info' } }));
-        }
-        return;
-      }
+      // Allow repeated expansions on the same node to progressively add more collaborators.
+      // We keep the lock to prevent concurrent requests, but do not block subsequent clicks.
 
       // Track existing nodes by normalized id, and links by undirected, normalized key
       const existingNodeIdsNormalized = new Set<string>(mergedNodes.map(n => normalizeId(n.id)));
@@ -298,14 +290,17 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         }
       }
 
-      // Select up to three neighbors that are NEW nodes only (do not connect to existing nodes)
-      // Also filter out the main artist if present in the collaborator network
+      // Select up to three neighbors per request that are NEW nodes only (do not connect to existing nodes)
+      // Also filter out the main artist if present in the collaborator network.
+      // To enable progressive expansion, skip neighbors we've already added for this anchor previously.
       const mainIdCandidates = [mainArtistNode?.id, mainArtistNode?.name].filter(Boolean).map(String);
       const isMain = (id: string) => mainIdCandidates.some(mid => toKey(mid) === toKey(id));
       const selectedNeighborIds: string[] = [];
+      const previouslyAdded = contributionsRef.current.get(clickedCanonicalFinalId)?.addedNodeIds || new Set<string>();
       for (const nid of neighborIds) {
         if (selectedNeighborIds.length >= 3) break;
         if (isMain(nid)) continue;
+        if (previouslyAdded.has(nid)) continue;
         if (!existingNodeIdsNormalized.has(normalizeId(nid))) {
           selectedNeighborIds.push(nid);
         }
@@ -388,9 +383,9 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       // Toast: success or no new neighbors
       if (typeof window !== 'undefined') {
         if (addedNodeCount === 0 && addedLinkCount === 0) {
-          window.dispatchEvent(new CustomEvent('network-toast', { detail: { message: `No new collaborators found for ${nodeName}.`, type: 'info' } }));
+          window.dispatchEvent(new CustomEvent('network-toast', { detail: { message: `No more collaborators to add for ${nodeName}.`, type: 'info' } }));
         } else {
-          window.dispatchEvent(new CustomEvent('network-toast', { detail: { message: `Expanded ${nodeName} with up to 3 collaborators.`, type: 'success' } }));
+          window.dispatchEvent(new CustomEvent('network-toast', { detail: { message: `Expanded ${nodeName} with up to 3 more collaborators.`, type: 'success' } }));
         }
       }
     } catch (error) {
@@ -485,17 +480,47 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         const t = typeof l.target === 'string' ? l.target : l.target.id;
         return !(toRemove.has(s) || toRemove.has(t));
       });
-      const remainingNodesHeuristic = workingData.nodes.filter(n => !toRemove.has(n.id));
+      // Never remove the clicked/anchor node itself
+      const anchorLower = toKey(clickedId);
+      let remainingNodesHeuristic = workingData.nodes.filter(n => !toRemove.has(n.id) || toKey(n.id) === anchorLower);
+
+      // Ensure the anchor's link to any base-graph node remains
+      const baseIdsArr = Array.from(baseIds);
+      const linkKey = (a: string, b: string) => {
+        const al = a.toLowerCase();
+        const bl = b.toLowerCase();
+        return al < bl ? `${al}|${bl}` : `${bl}|${al}`;
+      };
+      const existingKeys = new Set<string>(remainingLinksHeuristic.map(l => linkKey(typeof l.source === 'string' ? l.source : l.source.id, typeof l.target === 'string' ? l.target : l.target.id)));
+      for (const l of workingData.links) {
+        const s = typeof l.source === 'string' ? l.source : l.source.id;
+        const t = typeof l.target === 'string' ? l.target : l.target.id;
+        const connectsAnchor = toKey(s) === anchorLower || toKey(t) === anchorLower;
+        if (!connectsAnchor) continue;
+        const other = toKey(s) === anchorLower ? t : s;
+        if (!baseIdsArr.includes(other)) continue;
+        const k = linkKey(s, t);
+        if (!existingKeys.has(k)) {
+          remainingLinksHeuristic.push({ source: s, target: t });
+          existingKeys.add(k);
+        }
+      }
       const nextDataHeuristic: NetworkData = { nodes: remainingNodesHeuristic, links: remainingLinksHeuristic };
       setFullNetworkData(nextDataHeuristic);
 
       // Update expanded bookkeeping so UI toggles back to Expand
-      setExpandedNodes(prev => {
-        const ns = new Set(prev);
-        if (nodeId) ns.delete(nodeId);
-        ns.delete(nodeName);
-        return ns;
-      });
+      const newExpanded = new Set(expandedNodes);
+      // Robust case-insensitive removal of the anchor from expanded set
+      const toLower = (v?: string) => (v || '').toLowerCase();
+      const idLower = toLower(nodeId);
+      const nameLower = toLower(nodeName);
+      for (const k of Array.from(newExpanded)) {
+        const kl = toLower(k);
+        if ((idLower && kl === idLower) || (nameLower && kl === nameLower)) {
+          newExpanded.delete(k);
+        }
+      }
+      setExpandedNodes(newExpanded);
       // Remove any stale contribution entries matching this node by id/name (case-insensitive)
       const idKey = (nodeId || '').toLowerCase();
       const nameKey = (nodeName || '').toLowerCase();
@@ -504,13 +529,13 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         if (kl === idKey || kl === nameKey) contributionsRef.current.delete(k);
       }
 
-      // Persist new state immediately to avoid resurrecting stale snapshot
+      // Persist new state, but DO NOT overwrite an existing expanded snapshot with a collapsed one
       try {
         const payload = {
           main: mainArtistNode?.name || '',
-          isExpandedMode: contributionsRef.current.size > 0 || Array.from(expandedNodes).length > 1,
-          fullNetworkData: contributionsRef.current.size > 0 ? nextDataHeuristic : null,
-          expandedNodes: Array.from(expandedNodes),
+          isExpandedMode: contributionsRef.current.size > 0 || newExpanded.size > 0,
+          fullNetworkData: (contributionsRef.current.size > 0 || newExpanded.size > 0) ? nextDataHeuristic : null,
+          expandedNodes: Array.from(newExpanded),
           baseGraph: baseGraphRef.current,
           contributions: Array.from(contributionsRef.current.entries()).map(([k, v]) => ({
             key: k,
@@ -519,15 +544,21 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
             neighborIds: Array.from(v.neighborIds || []),
           })),
         } as any;
-        if (payload.isExpandedMode) {
-          (window as any).grapevineExpandedState = payload;
-          sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
-        } else {
-          delete (window as any).grapevineExpandedState;
-          sessionStorage.removeItem(PERSIST_KEY);
-          setIsExpandedMode(false);
-          setFullNetworkData(null);
-          baseGraphRef.current = null;
+        const existing = (typeof window !== 'undefined' && (window as any).grapevineExpandedState) || (sessionStorage.getItem(PERSIST_KEY) ? JSON.parse(sessionStorage.getItem(PERSIST_KEY) as string) : null);
+        const sameMain = existing && existing.main === payload.main;
+        const existingExpanded = Boolean(existing?.isExpandedMode);
+        const canOverwrite = payload.isExpandedMode || !existing || !sameMain || !existingExpanded;
+        if (canOverwrite) {
+          if (payload.isExpandedMode) {
+            (window as any).grapevineExpandedState = payload;
+            sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
+          } else {
+            delete (window as any).grapevineExpandedState;
+            sessionStorage.removeItem(PERSIST_KEY);
+            setIsExpandedMode(false);
+            setFullNetworkData(null);
+            baseGraphRef.current = null;
+          }
         }
       } catch {}
 
@@ -538,27 +569,42 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     const contribution = contributionsRef.current.get(keyToRemove);
     if (!contribution) return;
 
-    // Build preservation set: nodes that belong to other expansions (anchors and their added nodes)
+    // Build preservation set: nodes that belong to other expansions (anchors, their added nodes, and recorded neighbors)
     const preserveNodeIds = new Set<string>();
     contributionsRef.current.forEach((c, k) => {
       if (k === keyToRemove) return;
       preserveNodeIds.add(k); // other expansion anchors
       c.addedNodeIds.forEach(id => preserveNodeIds.add(id));
+      if (c.neighborIds) c.neighborIds.forEach(id => preserveNodeIds.add(id));
     });
 
-    // Remove contributed links, but preserve links that keep other expansions attached
+    // Remove contributed links, but preserve links that keep other expansions or base graph attached
+    const preservedLinkKeys = new Set<string>();
+    const anchorLower = toKey(keyToRemove);
+    const baseNodeIds = new Set<string>((baseGraphRef.current?.nodes || []).map(n => n.id));
     const remainingLinks = workingData.links.filter(l => {
       const s = typeof l.source === 'string' ? l.source : l.source.id;
       const t = typeof l.target === 'string' ? l.target : l.target.id;
       const key = (s.toLowerCase() < t.toLowerCase()) ? `${s.toLowerCase()}|${t.toLowerCase()}` : `${t.toLowerCase()}|${s.toLowerCase()}`;
       if (!contribution.addedLinkKeys.has(key)) return true;
       // Preserve if this link connects to nodes belonging to other expansions
-      if (preserveNodeIds.has(s) || preserveNodeIds.has(t)) return true;
+      if (preserveNodeIds.has(s) || preserveNodeIds.has(t)) {
+        preservedLinkKeys.add(key);
+        return true;
+      }
+      // Also preserve the anchor's tie to any base or preserved node (e.g., Ed <-> Justin)
+      const connectsAnchor = toKey(s) === anchorLower || toKey(t) === anchorLower;
+      if (connectsAnchor) {
+        const other = toKey(s) === anchorLower ? t : s;
+        if (baseNodeIds.has(other) || preserveNodeIds.has(other)) {
+          preservedLinkKeys.add(key);
+          return true;
+        }
+      }
       return false;
     });
 
     // Build keep sets
-    const baseNodeIds = new Set<string>((baseGraphRef.current?.nodes || []).map(n => n.id));
     const otherContributionNodeIds = new Set<string>();
     contributionsRef.current.forEach((c, k) => {
       if (k === keyToRemove) return;
@@ -578,6 +624,8 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       // Keep base and other contributions explicitly
       if (baseNodeIds.has(n.id)) return true;
       if (otherContributionNodeIds.has(n.id)) return true;
+      // Never remove the anchor node itself during its own collapse
+      if (toKey(n.id) === anchorLower) return true;
       // If this node was a neighbor added by this expansion, remove it and anything exclusively under it
       if (contribution.addedNodeIds.has(n.id) || contribution.neighborIds.has(n.id)) {
         if (!attachedNodeIds.has(n.id)) return false; // dangling
@@ -588,21 +636,67 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       return true;
     });
 
-    const nextData: NetworkData = { nodes: remainingNodes, links: remainingLinks };
+    // Safety: ensure the anchor node remains present after collapsing its own expansion
+    let ensuredNodes = remainingNodes;
+    const anchorExists = ensuredNodes.some(n => toKey(n.id) === anchorLower);
+    if (!anchorExists) {
+      const anchorFromWorking = workingData.nodes.find(n => toKey(n.id) === anchorLower || toKey(n.name) === anchorLower);
+      if (anchorFromWorking) ensuredNodes = [...ensuredNodes, anchorFromWorking];
+    }
+
+    // Safety: ensure the anchor retains its connection to any base or preserved nodes if such a link existed before
+    let ensuredLinks = remainingLinks;
+    const linkKey = (a: string, b: string) => {
+      const al = a.toLowerCase();
+      const bl = b.toLowerCase();
+      return al < bl ? `${al}|${bl}` : `${bl}|${al}`;
+    };
+    const existingKeys = new Set<string>(ensuredLinks.map(l => linkKey(typeof l.source === 'string' ? l.source : l.source.id, typeof l.target === 'string' ? l.target : l.target.id)));
+    // Identify parent candidates: base nodes or nodes preserved due to other expansions
+    const parentCandidates = new Set<string>([...baseNodeIds, ...preserveNodeIds]);
+    for (const l of workingData.links) {
+      const s = typeof l.source === 'string' ? l.source : l.source.id;
+      const t = typeof l.target === 'string' ? l.target : l.target.id;
+      const connectsAnchor = toKey(s) === anchorLower || toKey(t) === anchorLower;
+      if (!connectsAnchor) continue;
+      const other = toKey(s) === anchorLower ? t : s;
+      if (!parentCandidates.has(other)) continue;
+      const k = linkKey(s, t);
+      if (!existingKeys.has(k)) {
+        ensuredLinks = [...ensuredLinks, { source: s, target: t }];
+        existingKeys.add(k);
+      }
+    }
+
+    const nextData: NetworkData = { nodes: ensuredNodes, links: ensuredLinks };
     setFullNetworkData(nextData);
+
+    // Determine if any neighbor relationships were preserved due to child expansions
+    const preservedNeighbors = new Set<string>();
+    contribution.neighborIds.forEach(nid => { if (preserveNodeIds.has(nid)) preservedNeighbors.add(nid); });
 
     // Update expanded sets/maps
     const newExpanded = new Set(expandedNodes);
-    newExpanded.delete(keyToRemove);
+    if (preservedNeighbors.size > 0) {
+      // Keep a minimal contribution so the parent still shows as shrinkable
+      contributionsRef.current.set(keyToRemove, {
+        addedNodeIds: new Set<string>(),
+        addedLinkKeys: preservedLinkKeys,
+        neighborIds: preservedNeighbors,
+      });
+      newExpanded.add(keyToRemove);
+    } else {
+      newExpanded.delete(keyToRemove);
+      contributionsRef.current.delete(keyToRemove);
+    }
     setExpandedNodes(newExpanded);
-    contributionsRef.current.delete(keyToRemove);
 
-    // Persist new state immediately to avoid resurrecting stale snapshot
+    // Persist new state, but DO NOT overwrite an existing expanded snapshot with a collapsed one
     try {
       const payload = {
         main: mainArtistNode?.name || '',
-        isExpandedMode: contributionsRef.current.size > 0,
-        fullNetworkData: contributionsRef.current.size > 0 ? nextData : null,
+        isExpandedMode: contributionsRef.current.size > 0 || newExpanded.size > 0,
+        fullNetworkData: (contributionsRef.current.size > 0 || newExpanded.size > 0) ? nextData : null,
         expandedNodes: Array.from(newExpanded),
         baseGraph: baseGraphRef.current,
         contributions: Array.from(contributionsRef.current.entries()).map(([k, v]) => ({
@@ -612,15 +706,21 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
           neighborIds: Array.from(v.neighborIds || []),
         })),
       } as any;
-      if (payload.isExpandedMode) {
-        (window as any).grapevineExpandedState = payload;
-        sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
-      } else {
-        delete (window as any).grapevineExpandedState;
-        sessionStorage.removeItem(PERSIST_KEY);
-        setIsExpandedMode(false);
-        setFullNetworkData(null);
-        baseGraphRef.current = null;
+      const existing = (typeof window !== 'undefined' && (window as any).grapevineExpandedState) || (sessionStorage.getItem(PERSIST_KEY) ? JSON.parse(sessionStorage.getItem(PERSIST_KEY) as string) : null);
+      const sameMain = existing && existing.main === payload.main;
+      const existingExpanded = Boolean(existing?.isExpandedMode);
+      const canOverwrite = payload.isExpandedMode || !existing || !sameMain || !existingExpanded;
+      if (canOverwrite) {
+        if (payload.isExpandedMode) {
+          (window as any).grapevineExpandedState = payload;
+          sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
+        } else {
+          delete (window as any).grapevineExpandedState;
+          sessionStorage.removeItem(PERSIST_KEY);
+          setIsExpandedMode(false);
+          setFullNetworkData(null);
+          baseGraphRef.current = null;
+        }
       }
     } catch {}
     console.log(`[Shrink] Removed expansion for key=${keyToRemove}. Nodes now=${nextData.nodes.length} links=${nextData.links.length}`);
@@ -664,6 +764,71 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         }
       }
     }
+    // Structural fallback (scoped):
+    // Treat a node as expanded if EITHER it's a base-graph node OR it is a known expansion anchor,
+    // AND it has any neighbor that is not part of the base graph. This avoids marking newly-added
+    // leaf nodes as expanded before they themselves are expanded.
+    try {
+      if (fullNetworkData && baseGraphRef.current) {
+        const toLower = (v?: string) => (v || '').toLowerCase();
+        const baseIdsOnly = new Set<string>((baseGraphRef.current.nodes || []).map(n => toLower(n.id)));
+        const baseKeys = new Set<string>();
+        for (const n of baseGraphRef.current.nodes || []) {
+          baseKeys.add(toLower(n.id));
+          // name may equal id for some nodes; harmless duplicate
+          // use as any to read optional name defensively
+          const nm = (n as any).name as string | undefined;
+          if (nm) baseKeys.add(toLower(nm));
+        }
+        const anchor = toLower(nodeId) || toLower(nodeName);
+        if (anchor) {
+          // Is this node base or a recorded expansion anchor?
+          let isExpansionAnchor = false;
+          if (contributionsRef.current.size > 0) {
+            for (const k of contributionsRef.current.keys()) {
+              if (toLower(k) === anchor) { isExpansionAnchor = true; break; }
+            }
+          }
+          const isBase = baseKeys.has(anchor);
+          if (isBase || isExpansionAnchor) {
+            for (const l of fullNetworkData.links) {
+              const s = toLower(typeof l.source === 'string' ? l.source : l.source.id);
+              const t = toLower(typeof l.target === 'string' ? l.target : l.target.id);
+              if (s === anchor && !baseKeys.has(t)) return true;
+              if (t === anchor && !baseKeys.has(s)) return true;
+            }
+          }
+        }
+      }
+    } catch {}
+    // Degree-based fallback: treat as expanded if node has at least two neighbors total
+    // and at least one neighbor is not part of the base graph. This makes added parents
+    // (e.g., Benny with a child) shrinkable, while newly added leaves (degree=1) remain expandable.
+    try {
+      const toLower = (v?: string) => (v || '').toLowerCase();
+      const anchor = toLower(nodeId) || toLower(nodeName);
+      if (!anchor) return false;
+      const srcData = fullNetworkData || { nodes: getVisibleNodes(), links: getVisibleLinks() };
+      let degree = 0;
+      const neighbors = new Set<string>();
+      for (const l of srcData.links) {
+        const s = toLower(typeof l.source === 'string' ? l.source : l.source.id);
+        const t = toLower(typeof l.target === 'string' ? l.target : l.target.id);
+        if (s === anchor) { degree++; neighbors.add(t); }
+        else if (t === anchor) { degree++; neighbors.add(s); }
+      }
+      if (degree <= 1) return false;
+      const baseKeys = new Set<string>();
+      const baseSrc = baseGraphRef.current || { nodes: data.nodes, links: data.links };
+      for (const n of baseSrc.nodes || []) {
+        baseKeys.add(toLower(n.id));
+        const nm = (n as any).name as string | undefined;
+        if (nm) baseKeys.add(toLower(nm));
+      }
+      for (const n of neighbors) {
+        if (!baseKeys.has(n)) return true;
+      }
+    } catch {}
     // Fallback to set-based heuristic
     if (nodeId && expandedNodes.has(nodeId)) return true;
     for (const k of expandedNodes) {
