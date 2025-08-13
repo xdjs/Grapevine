@@ -538,15 +538,16 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     const contribution = contributionsRef.current.get(keyToRemove);
     if (!contribution) return;
 
-    // Build preservation set: nodes that belong to other expansions (anchors and their added nodes)
+    // Build preservation set: nodes that belong to other expansions (anchors, their added nodes, and recorded neighbors)
     const preserveNodeIds = new Set<string>();
     contributionsRef.current.forEach((c, k) => {
       if (k === keyToRemove) return;
       preserveNodeIds.add(k); // other expansion anchors
       c.addedNodeIds.forEach(id => preserveNodeIds.add(id));
+      if (c.neighborIds) c.neighborIds.forEach(id => preserveNodeIds.add(id));
     });
 
-    // Remove contributed links, but preserve links that keep other expansions attached
+    // Remove contributed links, but preserve links that keep other expansions or base graph attached
     const preservedLinkKeys = new Set<string>();
     const anchorLower = toKey(keyToRemove);
     const baseNodeIds = new Set<string>((baseGraphRef.current?.nodes || []).map(n => n.id));
@@ -560,18 +561,19 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         preservedLinkKeys.add(key);
         return true;
       }
-      // Also never remove a link that ties the anchor to a base-graph node (e.g., parent like Ed -> Justin)
+      // Also preserve the anchor's tie to any base or preserved node (e.g., Ed <-> Justin)
       const connectsAnchor = toKey(s) === anchorLower || toKey(t) === anchorLower;
-      const other = toKey(s) === anchorLower ? t : (toKey(t) === anchorLower ? s : null);
-      if (connectsAnchor && other && baseNodeIds.has(other)) {
-        preservedLinkKeys.add(key);
-        return true;
+      if (connectsAnchor) {
+        const other = toKey(s) === anchorLower ? t : s;
+        if (baseNodeIds.has(other) || preserveNodeIds.has(other)) {
+          preservedLinkKeys.add(key);
+          return true;
+        }
       }
       return false;
     });
 
     // Build keep sets
-    // baseNodeIds already computed above
     const otherContributionNodeIds = new Set<string>();
     contributionsRef.current.forEach((c, k) => {
       if (k === keyToRemove) return;
