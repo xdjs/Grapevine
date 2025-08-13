@@ -121,24 +121,18 @@ export default function NetworkVisualizer({
     batchSize: 20
   });
 
-  // Local render data that we can enhance with image URLs
-  const [renderData, setRenderData] = useState<NetworkData>(finalDisplayData);
-
-  // Keep local render data in sync when the base graph changes
-  useEffect(() => {
-    setRenderData(finalDisplayData);
-  }, [finalDisplayData]);
-
-  // Immediately trigger image fetch and apply results to render data
+  // Immediately trigger image fetch and apply results in-place to avoid re-simulating
   useEffect(() => {
     (async () => {
       try {
         if (!finalDisplayData?.nodes || finalDisplayData.nodes.length === 0) return;
         const updatedNodes = await profilePictures.updateNodesWithImages(finalDisplayData.nodes);
-        // Only update if we actually received any new image URLs
-        const changed = updatedNodes.some((n, i) => n.imageUrl !== finalDisplayData.nodes[i]?.imageUrl);
-        if (changed) {
-          setRenderData({ nodes: updatedNodes, links: finalDisplayData.links });
+        // Update nodes in-place so the D3 renderer doesn't tear down/rebuild the simulation
+        for (let i = 0; i < updatedNodes.length; i++) {
+          const newUrl = updatedNodes[i]?.imageUrl;
+          if (newUrl && finalDisplayData.nodes[i]) {
+            (finalDisplayData.nodes[i] as any).imageUrl = newUrl;
+          }
         }
       } catch (error) {
         handleError(error as Error, 'initial profile picture fetch');
