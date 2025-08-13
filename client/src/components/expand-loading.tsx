@@ -56,7 +56,7 @@ export default function ExpandLoading({ isVisible, artistName }: ExpandLoadingPr
 
         {/* Footer */}
         <div className="text-xs text-gray-500 text-center max-w-xs">
-          Using AI to generate authentic music industry connections
+          Using AI to generate music industry connections
         </div>
       </div>
     </div>
