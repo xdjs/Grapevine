@@ -58,7 +58,6 @@ export function useProfilePictures(options: UseProfilePicturesOptions = {}): Use
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<{ totalRequested: number; totalFound: number; totalCached: number; processingTimeMs: number } | null>(null);
-  const [stats, setStats] = useState<UseProfilePicturesReturn['stats']>(null);
 
   /**
    * Fetch profile pictures for a batch of artists
