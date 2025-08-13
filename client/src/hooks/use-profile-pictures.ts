@@ -60,7 +60,7 @@ export function useProfilePictures(options: UseProfilePicturesOptions = {}): Use
   const [stats, setStats] = useState<UseProfilePicturesReturn['stats']>(null);
 
   /**
-   * Fetch profile pictures for a batch of artists
+   * Fetch profile pictures per-artist (no batch endpoint)
    */
   const fetchProfilePictures = useCallback(async (nodes: NetworkNode[]): Promise<Map<string, string>> => {
     if (nodes.length === 0) {
@@ -70,84 +70,69 @@ export function useProfilePictures(options: UseProfilePicturesOptions = {}): Use
     setIsLoading(true);
     setError(null);
 
-    try {
-      // Filter out nodes that already have images (unless we're forcing a refresh)
-      const artistNames = nodes
-        .filter(node => !node.imageUrl || !useCache)
-        .map(node => node.name);
+    const start = Date.now();
+    const imageMap = new Map<string, string>();
+    const artistNames = nodes
+      .filter(node => !node.imageUrl || !useCache)
+      .map(node => node.name);
 
-      if (artistNames.length === 0) {
-        console.log('🖼️ [ProfilePictures] All nodes already have images, skipping fetch');
-        setIsLoading(false);
-        return new Map();
-      }
+    const totalStats = {
+      totalRequested: artistNames.length,
+      totalFound: 0,
+      totalCached: 0,
+      processingTimeMs: 0,
+    };
 
-      console.log(`🖼️ [ProfilePictures] Fetching images for ${artistNames.length} artists`);
+    // Process with limited concurrency using batchSize as concurrency limit
+    const concurrency = Math.max(1, batchSize);
+    let index = 0;
 
-      // Process in batches to avoid overwhelming the API
-      const imageMap = new Map<string, string>();
-      let totalStats = {
-        totalRequested: 0,
-        totalFound: 0,
-        totalCached: 0,
-        processingTimeMs: 0
-      };
+    const fetchOne = async (artistName: string) => {
+      try {
+        const params = new URLSearchParams();
+        params.set('size', 'medium');
+        if (!useCache) params.set('refresh', 'true');
+        const url = `/api/artist-profile-pictures/${encodeURIComponent(artistName)}${params.toString() ? `?${params.toString()}` : ''}`;
 
-      for (let i = 0; i < artistNames.length; i += batchSize) {
-        const batch = artistNames.slice(i, i + batchSize);
-        
-        console.log(`🖼️ [ProfilePictures] Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(artistNames.length/batchSize)}`);
-
-        const response = await fetch('/api/artist-profile-pictures-batch', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            artistNames: batch,
-            useCache
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data: ProfilePictureBatchResponse = await response.json();
-        
-        // Update running totals
-        totalStats.totalRequested += data.totalRequested;
-        totalStats.totalFound += data.totalFound;
-        totalStats.totalCached += data.totalCached;
-        totalStats.processingTimeMs += data.processingTimeMs;
-
-        // Process results
-        data.results.forEach(result => {
-          if (result.imageUrl) {
-            imageMap.set(result.artistName, result.imageUrl);
+        const res = await fetch(url);
+        if (!res.ok) {
+          // Treat 404 as not found; other errors recorded but do not throw
+          if (res.status !== 404) {
+            const msg = await res.text().catch(() => '');
+            console.warn(`⚠️ [ProfilePictures] HTTP ${res.status} for ${artistName}: ${msg}`);
           }
-        });
-
-        // Add delay between batches to be respectful to the API
-        if (i + batchSize < artistNames.length) {
-          await new Promise(resolve => setTimeout(resolve, 200));
+          return;
         }
+        const data = await res.json();
+        if (data && data.imageUrl) {
+          imageMap.set(artistName, data.imageUrl as string);
+          totalStats.totalFound += 1;
+          if (data.fromCache) totalStats.totalCached += 1;
+        }
+      } catch (e) {
+        console.warn(`⚠️ [ProfilePictures] Error fetching image for ${artistName}:`, e);
       }
+    };
 
-      setStats(totalStats);
-      
-      console.log(`✅ [ProfilePictures] Batch fetch complete: ${totalStats.totalFound}/${totalStats.totalRequested} images found, ${totalStats.totalCached} from cache`);
-      
-      return imageMap;
+    const workers: Promise<void>[] = Array.from({ length: Math.min(concurrency, artistNames.length) }, async () => {
+      while (index < artistNames.length) {
+        const current = artistNames[index++];
+        await fetchOne(current);
+        // Small yield to avoid starving event loop
+        await Promise.resolve();
+      }
+    });
 
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-      console.error('❌ [ProfilePictures] Failed to fetch profile pictures:', errorMessage);
-      setError(errorMessage);
-      return new Map();
+    try {
+      await Promise.all(workers);
     } finally {
+      totalStats.processingTimeMs = Date.now() - start;
+      setStats(totalStats);
       setIsLoading(false);
     }
+
+    console.log(`✅ [ProfilePictures] Fetched ${totalStats.totalFound}/${totalStats.totalRequested} images (cached: ${totalStats.totalCached})`);
+    return imageMap;
   }, [useCache, batchSize]);
 
   /**
