@@ -140,8 +140,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       let spotifyErrorMessage: string | undefined;
       if (spotifyConfigured) {
         try {
-          // Import through adapter so the path is stable in serverless bundles
-          const { spotifyService } = await import('../_shared/spotify-adapter');
+          // Import through adapter (with .js extension for ESM). Fallback to direct server import.
+          const { spotifyService } = await import('../_shared/spotify-adapter.js').catch(async () => {
+            return await import('../../server/spotify.js');
+          });
           // Inline fetch with retries using the shared service instance
           let data: { imageUrl: string; spotifyId: string } | null = null;
           let lastErr: any = null;
