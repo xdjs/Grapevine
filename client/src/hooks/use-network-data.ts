@@ -769,6 +769,21 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         }
       }
     }
+    // Structural fallback: if this node has any neighbor that is not part of the base graph, consider it expanded
+    try {
+      if (fullNetworkData && baseGraphRef.current) {
+        const baseIds = new Set<string>((baseGraphRef.current.nodes || []).map(n => n.id.toLowerCase()));
+        const anchor = (nodeId || nodeName || '').toLowerCase();
+        if (anchor) {
+          for (const l of fullNetworkData.links) {
+            const s = (typeof l.source === 'string' ? l.source : l.source.id).toLowerCase();
+            const t = (typeof l.target === 'string' ? l.target : l.target.id).toLowerCase();
+            if (s === anchor && !baseIds.has(t)) return true;
+            if (t === anchor && !baseIds.has(s)) return true;
+          }
+        }
+      }
+    } catch {}
     // Fallback to set-based heuristic
     if (nodeId && expandedNodes.has(nodeId)) return true;
     for (const k of expandedNodes) {
