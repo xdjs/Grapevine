@@ -799,8 +799,8 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
             for (const l of fullNetworkData.links) {
               const s = toLower(typeof l.source === 'string' ? l.source : l.source.id);
               const t = toLower(typeof l.target === 'string' ? l.target : l.target.id);
-              if (s === anchor && !baseIdsOnly.has(t)) return true;
-              if (t === anchor && !baseIdsOnly.has(s)) return true;
+              if (s === anchor && !baseKeys.has(t)) return true;
+              if (t === anchor && !baseKeys.has(s)) return true;
             }
           }
         }
