@@ -4,7 +4,7 @@ import SearchInterface from "@/components/search-interface";
 import NetworkVisualizer, { NetworkVisualizerRef } from "@/components/network-visualizer";
 
 import FilterControls from "@/components/filter-controls";
-import MobileControls from "@/components/mobile-controls";
+import MobileDraggableZoomControls from "@/components/mobile-draggable-zoom-controls";
 import HelpButton from "@/components/help-button";
 import ShareButton from "@/components/share-button";
 import LoadingScreen from "@/components/loading-screen";
@@ -433,15 +433,16 @@ export default function Home() {
       {/* Controls - Only show when network is visible */}
       {showNetworkView && (
         <>
-          {/* Mobile Controls */}
+          {/* Mobile Draggable Zoom Controls */}
           {!showCollaborationPopup && (
-            <MobileControls
+            <MobileDraggableZoomControls
               onZoomIn={handleZoomIn}
               onZoomOut={handleZoomOut}
               onZoomReset={handleZoomReset}
               onBackToFirstDegree={handleResetToFirstDegree}
               onClearAll={handleClearNetwork}
-              artistId={currentArtistId}
+              showClearButton={true}
+              showBackToFirstDegree={true}
             />
           )}
         </>
