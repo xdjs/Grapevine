@@ -51,7 +51,9 @@ interface MobileControlsProps {
   onZoomReset: () => void;
   onBackToFirstDegree?: () => void;
   onClearAll: () => void;
+
   artistId?: string | null;
+
 }
 
 export default function MobileControls({
@@ -60,7 +62,9 @@ export default function MobileControls({
   onZoomReset,
   onBackToFirstDegree,
   onClearAll,
+
   artistId,
+
 }: MobileControlsProps) {
   const [showControls, setShowControls] = useState(false); // existing zoom / clear panel
   const [showMenu, setShowMenu] = useState(false); // new three-dot options menu
@@ -689,6 +693,25 @@ export default function MobileControls({
             )}
           </Button>
 
+          {/* Reset Button */}
+          {onBackToFirstDegree && (
+            <Button
+              size="icon"
+              variant="secondary"
+              className="w-12 h-12 backdrop-blur border-2 rounded-full shadow-lg"
+              style={{ 
+                backgroundColor: '#F2A6E0', 
+                borderColor: '#F2A6E0'
+              }}
+              title="Back to First Degree"
+              onClick={onBackToFirstDegree}
+            >
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 12H5M12 19L5 12L12 5" stroke="#282A36" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </Button>
+          )}
+
           {/* Settings Button – opens existing controls panel */}
           <Button
             size="icon"
@@ -793,22 +816,6 @@ export default function MobileControls({
               <X className="w-3 h-3 mr-1" />
               Clear All
             </Button>
-
-            {/* Back to First Degree Button */}
-            {onBackToFirstDegree && (
-              <Button
-                onClick={onBackToFirstDegree}
-                size="sm"
-                variant="secondary"
-                style={{ backgroundColor: '#F2A6E0', borderColor: '#F2A6E0' }}
-                className="w-full hover:bg-[#EB93D5] text-xs px-2 py-1"
-              >
-                <svg className="w-3 h-3 mr-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M19 12H5M12 19L5 12L12 5" stroke="#282A36" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Back to First Degree
-              </Button>
-            )}
           </div>
         </Card>
       )}

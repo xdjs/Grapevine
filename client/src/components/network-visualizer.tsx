@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from "react";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import { useNetworkData } from "@/hooks/use-network-data";
 import { useConfig } from "@/hooks/use-config";
@@ -17,7 +17,6 @@ import NetworkTooltip from "./network-tooltip";
 import ZoomControlsEnhanced from "./zoom-controls-enhanced";
 import NetworkResetButton from "./network-reset-button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import MobileControls from "./mobile-controls";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -26,8 +25,12 @@ interface NetworkVisualizerProps {
   onZoomChange: (transform: { k: number; x: number; y: number }) => void;
   onArtistSearch?: (artistName: string) => void;
   onArtistNodeClick?: (artistName: string, artistId?: string) => void;
-  onError?: (error: Error) => void;
   onClearAll?: () => void;
+  onError?: (error: Error) => void;
+}
+
+export interface NetworkVisualizerRef {
+  resetToFirstDegree: () => void;
 }
 
 interface ComponentError {
@@ -36,7 +39,7 @@ interface ComponentError {
   retryable: boolean;
 }
 
-export default function NetworkVisualizer({
+const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProps>(({
   data,
   visible,
   filterState,
@@ -45,7 +48,7 @@ export default function NetworkVisualizer({
   onArtistNodeClick,
   onError,
   onClearAll,
-}: NetworkVisualizerProps) {
+}, ref) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
   const isMobile = useIsMobile();
@@ -311,6 +314,12 @@ export default function NetworkVisualizer({
     };
   }, [visible, currentZoom, componentError, handleZoomIn, handleZoomOut, handleZoomReset, handleError]);
 
+  // Expose resetToFirstDegree to parent component
+  useImperativeHandle(ref, () => ({
+    resetToFirstDegree: () => {
+      resetToFirstDegree();
+    },
+  }));
 
 
   // Loading state component
@@ -419,18 +428,6 @@ export default function NetworkVisualizer({
             />
           )}
 
-          {/* Mobile Controls */}
-          {isMobile && (
-            <MobileControls
-              onZoomIn={handleZoomIn}
-              onZoomOut={handleZoomOut}
-              onZoomReset={handleZoomReset}
-              onBackToFirstDegree={isExpandedMode ? resetToFirstDegree : undefined}
-              onClearAll={onClearAll}
-              artistId={mainArtistNode?.artistId}
-            />
-          )}
-
           {/* D3 Network Renderer Component */}
           <D3NetworkRenderer
             data={finalDisplayData}
@@ -514,4 +511,6 @@ export default function NetworkVisualizer({
       )}
     </div>
   );
-}
+});
+
+export default NetworkVisualizer;
