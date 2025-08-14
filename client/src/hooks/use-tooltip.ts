@@ -40,6 +40,8 @@ export interface UseTooltipReturn {
   tooltipPosition: TooltipPosition;
   highlightedNode: d3.Selection<SVGGElement, unknown, null, undefined> | null;
   currentNode: NetworkNode | null;
+  isExpandLoading?: boolean;
+  expandTargetName?: string | null;
   
   // Core functions
   showTooltip: (event: MouseEvent, node: NetworkNode) => void;
@@ -71,6 +73,8 @@ export function useTooltip({
   const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition>({ x: 0, y: 0 });
   const [highlightedNode, setHighlightedNode] = useState<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
   const [currentNode, setCurrentNode] = useState<NetworkNode | null>(null);
+  const [isExpandLoading, setIsExpandLoading] = useState(false);
+  const [expandTargetName, setExpandTargetName] = useState<string | null>(null);
   
   // Remove D3 tooltip implementation - using React NetworkTooltip component instead
 
@@ -120,11 +124,13 @@ export function useTooltip({
 
   // Core tooltip functions
   const showTooltip = useCallback((event: MouseEvent, node: NetworkNode) => {
+    // Do not show tooltip while expand is loading
+    if (isExpandLoading) return;
     const position = calculatePosition(event);
     setTooltipPosition(position);
     setIsTooltipVisible(true);
     setCurrentNode(node);
-  }, [calculatePosition]);
+  }, [calculatePosition, isExpandLoading]);
 
   // Node highlighting functions
   const resetNodeHighlight = useCallback(() => {
@@ -213,9 +219,21 @@ export function useTooltip({
 
   const handleExpandAction = useCallback(async (node: NetworkNode) => {
     console.log(`🔗 Expanding network for ${node.name}`);
-    await networkDataHook.expandNodeNetwork(node.name, node.artistId);
-    hideTooltip();
-  }, [networkDataHook.expandNodeNetwork, hideTooltip]);
+    if (isExpandLoading) {
+      console.log(`⏳ Expand already in progress, ignoring click for ${node.name}`);
+      return;
+    }
+    try {
+      setIsExpandLoading(true);
+      setExpandTargetName(node.name);
+      // Hide tooltip immediately while loading overlay is visible
+      hideTooltip();
+      await networkDataHook.expandNodeNetwork(node.name, node.artistId);
+    } finally {
+      setIsExpandLoading(false);
+      setExpandTargetName(null);
+    }
+  }, [networkDataHook.expandNodeNetwork, hideTooltip, isExpandLoading]);
 
   const handleProfileAction = useCallback(async (node: NetworkNode) => {
     console.log(`🎵 [Frontend] openMusicNerdProfile called for "${node.name}" with artistId: ${node.artistId}`);
@@ -378,6 +396,8 @@ export function useTooltip({
     tooltipPosition,
     highlightedNode,
     currentNode,
+    isExpandLoading,
+    expandTargetName,
     
     // Core functions
     showTooltip,

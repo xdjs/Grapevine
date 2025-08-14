@@ -50,6 +50,9 @@ export default function D3NetworkRenderer({
   mainArtistNode,
 }: D3NetworkRendererProps) {
   
+  // Track which node IDs we've already batch-preloaded to avoid re-preloading on small expansions
+  const preloadedNodeIdsRef = useRef<Set<string>>(new Set());
+
   // Use filter visibility management hook
   const { isNodeVisible } = useFilterVisibility({
     svgRef,
@@ -248,14 +251,14 @@ export default function D3NetworkRenderer({
       
       let cleanedCount = 0;
       
-      for (const patternId of this.cleanupQueue) {
+      this.cleanupQueue.forEach((patternId) => {
         const pattern = defs.querySelector(`#${patternId}`);
         if (pattern) {
           pattern.remove();
           this.patterns.delete(patternId);
           cleanedCount++;
         }
-      }
+      });
       
       this.cleanupQueue.clear();
       
@@ -528,25 +531,27 @@ export default function D3NetworkRenderer({
     
     // Performance monitoring with image quality metrics
     getPerformanceStats() {
-      // Count images by quality level
-      const qualityStats = { low: 0, medium: 0, high: 0 };
-      const imageElements = document.querySelectorAll('image.profile-image[data-quality]');
-      imageElements.forEach(img => {
-        const quality = img.getAttribute('data-quality') as 'low' | 'medium' | 'high';
-        if (quality && qualityStats[quality] !== undefined) {
-          qualityStats[quality]++;
-        }
-      });
-      
+      // Provide safe defaults for non-DOM environments (SSR/tests)
+      const hasDocument = typeof document !== 'undefined';
+      const qualityStats = { low: 0, medium: 0, high: 0 } as Record<'low' | 'medium' | 'high', number>;
+      const imageElements = hasDocument ? document.querySelectorAll('image.profile-image[data-quality]') : ([] as any);
+      if (hasDocument) {
+        imageElements.forEach((img: Element) => {
+          const quality = (img.getAttribute('data-quality') as 'low' | 'medium' | 'high') || undefined;
+          if (quality && (quality in qualityStats)) {
+            qualityStats[quality]++;
+          }
+        });
+      }
+      const hasMemory = typeof performance !== 'undefined' && (performance as any).memory;
       return {
         loadedImages: this.loadedImages.size,
         failedImages: this.failedImages.size,
         pendingImages: this.pendingImages.size,
         viewportCacheSize: this.viewportCache.size,
         imageQuality: qualityStats,
-        totalRenderedImages: imageElements.length,
-        memoryUsageMB: (performance as any).memory ? 
-          Math.round(((performance as any).memory.usedJSHeapSize / 1024 / 1024) * 100) / 100 : 'unknown'
+        totalRenderedImages: hasDocument ? (imageElements as NodeListOf<Element>).length : 0,
+        memoryUsageMB: hasMemory ? Math.round(((performance as any).memory.usedJSHeapSize / 1024 / 1024) * 100) / 100 : 'unknown'
       };
     }
   };
@@ -604,9 +609,9 @@ export default function D3NetworkRenderer({
             .outerRadius(d.size)
             .startAngle(startAngle)
             .endAngle(endAngle);
-          
+          const arcD = (arcPath as unknown as () => string | null)() || '';
           group.append("path")
-            .attr("d", arcPath)
+            .attr("d", arcD)
             .attr("fill", () => {
               if (role === 'artist') return '#FF0ACF';       // Magenta Pink
               if (role === 'producer') return '#AE53FF';     // Bright Purple  
@@ -698,7 +703,7 @@ export default function D3NetworkRenderer({
             .attr("width", profileImageSize * 2)
             .attr("height", profileImageSize * 2)
             .attr("clip-path", `url(#${clipId})`)
-            .attr("href", d.imageUrl)
+            .attr("href", d.imageUrl || '')
             .attr("crossorigin", "anonymous")
             .style("opacity", 1)
             .style("image-rendering", optimalSize.quality === 'low' ? 'pixelated' : 'auto');
@@ -767,7 +772,7 @@ export default function D3NetworkRenderer({
                 .attr("width", profileImageSize * 2)
                 .attr("height", profileImageSize * 2)
                 .attr("clip-path", `url(#${clipId})`)
-                .attr("href", d.imageUrl)
+                 .attr("href", d.imageUrl || '')
                 .attr("crossorigin", "anonymous")
                 .style("opacity", 0)
                 .style("image-rendering", optimalSize.quality === 'low' ? 'pixelated' : 'auto');
@@ -925,7 +930,7 @@ export default function D3NetworkRenderer({
                         .attr("width", profileImageSize * 2)
                         .attr("height", profileImageSize * 2)
                         .attr("clip-path", `url(#${clipId})`)
-                        .attr("href", node.imageUrl)
+                        .attr("href", node.imageUrl || '')
                         .attr("crossorigin", "anonymous")
                         .style("opacity", 0);
                       
@@ -1012,14 +1017,17 @@ export default function D3NetworkRenderer({
 
     // Filter out links where either node doesn't exist or is isolated
     const nodeSet = new Set(data.nodes.map(n => n.id));
-    const validLinks = data.links.filter(link => {
+    let validLinks = data.links.filter(link => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       return nodeSet.has(sourceId) && nodeSet.has(targetId);
     });
+    // Do NOT override with data.links; when validLinks is empty, render no links.
 
     // Start optimized batch preloading of profile pictures
-    const imagesToLoad = data.nodes
+    // Only preload for nodes we haven't already batch-preloaded in this session
+    const nodesToPreload = data.nodes.filter(node => !preloadedNodeIdsRef.current.has(node.id));
+    const imagesToLoad = nodesToPreload
       .filter(node => node.imageUrl)
       .map((node, index) => ({
         url: node.imageUrl!,
@@ -1036,6 +1044,10 @@ export default function D3NetworkRenderer({
       ImageLoadingManager.batchPreloadImages(imagesToLoad).then(() => {
         console.log(`✅ [D3Renderer] Optimized batch preload complete`);
         console.log(`📊 [D3Renderer] Performance stats after loading:`, ImageLoadingManager.getPerformanceStats());
+        // Mark these nodes as preloaded to prevent future batch preloads for the same set
+        for (const { node } of imagesToLoad) {
+          preloadedNodeIdsRef.current.add(node.id);
+        }
       }).catch(error => {
         console.error(`❌ [D3Renderer] Batch preload error:`, error);
       });
@@ -1063,7 +1075,7 @@ export default function D3NetworkRenderer({
 
     // Create and configure D3 simulation
     const simulation = createSimulation(data.nodes, validLinks, width, height, mainArtistNode);
-    simulationRef.current = simulation;
+    (simulationRef as unknown as React.MutableRefObject<d3.Simulation<NetworkNode, NetworkLink> | null>).current = simulation;
 
     // Add resize listener to handle orientation changes
     const handleResize = () => {

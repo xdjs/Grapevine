@@ -43,7 +43,10 @@ describe('NetworkTooltip', () => {
     position: { x: 100, y: 200 },
     visible: true,
     isMainArtist: false,
+    isFirstDegreeCollaborator: true,
+    isExpanded: false,
     onNetworkAction: vi.fn(),
+    onExpandAction: vi.fn(),
     onProfileAction: vi.fn(),
     onCollaborationAction: vi.fn(),
     onClose: vi.fn(),
@@ -109,8 +112,8 @@ describe('NetworkTooltip', () => {
     it('should call onNetworkAction when network link is clicked', () => {
       render(<NetworkTooltip {...defaultProps} />);
 
-      const networkAction = screen.getByTestId('network-action');
-      fireEvent.click(networkAction);
+      const networkLink = screen.getByText(`${mockArtistNode.name}'s network`);
+      fireEvent.click(networkLink);
 
       expect(defaultProps.onNetworkAction).toHaveBeenCalledWith(mockArtistNode);
       expect(defaultProps.onClose).toHaveBeenCalled();
@@ -125,7 +128,52 @@ describe('NetworkTooltip', () => {
     });
   });
 
-  // Expand Action removed from UI
+  describe('Expand Action', () => {
+    it('should render expand action for non-main nodes', () => {
+      render(<NetworkTooltip {...defaultProps} />);
+
+      const expandLink = screen.getByText(`Expand ${mockArtistNode.name}'s network`);
+      expect(expandLink).toBeInTheDocument();
+    });
+
+    it('should not render expand action for main artist', () => {
+      render(<NetworkTooltip {...defaultProps} isMainArtist={true} />);
+
+      const expandLink = screen.queryByText(`Expand ${mockArtistNode.name}'s network`);
+      expect(expandLink).not.toBeInTheDocument();
+    });
+
+    it('should show Already expanded state when isExpanded is true and block click', () => {
+      const onExpand = vi.fn();
+      render(<NetworkTooltip {...defaultProps} isExpanded={true} onExpandAction={onExpand} />);
+
+      const label = screen.getByText('Already expanded');
+      expect(label).toBeInTheDocument();
+
+      fireEvent.click(label);
+      expect(onExpand).not.toHaveBeenCalled();
+    });
+
+    it('should call onExpandAction when expand link is clicked', () => {
+      render(<NetworkTooltip {...defaultProps} />);
+
+      const expandLink = screen.getByText(`Expand ${mockArtistNode.name}'s network`);
+      fireEvent.click(expandLink);
+
+      expect(defaultProps.onExpandAction).toHaveBeenCalledWith(mockArtistNode);
+      expect(defaultProps.onClose).toHaveBeenCalled();
+    });
+
+    it('should have correct expand icon styling', () => {
+      render(<NetworkTooltip {...defaultProps} />);
+
+      const expandIcon = screen.getByText('+');
+      expect(expandIcon).toBeInTheDocument();
+      expect(expandIcon.parentElement).toHaveStyle({
+        backgroundColor: '#4CAF50',
+      });
+    });
+  });
 
   describe('Music Nerd Profile Action', () => {
     it('should render profile action for artists', () => {
@@ -145,8 +193,8 @@ describe('NetworkTooltip', () => {
     it('should call onProfileAction when profile link is clicked', () => {
       render(<NetworkTooltip {...defaultProps} />);
 
-      const profileAction = screen.getByTestId('profile-action');
-      fireEvent.click(profileAction);
+      const profileLink = screen.getByText(`${mockArtistNode.name}'s Music Nerd profile`);
+      fireEvent.click(profileLink);
 
       expect(defaultProps.onProfileAction).toHaveBeenCalledWith(mockArtistNode);
       expect(defaultProps.onClose).toHaveBeenCalled();
@@ -186,8 +234,8 @@ describe('NetworkTooltip', () => {
     it('should call onCollaborationAction when collaboration link is clicked', () => {
       render(<NetworkTooltip {...defaultProps} />);
 
-      const collaborationAction = screen.getByTestId('collaboration-action');
-      fireEvent.click(collaborationAction);
+      const collaborationLink = screen.getByText('Collaboration details');
+      fireEvent.click(collaborationLink);
 
       expect(defaultProps.onCollaborationAction).toHaveBeenCalledWith(mockArtistNode);
       expect(defaultProps.onClose).toHaveBeenCalled();
@@ -391,15 +439,14 @@ describe('NetworkTooltip', () => {
       
       // Check that network action appears first
       const networkAction = screen.getByTestId('network-action');
+      const expandAction = screen.getByTestId('expand-action');
       const profileAction = screen.getByTestId('profile-action');
       const collaborationAction = screen.getByTestId('collaboration-action');
 
       expect(networkAction).toBeInTheDocument();
+      expect(expandAction).toBeInTheDocument();
       expect(profileAction).toBeInTheDocument();
       expect(collaborationAction).toBeInTheDocument();
-      
-      // Ensure there are exactly three actions now that expand is removed
-      expect(actionElements.length).toBe(3);
     });
   });
 
