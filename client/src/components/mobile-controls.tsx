@@ -80,13 +80,54 @@ export default function MobileControls({
   const controlsRef = useRef<HTMLDivElement>(null);
   const dragTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Initialize position based on screen size
+  useEffect(() => {
+    const updatePosition = () => {
+      const screenWidth = window.innerWidth;
+      const screenHeight = window.innerHeight;
+      
+      // Ensure panel is always visible and properly positioned
+      const panelWidth = 280; // Estimated panel width
+      const panelHeight = 200; // Estimated panel height
+      
+      const newPosition = {
+        x: Math.max(8, Math.min(screenWidth - panelWidth - 8, 8)), // Left side with margin
+        y: Math.max(8, Math.min(screenHeight - panelHeight - 8, screenHeight - panelHeight - 8)) // Bottom with margin
+      };
+      
+      console.log('📱 [Mobile Controls] Updating position:', {
+        screenWidth,
+        screenHeight,
+        panelWidth,
+        panelHeight,
+        newPosition
+      });
+      
+      setDragPosition(newPosition);
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    
+    return () => window.removeEventListener('resize', updatePosition);
+  }, []);
+
   // Load saved position from localStorage on mount
   useEffect(() => {
     const savedPosition = localStorage.getItem('mobile-zoom-controls-position');
     if (savedPosition) {
       try {
         const parsed = JSON.parse(savedPosition);
-        setDragPosition(parsed);
+        // Validate the saved position is within screen bounds
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        const panelWidth = 280;
+        const panelHeight = 200;
+        
+        if (parsed.x >= 8 && parsed.x <= screenWidth - panelWidth - 8 && 
+            parsed.y >= 8 && parsed.y <= screenHeight - panelHeight - 8) {
+          setDragPosition(parsed);
+        }
       } catch (error) {
         console.warn('Failed to parse saved zoom controls position:', error);
       }
@@ -103,6 +144,26 @@ export default function MobileControls({
   const [artistXUsername, setArtistXUsername] = useState<string | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  // Debug logging
+  useEffect(() => {
+    console.log('📱 [Mobile Controls] Component mounted, isMobile:', isMobile);
+    console.log('📱 [Mobile Controls] Window dimensions:', {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      devicePixelRatio: window.devicePixelRatio
+    });
+  }, [isMobile]);
+
+  // Debug logging for controls state
+  useEffect(() => {
+    console.log('📱 [Mobile Controls] Controls state changed:', {
+      showControls,
+      showMenu,
+      isDragging,
+      dragPosition
+    });
+  }, [showControls, showMenu, isDragging, dragPosition]);
 
   // Local state for artist social data (simplified)
   const [artistSocialData, setArtistSocialData] = useState<ArtistSocialData | null>(null);
@@ -820,7 +881,7 @@ export default function MobileControls({
 
       {/* Options Menu */}
       {showMenu && (
-        <div className="fixed bottom-24 sm:bottom-20 right-4 z-50 flex flex-col items-end gap-2">
+        <div className="fixed bottom-24 sm:bottom-20 right-4 z-15 flex flex-col items-end gap-2">
           {/* Share Button */}
           <Button
             size="icon"
@@ -865,6 +926,7 @@ export default function MobileControls({
             style={{ borderColor: '#b427b4' }}
             title="Settings"
             onClick={() => {
+              console.log('📱 [Mobile Controls] Opening zoom controls panel');
               setShowControls(true);
               setShowMenu(false);
             }}
@@ -872,12 +934,31 @@ export default function MobileControls({
             <Settings className="w-6 h-6" />
           </Button>
 
+          {/* Test Button - Debug */}
+          <Button
+            size="icon"
+            variant="secondary"
+            className="w-12 h-12 bg-blue-600/90 backdrop-blur hover:bg-blue-700 border-2 rounded-full shadow-lg"
+            style={{ borderColor: '#3b82f6' }}
+            title="Test - Debug"
+            onClick={() => {
+              console.log('📱 [Mobile Controls] Test button clicked');
+              toast({
+                title: "Mobile Controls Working!",
+                description: "The mobile controls component is functioning correctly.",
+                className: "bg-blue-600 border-blue-500 text-white",
+                duration: 3000,
+              });
+            }}
+          >
+            <HelpCircle className="w-6 h-6" />
+          </Button>
+
           {/* Help Button */}
           <Button
             size="icon"
             variant="secondary"
             className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
-            style={{ borderColor: '#b427b4' }}
             title="Help"
             onClick={() => {
               setShowHelp(true);
@@ -901,12 +982,20 @@ export default function MobileControls({
         </div>
       )}
 
+      {/* Background overlay to close controls - only show when controls are open */}
+      {showControls && (
+        <div
+          className="fixed inset-0 z-5 bg-transparent"
+          onClick={() => setShowControls(false)}
+        />
+      )}
+
       {/* Mobile Controls Panel */}
       {showControls && (
         <Card 
           ref={controlsRef}
           data-card-background
-          className={`fixed z-50 bg-gray-900/95 backdrop-blur p-3 max-w-[calc(100vw-2rem)] border-2 transition-all duration-200 ${
+          className={`fixed z-15 bg-gray-900/95 backdrop-blur p-3 max-w-[calc(100vw-2rem)] border-2 transition-all duration-200 ${
             isDragging ? 'select-none shadow-2xl ring-2 ring-purple-400/50' : 'shadow-lg'
           }`} 
           style={{ 
@@ -914,7 +1003,14 @@ export default function MobileControls({
             left: `${dragPosition.x}px`,
             top: `${dragPosition.y}px`,
             transform: isDragging ? 'scale(1.02)' : 'scale(1)',
-            cursor: isDragging ? 'grabbing' : 'default'
+            cursor: isDragging ? 'grabbing' : 'default',
+            pointerEvents: 'auto',
+            maxWidth: '280px',
+            minWidth: '200px',
+            position: 'fixed',
+            zIndex: 15,
+            // Test: Add a distinctive background to see if this is causing issues
+            backgroundColor: 'rgba(34, 34, 34, 0.95)'
           }}
           onMouseDown={handleDragStart}
           onTouchStart={handleDragStart}
@@ -994,14 +1090,6 @@ export default function MobileControls({
             </Button>
           </div>
         </Card>
-      )}
-
-      {/* Background overlay to close controls */}
-      {showControls && (
-        <div
-          className="fixed inset-0 z-30 bg-black/20"
-          onClick={() => setShowControls(false)}
-        />
       )}
 
       {/* Share Dialog - Outside options menu */}
