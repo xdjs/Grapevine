@@ -79,7 +79,7 @@ async function findArtistInDatabase(client: any, artistName: string): Promise<{i
   return null;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -91,14 +91,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method !== 'GET') {
-    return res.status(405).json({ message: 'Method not allowed' });
+    res.status(405).json({ message: 'Method not allowed' });
+    return;
   }
 
   try {
     const { artistName } = req.query;
     
     if (!artistName || typeof artistName !== 'string') {
-      return res.status(400).json({ message: 'Artist name is required' });
+      res.status(400).json({ message: 'Artist name is required' });
+      return;
     }
 
     console.log(`🎵 [Vercel] Network data request for: ${artistName}`);
@@ -115,7 +117,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!CONNECTION_STRING) {
       console.error('❌ [Vercel] CONNECTION_STRING not found');
       console.error('❌ [Vercel] Available env vars:', Object.keys(process.env).filter(k => !k.startsWith('npm_')));
-      return res.status(500).json({ message: 'Database connection not configured' });
+      res.status(500).json({ message: 'Database connection not configured' });
+      return;
     }
 
     try {
@@ -135,9 +138,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       if (!artistMatch) {
         await client.end();
-        return res.status(404).json({ 
+        res.status(404).json({ 
           message: `Artist "${artistName}" not found in database. Please search for an existing artist.`
         });
+        return;
       }
       
       // Use the correct artist name from database (with proper capitalization)
@@ -150,12 +154,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!OPENAI_API_KEY) {
         console.error(`❌ [Vercel] OpenAI API key not configured for ${artistName}`);
         await client.end();
-        return res.status(503).json({ 
+        res.status(503).json({ 
           error: 'OpenAI API key not configured',
           message: 'Network generation requires OpenAI API key. Please set OPENAI_API_KEY environment variable.',
           artist: artistName,
           timestamp: new Date().toISOString()
         });
+        return;
       }
       
       // Generate new network data using OpenAI
@@ -219,12 +224,13 @@ Guidelines:
         if (!openaiContent) {
           console.error('❌ [Vercel] OpenAI returned empty response');
           await client.end();
-          return res.status(503).json({ 
+          res.status(503).json({ 
             error: 'OpenAI API returned empty response',
             message: 'Failed to generate collaboration data from OpenAI',
             artist: artistName,
             timestamp: new Date().toISOString()
           });
+          return;
         }
         
         // Try to extract JSON from OpenAI response (sometimes includes extra text)
@@ -254,69 +260,37 @@ Guidelines:
         console.error('❌ [Vercel] Failed to parse OpenAI response:', parseError);
         console.error('❌ [Vercel] Raw OpenAI content:', completion.choices[0]?.message?.content);
         await client.end();
-        return res.status(503).json({ 
+        res.status(503).json({ 
           error: 'Failed to parse OpenAI response',
           message: 'OpenAI returned invalid JSON format',
           artist: artistName,
           parseError: parseError instanceof Error ? parseError.message : 'Unknown parse error',
           timestamp: new Date().toISOString()
         });
+        return;
       }
 
       // Build network data structure with comprehensive role consistency
       const nodeMap = new Map<string, NetworkNode>();
       const links: NetworkLink[] = [];
 
-      // Create optimized batch role detection system for performance
+      // Create optimized evidence-based batch role detection system for performance
       const globalRoleMap = new Map<string, string[]>();
-      
-      // Batch role detection function for better performance
+      const { roleService } = await import('../../server/role-service.js');
+
       const batchDetectRoles = async (peopleList: string[]): Promise<void> => {
         if (peopleList.length === 0) return;
-        
-        try {
-          const peopleListStr = peopleList.map(name => `"${name}"`).join(', ');
-          const batchRolePrompt = `For each of these music industry professionals: ${peopleListStr}
-          
-Return their roles as JSON in this exact format:
-{
-  "Person Name 1": ["artist", "songwriter"],
-  "Person Name 2": ["producer", "songwriter"],
-  "Person Name 3": ["artist"]
-}
-
-Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has. Return ONLY the JSON object, no other text.`;
-
-          const openai = new OpenAI({
-            apiKey: OPENAI_API_KEY,
-          });
-
-          const roleCompletion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [{ role: "user", content: batchRolePrompt }],
-            temperature: 0.1,
-            max_tokens: 1000,
-          });
-
-          const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
-          if (roleContent) {
-            try {
-              const rolesData = JSON.parse(roleContent);
-              for (const [personName, roles] of Object.entries(rolesData)) {
-                if (Array.isArray(roles) && roles.length > 0) {
-                  const validRoles = roles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
-                  if (validRoles.length > 0) {
-                    globalRoleMap.set(personName, validRoles);
-                    console.log(`✅ [Vercel] Batch detected roles for "${personName}":`, validRoles);
-                  }
-                }
-              }
-            } catch {
-              console.log(`⚠️ [Vercel] Could not parse batch role detection, falling back to defaults`);
+        const results = await Promise.allSettled(
+          peopleList.map(async (name) => ({ name, roles: (await roleService.computeRoles(name, { includeArtistByDefault: false })).roles }))
+        );
+        for (const r of results) {
+          if (r.status === 'fulfilled') {
+            const validRoles = (r.value.roles || []).filter((x: string) => ['artist','producer','songwriter'].includes(x));
+            if (validRoles.length > 0) {
+              globalRoleMap.set(r.value.name, validRoles);
+              console.log(`✅ [Vercel] Evidence-based roles for "${r.value.name}":`, validRoles);
             }
           }
-        } catch {
-          console.log(`⚠️ [Vercel] Batch role detection failed, falling back to defaults`);
         }
       };
       
@@ -325,53 +299,17 @@ Each person's roles should be from: ["artist", "producer", "songwriter"]. Includ
         return globalRoleMap.get(personName) || [defaultRole];
       };
 
-      // Pre-detect roles for main artist with dedicated detection
+      // Pre-detect roles for main artist with dedicated evidence-based detection
       console.log(`🔍 [Vercel] Detecting roles for main artist "${correctArtistName}"...`);
       let mainArtistTypes = ['artist']; // Default
       
       try {
-        const mainArtistRolePrompt = `What roles does ${correctArtistName} have in the music industry? CRITICAL: Search extensively for ALL POSSIBLE ROLES regardless of their popularity or fame level - many people have multiple roles (artist, producer, songwriter). This includes mainstream artists, independent artists, underground artists, regional artists, and emerging artists.
-
-Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. 
-
-Investigate thoroughly for multiple roles on ${correctArtistName}, whether they are famous or lesser-known. Return ONLY the JSON array, no other text.`;
-        
-        const openai = new OpenAI({
-          apiKey: OPENAI_API_KEY,
-        });
-
-        const roleCompletion = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [
-            {
-              role: "system",
-              content: "You are a music industry database expert. For mainstream/well-known artists, confidently provide all documented collaborations. For lesser-known artists, be more selective but still inclusive of authentic collaborations. Prioritize accuracy while being comprehensive for well-documented artists."
-            },
-            {
-              role: "user",
-              content: mainArtistRolePrompt
-            }
-          ],
-          temperature: 0.1,
-          max_tokens: 100,
-        });
-
-        const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
-        if (roleContent) {
-          try {
-            const detectedRoles = JSON.parse(roleContent);
-            if (Array.isArray(detectedRoles) && detectedRoles.length > 0) {
-              const validRoles = detectedRoles.filter(role => ['artist', 'producer', 'songwriter'].includes(role));
-              if (validRoles.length > 0) {
-                mainArtistTypes = validRoles;
-                console.log(`✅ [Vercel] Detected main artist roles for "${correctArtistName}":`, mainArtistTypes);
-                // Cache for consistency
-                globalRoleMap.set(correctArtistName, mainArtistTypes);
-              }
-            }
-          } catch {
-            console.log(`⚠️ [Vercel] Could not parse main artist role detection for "${correctArtistName}", using default`);
-          }
+        const result = await roleService.computeRoles(correctArtistName, { includeArtistByDefault: true });
+        const validRoles = (result.roles || []).filter(r => ['artist','producer','songwriter'].includes(r));
+        if (validRoles.length > 0) {
+          mainArtistTypes = validRoles;
+          console.log(`✅ [Vercel] Evidence-based main artist roles for "${correctArtistName}":`, mainArtistTypes);
+          globalRoleMap.set(correctArtistName, mainArtistTypes);
         }
       } catch {
         console.log(`⚠️ [Vercel] Main artist role detection failed for "${correctArtistName}", using default`);
@@ -651,52 +589,21 @@ Guidelines:
         for (const branchingArtist of collaborator.topCollaborators || []) {
           if (branchingArtist !== correctArtistName && !nodeMap.has(branchingArtist)) {
             
-            // Use OpenAI to detect all roles for this artist node
+            // Use evidence-based service to detect roles for this artist node
             let branchingRoles = ['artist']; // Default fallback
             try {
               console.log(`🎭 [Vercel] Detecting roles for artist node: "${branchingArtist}"`);
-              
-              const rolePrompt = `What roles does ${branchingArtist} have in the music industry? CRITICAL: Search extensively for ALL POSSIBLE ROLES regardless of their popularity or fame level - many people have multiple roles (artist, producer, songwriter). This includes mainstream artists, independent artists, underground artists, regional artists, and emerging artists.
-
-Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. 
-
-Investigate thoroughly for multiple roles on ${branchingArtist}, whether they are famous or lesser-known. Return ONLY the JSON array, no other text.`;
-              
-              const roleCompletion = await openai.chat.completions.create({
-                model: "gpt-4o",
-                messages: [
-                  {
-                    role: "system",
-                    content: "You are a music industry database expert. For mainstream/well-known artists, confidently provide all documented collaborations. For lesser-known artists, be more selective but still inclusive of authentic collaborations. Prioritize accuracy while being comprehensive for well-documented artists."
-                  },
-                  {
-                    role: "user",
-                    content: rolePrompt
-                  }
-                ],
-                temperature: 0.1,
-                max_tokens: 100,
-              });
-
-              const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
-              if (roleContent) {
-                try {
-                  const detectedRoles = JSON.parse(roleContent);
-                  if (Array.isArray(detectedRoles) && detectedRoles.length > 0) {
-                    branchingRoles = detectedRoles.filter(role => 
-                      ['artist', 'producer', 'songwriter'].includes(role)
-                    );
-                    console.log(`✅ [Vercel] Detected roles for artist "${branchingArtist}":`, branchingRoles);
-                  }
-                } catch {
-                  console.log(`⚠️ [Vercel] Could not parse role detection for "${branchingArtist}", using default`);
-                }
+              const result = await roleService.computeRoles(branchingArtist, { includeArtistByDefault: true });
+              const detectedRoles = (result.roles || []).filter(r => ['artist','producer','songwriter'].includes(r));
+              if (detectedRoles.length > 0) {
+                branchingRoles = detectedRoles;
+                console.log(`✅ [Vercel] Evidence-based roles for artist "${branchingArtist}":`, branchingRoles);
               }
             } catch {
               console.log(`⚠️ [Vercel] Role detection failed for "${branchingArtist}", using default`);
             }
 
-            const branchNode = {
+            const branchNode: NetworkNode = {
               id: branchingArtist,
               name: branchingArtist,
               type: branchingRoles[0],
@@ -784,11 +691,12 @@ Investigate thoroughly for multiple roles on ${branchingArtist}, whether they ar
     } catch (dbError) {
       console.error('❌ [Vercel] Database/OpenAI error:', dbError);
       console.error('❌ [Vercel] Error stack:', dbError instanceof Error ? dbError.stack : 'No stack trace');
-      return res.status(500).json({ 
+      res.status(500).json({ 
         message: 'Failed to generate network data', 
         error: dbError instanceof Error ? dbError.message : 'Unknown error',
         timestamp: new Date().toISOString()
       });
+      return;
     }
     
   } catch (error) {

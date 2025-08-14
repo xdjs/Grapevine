@@ -4,6 +4,7 @@ import { db, isDatabaseAvailable } from './supabase.js';
 import { artists, collaborations, type Artist, type InsertArtist, type Collaboration, type InsertCollaboration, type NetworkData, type NetworkNode, type NetworkLink } from "../shared/schema.js";
 import { spotifyService } from "./spotify.js";
 import { openAIService } from "./openai-service.js";
+import { roleService } from './role-service.js';
 import { musicBrainzService } from "./musicbrainz.js";
 import { wikipediaService } from "./wikipedia.js";
 import { musicNerdService } from "./musicnerd-service.js";
@@ -190,103 +191,31 @@ export class DatabaseStorage implements IStorage {
 
   private async batchDetectRoles(peopleList: string[]): Promise<Map<string, RoleType[]>> {
     const globalRoleMap = new Map<string, RoleType[]>();
-    
-    if (!openAIService.isServiceAvailable() || peopleList.length === 0) {
-      return globalRoleMap;
-    }
-      
-      try {
-        const peopleListStr = peopleList.map(name => `"${name}"`).join(', ');
-        const batchRolePrompt = `For each of these music industry professionals: ${peopleListStr}
-        
-CRITICAL: Search extensively for MULTIPLE ROLES for every single person, regardless of their popularity or fame level. Many people have multiple roles (artist, producer, songwriter). This includes mainstream artists, independent artists, underground artists, regional artists, and emerging artists.
-
-Return their roles as JSON in this exact format:
-{
-  "Person Name 1": ["artist", "songwriter"],
-  "Person Name 2": ["producer", "songwriter"],
-  "Person Name 3": ["artist"]
-}
-
-
-Each person's roles should be from: ["artist", "producer", "songwriter"]. Include ALL roles each person has - investigate thoroughly for multiple roles on every person queried, whether they are famous or lesser-known. Return ONLY the JSON object, no other text.`;
-
-        const OpenAI = await import('openai');
-        const openai = new OpenAI.default({
-          apiKey: process.env.OPENAI_API_KEY,
-        });
-
-        const roleCompletion = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [{ role: "user", content: batchRolePrompt }],
-          temperature: 0.1,
-          max_tokens: 1000,
-        });
-
-        const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
-        if (roleContent) {
-          try {
-            const rolesData = JSON.parse(roleContent) as Record<string, unknown>;
-            for (const [personName, roles] of Object.entries(rolesData)) {
-              const validRoles = safeParseRoles(roles);
-              if (validRoles.length > 0) {
-                globalRoleMap.set(personName, validRoles);
-                console.log(`✅ [DEBUG] Batch detected roles for "${personName}":`, validRoles);
-              }
-            }
-          } catch (parseError) {
-            console.log(`⚠️ [DEBUG] Could not parse batch role detection, falling back to defaults`);
-          }
+    if (peopleList.length === 0) return globalRoleMap;
+    // Evidence-based detection per person, parallelized
+    const results = await Promise.allSettled(
+      peopleList.map(async (name) => {
+        const result = await roleService.computeRoles(name, { includeArtistByDefault: false });
+        return { name, roles: result.roles };
+      })
+    );
+    for (const r of results) {
+      if (r.status === 'fulfilled') {
+        const { name, roles } = r.value;
+        const valid = validateRoles(roles);
+        if (valid.length > 0) {
+          globalRoleMap.set(name, valid);
+          console.log(`✅ [DEBUG] Evidence-based batch roles for "${name}":`, valid);
         }
-      } catch (error) {
-        console.log(`⚠️ [DEBUG] Batch role detection failed, falling back to defaults`);
       }
-    
+    }
     return globalRoleMap;
   }
 
   private async detectMainArtistRoles(artistName: string): Promise<RoleType[]> {
-    if (!openAIService.isServiceAvailable()) {
-      return ['artist'];
-    }
-    
-      try {
-        const mainArtistRolePrompt = `What roles does ${artistName} have in the music industry? CRITICAL: Search extensively for ALL POSSIBLE ROLES regardless of their popularity or fame level - many artists also produce and write songs. This includes mainstream artists, independent artists, underground artists, regional artists, and emerging artists.
-
-Return ONLY a JSON array of their roles from: ["artist", "producer", "songwriter"]. For example: ["artist", "songwriter"] or ["producer", "songwriter"] or ["artist", "producer", "songwriter"]. 
-
-Investigate thoroughly for multiple roles on ${artistName} - check if they are also a producer or songwriter in addition to being an artist, whether they are famous or lesser-known. Return ONLY the JSON array, no other text.`;
-        
-        const OpenAI = await import('openai');
-        const openai = new OpenAI.default({
-          apiKey: process.env.OPENAI_API_KEY,
-        });
-
-        const roleCompletion = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [{ role: "user", content: mainArtistRolePrompt }],
-          temperature: 0.1,
-          max_tokens: 100,
-        });
-
-        const roleContent = roleCompletion.choices[0]?.message?.content?.trim();
-        if (roleContent) {
-          try {
-            const detectedRoles = JSON.parse(roleContent);
-          const validRoles = safeParseRoles(detectedRoles);
-              if (validRoles.length > 0) {
-            console.log(`✅ [DEBUG] Detected main artist roles for "${artistName}":`, validRoles);
-            return validRoles;
-            }
-          } catch (parseError) {
-            console.log(`⚠️ [DEBUG] Could not parse main artist role detection for "${artistName}", using default`);
-          }
-        }
-      } catch (error) {
-        console.log(`⚠️ [DEBUG] Main artist role detection failed for "${artistName}", using default`);
-      }
-    
-    return ['artist'];
+    const computed = await roleService.computeRoles(artistName, { includeArtistByDefault: true });
+    const valid = validateRoles(computed.roles);
+    return valid.length > 0 ? valid : ['artist'];
   }
 
   private async generateRealCollaborationNetwork(artistName: string): Promise<SafeNetworkData> {
