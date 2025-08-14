@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import SearchInterface from "@/components/search-interface";
-import NetworkVisualizer from "@/components/network-visualizer";
+import NetworkVisualizer, { NetworkVisualizerRef } from "@/components/network-visualizer";
 
 import FilterControls from "@/components/filter-controls";
 import MobileControls from "@/components/mobile-controls";
@@ -113,6 +113,12 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentArtistName, setCurrentArtistName] = useState<string>("");
   const [currentArtistId, setCurrentArtistId] = useState<string | null>(null);
+  const networkVisualizerRef = useRef<NetworkVisualizerRef>(null);
+
+  // Function to access resetToFirstDegree from NetworkVisualizer
+  const handleResetToFirstDegree = useCallback(() => {
+    networkVisualizerRef.current?.resetToFirstDegree();
+  }, []);
   const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
   const [clearSearchField, setClearSearchField] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
@@ -416,6 +422,7 @@ export default function Home() {
             onArtistSearch={handleArtistSearch}
             onArtistNodeClick={handleArtistNodeClick}
             onClearAll={handleClearNetwork}
+            ref={networkVisualizerRef}
           />
         </div>
       )}
@@ -432,6 +439,7 @@ export default function Home() {
               onZoomIn={handleZoomIn}
               onZoomOut={handleZoomOut}
               onZoomReset={handleZoomReset}
+              onBackToFirstDegree={handleResetToFirstDegree}
               onClearAll={handleClearNetwork}
               artistId={currentArtistId}
             />

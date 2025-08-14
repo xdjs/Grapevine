@@ -144,6 +144,29 @@ describe('useNetworkData expandNodeNetwork', () => {
     expect(afterSecond.nodes.length).toBe(afterFirst.nodes.length);
     expect(afterSecond.links.length).toBe(afterFirst.links.length);
   });
+
+  it('should reset to first degree network when resetToFirstDegree is called', async () => {
+    const { result } = renderHook(() => useNetworkData({ data: baseData }));
+
+    // Initially should be in first-degree mode
+    expect(result.current.isExpandedMode).toBe(false);
+    expect(result.current.fullNetworkData).toBeNull();
+
+    // Expand a node
+    await result.current.expandNodeNetwork('A', 'A');
+    
+    // Should now be in expanded mode
+    expect(result.current.isExpandedMode).toBe(true);
+    expect(result.current.fullNetworkData).not.toBeNull();
+
+    // Reset to first degree
+    result.current.resetToFirstDegree();
+
+    // Should be back to first-degree mode
+    expect(result.current.isExpandedMode).toBe(false);
+    expect(result.current.fullNetworkData).toBeNull();
+    expect(result.current.expandedNodes.size).toBe(0);
+  });
 });
 
 

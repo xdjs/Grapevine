@@ -1,4 +1,5 @@
 import { Loader2, Brain, Share2, Users } from "lucide-react";
+import { createPortal } from "react-dom";
 
 interface ExpandLoadingProps {
   isVisible: boolean;
@@ -8,8 +9,8 @@ interface ExpandLoadingProps {
 export default function ExpandLoading({ isVisible, artistName }: ExpandLoadingProps) {
   if (!isVisible) return null;
 
-  return (
-    <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 p-4">
+  const content = (
+    <div className="fixed inset-0 flex items-center justify-center bg-transparent md:bg-black/60 md:backdrop-blur-sm z-[9999] p-4 pointer-events-none">
       <div className="bg-black/90 rounded-xl p-6 sm:p-8 flex flex-col items-center space-y-4 sm:space-y-6 max-w-sm sm:max-w-md border border-pink-500/20 shadow-2xl">
         {/* Main Loading Spinner */}
         <div className="relative">
@@ -61,6 +62,12 @@ export default function ExpandLoading({ isVisible, artistName }: ExpandLoadingPr
       </div>
     </div>
   );
+
+  // Render to body to avoid being affected by any parent transforms/overflow (iOS Safari quirks)
+  if (typeof document !== 'undefined' && document.body) {
+    return createPortal(content, document.body);
+  }
+  return content;
 }
 
 

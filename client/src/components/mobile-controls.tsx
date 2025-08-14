@@ -49,6 +49,7 @@ interface MobileControlsProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomReset: () => void;
+  onBackToFirstDegree?: () => void;
   onClearAll: () => void;
 
   artistId?: string | null;
@@ -59,6 +60,7 @@ export default function MobileControls({
   onZoomIn,
   onZoomOut,
   onZoomReset,
+  onBackToFirstDegree,
   onClearAll,
 
   artistId,
@@ -690,6 +692,25 @@ export default function MobileControls({
               <Share2 className="w-6 h-6" />
             )}
           </Button>
+
+          {/* Reset Button */}
+          {onBackToFirstDegree && (
+            <Button
+              size="icon"
+              variant="secondary"
+              className="w-12 h-12 backdrop-blur border-2 rounded-full shadow-lg"
+              style={{ 
+                backgroundColor: '#F2A6E0', 
+                borderColor: '#F2A6E0'
+              }}
+              title="Back to First Degree"
+              onClick={onBackToFirstDegree}
+            >
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 12H5M12 19L5 12L12 5" stroke="#282A36" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </Button>
+          )}
 
           {/* Settings Button – opens existing controls panel */}
           <Button
