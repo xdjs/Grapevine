@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { NetworkData, NetworkNode } from "@/types/network";
 import {
   Plus,
   Minus,
@@ -74,16 +73,76 @@ export default function MobileControls({
   const [isCapturing, setIsCapturing] = useState(false);
   const [snapshotDataUrl, setSnapshotDataUrl] = useState<string | null>(null);
 
+  // Drag state for zoom controls panel
+  const [dragPosition, setDragPosition] = useState({ x: 16, y: window.innerHeight - 120 }); // Default bottom-left position
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const controlsRef = useRef<HTMLDivElement>(null);
+  const dragTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load saved position from localStorage on mount
+  useEffect(() => {
+    const savedPosition = localStorage.getItem('mobile-zoom-controls-position');
+    if (savedPosition) {
+      try {
+        const parsed = JSON.parse(savedPosition);
+        setDragPosition(parsed);
+      } catch (error) {
+        console.warn('Failed to parse saved zoom controls position:', error);
+      }
+    }
+  }, []);
+
+  // Save position to localStorage when it changes
+  useEffect(() => {
+    if (showControls) {
+      localStorage.setItem('mobile-zoom-controls-position', JSON.stringify(dragPosition));
+    }
+  }, [dragPosition, showControls]);
+
   const [artistXUsername, setArtistXUsername] = useState<string | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  // Local state for artist social data (simplified)
+  const [artistSocialData, setArtistSocialData] = useState<ArtistSocialData | null>(null);
+
+  // Fetch artist social data when artistId changes
+  useEffect(() => {
+    const fetchArtistSocialData = async () => {
+      if (!artistId) {
+        setArtistSocialData(null);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/artist-social/${artistId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setArtistSocialData({
+            artistId,
+            name: data.name || null,
+            xUsername: data.xUsername,
+            instagramUsername: data.instagramUsername,
+            facebookUsername: data.facebookUsername
+          });
+        } else {
+          setArtistSocialData(null);
+        }
+      } catch (error) {
+        console.error('Error fetching artist social data:', error);
+        setArtistSocialData(null);
+      }
+    };
+
+    fetchArtistSocialData();
+  }, [artistId]);
 
   // Fetch artist X username when artistId changes
   useEffect(() => {
     const fetchArtistXUsername = async () => {
       if (!artistId) {
         setArtistXUsername(null);
-
         return;
       }
 
@@ -117,14 +176,6 @@ export default function MobileControls({
       text = `Check out @${artistSocialData.facebookUsername}'s artist collaboration network! Explore music connections 👇`;
     } else if (artistSocialData && artistSocialData.name) {
       text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇`;
-    } else if (networkData) {
-      // Find main artist from network data as fallback
-      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
-        node.size === 30 && node.type === 'artist'
-      );
-      if (mainArtist) {
-        text = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇`;
-      }
     }
     
     const encodedText = encodeURIComponent(text);
@@ -141,14 +192,6 @@ export default function MobileControls({
       text = `Check out @${artistSocialData.instagramUsername}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
     } else if (artistSocialData && artistSocialData.name) {
       text = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
-    } else if (networkData) {
-      // Find main artist from network data as fallback
-      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
-        node.size === 30 && node.type === 'artist'
-      );
-      if (mainArtist) {
-        text = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇\n\n${window.location.href}\n\n#music #artists #collaboration #grapevine`;
-      }
     }
     
     navigator.clipboard.writeText(text).then(() => {
@@ -224,7 +267,7 @@ export default function MobileControls({
     }
 
     const url = encodeURIComponent(window.location.href);
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodedText}&url=${url}`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
     window.open(twitterUrl, '_blank', 'width=600,height=400');
   };
   
@@ -235,14 +278,6 @@ export default function MobileControls({
     // Add artist information if available (Pinterest doesn't have specific usernames)
     if (artistSocialData && artistSocialData.name) {
       description = `Check out ${artistSocialData.name}'s artist collaboration network! Explore music connections 👇`;
-    } else if (networkData) {
-      // Find main artist from network data as fallback
-      const mainArtist = networkData.nodes.find((node: NetworkNode) => 
-        node.size === 30 && node.type === 'artist'
-      );
-      if (mainArtist) {
-        description = `Check out ${mainArtist.name}'s artist collaboration network! Explore music connections 👇`;
-      }
     }
     
     const encodedDescription = encodeURIComponent(description);
@@ -656,6 +691,116 @@ export default function MobileControls({
     }
   };
 
+  // Drag handlers for zoom controls panel
+  const handleDragStart = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    if (!controlsRef.current) return;
+    
+    // Only start drag if clicking on the drag handle or the card background
+    const target = e.target as HTMLElement;
+    const isDragHandle = target.closest('[data-drag-handle]');
+    const isCardBackground = target === controlsRef.current || target.closest('[data-card-background]');
+    const isButton = target.closest('button');
+    
+    // Don't start drag if clicking on a button
+    if (isButton) return;
+    
+    if (!isDragHandle && !isCardBackground) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Add a small delay to prevent accidental dragging when clicking buttons
+    dragTimeoutRef.current = setTimeout(() => {
+      setIsDragging(true);
+      const rect = controlsRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      
+      if ('touches' in e) {
+        // Touch event
+        dragStartRef.current = {
+          x: e.touches[0].clientX - rect.left,
+          y: e.touches[0].clientY - rect.top
+        };
+      } else {
+        // Mouse event
+        dragStartRef.current = {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        };
+      }
+    }, 150); // 150ms delay
+  }, []);
+
+  const handleDragMove = useCallback((e: TouchEvent | MouseEvent) => {
+    if (!isDragging || !controlsRef.current) return;
+    
+    e.preventDefault();
+    
+    let clientX: number, clientY: number;
+    
+    if ('touches' in e) {
+      // Touch event
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      // Mouse event
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    
+    const newX = clientX - dragStartRef.current.x;
+    const newY = clientY - dragStartRef.current.y;
+    
+    // Constrain to screen bounds
+    const maxX = window.innerWidth - (controlsRef.current.offsetWidth || 200);
+    const maxY = window.innerHeight - (controlsRef.current.offsetHeight || 150);
+    
+    setDragPosition({
+      x: Math.max(0, Math.min(newX, maxX)),
+      y: Math.max(0, Math.min(newY, maxY))
+    });
+  }, [isDragging]);
+
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+    // Clear any pending drag timeout
+    if (dragTimeoutRef.current) {
+      clearTimeout(dragTimeoutRef.current);
+      dragTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Cleanup drag timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (dragTimeoutRef.current) {
+        clearTimeout(dragTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Set up drag event listeners
+  useEffect(() => {
+    if (showControls) {
+      const handleMouseMove = (e: MouseEvent) => handleDragMove(e);
+      const handleMouseUp = () => handleDragEnd();
+      const handleTouchMove = (e: TouchEvent) => handleDragMove(e);
+      const handleTouchEnd = () => handleDragEnd();
+      
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
+      };
+    }
+  }, [showControls, handleDragMove, handleDragEnd]);
+
   return (
     <>
       {/* Options (three-dots) Toggle Button */}
@@ -758,13 +903,46 @@ export default function MobileControls({
 
       {/* Mobile Controls Panel */}
       {showControls && (
-        <Card className="fixed bottom-6 sm:bottom-4 left-4 z-50 bg-gray-900/95 backdrop-blur p-3 max-w-[calc(100vw-2rem)] border-2" style={{ borderColor: '#b427b4' }}>
+        <Card 
+          ref={controlsRef}
+          data-card-background
+          className={`fixed z-50 bg-gray-900/95 backdrop-blur p-3 max-w-[calc(100vw-2rem)] border-2 transition-all duration-200 ${
+            isDragging ? 'select-none shadow-2xl ring-2 ring-purple-400/50' : 'shadow-lg'
+          }`} 
+          style={{ 
+            borderColor: '#b427b4',
+            left: `${dragPosition.x}px`,
+            top: `${dragPosition.y}px`,
+            transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+            cursor: isDragging ? 'grabbing' : 'default'
+          }}
+          onMouseDown={handleDragStart}
+          onTouchStart={handleDragStart}
+        >
+          {/* Drag Handle */}
+          <div 
+            data-drag-handle
+            className={`w-full h-3 rounded-t mb-2 cursor-grab active:cursor-grabbing flex items-center justify-center group transition-all duration-200 ${
+              isDragging 
+                ? 'bg-gradient-to-r from-purple-500 to-purple-600' 
+                : 'bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600'
+            }`}
+            onMouseDown={handleDragStart}
+            onTouchStart={handleDragStart}
+            title="Drag to move zoom controls"
+          >
+            <div className={`w-8 h-1 rounded-full transition-colors duration-200 ${
+              isDragging ? 'bg-white' : 'bg-gray-400 group-hover:bg-gray-300'
+            }`}></div>
+            <span className="sr-only">Drag to move zoom controls</span>
+          </div>
+          
           {/* Close Button in Corner */}
           <Button
             onClick={() => setShowControls(false)}
             size="icon"
             variant="ghost"
-            className="absolute top-1 right-1 w-5 h-5 bg-gray-800/50 hover:bg-gray-700/50 rounded-full"
+            className="absolute top-3 right-1 w-5 h-5 bg-gray-800/50 hover:bg-gray-700/50 rounded-full"
           >
             <X className="w-3 h-3" />
           </Button>
@@ -803,8 +981,6 @@ export default function MobileControls({
                 </Button>
               </div>
             </div>
-
-
 
             {/* Clear All */}
             <Button

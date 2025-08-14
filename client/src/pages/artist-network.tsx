@@ -4,7 +4,7 @@ import SearchInterface from "@/components/search-interface";
 import NetworkVisualizer, { NetworkVisualizerRef } from "@/components/network-visualizer";
 
 import FilterControls from "@/components/filter-controls";
-import MobileDraggableZoomControls from "@/components/mobile-draggable-zoom-controls";
+import MobileControls from "@/components/mobile-controls";
 import LoadingScreen from "@/components/loading-screen";
 import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft } from "lucide-react";
@@ -201,15 +201,14 @@ export default function ArtistNetwork() {
           </>
         )}
         
-        {/* Mobile Draggable Zoom Controls */}
-        <MobileDraggableZoomControls
+        {/* Mobile Controls */}
+        <MobileControls
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onZoomReset={handleZoomReset}
-          onBackToFirstDegree={handleResetToFirstDegree}
           onClearAll={handleClearNetwork}
-          showClearButton={true}
-          showBackToFirstDegree={true}
+          artistId={currentArtistId}
+          onBackToFirstDegree={handleResetToFirstDegree}
         />
       </>
     </div>
