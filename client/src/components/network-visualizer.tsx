@@ -451,6 +451,10 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
               <div>Main artist: {mainArtistNode?.name || 'None'}</div>
               <div>SVG ref: {svgRef.current ? 'Yes' : 'No'}</div>
               <div>Error: {componentError ? componentError.message : 'None'}</div>
+              <div>Is Mobile: {isMobile ? 'Yes' : 'No'}</div>
+              <div>Screen: {window.innerWidth}x{window.innerHeight}</div>
+              <div>Network Container: {document.querySelector('.mobile-network-container') ? 'Found' : 'Not Found'}</div>
+              <div>SVG Element: {document.querySelector('.mobile-network-container svg') ? 'Found' : 'Not Found'}</div>
             </div>
           )}
           

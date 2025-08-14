@@ -227,6 +227,9 @@ export default function MobileControls({
 
   if (!isMobile) return null;
 
+  // TEMPORARILY DISABLE MOBILE CONTROLS TO TEST BLACK SCREEN ISSUE
+  return null;
+
   // Platform-specific share functions - direct URL sharing
   const shareToFacebook = () => {
     const url = encodeURIComponent(window.location.href);
