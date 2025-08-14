@@ -17,6 +17,7 @@ import NetworkTooltip from "./network-tooltip";
 import ZoomControlsEnhanced from "./zoom-controls-enhanced";
 import NetworkResetButton from "./network-reset-button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import MobileControls from "./mobile-controls";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -415,6 +416,18 @@ export default function NetworkVisualizer({
               orientation="vertical"
               theme="dark"
               ariaLabel="Zoom controls"
+            />
+          )}
+
+          {/* Mobile Controls */}
+          {isMobile && (
+            <MobileControls
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+              onZoomReset={handleZoomReset}
+              onBackToFirstDegree={isExpandedMode ? resetToFirstDegree : undefined}
+              onClearAll={onClearAll}
+              artistId={mainArtistNode?.artistId}
             />
           )}
 
