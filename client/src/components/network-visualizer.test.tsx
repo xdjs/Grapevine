@@ -24,6 +24,12 @@ vi.mock("./collaboration-details-popup", () => ({
 vi.mock("./network-tooltip", () => ({
   default: vi.fn(() => <div data-testid="network-tooltip" />)
 }));
+vi.mock("./zoom-controls-enhanced", () => ({
+  default: vi.fn(() => <div data-testid="zoom-controls" />)
+}));
+vi.mock("./network-reset-button", () => ({
+  default: vi.fn(() => <div data-testid="network-reset-button" />)
+}));
 
 // Import mocked modules for type safety
 import * as useNetworkDataModule from "@/hooks/use-network-data";
@@ -40,6 +46,8 @@ import MockD3NetworkRenderer from "./d3-network-renderer";
 import MockArtistSelectionModal from "./artist-selection-modal";
 import MockCollaborationDetailsPopup from "./collaboration-details-popup";
 import MockNetworkTooltip from "./network-tooltip";
+import MockZoomControlsEnhanced from "./zoom-controls-enhanced";
+import MockNetworkResetButton from "./network-reset-button";
 
 // Mock D3 to prevent DOM manipulation issues in tests
 vi.mock("d3", () => ({
@@ -291,6 +299,27 @@ describe("NetworkVisualizer Integration Tests", () => {
       const resetButton = screen.getByRole("button", { name: /back to taylor swift/i });
       expect(resetButton).toBeInTheDocument();
       expect(resetButton).toHaveClass("bg-blue-600");
+    });
+
+    it("should show back-to-first-degree button in zoom controls when in expanded mode", () => {
+      const expandedMockData = {
+        ...mockUseNetworkData,
+        isExpandedMode: true,
+        resetToFirstDegree: vi.fn()
+      };
+
+      vi.mocked(useNetworkDataModule.useNetworkData).mockReturnValue(expandedMockData);
+
+      render(<NetworkVisualizer {...mockProps} />);
+
+      // Verify ZoomControlsEnhanced is called with back-to-first-degree props
+      expect(vi.mocked(MockZoomControlsEnhanced)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          onBackToFirstDegree: expandedMockData.resetToFirstDegree,
+          showBackToFirstDegree: true
+        }),
+        expect.any(Object)
+      );
     });
 
     it("should handle zoom events through window event system", async () => {

@@ -78,6 +78,10 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
   const getVisibleNodes = useCallback(() => {
     if (!mainArtistNode) return data.nodes;
     
+    // Use fullNetworkData if we're in expanded mode, otherwise use original data
+    const workingData = fullNetworkData || data;
+    const workingLinks = fullNetworkData?.links || data.links;
+    
     const firstDegreeIds = getFirstDegreeCollaborators();
     const visibleIds = new Set([mainArtistNode.id]);
     
@@ -92,7 +96,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       visibleIds.add(expandedNodeId);
       
       // Add all nodes connected to this expanded node
-      data.links.forEach(link => {
+      workingLinks.forEach(link => {
         const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
         const targetId = typeof link.target === 'string' ? link.target : link.target.id;
         
@@ -104,19 +108,22 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       });
     });
     
-    return data.nodes.filter(node => visibleIds.has(node.id));
-  }, [mainArtistNode, data.nodes, data.links, expandedNodes, getFirstDegreeCollaborators]);
+    return workingData.nodes.filter(node => visibleIds.has(node.id));
+  }, [mainArtistNode, data.nodes, data.links, fullNetworkData, expandedNodes, getFirstDegreeCollaborators]);
 
   // Get visible links based on visible nodes
   const getVisibleLinks = useCallback(() => {
     const visibleNodeIds = new Set(getVisibleNodes().map(node => node.id));
     
-    return data.links.filter(link => {
+    // Use fullNetworkData if we're in expanded mode, otherwise use original data
+    const workingLinks = fullNetworkData?.links || data.links;
+    
+    return workingLinks.filter(link => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       return visibleNodeIds.has(sourceId) && visibleNodeIds.has(targetId);
     });
-  }, [data.links, getVisibleNodes]);
+  }, [data.links, fullNetworkData, getVisibleNodes]);
 
   // Function to expand a node's network (limit to at most 3 directly connected collaborators)
   const expandNodeNetwork = useCallback(async (nodeName: string, nodeId?: string) => {
@@ -728,10 +735,24 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
 
   // Function to reset to first-degree view
   const resetToFirstDegree = useCallback(() => {
+    console.log(`🔄 Reset to first-degree view for ${mainArtistNode?.name || 'main artist'}`);
+    
+    // Clear all expanded state
     setFullNetworkData(null);
     setExpandedNodes(new Set());
     setIsExpandedMode(false);
-    console.log(`🔄 Reset to first-degree view for ${mainArtistNode?.name || 'main artist'}`);
+    
+    // Clear all contributions and base graph
+    contributionsRef.current.clear();
+    baseGraphRef.current = null;
+    
+    // Clear persisted state
+    try {
+      delete (window as any).grapevineExpandedState;
+      sessionStorage.removeItem(PERSIST_KEY);
+    } catch {}
+    
+    console.log(`✅ Reset complete - returning to first-degree network`);
   }, [mainArtistNode?.name]);
 
   // Compute visible nodes and links

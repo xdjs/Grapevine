@@ -407,8 +407,10 @@ export default function NetworkVisualizer({
               onZoomIn={handleZoomIn}
               onZoomOut={handleZoomOut}
               onZoomReset={handleZoomReset}
+              onBackToFirstDegree={isExpandedMode ? resetToFirstDegree : undefined}
               onClearAll={onClearAll}
               showClearButton={true}
+              showBackToFirstDegree={isExpandedMode}
               position="top-right"
               orientation="vertical"
               theme="dark"
@@ -429,23 +431,7 @@ export default function NetworkVisualizer({
             mainArtistNode={mainArtistNode}
           />
           
-          {/* Shrink network button for expanded mode */}
-          {isExpandedMode && (
-            <button
-              onClick={() => {
-                try {
-                  resetToFirstDegree();
-                } catch (error) {
-                  handleError(error as Error, 'reset to first degree');
-                }
-              }}
-              className="absolute top-4 right-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors duration-200 z-10"
-              style={{ fontSize: '14px', fontWeight: '500' }}
-              data-testid="reset-button"
-            >
-              Shrink network
-            </button>
-          )}
+          {/* Top-right shrink button removed: shrinking is available via tooltip per-node action */}
           
           <ArtistSelectionModal
             isOpen={modals.showArtistModal}
