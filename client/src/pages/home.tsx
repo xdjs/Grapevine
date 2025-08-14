@@ -165,6 +165,8 @@ export default function Home() {
       if (params.artistId && !networkData && !isLoading && !isClearing) {
         try {
           setIsLoading(true);
+          // Ensure the loading overlay and network view are shown immediately for direct links
+          setShowNetworkView(true);
           console.log(`🔗 Loading artist network from URL: ${params.artistId}`);
           
           // Use the fetchNetworkDataById function which returns proper NetworkResponse
