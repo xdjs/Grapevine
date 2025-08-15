@@ -95,7 +95,7 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
 
   const handlePinchZoomIn = useCallback((focalX: number, focalY: number) => {
     setCurrentZoom(prevZoom => {
-      const newZoom = Math.min(10000, prevZoom * 2.5); // Easier zoom in - more aggressive zoom factor
+      const newZoom = Math.min(10000, prevZoom * 3.0); // Very responsive zoom in
       console.log(`🤏 Pinch zoom in: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
       applyPinchZoom(newZoom, focalX, focalY);
       return newZoom;
@@ -104,7 +104,7 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
 
   const handlePinchZoomOut = useCallback((focalX: number, focalY: number) => {
     setCurrentZoom(prevZoom => {
-      const newZoom = Math.max(0.00001, prevZoom / 2.0); // Min 0.00001x for pinch zoom
+      const newZoom = Math.max(0.00001, prevZoom / 3.0); // Very responsive zoom out
       console.log(`🤏 Pinch zoom out: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
       applyPinchZoom(newZoom, focalX, focalY);
       return newZoom;
@@ -151,7 +151,7 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     let initialDistance = 0;
     let lastScale = 1;
     let isPinching = false;
-    const pinchThreshold = 1.5; // Decreased sensitivity - requires larger pinch movement
+    const pinchThreshold = 2.0; // Much less sensitive - requires very deliberate pinch movement
     let pinchCenterX = 0;
     let pinchCenterY = 0;
 
