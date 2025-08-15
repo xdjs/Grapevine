@@ -917,7 +917,7 @@ export default function MobileControls({
 
       {/* Options Menu with Staggered Animation */}
       {showMenu && (
-        <div className="fixed bottom-20 right-4 z-50 flex flex-col items-end gap-2">
+        <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
           {/* Share Button */}
           <Button
             size="icon"
