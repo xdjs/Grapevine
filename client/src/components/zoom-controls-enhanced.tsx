@@ -8,12 +8,14 @@ interface ZoomControlsEnhancedProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomReset: () => void;
+  onBackToFirstDegree?: () => void;
   onClearAll?: () => void;
   
   // Configuration options
   position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   orientation?: 'vertical' | 'horizontal';
   showClearButton?: boolean;
+  showBackToFirstDegree?: boolean;
   disabled?: boolean;
   
   // Styling customization
@@ -31,6 +33,7 @@ interface ZoomControlsEnhancedProps {
     zoomIn?: string;
     zoomOut?: string;
     zoomReset?: string;
+    backToFirstDegree?: string;
     clearAll?: string;
   };
   
@@ -43,6 +46,7 @@ const defaultKeyboardShortcuts = {
   zoomIn: '+',
   zoomOut: '-',
   zoomReset: '0',
+  backToFirstDegree: 'b',
   clearAll: 'Escape'
 };
 
@@ -68,10 +72,12 @@ export const ZoomControlsEnhanced = memo<ZoomControlsEnhancedProps>(({
   onZoomIn,
   onZoomOut,
   onZoomReset,
+  onBackToFirstDegree,
   onClearAll,
   position = 'top-right',
   orientation = 'vertical',
   showClearButton = true,
+  showBackToFirstDegree = false,
   disabled = false,
   className,
   buttonClassName,
@@ -155,16 +161,38 @@ export const ZoomControlsEnhanced = memo<ZoomControlsEnhancedProps>(({
     handleDebouncedAction(onClearAll);
   }, [onClearAll, handleDebouncedAction, disabled]);
 
+  const handleBackToFirstDegree = useCallback(() => {
+    if (disabled || !onBackToFirstDegree) return;
+    handleDebouncedAction(onBackToFirstDegree);
+  }, [onBackToFirstDegree, handleDebouncedAction, disabled]);
+
   // Keyboard event handler
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (disabled || !enableKeyboardShortcuts) return;
 
+    // Don't capture shortcuts when user is typing in input fields
+    // This allows normal typing in search bars, text inputs, etc.
+    const target = event.target as HTMLElement;
+    const isInputField = target.tagName === 'INPUT' || 
+                        target.tagName === 'TEXTAREA' || 
+                        target.contentEditable === 'true' ||
+                        target.closest('input, textarea, [contenteditable]') ||
+                        target.closest('[role="textbox"]') ||
+                        target.closest('[data-input]');
+    
+    if (isInputField) {
+      // Allow normal typing in input fields
+      console.log('🔤 [Zoom Controls] Allowing key in input field:', event.key, 'Target:', target.tagName);
+      return;
+    }
+
     const key = event.key;
     const shortcuts = { ...defaultKeyboardShortcuts, ...keyboardShortcuts };
 
-    // Prevent default browser behavior for our shortcuts
+    // Only prevent default for our shortcuts when not in input fields
     const isOurShortcut = Object.values(shortcuts).includes(key);
     if (isOurShortcut) {
+      console.log('⌨️ [Zoom Controls] Capturing shortcut key:', key);
       event.preventDefault();
       event.stopPropagation();
     }
@@ -181,6 +209,11 @@ export const ZoomControlsEnhanced = memo<ZoomControlsEnhancedProps>(({
       case shortcuts.zoomReset:
         handleZoomReset();
         break;
+      case shortcuts.backToFirstDegree:
+        if (onBackToFirstDegree) {
+          handleBackToFirstDegree();
+        }
+        break;
       case shortcuts.clearAll:
         if (onClearAll) {
           handleClearAll();
@@ -194,8 +227,10 @@ export const ZoomControlsEnhanced = memo<ZoomControlsEnhancedProps>(({
     handleZoomInStart,
     handleZoomOutStart,
     handleZoomReset,
+    handleBackToFirstDegree,
     handleClearAll,
     stopContinuousZoom,
+    onBackToFirstDegree,
     onClearAll
   ]);
 
@@ -338,10 +373,35 @@ export const ZoomControlsEnhanced = memo<ZoomControlsEnhancedProps>(({
         <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
       </Button>
 
-      {/* Separator */}
-      {showClearButton && onClearAll && (
-        <div className="w-full h-px bg-gray-700 my-1" role="separator" />
+      {/* Back to First Degree Button */}
+      {showBackToFirstDegree && onBackToFirstDegree && (
+        <Button
+          {...buttonProps}
+          onClick={handleBackToFirstDegree}
+          variant="secondary"
+          style={{ 
+            backgroundColor: '#F2A6E0', 
+            borderColor: '#F2A6E0',
+            '--tw-hover-bg-opacity': '1'
+          } as React.CSSProperties}
+          className={cn(buttonClass, 'hover:bg-[#EB93D5]')}
+          aria-label="Back to first degree network (keyboard shortcut: b)"
+          aria-keyshortcuts={enableKeyboardShortcuts ? keyboardShortcuts.backToFirstDegree || 'b' : undefined}
+          title={`Back to First Degree${enableKeyboardShortcuts ? ` (${keyboardShortcuts.backToFirstDegree || 'b'})` : ''}`}
+          onFocus={() => setFocusedButton('back-to-first-degree')}
+          onBlur={() => setFocusedButton(null)}
+          data-testid="back-to-first-degree-button"
+        >
+          <svg className="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 12H5M12 19L5 12L12 5" stroke="#282A36" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </Button>
       )}
+
+      {/* Separator */}
+      {(showClearButton && onClearAll) || (showBackToFirstDegree && onBackToFirstDegree) ? (
+        <div className="w-full h-px bg-gray-700 my-1" role="separator" />
+      ) : null}
 
       {/* Clear All Button */}
       {showClearButton && onClearAll && (

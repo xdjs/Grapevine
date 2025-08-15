@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useParams, useLocation } from "wouter";
 import SearchInterface from "@/components/search-interface";
-import NetworkVisualizer from "@/components/network-visualizer";
+import NetworkVisualizer, { NetworkVisualizerRef } from "@/components/network-visualizer";
 
 import FilterControls from "@/components/filter-controls";
 import MobileControls from "@/components/mobile-controls";
@@ -14,11 +14,55 @@ import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function ArtistNetwork() {
+  // EMERGENCY FIX: Force mobile detection based on screen dimensions
+  const [forceMobile, setForceMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkForceMobile = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const isMobileByDimensions = width <= 768 || height <= 768;
+      
+      console.log('🚨 [EMERGENCY] Force mobile check:', {
+        width,
+        height,
+        isMobileByDimensions,
+        willForceMobile: isMobileByDimensions
+      });
+      
+      setForceMobile(isMobileByDimensions);
+    };
+    
+    checkForceMobile();
+    window.addEventListener('resize', checkForceMobile);
+    
+    return () => window.removeEventListener('resize', checkForceMobile);
+  }, []);
+
   const [, setLocation] = useLocation();
   const [networkData, setNetworkData] = useState<NetworkData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentArtistName, setCurrentArtistName] = useState<string>("");
   const [currentArtistId, setCurrentArtistId] = useState<string | null>(null);
+  const networkVisualizerRef = useRef<NetworkVisualizerRef>(null);
+
+  // Debug logging for network data changes
+  useEffect(() => {
+    console.log('🎯 [Artist Network] Network data state changed:', {
+      hasNetworkData: !!networkData,
+      nodesCount: networkData?.nodes?.length || 0,
+      linksCount: networkData?.links?.length || 0,
+      isLoading,
+      currentArtistName,
+      currentArtistId,
+      isMobile
+    });
+  }, [networkData, isLoading, currentArtistName, currentArtistId, isMobile]);
+
+  // Function to access resetToFirstDegree from NetworkVisualizer
+  const handleResetToFirstDegree = useCallback(() => {
+    networkVisualizerRef.current?.resetToFirstDegree();
+  }, []);
   const [zoomTransform, setZoomTransform] = useState({ k: 1, x: 0, y: 0 });
   const [clearSearchField, setClearSearchField] = useState(false);
   const [filterState, setFilterState] = useState<FilterState>({
@@ -31,11 +75,19 @@ export default function ArtistNetwork() {
   const isMobile = useIsMobile();
 
   const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
+    console.log('🎯 [Artist Network] Network data received:', {
+      hasData: !!data,
+      nodesCount: data?.nodes?.length || 0,
+      linksCount: data?.links?.length || 0,
+      artistId,
+      isMobile
+    });
+    
     setNetworkData(data);
     // Extract the artist ID from the network data
     const finalArtistId = artistId || data.nodes.find(node => node.size === 30)?.artistId || null;
     setCurrentArtistId(finalArtistId);
-  }, []);
+  }, [isMobile]);
 
   // Navigate back to home
   const handleGoHome = () => {
@@ -163,21 +215,90 @@ export default function ArtistNetwork() {
         onHistorySave={handleHistorySave}
       />
 
-      {/* Network Visualization - Only show when network data exists */}
-      {networkData && (
-        <div className="mobile-network-container network-visible">
-          <NetworkVisualizer
-            key={`network-${Date.now()}`}
-            data={networkData}
-            visible={true}
-            filterState={filterState}
-            onZoomChange={handleZoomChange}
-            onArtistSearch={handleArtistSearch}
-            onArtistNodeClick={handleArtistNodeClick}
-            onClearAll={handleClearNetwork}
-          />
+      {/* Network Visualization - Always show when network data exists */}
+      {(networkData || forceMobile) && (
+        <>
+          {/* Emergency debugging for mobile */}
+          <div className="fixed top-0 left-0 z-50 bg-red-600 text-white p-2 text-xs w-full">
+            🚨 EMERGENCY DEBUG: Network data exists! Nodes: {networkData?.nodes.length || 0}, Links: {networkData?.links.length || 0}
+            {forceMobile && ' | FORCE MOBILE ACTIVE'}
+          </div>
+          
+          {/* Simple status indicator */}
+          <div className="fixed top-20 left-4 z-50 bg-green-500 text-white p-2 rounded text-xs">
+            ✓ Network loaded: {networkData?.nodes.length || 0} nodes, {networkData?.links.length || 0} links
+            {forceMobile && ' | MOBILE FORCED'}
+          </div>
+          
+          {/* FORCE RENDER: Always show network visualization when data exists */}
+          <div 
+            className="fixed top-16 left-0 right-0 bottom-0 z-10 bg-black"
+            style={{
+              position: 'fixed',
+              top: '64px',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100%',
+              height: 'calc(100vh - 64px)',
+              zIndex: 10,
+              border: '2px solid red' // Debug border to ensure it's visible
+            }}
+          >
+            {networkData ? (
+              <>
+                <div className="w-full h-full flex items-center justify-center text-white">
+                  <div className="text-center">
+                    <div className="text-lg font-bold mb-2">Network Visualization</div>
+                    <div>This should be visible on mobile</div>
+                    <div className="text-sm mt-2">Nodes: {networkData.nodes.length}, Links: {networkData.links.length}</div>
+                  </div>
+                </div>
+                
+                {/* Actual NetworkVisualizer component */}
+                <NetworkVisualizer
+                  key={`network-${Date.now()}`}
+                  data={networkData}
+                  visible={true}
+                  filterState={filterState}
+                  onZoomChange={handleZoomChange}
+                  onArtistSearch={handleArtistSearch}
+                  onArtistNodeClick={handleArtistNodeClick}
+                  onClearAll={handleClearNetwork}
+                  ref={networkVisualizerRef}
+                />
+              </>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-white">
+                <div className="text-center">
+                  <div className="text-lg font-bold mb-2">Mobile Mode Active</div>
+                  <div>Search for an artist to generate network</div>
+                  <div className="text-sm mt-2">Force Mobile: {forceMobile ? 'Yes' : 'No'}</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Show when no network data */}
+      {!networkData && !isLoading && (
+        <div className="fixed top-20 left-4 z-50 bg-gray-500 text-white p-2 rounded text-xs">
+          No network data - search for an artist to begin
         </div>
       )}
+
+      {/* Show loading status */}
+      {isLoading && (
+        <div className="fixed top-20 left-4 z-50 bg-blue-500 text-white p-2 rounded text-xs">
+          🔄 Loading network for: {currentArtistName}
+        </div>
+      )}
+
+      {/* Test mobile network container visibility */}
+      <div className="fixed bottom-20 left-4 z-50 bg-yellow-500 text-black p-2 rounded text-xs">
+        📱 Mobile Test: isMobile={isMobile ? 'Yes' : 'No'}, hasData={networkData ? 'Yes' : 'No'}
+      </div>
 
       {/* Loading Screen */}
       <LoadingScreen isVisible={isLoading} artistName={currentArtistName} />
@@ -201,6 +322,7 @@ export default function ArtistNetwork() {
           onZoomReset={handleZoomReset}
           onClearAll={handleClearNetwork}
           artistId={currentArtistId}
+          onBackToFirstDegree={handleResetToFirstDegree}
         />
       </>
     </div>

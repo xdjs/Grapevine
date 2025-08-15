@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from "react";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import { useNetworkData } from "@/hooks/use-network-data";
 import { useConfig } from "@/hooks/use-config";
@@ -25,8 +25,12 @@ interface NetworkVisualizerProps {
   onZoomChange: (transform: { k: number; x: number; y: number }) => void;
   onArtistSearch?: (artistName: string) => void;
   onArtistNodeClick?: (artistName: string, artistId?: string) => void;
-  onError?: (error: Error) => void;
   onClearAll?: () => void;
+  onError?: (error: Error) => void;
+}
+
+export interface NetworkVisualizerRef {
+  resetToFirstDegree: () => void;
 }
 
 interface ComponentError {
@@ -35,7 +39,7 @@ interface ComponentError {
   retryable: boolean;
 }
 
-export default function NetworkVisualizer({
+const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProps>(({
   data,
   visible,
   filterState,
@@ -44,7 +48,7 @@ export default function NetworkVisualizer({
   onArtistNodeClick,
   onError,
   onClearAll,
-}: NetworkVisualizerProps) {
+}, ref) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
   const isMobile = useIsMobile();
@@ -310,6 +314,12 @@ export default function NetworkVisualizer({
     };
   }, [visible, currentZoom, componentError, handleZoomIn, handleZoomOut, handleZoomReset, handleError]);
 
+  // Expose resetToFirstDegree to parent component
+  useImperativeHandle(ref, () => ({
+    resetToFirstDegree: () => {
+      resetToFirstDegree();
+    },
+  }));
 
 
   // Loading state component
@@ -407,8 +417,10 @@ export default function NetworkVisualizer({
               onZoomIn={handleZoomIn}
               onZoomOut={handleZoomOut}
               onZoomReset={handleZoomReset}
+              onBackToFirstDegree={isExpandedMode ? resetToFirstDegree : undefined}
               onClearAll={onClearAll}
               showClearButton={true}
+              showBackToFirstDegree={isExpandedMode}
               position="top-right"
               orientation="vertical"
               theme="dark"
@@ -429,23 +441,7 @@ export default function NetworkVisualizer({
             mainArtistNode={mainArtistNode}
           />
           
-          {/* Shrink network button for expanded mode */}
-          {isExpandedMode && (
-            <button
-              onClick={() => {
-                try {
-                  resetToFirstDegree();
-                } catch (error) {
-                  handleError(error as Error, 'reset to first degree');
-                }
-              }}
-              className="absolute top-4 right-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors duration-200 z-10"
-              style={{ fontSize: '14px', fontWeight: '500' }}
-              data-testid="reset-button"
-            >
-              Shrink network
-            </button>
-          )}
+          {/* Top-right shrink button removed: shrinking is available via tooltip per-node action */}
           
           <ArtistSelectionModal
             isOpen={modals.showArtistModal}
@@ -515,4 +511,6 @@ export default function NetworkVisualizer({
       )}
     </div>
   );
-}
+});
+
+export default NetworkVisualizer;
