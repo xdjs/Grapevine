@@ -227,6 +227,16 @@ export default function MobileControls({
 
   if (!isMobile) return null;
 
+  // Additional safety check - ensure we're actually on a mobile device
+  const screenWidth = window.innerWidth;
+  const screenHeight = window.innerHeight;
+  const isActuallyMobile = screenWidth <= 768 || screenHeight <= 768;
+  
+  if (!isActuallyMobile) {
+    console.log('📱 [Mobile Controls] Safety check failed - not actually mobile:', { screenWidth, screenHeight, isMobile });
+    return null;
+  }
+
   // Mobile controls are now restored - no longer disabled for debugging
 
   // Platform-specific share functions - direct URL sharing

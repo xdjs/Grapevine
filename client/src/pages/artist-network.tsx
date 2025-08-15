@@ -203,19 +203,20 @@ export default function ArtistNetwork() {
             ✓ Network loaded: {networkData.nodes.length} nodes, {networkData.links.length} links
           </div>
           
-          {/* Test: Simple network container without complex CSS */}
-          <div className="fixed top-60 left-0 right-0 bottom-0 z-10 bg-blue-900/20 border-2 border-blue-500">
-            <div className="w-full h-full flex items-center justify-center text-white">
-              <div className="text-center">
-                <div className="text-lg font-bold mb-2">Network Container Test</div>
-                <div>This should be visible on mobile</div>
-                <div className="text-sm mt-2">Nodes: {networkData.nodes.length}, Links: {networkData.links.length}</div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Original mobile network container */}
-          <div className="mobile-network-container network-visible">
+          {/* SIMPLIFIED MOBILE NETWORK CONTAINER - bypasses complex CSS */}
+          <div 
+            className="fixed top-16 left-0 right-0 bottom-0 z-10 bg-black"
+            style={{
+              position: 'fixed',
+              top: '64px',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100%',
+              height: 'calc(100vh - 64px)',
+              zIndex: 10
+            }}
+          >
             <NetworkVisualizer
               key={`network-${Date.now()}`}
               data={networkData}
@@ -228,6 +229,21 @@ export default function ArtistNetwork() {
               ref={networkVisualizerRef}
             />
           </div>
+          
+          {/* Original mobile network container - commented out for now */}
+          {/* <div className="mobile-network-container network-visible">
+            <NetworkVisualizer
+              key={`network-${Date.now()}`}
+              data={networkData}
+              visible={true}
+              filterState={filterState}
+              onZoomChange={handleZoomChange}
+              onArtistSearch={handleArtistSearch}
+              onArtistNodeClick={handleArtistNodeClick}
+              onClearAll={handleClearNetwork}
+              ref={networkVisualizerRef}
+            />
+          </div> */}
         </>
       )}
 
