@@ -91,14 +91,12 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
     svgRef,
     visible,
     onPinchZoomIn: (focalX: number, focalY: number) => {
-      const newZoom = Math.min(100, currentZoom * 1.5);
-      console.log(`🤏 Pinch zoom in: ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
-      applyPinchZoom(newZoom, focalX, focalY);
+      // Call the handlePinchZoomIn function from use-zoom hook
+      zoom.handlePinchZoomIn(focalX, focalY);
     },
     onPinchZoomOut: (focalX: number, focalY: number) => {
-      const newZoom = Math.max(0.01, currentZoom / 1.2);
-      console.log(`🤏 Pinch zoom out: ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
-      applyPinchZoom(newZoom, focalX, focalY);
+      // Call the handlePinchZoomOut function from use-zoom hook
+      zoom.handlePinchZoomOut(focalX, focalY);
     }
   });
 

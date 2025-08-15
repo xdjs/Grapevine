@@ -370,19 +370,59 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     };
   }, [visible, handleZoomIn, handleZoomOut, handleZoomReset]);
 
-  // Setup touch and wheel event handlers
+  // Setup wheel event handlers only (touch handled by use-touch-gestures)
   useEffect(() => {
     if (!visible) return;
     
-    const cleanup = setupTouchAndWheelHandlers();
-    return cleanup;
-  }, [visible, setupTouchAndWheelHandlers]);
+    // Only setup wheel handlers, not touch handlers
+    if (!svgRef.current) return () => {};
+
+    // Universal wheel event handler for mouse scroll and trackpad pinch
+    let lastWheelTime = 0;
+    const handleWheelZoom = (event: WheelEvent) => {
+      event.preventDefault();
+      
+      // Reduced sensitivity with longer throttling
+      const now = Date.now();
+      if (now - lastWheelTime < 50) { // Increased from 8ms to 50ms for less sensitivity
+        return;
+      }
+      lastWheelTime = now;
+
+      // Calculate focal point (center of viewport)
+      const rect = svgRef.current!.getBoundingClientRect();
+      const focalX = event.clientX - rect.left;
+      const focalY = event.clientY - rect.top;
+
+      // Determine zoom direction
+      const zoomIn = event.deltaY < 0;
+      
+      if (zoomIn) {
+        handlePinchZoomIn(focalX, focalY);
+        console.log(event.ctrlKey ? '🖱️ Trackpad pinch zoom in' : '🖱️ Mouse wheel zoom in');
+      } else {
+        handlePinchZoomOut(focalX, focalY);
+        console.log(event.ctrlKey ? '🖱️ Trackpad pinch zoom out' : '🖱️ Mouse wheel zoom out');
+      }
+    };
+
+    // Add event listeners to SVG element
+    const svgElement = svgRef.current;
+    svgElement.addEventListener('wheel', handleWheelZoom, { passive: false });
+
+    // Return cleanup function
+    return () => {
+      svgElement.removeEventListener('wheel', handleWheelZoom);
+    };
+  }, [visible, handlePinchZoomIn, handlePinchZoomOut]);
 
   return {
     currentZoom,
     handleZoomIn,
     handleZoomOut,
     handleZoomReset,
+    handlePinchZoomIn,
+    handlePinchZoomOut,
     applyZoom,
     applyPinchZoom,
     setupZoomBehavior,
