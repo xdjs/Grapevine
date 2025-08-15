@@ -360,6 +360,30 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         }
       }
 
+      // CRITICAL FIX: Preserve current node positions from the existing network
+      // This prevents nodes from "floating away" when the network is reloaded
+      const currentPositions = new Map<string, { x: number; y: number }>();
+      
+      // Get current positions from the existing fullNetworkData if available
+      if (fullNetworkData) {
+        fullNetworkData.nodes.forEach(node => {
+          if (node.x !== undefined && node.y !== undefined) {
+            currentPositions.set(node.id, { x: node.x, y: node.y });
+          }
+        });
+        console.log(`[Expand] Preserved ${currentPositions.size} current node positions`);
+      }
+      
+      // Apply preserved positions to merged nodes
+      mergedNodes.forEach(node => {
+        const preserved = currentPositions.get(node.id);
+        if (preserved) {
+          node.x = preserved.x;
+          node.y = preserved.y;
+          vlog(`[Expand] Restored position for ${node.name}: (${preserved.x}, ${preserved.y})`);
+        }
+      });
+
       const mergedNetworkData: NetworkData = { nodes: mergedNodes, links: mergedLinks };
       setFullNetworkData(mergedNetworkData);
       setExpandedNodes(prev => new Set([...prev, clickedCanonicalFinalId]));
@@ -513,6 +537,31 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         }
       }
       const nextDataHeuristic: NetworkData = { nodes: remainingNodesHeuristic, links: remainingLinksHeuristic };
+      
+      // CRITICAL FIX: Preserve current node positions during heuristic collapse
+      // This prevents nodes from "floating away" when the network is reloaded
+      if (workingData) {
+        const currentPositions = new Map<string, { x: number; y: number }>();
+        
+        // Get current positions from the working data
+        workingData.nodes.forEach(node => {
+          if (node.x !== undefined && node.y !== undefined) {
+            currentPositions.set(node.id, { x: node.x, y: node.y });
+          }
+        });
+        
+        // Apply preserved positions to the heuristic collapsed network nodes
+        nextDataHeuristic.nodes.forEach(node => {
+          const preserved = currentPositions.get(node.id);
+          if (preserved) {
+            node.x = preserved.x;
+            node.y = preserved.y;
+          }
+        });
+        
+        console.log(`[Shrink] Heuristic preserved ${currentPositions.size} current node positions during collapse`);
+      }
+      
       setFullNetworkData(nextDataHeuristic);
 
       // Update expanded bookkeeping so UI toggles back to Expand
@@ -676,6 +725,31 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     }
 
     const nextData: NetworkData = { nodes: ensuredNodes, links: ensuredLinks };
+    
+    // CRITICAL FIX: Preserve current node positions during collapse
+    // This prevents nodes from "floating away" when the network is reloaded
+    if (fullNetworkData) {
+      const currentPositions = new Map<string, { x: number; y: number }>();
+      
+      // Get current positions from the existing fullNetworkData
+      fullNetworkData.nodes.forEach(node => {
+        if (node.x !== undefined && node.y !== undefined) {
+          currentPositions.set(node.id, { x: node.x, y: node.y });
+        }
+      });
+      
+      // Apply preserved positions to the collapsed network nodes
+      nextData.nodes.forEach(node => {
+        const preserved = currentPositions.get(node.id);
+        if (preserved) {
+          node.x = preserved.x;
+          node.y = preserved.y;
+        }
+      });
+      
+      console.log(`[Shrink] Preserved ${currentPositions.size} current node positions during collapse`);
+    }
+    
     setFullNetworkData(nextData);
 
     // Determine if any neighbor relationships were preserved due to child expansions
@@ -881,6 +955,18 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       links: visibleLinks
     };
     
+    // Debug: Log what data is being returned
+    const nodesWithCoords = baseData.nodes.filter(n => n.x !== undefined && n.y !== undefined);
+    const nodesWithoutCoords = baseData.nodes.filter(n => n.x === undefined || n.y === undefined);
+    console.log(`[displayData] Returning data:`, {
+      source: fullNetworkData ? 'fullNetworkData' : 'visibleNodes/visibleLinks',
+      totalNodes: baseData.nodes.length,
+      withCoordinates: nodesWithCoords.length,
+      withoutCoordinates: nodesWithoutCoords.length,
+      isExpandedMode,
+      hasFullNetworkData: !!fullNetworkData
+    });
+    
     // When in expanded mode, show all nodes from the full network data
     return isExpandedMode && fullNetworkData ? fullNetworkData : baseData;
   }, [fullNetworkData, visibleNodes, visibleLinks, isExpandedMode]);
@@ -1006,6 +1092,29 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         (Array.isArray(data?.nodes) ? saved.fullNetworkData.nodes.length >= data.nodes.length : true);
       if (!valid) return;
       if (saved.isExpandedMode) {
+        console.log(`[ExpandPersist] Restoring expanded network data:`, {
+          nodes: saved.fullNetworkData.nodes.length,
+          links: saved.fullNetworkData.links?.length ?? 0,
+          sampleNode: saved.fullNetworkData.nodes[0] ? {
+            id: saved.fullNetworkData.nodes[0].id,
+            name: saved.fullNetworkData.nodes[0].name,
+            hasCoordinates: !!(saved.fullNetworkData.nodes[0].x && saved.fullNetworkData.nodes[0].y),
+            x: saved.fullNetworkData.nodes[0].x,
+            y: saved.fullNetworkData.nodes[0].y
+          } : 'no nodes'
+        });
+        
+        // Debug: Check if any nodes have coordinates
+        const nodesWithCoords = saved.fullNetworkData.nodes.filter(n => n.x !== undefined && n.y !== undefined);
+        const nodesWithoutCoords = saved.fullNetworkData.nodes.filter(n => n.x === undefined || n.y === undefined);
+        console.log(`[ExpandPersist] Coordinate analysis:`, {
+          totalNodes: saved.fullNetworkData.nodes.length,
+          withCoordinates: nodesWithCoords.length,
+          withoutCoordinates: nodesWithoutCoords.length,
+          sampleWithCoords: nodesWithCoords[0] ? `${nodesWithCoords[0].name}: (${nodesWithCoords[0].x}, ${nodesWithCoords[0].y})` : 'none',
+          sampleWithoutCoords: nodesWithoutCoords[0] ? `${nodesWithoutCoords[0].name}: (${nodesWithoutCoords[0].x}, ${nodesWithoutCoords[0].y})` : 'none'
+        });
+        
         setFullNetworkData(saved.fullNetworkData);
         setIsExpandedMode(true);
         console.log(`[ExpandPersist] applied nodes=${saved.fullNetworkData.nodes.length} links=${saved.fullNetworkData.links?.length ?? 0}`);

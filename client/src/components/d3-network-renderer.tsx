@@ -146,6 +146,8 @@ export default function D3NetworkRenderer({
     const componentWidth = width / componentsPerRow;
     const componentHeight = height / Math.ceil(components.length / componentsPerRow);
     
+    console.log(`🔍 [PositionComponents] Positioning ${components.length} components for ${components.flat().length} total nodes`);
+    
     components.forEach((component, index) => {
       const row = Math.floor(index / componentsPerRow);
       const col = index % componentsPerRow;
@@ -158,10 +160,14 @@ export default function D3NetworkRenderer({
           if (node === mainArtist) {
             node.x = width / 2;
             node.y = height / 2;
+            console.log(`🔍 [PositionComponents] Positioned main artist ${node.name} at (${node.x}, ${node.y})`);
           } else {
             node.x = centerX + (Math.random() - 0.5) * 100;
             node.y = centerY + (Math.random() - 0.5) * 100;
+            console.log(`🔍 [PositionComponents] Positioned node ${node.name} at (${node.x}, ${node.y})`);
           }
+        } else {
+          console.log(`🔍 [PositionComponents] Preserving existing position for ${node.name} at (${node.x}, ${node.y})`);
         }
       });
     });
@@ -1131,16 +1137,29 @@ export default function D3NetworkRenderer({
     
     // Restore preserved positions for existing nodes
     if (existingNodes.size > 0) {
+      console.log(`🔍 [D3Renderer] Restoring positions for ${existingNodes.size} existing nodes`);
       data.nodes.forEach(node => {
         const preserved = existingNodes.get(node.id);
         if (preserved && node.x !== undefined && node.y !== undefined) {
           // Only restore if the preserved position is reasonable (within viewport bounds)
           if (preserved.x >= -width/2 && preserved.x <= width*1.5 && 
               preserved.y >= -height/2 && preserved.y <= height*1.5) {
+            const oldX = node.x;
+            const oldY = node.y;
             node.x = preserved.x;
             node.y = preserved.y;
-            console.log(`🔍 [D3Renderer] Restored position for ${node.name}: (${preserved.x}, ${preserved.y})`);
+            console.log(`🔍 [D3Renderer] Restored position for ${node.name}: (${oldX}, ${oldY}) -> (${preserved.x}, ${preserved.y})`);
+          } else {
+            console.log(`🔍 [D3Renderer] Skipped restoring position for ${node.name}: preserved (${preserved.x}, ${preserved.y}) outside reasonable bounds`);
           }
+        }
+      });
+      
+      // Log final positions after restoration
+      console.log(`🔍 [D3Renderer] Final node positions after restoration:`);
+      data.nodes.forEach(node => {
+        if (existingNodes.has(node.id)) {
+          console.log(`  ${node.name}: (${node.x}, ${node.y})`);
         }
       });
     }
@@ -1149,6 +1168,27 @@ export default function D3NetworkRenderer({
 
     // Create and configure D3 simulation
     const simulation = createSimulation(data.nodes, validLinks, width, height, mainArtistNode);
+    
+    // If we're restoring positions, make the simulation much gentler to prevent nodes from floating away
+    if (existingNodes.size > 0) {
+      console.log(`🔍 [D3Renderer] Configuring gentle simulation for position restoration`);
+      
+      // Reduce link force strength to prevent dramatic repositioning
+      simulation.force("link")?.strength(0.1); // Much weaker than default 1.0
+      
+      // Reduce charge force to prevent nodes from repelling each other too strongly
+      simulation.force("charge")?.strength(-50); // Much weaker than default -150
+      
+      // Reduce collision force to prevent aggressive repositioning
+      simulation.force("collision")?.radius((d) => (d.size + 5)); // Smaller radius than default +10
+      
+      // Make center forces very weak to prevent pulling nodes to center
+      simulation.force("centerX")?.strength((d) => d === mainArtistNode ? 0.05 : 0); // Very weak
+      simulation.force("centerY")?.strength((d) => d === mainArtistNode ? 0.05 : 0); // Very weak
+      
+      console.log(`🔍 [D3Renderer] Simulation forces configured for gentle positioning`);
+    }
+    
     console.log('🔍 [D3Renderer] Created simulation');
     (simulationRef as unknown as React.MutableRefObject<d3.Simulation<NetworkNode, NetworkLink> | null>).current = simulation;
 
