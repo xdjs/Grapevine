@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from "react";
+import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import { useNetworkData } from "@/hooks/use-network-data";
 import { useConfig } from "@/hooks/use-config";
@@ -439,6 +440,7 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
             nodeInteractions={nodeInteractions}
             tooltip={tooltip}
             mainArtistNode={mainArtistNode}
+            rehydrateReady={rehydrateReady}
           />
           
           {/* Top-right shrink button removed: shrinking is available via tooltip per-node action */}

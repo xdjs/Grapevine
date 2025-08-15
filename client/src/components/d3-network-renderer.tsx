@@ -25,6 +25,8 @@ export interface D3NetworkRendererProps {
   tooltip: UseTooltipReturn;
   /** Main artist node for special positioning */
   mainArtistNode?: NetworkNode;
+  /** Whether rehydration is complete and simulation can start */
+  rehydrateReady?: boolean;
 }
 
 /**
@@ -48,6 +50,7 @@ export default function D3NetworkRenderer({
   nodeInteractions,
   tooltip,
   mainArtistNode,
+  rehydrateReady = true,
 }: D3NetworkRendererProps) {
   
   // Track which node IDs we've already batch-preloaded to avoid re-preloading on small expansions
@@ -1009,14 +1012,16 @@ export default function D3NetworkRenderer({
       dataNodes: data?.nodes?.length || 0,
       dataLinks: data?.links?.length || 0,
       visible,
-      mainArtistNode: mainArtistNode?.name
+      mainArtistNode: mainArtistNode?.name,
+      rehydrateReady
     });
 
-    if (!svgRef.current || !data || !visible) {
+    if (!svgRef.current || !data || !visible || !rehydrateReady) {
       console.log('❌ [D3Renderer] Early return:', {
         noSvgRef: !svgRef.current,
         noData: !data,
-        notVisible: !visible
+        notVisible: !visible,
+        notRehydrated: !rehydrateReady
       });
       return;
     }
@@ -1037,6 +1042,27 @@ export default function D3NetworkRenderer({
     const height = container ? container.clientHeight : window.innerHeight;
 
     console.log('🔍 [D3Renderer] Dimensions:', { width, height });
+
+    // Preserve existing node positions when transitioning from base to expanded data
+    const existingNodes = new Map<string, { x: number; y: number }>();
+    if (simulationRef.current) {
+      // Store current positions before clearing
+      svg.selectAll('.node-group').each(function(d: any) {
+        if (d && d.id) {
+          const transform = d3.select(this).attr('transform');
+          if (transform) {
+            const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+            if (match) {
+              existingNodes.set(d.id, {
+                x: parseFloat(match[1]),
+                y: parseFloat(match[2])
+              });
+            }
+          }
+        }
+      });
+      console.log(`🔍 [D3Renderer] Preserved positions for ${existingNodes.size} existing nodes`);
+    }
 
     // Clear existing content
     svg.selectAll("*").remove();
@@ -1100,8 +1126,26 @@ export default function D3NetworkRenderer({
     console.log('🔍 [D3Renderer] Found components:', components.length);
     
     // Position components in a grid layout to prevent overlap
+    // But preserve existing positions for nodes that had them
     positionComponents(components, width, height, mainArtistNode);
-    console.log('🔍 [D3Renderer] Positioned components');
+    
+    // Restore preserved positions for existing nodes
+    if (existingNodes.size > 0) {
+      data.nodes.forEach(node => {
+        const preserved = existingNodes.get(node.id);
+        if (preserved && node.x !== undefined && node.y !== undefined) {
+          // Only restore if the preserved position is reasonable (within viewport bounds)
+          if (preserved.x >= -width/2 && preserved.x <= width*1.5 && 
+              preserved.y >= -height/2 && preserved.y <= height*1.5) {
+            node.x = preserved.x;
+            node.y = preserved.y;
+            console.log(`🔍 [D3Renderer] Restored position for ${node.name}: (${preserved.x}, ${preserved.y})`);
+          }
+        }
+      });
+    }
+    
+    console.log('🔍 [D3Renderer] Positioned components and restored existing positions');
 
     // Create and configure D3 simulation
     const simulation = createSimulation(data.nodes, validLinks, width, height, mainArtistNode);
@@ -1153,9 +1197,16 @@ export default function D3NetworkRenderer({
     
     console.log('🔍 [D3Renderer] Setup tick handler');
     
-    // Start the simulation
-    simulation.alpha(1).restart();
-    console.log('🔍 [D3Renderer] Started simulation');
+    // Start the simulation with reduced alpha if we're restoring positions
+    if (existingNodes.size > 0) {
+      // Use lower alpha to prevent dramatic movement when restoring positions
+      simulation.alpha(0.3).restart();
+      console.log('🔍 [D3Renderer] Started simulation with reduced alpha for position restoration');
+    } else {
+      // Normal simulation start
+      simulation.alpha(1).restart();
+      console.log('🔍 [D3Renderer] Started simulation normally');
+    }
 
     // Enhanced cleanup function with comprehensive memory optimization
     return () => {
@@ -1179,7 +1230,7 @@ export default function D3NetworkRenderer({
         });
       }
     };
-  }, [data, visible, mainArtistNode, zoom, nodeInteractions, tooltip, simulationRef, svgRef]);
+  }, [data, visible, mainArtistNode, zoom, nodeInteractions, tooltip, simulationRef, svgRef, rehydrateReady]);
 
   // This component doesn't render JSX, it only manages D3 DOM manipulation
   return null;
