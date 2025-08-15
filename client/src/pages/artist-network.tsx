@@ -14,6 +14,31 @@ import { fetchNetworkData, fetchNetworkDataById } from "@/lib/network-data";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function ArtistNetwork() {
+  // EMERGENCY FIX: Force mobile detection based on screen dimensions
+  const [forceMobile, setForceMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkForceMobile = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const isMobileByDimensions = width <= 768 || height <= 768;
+      
+      console.log('🚨 [EMERGENCY] Force mobile check:', {
+        width,
+        height,
+        isMobileByDimensions,
+        willForceMobile: isMobileByDimensions
+      });
+      
+      setForceMobile(isMobileByDimensions);
+    };
+    
+    checkForceMobile();
+    window.addEventListener('resize', checkForceMobile);
+    
+    return () => window.removeEventListener('resize', checkForceMobile);
+  }, []);
+
   const [, setLocation] = useLocation();
   const [networkData, setNetworkData] = useState<NetworkData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -190,20 +215,22 @@ export default function ArtistNetwork() {
         onHistorySave={handleHistorySave}
       />
 
-      {/* Network Visualization - Only show when network data exists */}
-      {networkData && (
+      {/* Network Visualization - Always show when network data exists */}
+      {(networkData || forceMobile) && (
         <>
           {/* Emergency debugging for mobile */}
           <div className="fixed top-0 left-0 z-50 bg-red-600 text-white p-2 text-xs w-full">
-            🚨 EMERGENCY DEBUG: Network data exists! Nodes: {networkData.nodes.length}, Links: {networkData.links.length}
+            🚨 EMERGENCY DEBUG: Network data exists! Nodes: {networkData?.nodes.length || 0}, Links: {networkData?.links.length || 0}
+            {forceMobile && ' | FORCE MOBILE ACTIVE'}
           </div>
           
           {/* Simple status indicator */}
           <div className="fixed top-20 left-4 z-50 bg-green-500 text-white p-2 rounded text-xs">
-            ✓ Network loaded: {networkData.nodes.length} nodes, {networkData.links.length} links
+            ✓ Network loaded: {networkData?.nodes.length || 0} nodes, {networkData?.links.length || 0} links
+            {forceMobile && ' | MOBILE FORCED'}
           </div>
           
-          {/* SIMPLIFIED MOBILE NETWORK CONTAINER - bypasses complex CSS */}
+          {/* FORCE RENDER: Always show network visualization when data exists */}
           <div 
             className="fixed top-16 left-0 right-0 bottom-0 z-10 bg-black"
             style={{
@@ -214,36 +241,43 @@ export default function ArtistNetwork() {
               bottom: 0,
               width: '100%',
               height: 'calc(100vh - 64px)',
-              zIndex: 10
+              zIndex: 10,
+              border: '2px solid red' // Debug border to ensure it's visible
             }}
           >
-            <NetworkVisualizer
-              key={`network-${Date.now()}`}
-              data={networkData}
-              visible={true}
-              filterState={filterState}
-              onZoomChange={handleZoomChange}
-              onArtistSearch={handleArtistSearch}
-              onArtistNodeClick={handleArtistNodeClick}
-              onClearAll={handleClearNetwork}
-              ref={networkVisualizerRef}
-            />
+            {networkData ? (
+              <>
+                <div className="w-full h-full flex items-center justify-center text-white">
+                  <div className="text-center">
+                    <div className="text-lg font-bold mb-2">Network Visualization</div>
+                    <div>This should be visible on mobile</div>
+                    <div className="text-sm mt-2">Nodes: {networkData.nodes.length}, Links: {networkData.links.length}</div>
+                  </div>
+                </div>
+                
+                {/* Actual NetworkVisualizer component */}
+                <NetworkVisualizer
+                  key={`network-${Date.now()}`}
+                  data={networkData}
+                  visible={true}
+                  filterState={filterState}
+                  onZoomChange={handleZoomChange}
+                  onArtistSearch={handleArtistSearch}
+                  onArtistNodeClick={handleArtistNodeClick}
+                  onClearAll={handleClearNetwork}
+                  ref={networkVisualizerRef}
+                />
+              </>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-white">
+                <div className="text-center">
+                  <div className="text-lg font-bold mb-2">Mobile Mode Active</div>
+                  <div>Search for an artist to generate network</div>
+                  <div className="text-sm mt-2">Force Mobile: {forceMobile ? 'Yes' : 'No'}</div>
+                </div>
+              </div>
+            )}
           </div>
-          
-          {/* Original mobile network container - commented out for now */}
-          {/* <div className="mobile-network-container network-visible">
-            <NetworkVisualizer
-              key={`network-${Date.now()}`}
-              data={networkData}
-              visible={true}
-              filterState={filterState}
-              onZoomChange={handleZoomChange}
-              onArtistSearch={handleArtistSearch}
-              onArtistNodeClick={handleArtistNodeClick}
-              onClearAll={handleClearNetwork}
-              ref={networkVisualizerRef}
-            />
-          </div> */}
         </>
       )}
 

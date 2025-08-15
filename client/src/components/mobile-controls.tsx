@@ -225,15 +225,22 @@ export default function MobileControls({
   }, [artistId]);
 
 
-  if (!isMobile) return null;
-
-  // Additional safety check - ensure we're actually on a mobile device
+  // CRITICAL FIX: Bypass the hook issue and force mobile detection
   const screenWidth = window.innerWidth;
   const screenHeight = window.innerHeight;
-  const isActuallyMobile = screenWidth <= 768 || screenHeight <= 768;
+  const forceMobile = screenWidth <= 768 || screenHeight <= 768;
   
-  if (!isActuallyMobile) {
-    console.log('📱 [Mobile Controls] Safety check failed - not actually mobile:', { screenWidth, screenHeight, isMobile });
+  console.log('📱 [Mobile Controls] Force mobile check:', {
+    screenWidth,
+    screenHeight,
+    hookIsMobile: isMobile,
+    forceMobile,
+    willRender: forceMobile
+  });
+  
+  // Use forceMobile instead of the hook
+  if (!forceMobile) {
+    console.log('📱 [Mobile Controls] Not rendering - not mobile dimensions');
     return null;
   }
 
