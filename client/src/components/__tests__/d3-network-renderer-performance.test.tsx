@@ -108,7 +108,7 @@ describe('D3NetworkRenderer Performance Tests', () => {
         id: `node-${i}`,
         name: `Artist ${i}`,
         type: i % 3 === 0 ? 'artist' : i % 3 === 1 ? 'producer' : 'songwriter',
-        size: 20 + (i % 10),
+                    size: 20,
         imageUrl: includeImages ? `https://example.com/image-${i}.jpg` : undefined,
         spotifyId: includeImages ? `spotify-${i}` : undefined
       });

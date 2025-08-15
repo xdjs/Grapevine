@@ -412,7 +412,7 @@ describe('Profile Picture SVG Patterns - Task 2.1', () => {
           id: 'producer1',
           name: 'Producer With Image',
           type: 'producer',
-          size: 15,
+          size: 20,
           imageUrl: 'https://example.com/producer1.jpg',
         },
       ];

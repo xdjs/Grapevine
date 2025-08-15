@@ -372,7 +372,7 @@ describe("NetworkVisualizer Integration Tests", () => {
         expandedNodes: new Set(["taylor-swift"]),
         fullNetworkData: {
           ...mockNetworkData,
-          nodes: [...mockNetworkData.nodes, { id: "new-collaborator", name: "New Collaborator", type: "songwriter", size: 15, color: "#00CED1", x: 300, y: 300 }]
+          nodes: [...mockNetworkData.nodes, { id: "new-collaborator", name: "New Collaborator", type: "songwriter", size: 20, color: "#00CED1", x: 300, y: 300 }]
         }
       };
 
@@ -615,7 +615,7 @@ describe("NetworkVisualizer Integration Tests", () => {
           id: `node-${i}`,
           name: `Node ${i}`,
           type: i % 3 === 0 ? "artist" : i % 3 === 1 ? "producer" : "songwriter",
-          size: 10 + (i % 20),
+                      size: 20,
           color: "#FF69B4",
           x: Math.random() * 800,
           y: Math.random() * 600
