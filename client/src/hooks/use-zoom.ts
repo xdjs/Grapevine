@@ -97,19 +97,20 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     setCurrentZoom(prevZoom => {
       const newZoom = Math.min(50000, prevZoom * 1.5); // Increased zoom limit to 50,000x
       console.log(`🤏 Pinch zoom in: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
-      applyPinchZoom(newZoom, focalX, focalY);
+      applyZoom(newZoom); // Use the same zoom system as buttons
       return newZoom;
     });
-  }, [applyPinchZoom]);
+  }, [applyZoom]);
 
   const handlePinchZoomOut = useCallback((focalX: number, focalY: number) => {
     setCurrentZoom(prevZoom => {
       const newZoom = Math.max(0.000001, prevZoom / 1.2); // Much more zoom out capability
       console.log(`🤏 Pinch zoom out: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
-      applyPinchZoom(newZoom, focalX, focalY);
+      console.log(`🤏 Current zoom: ${prevZoom}, New zoom: ${newZoom}, Can zoom out: ${prevZoom > 0.000001}`);
+      applyZoom(newZoom); // Use the same zoom system as buttons
       return newZoom;
     });
-  }, [applyPinchZoom]);
+  }, [applyZoom]);
 
   // Button zoom handlers
   const handleZoomIn = useCallback(() => {
@@ -199,11 +200,14 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
          
           // Use threshold to prevent too frequent updates
           if (Math.abs(scaleChange - lastScale) > pinchThreshold) {
+            console.log(`🤏 Pinch gesture detected: scaleChange=${scaleChange.toFixed(2)}, lastScale=${lastScale.toFixed(2)}, threshold=${pinchThreshold}`);
             if (scaleChange > lastScale) {
               // Pinch out - zoom in using focal point
+              console.log(`🤏 Pinch OUT detected - zooming IN`);
               handlePinchZoomIn(currentCenterX, currentCenterY);
             } else {
               // Pinch in - zoom out using focal point
+              console.log(`🤏 Pinch IN detected - zooming OUT`);
               handlePinchZoomOut(currentCenterX, currentCenterY);
             }
             lastScale = scaleChange;
