@@ -21,19 +21,6 @@ export default function ArtistNetwork() {
   const [currentArtistId, setCurrentArtistId] = useState<string | null>(null);
   const networkVisualizerRef = useRef<NetworkVisualizerRef>(null);
 
-  // Debug logging for network data changes
-  useEffect(() => {
-    console.log('🎯 [Artist Network] Network data state changed:', {
-      hasNetworkData: !!networkData,
-      nodesCount: networkData?.nodes?.length || 0,
-      linksCount: networkData?.links?.length || 0,
-      isLoading,
-      currentArtistName,
-      currentArtistId,
-      isMobile
-    });
-  }, [networkData, isLoading, currentArtistName, currentArtistId, isMobile]);
-
   // Function to access resetToFirstDegree from NetworkVisualizer
   const handleResetToFirstDegree = useCallback(() => {
     networkVisualizerRef.current?.resetToFirstDegree();
@@ -50,19 +37,12 @@ export default function ArtistNetwork() {
   const isMobile = useIsMobile();
 
   const handleNetworkData = useCallback((data: NetworkData, artistId?: string) => {
-    console.log('🎯 [Artist Network] Network data received:', {
-      hasData: !!data,
-      nodesCount: data?.nodes?.length || 0,
-      linksCount: data?.links?.length || 0,
-      artistId,
-      isMobile
-    });
     
     setNetworkData(data);
     // Extract the artist ID from the network data
     const finalArtistId = artistId || data.nodes.find(node => node.size === 30)?.artistId || null;
     setCurrentArtistId(finalArtistId);
-  }, [isMobile]);
+  }, []);
 
   // Navigate back to home
   const handleGoHome = () => {
@@ -100,7 +80,6 @@ export default function ArtistNetwork() {
 
   // Handle node click to load new artist network
   const handleArtistNodeClick = useCallback(async (artistName: string, artistId?: string) => {
-    console.log(`🔗 [Artist Network] Artist node clicked: ${artistName} (ID: ${artistId})`);
     
     // Immediately show loading state
     setIsLoading(true);
@@ -193,11 +172,6 @@ export default function ArtistNetwork() {
       {/* Network Visualization - Only show when network data exists */}
       {networkData && (
         <div className="mobile-network-container network-visible">
-          {/* Simple status indicator */}
-          <div className="fixed top-20 left-4 z-50 bg-green-500 text-white p-2 rounded text-xs">
-            ✓ Network loaded: {networkData.nodes.length} nodes, {networkData.links.length} links
-          </div>
-          
           <NetworkVisualizer
             key={`network-${Date.now()}`}
             data={networkData}
@@ -209,20 +183,6 @@ export default function ArtistNetwork() {
             onClearAll={handleClearNetwork}
             ref={networkVisualizerRef}
           />
-        </div>
-      )}
-
-      {/* Show when no network data */}
-      {!networkData && !isLoading && (
-        <div className="fixed top-20 left-4 z-50 bg-gray-500 text-white p-2 rounded text-xs">
-          No network data - search for an artist to begin
-        </div>
-      )}
-
-      {/* Show loading status */}
-      {isLoading && (
-        <div className="fixed top-20 left-4 z-50 bg-blue-500 text-white p-2 rounded text-xs">
-          🔄 Loading network for: {currentArtistName}
         </div>
       )}
 
