@@ -1003,14 +1003,40 @@ export default function D3NetworkRenderer({
   
   // Main D3 visualization effect
   useEffect(() => {
-    if (!svgRef.current || !data || !visible) return;
+    console.log('🔍 [D3Renderer] Main effect triggered:', {
+      hasSvgRef: !!svgRef.current,
+      hasData: !!data,
+      dataNodes: data?.nodes?.length || 0,
+      dataLinks: data?.links?.length || 0,
+      visible,
+      mainArtistNode: mainArtistNode?.name
+    });
+
+    if (!svgRef.current || !data || !visible) {
+      console.log('❌ [D3Renderer] Early return:', {
+        noSvgRef: !svgRef.current,
+        noData: !data,
+        notVisible: !visible
+      });
+      return;
+    }
 
     const svg = d3.select(svgRef.current);
     const container = svgRef.current.parentElement;
     
+    console.log('🔍 [D3Renderer] Container info:', {
+      container: !!container,
+      containerWidth: container?.clientWidth,
+      containerHeight: container?.clientHeight,
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight
+    });
+    
     // Use container dimensions instead of window dimensions to avoid browser UI areas
     const width = container ? container.clientWidth : window.innerWidth;
     const height = container ? container.clientHeight : window.innerHeight;
+
+    console.log('🔍 [D3Renderer] Dimensions:', { width, height });
 
     // Clear existing content
     svg.selectAll("*").remove();
@@ -1055,9 +1081,11 @@ export default function D3NetworkRenderer({
 
     // Create network group
     const networkGroup = svg.append("g").attr("class", "network-group");
+    console.log('🔍 [D3Renderer] Created network group');
 
     // Setup zoom behavior using the zoom hook
     zoom.setupZoomBehavior(networkGroup);
+    console.log('🔍 [D3Renderer] Setup zoom behavior');
 
     // Add background click handler to hide tooltip and reset highlighting
     svg.on("click", function(event) {
@@ -1069,12 +1097,15 @@ export default function D3NetworkRenderer({
 
     // Find connected components for cluster positioning
     const components = findConnectedComponents(data.nodes, validLinks);
+    console.log('🔍 [D3Renderer] Found components:', components.length);
     
     // Position components in a grid layout to prevent overlap
     positionComponents(components, width, height, mainArtistNode);
+    console.log('🔍 [D3Renderer] Positioned components');
 
     // Create and configure D3 simulation
     const simulation = createSimulation(data.nodes, validLinks, width, height, mainArtistNode);
+    console.log('🔍 [D3Renderer] Created simulation');
     (simulationRef as unknown as React.MutableRefObject<d3.Simulation<NetworkNode, NetworkLink> | null>).current = simulation;
 
     // Add resize listener to handle orientation changes
@@ -1100,6 +1131,12 @@ export default function D3NetworkRenderer({
     const linkElements = renderLinks(networkGroup, validLinks);
     const nodeElements = renderNodes(networkGroup, data.nodes);
     const labelElements = renderLabels(networkGroup, data.nodes);
+    
+    console.log('🔍 [D3Renderer] Rendered elements:', {
+      links: linkElements.size(),
+      nodes: nodeElements.size(),
+      labels: labelElements.size()
+    });
 
     // Update positions on tick
     simulation.on("tick", () => {
@@ -1113,6 +1150,12 @@ export default function D3NetworkRenderer({
 
       labelElements.attr("x", (d) => d.x!).attr("y", (d) => d.y!);
     });
+    
+    console.log('🔍 [D3Renderer] Setup tick handler');
+    
+    // Start the simulation
+    simulation.alpha(1).restart();
+    console.log('🔍 [D3Renderer] Started simulation');
 
     // Enhanced cleanup function with comprehensive memory optimization
     return () => {

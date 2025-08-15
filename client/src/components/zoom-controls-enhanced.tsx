@@ -170,12 +170,29 @@ export const ZoomControlsEnhanced = memo<ZoomControlsEnhancedProps>(({
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (disabled || !enableKeyboardShortcuts) return;
 
+    // Don't capture shortcuts when user is typing in input fields
+    // This allows normal typing in search bars, text inputs, etc.
+    const target = event.target as HTMLElement;
+    const isInputField = target.tagName === 'INPUT' || 
+                        target.tagName === 'TEXTAREA' || 
+                        target.contentEditable === 'true' ||
+                        target.closest('input, textarea, [contenteditable]') ||
+                        target.closest('[role="textbox"]') ||
+                        target.closest('[data-input]');
+    
+    if (isInputField) {
+      // Allow normal typing in input fields
+      console.log('🔤 [Zoom Controls] Allowing key in input field:', event.key, 'Target:', target.tagName);
+      return;
+    }
+
     const key = event.key;
     const shortcuts = { ...defaultKeyboardShortcuts, ...keyboardShortcuts };
 
-    // Prevent default browser behavior for our shortcuts
+    // Only prevent default for our shortcuts when not in input fields
     const isOurShortcut = Object.values(shortcuts).includes(key);
     if (isOurShortcut) {
+      console.log('⌨️ [Zoom Controls] Capturing shortcut key:', key);
       event.preventDefault();
       event.stopPropagation();
     }
