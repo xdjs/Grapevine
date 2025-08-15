@@ -26,9 +26,11 @@ export function useTouchGestures({
     let initialDistance = 0;
     let lastScale = 1;
     let isPinching = false;
-    const pinchThreshold = 0.05; // Much more sensitive for mobile touch screens
+    const pinchThreshold = 0.01; // Extremely sensitive for easy registration
     let pinchCenterX = 0;
     let pinchCenterY = 0;
+    let lastZoomTime = 0;
+    const zoomThrottle = 16; // ~60fps for smooth continuous zoom
 
     // Custom touch event handlers using existing zoom functions
     const handleTouchStart = (event: TouchEvent) => {
@@ -71,6 +73,12 @@ export function useTouchGestures({
         
         if (initialDistance > 0) {
           const scaleChange = currentDistance / initialDistance;
+          const now = Date.now();
+          
+          // Throttle zoom calls for smooth continuous zoom
+          if (now - lastZoomTime < zoomThrottle) {
+            return;
+          }
           
           // Debug logging for touch sensitivity
           console.log(`🤏 Touch: scaleChange=${scaleChange.toFixed(3)}, lastScale=${lastScale.toFixed(3)}, threshold=${pinchThreshold}, diff=${Math.abs(scaleChange - lastScale).toFixed(3)}`);
@@ -78,16 +86,27 @@ export function useTouchGestures({
           // Use threshold to prevent too frequent updates
           if (Math.abs(scaleChange - lastScale) > pinchThreshold) {
             console.log(`🤏 Touch gesture triggered! scaleChange=${scaleChange.toFixed(3)}, lastScale=${lastScale.toFixed(3)}`);
+            
+            // Calculate how many zoom steps to take based on scale change
+            const scaleDiff = Math.abs(scaleChange - lastScale);
+            const zoomSteps = Math.max(1, Math.floor(scaleDiff * 10)); // Bigger increments for larger gestures
+            
             if (scaleChange > lastScale) {
               // Pinch out - zoom in using focal point
-              console.log(`🤏 Touch: Pinch OUT detected - zooming IN`);
-              onPinchZoomIn(currentCenterX, currentCenterY);
+              console.log(`🤏 Touch: Pinch OUT detected - zooming IN (${zoomSteps} steps)`);
+              for (let i = 0; i < zoomSteps; i++) {
+                onPinchZoomIn(currentCenterX, currentCenterY);
+              }
             } else {
               // Pinch in - zoom out using focal point
-              console.log(`🤏 Touch: Pinch IN detected - zooming OUT`);
-              onPinchZoomOut(currentCenterX, currentCenterY);
+              console.log(`🤏 Touch: Pinch IN detected - zooming OUT (${zoomSteps} steps)`);
+              for (let i = 0; i < zoomSteps; i++) {
+                onPinchZoomOut(currentCenterX, currentCenterY);
+              }
             }
+            
             lastScale = scaleChange;
+            lastZoomTime = now;
           }
         }
         event.preventDefault();
