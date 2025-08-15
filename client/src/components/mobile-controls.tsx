@@ -15,8 +15,7 @@ import {
   Download,
   Facebook,
   Instagram,
-  ZoomIn,
-  Users,
+  MoreVertical,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -52,8 +51,6 @@ interface MobileControlsProps {
   onZoomReset: () => void;
   onBackToFirstDegree?: () => void;
   onClearAll: () => void;
-  onShare: () => void;
-  onShowCollaborationDetails: () => void;
 
   artistId?: string | null;
 
@@ -65,8 +62,6 @@ export default function MobileControls({
   onZoomReset,
   onBackToFirstDegree,
   onClearAll,
-  onShare,
-  onShowCollaborationDetails,
 
   artistId,
 
@@ -889,77 +884,194 @@ export default function MobileControls({
 
   return (
     <>
-      {/* Options (three-dots) Toggle Button */}
-      {!showMenu && (
-        <Button
-          onClick={() => setShowMenu(true)}
-          className="fixed bottom-6 sm:bottom-4 right-4 z-40 w-12 h-12 rounded-full shadow-lg border-2"
-          style={{ backgroundColor: '#b427b4', borderColor: '#b427b4' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#9a239a'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#b427b4'}
-          size="icon"
-          title="Options"
-        >
-          <MoreHorizontal className="w-5 h-5" />
-        </Button>
-      )}
+      {/* Main Options Button (Three Dots) */}
+      <Button
+        size="icon"
+        variant="secondary"
+        className="fixed bottom-4 right-4 z-50 w-14 h-14 bg-gray-900/95 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-xl transition-all duration-200"
+        style={{ 
+          borderColor: '#b427b4',
+          pointerEvents: 'auto',
+          touchAction: 'manipulation'
+        }}
+        title="Options"
+        onClick={() => {
+          console.log('📱 [Mobile Controls] Options button clicked');
+          setShowMenu(!showMenu);
+        }}
+        onTouchStart={(e) => {
+          console.log('📱 [Mobile Controls] Options button touch start');
+          e.stopPropagation();
+        }}
+        onTouchEnd={(e) => {
+          console.log('📱 [Mobile Controls] Options button touch end');
+          e.stopPropagation();
+        }}
+      >
+        <MoreVertical className="w-7 h-7 text-white" />
+      </Button>
 
       {/* Options Menu */}
       {showMenu && (
         <div className="fixed bottom-24 sm:bottom-20 right-4 z-50 flex flex-col items-end gap-2">
-          <Card className="bg-gray-900/95 backdrop-blur p-3 border-2 border-purple-500 shadow-xl">
-            <div className="flex flex-col gap-2">
-              {/* Zoom Controls Button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setShowControls(true);
-                  setShowMenu(false);
-                }}
-                className="text-white hover:bg-purple-600/20 hover:text-purple-300 transition-colors"
-              >
-                <ZoomIn className="w-4 h-4 mr-2" />
-                Zoom Controls
-              </Button>
-              
-              {/* Share Button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  if (onShare) {
-                    onShare();
-                  }
-                  setShowMenu(false);
-                }}
-                className="text-white hover:bg-purple-600/20 hover:text-purple-300 transition-colors"
-              >
-                <Share2 className="w-4 h-4 mr-2" />
-                Share
-              </Button>
-              
-              {/* Collaboration Details Button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  if (onShowCollaborationDetails) {
-                    onShowCollaborationDetails();
-                  }
-                  setShowMenu(false);
-                }}
-                className="text-white hover:bg-purple-600/20 hover:text-purple-300 transition-colors"
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Collaboration Details
-              </Button>
-            </div>
-          </Card>
+          {/* Share Button */}
+          <Button
+            size="icon"
+            variant="secondary"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+            style={{ 
+              borderColor: '#b427b4',
+              pointerEvents: 'auto',
+              touchAction: 'manipulation'
+            }}
+            title="Share"
+            onClick={() => {
+              console.log('📱 [Mobile Controls] Share button clicked');
+              handleShareClick();
+            }}
+            onTouchStart={(e) => {
+              console.log('📱 [Mobile Controls] Share button touch start');
+              e.stopPropagation();
+            }}
+            disabled={isCapturing}
+          >
+            {isCapturing ? (
+              <Camera className="w-6 h-6 animate-pulse" />
+            ) : (
+              <Share2 className="w-6 h-6" />
+            )}
+          </Button>
+
+          {/* Reset Button */}
+          {onBackToFirstDegree && (
+            <Button
+              size="icon"
+              variant="secondary"
+              className="w-12 h-12 backdrop-blur border-2 rounded-full shadow-lg"
+              style={{ 
+                backgroundColor: '#F2A6E0', 
+                borderColor: '#F2A6E0',
+                pointerEvents: 'auto',
+                touchAction: 'manipulation'
+              }}
+              title="Back to First Degree"
+              onClick={() => {
+                console.log('📱 [Mobile Controls] Reset button clicked');
+                onBackToFirstDegree();
+              }}
+              onTouchStart={(e) => {
+                console.log('📱 [Mobile Controls] Reset button touch start');
+                e.stopPropagation();
+              }}
+            >
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 12H5M12 19L5 12L12 5" stroke="#282A36" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </Button>
+          )}
+
+          {/* Settings Button – opens existing controls panel */}
+          <Button
+            size="icon"
+            variant="secondary"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+            style={{ 
+              borderColor: '#b427b4',
+              pointerEvents: 'auto',
+              touchAction: 'manipulation'
+            }}
+            title="Settings"
+            onClick={() => {
+              console.log('📱 [Mobile Controls] Settings button clicked');
+              setShowControls(true);
+              setShowMenu(false);
+            }}
+            onTouchStart={(e) => {
+              console.log('📱 [Mobile Controls] Settings button touch start');
+              e.stopPropagation();
+            }}
+          >
+            <Settings className="w-6 h-6" />
+          </Button>
+
+          {/* Test Button - Debug */}
+          <Button
+            size="icon"
+            variant="secondary"
+            className="w-12 h-12 bg-blue-600/90 backdrop-blur hover:bg-blue-700 border-2 rounded-full shadow-lg"
+            style={{ 
+              borderColor: '#3b82f6',
+              pointerEvents: 'auto',
+              touchAction: 'manipulation'
+            }}
+            title="Test - Debug"
+            onClick={() => {
+              console.log('📱 [Mobile Controls] Test button clicked');
+              toast({
+                title: "Mobile Controls Working!",
+                description: "The mobile controls component is functioning correctly.",
+                className: "bg-blue-600 border-blue-500 text-white",
+                duration: 3000,
+              });
+            }}
+            onTouchStart={(e) => {
+              console.log('📱 [Mobile Controls] Test button touch start');
+              e.stopPropagation();
+            }}
+          >
+            <HelpCircle className="w-6 h-6" />
+          </Button>
+
+          {/* Help Button */}
+          <Button
+            size="icon"
+            variant="secondary"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+            style={{ 
+              borderColor: '#b427b4',
+              pointerEvents: 'auto',
+              touchAction: 'manipulation'
+            }}
+            title="Help"
+            onClick={() => {
+              console.log('📱 [Mobile Controls] Help button clicked');
+              setShowHelp(true);
+              setShowMenu(false);
+            }}
+            onTouchStart={(e) => {
+              console.log('📱 [Mobile Controls] Help button touch start');
+              e.stopPropagation();
+            }}
+          >
+            <HelpCircle className="w-6 h-6" />
+          </Button>
+
+          {/* Close Button */}
+          <Button
+            size="icon"
+            variant="destructive"
+            className="w-12 h-12 bg-red-900/90 backdrop-blur hover:bg-red-800 border-2 rounded-full shadow-lg"
+            style={{ 
+              borderColor: '#b427b4',
+              pointerEvents: 'auto',
+              touchAction: 'manipulation'
+            }}
+            title="Close Menu"
+            onClick={() => {
+              console.log('📱 [Mobile Controls] Close button clicked');
+              setShowMenu(false);
+            }}
+            onTouchStart={(e) => {
+              console.log('📱 [Mobile Controls] Close button touch start');
+              e.stopPropagation();
+            }}
+          >
+            <X className="w-6 h-6" />
+          </Button>
         </div>
       )}
 
-      {/* Background overlay - only when controls are open */}
+      {/* Background overlay to close controls - only show when controls are open */}
       {showControls && (
         <div
           className="fixed inset-0 z-40 bg-transparent"
@@ -968,15 +1080,15 @@ export default function MobileControls({
         />
       )}
 
-      {/* Zoom Controls Panel */}
+      {/* Mobile Controls Panel */}
       {showControls && (
-        <Card
+        <Card 
           ref={controlsRef}
           data-card-background
           className={`fixed z-50 bg-gray-900/95 backdrop-blur p-3 max-w-[calc(100vw-2rem)] border-2 transition-all duration-200 ${
             isDragging ? 'select-none shadow-2xl ring-2 ring-purple-400/50' : 'shadow-lg'
-          }`}
-          style={{
+          }`} 
+          style={{ 
             borderColor: '#b427b4',
             left: `${dragPosition.x}px`,
             top: `${dragPosition.y}px`,
@@ -986,7 +1098,7 @@ export default function MobileControls({
             maxWidth: '280px',
             minWidth: '200px',
             position: 'fixed',
-            zIndex: 50 // Ensure it's above everything
+            zIndex: 50 // Restore proper z-index
           }}
           onMouseDown={handleDragStart}
           onTouchStart={handleDragStart}
@@ -1015,6 +1127,11 @@ export default function MobileControls({
             size="icon"
             variant="ghost"
             className="absolute top-3 right-1 w-5 h-5 bg-gray-800/50 hover:bg-gray-700/50 rounded-full"
+            style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}
+            onTouchStart={(e) => {
+              console.log('📱 [Mobile Controls] Close zoom panel button touch start');
+              e.stopPropagation();
+            }}
           >
             <X className="w-3 h-3" />
           </Button>
@@ -1025,28 +1142,52 @@ export default function MobileControls({
               <h3 className="text-xs font-semibold text-white mb-1">Zoom</h3>
               <div className="flex gap-1">
                 <Button
-                  onClick={onZoomIn}
+                  onClick={() => {
+                    console.log('📱 [Mobile Controls] Zoom In button clicked');
+                    onZoomIn();
+                  }}
                   size="sm"
                   variant="secondary"
                   className="flex-1 bg-gray-800 hover:bg-gray-700 border-gray-600 text-xs px-2 py-1"
+                  style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}
+                  onTouchStart={(e) => {
+                    console.log('📱 [Mobile Controls] Zoom In button touch start');
+                    e.stopPropagation();
+                  }}
                 >
                   <Plus className="w-3 h-3 mr-1" />
                   In
                 </Button>
                 <Button
-                  onClick={onZoomOut}
+                  onClick={() => {
+                    console.log('📱 [Mobile Controls] Zoom Out button clicked');
+                    onZoomOut();
+                  }}
                   size="sm"
                   variant="secondary"
                   className="flex-1 bg-gray-800 hover:bg-gray-700 border-gray-600 text-xs px-2 py-1"
+                  style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}
+                  onTouchStart={(e) => {
+                    console.log('📱 [Mobile Controls] Zoom Out button touch start');
+                    e.stopPropagation();
+                  }}
                 >
                   <Minus className="w-3 h-3 mr-1" />
                   Out
                 </Button>
                 <Button
-                  onClick={onZoomReset}
+                  onClick={() => {
+                    console.log('📱 [Mobile Controls] Zoom Reset button clicked');
+                    onZoomReset();
+                  }}
                   size="sm"
                   variant="secondary"
                   className="flex-1 bg-gray-800 hover:bg-gray-700 border-gray-600 text-xs px-2 py-1"
+                  style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}
+                  onTouchStart={(e) => {
+                    console.log('📱 [Mobile Controls] Zoom Reset button touch start');
+                    e.stopPropagation();
+                  }}
                 >
                   <RotateCcw className="w-3 h-3 mr-1" />
                   Reset
@@ -1056,10 +1197,18 @@ export default function MobileControls({
 
             {/* Clear All */}
             <Button
-              onClick={onClearAll}
+              onClick={() => {
+                console.log('📱 [Mobile Controls] Clear All button clicked');
+                onClearAll();
+              }}
               size="sm"
               variant="destructive"
               className="w-full bg-red-900/90 hover:bg-red-800 border-red-700 text-xs px-2 py-1"
+              style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}
+              onTouchStart={(e) => {
+                console.log('📱 [Mobile Controls] Clear All button touch start');
+                e.stopPropagation();
+              }}
             >
               <X className="w-3 h-3 mr-1" />
               Clear All

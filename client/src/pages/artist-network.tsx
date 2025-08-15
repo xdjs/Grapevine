@@ -317,9 +317,12 @@ export default function ArtistNetwork() {
         
         {/* Mobile Controls */}
         <MobileControls
-          artistId={networkData?.nodes[0]?.id || null}
-          onShare={handleShare}
-          onShowCollaborationDetails={handleShowCollaborationDetails}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onZoomReset={handleZoomReset}
+          onClearAll={handleClearNetwork}
+          artistId={currentArtistId}
+          onBackToFirstDegree={handleResetToFirstDegree}
         />
       </>
     </div>
