@@ -104,9 +104,9 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
 
   const handlePinchZoomOut = useCallback((focalX: number, focalY: number) => {
     setCurrentZoom(prevZoom => {
-      const newZoom = Math.max(0.000001, prevZoom / 1.2); // Much more zoom out capability
+      const newZoom = Math.max(0.0000001, prevZoom / 1.2); // Much more zoom out capability
       console.log(`🤏 Pinch zoom out: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
-      console.log(`🤏 Current zoom: ${prevZoom}, New zoom: ${newZoom}, Can zoom out: ${prevZoom > 0.000001}`);
+      console.log(`🤏 Current zoom: ${prevZoom}, New zoom: ${newZoom}, Can zoom out: ${prevZoom > 0.0000001}`);
       applyZoom(newZoom); // Use the same zoom system as buttons
       return newZoom;
     });
@@ -281,7 +281,7 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     // Create zoom behavior for mouse/touch interaction
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.000001, 50000])
+      .scaleExtent([0.0000001, 50000])
       .filter((event) => {
         // Block all wheel events since we handle them manually for better zoom control
         // Block touch events since we handle them manually for better pinch zoom control
