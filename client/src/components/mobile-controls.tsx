@@ -888,7 +888,9 @@ export default function MobileControls({
       <Button
         size="icon"
         variant="secondary"
-        className="fixed bottom-4 right-4 z-50 w-14 h-14 bg-gray-900/95 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-xl transition-all duration-200"
+        className={`fixed bottom-4 right-4 z-50 w-14 h-14 bg-gray-900/95 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-xl transition-all duration-300 ${
+          showMenu ? 'scale-110 rotate-12' : 'scale-100 rotate-0'
+        }`}
         style={{ 
           borderColor: '#b427b4',
           pointerEvents: 'auto',
@@ -908,21 +910,24 @@ export default function MobileControls({
           e.stopPropagation();
         }}
       >
-        <MoreHorizontal className="w-7 h-7 text-white" />
+        <MoreHorizontal className={`w-7 h-7 text-white transition-all duration-300 ${
+          showMenu ? 'rotate-180' : 'rotate-0'
+        }`} />
       </Button>
 
-      {/* Options Menu */}
+      {/* Options Menu with Staggered Animation */}
       {showMenu && (
         <div className="fixed bottom-24 sm:bottom-20 right-4 z-50 flex flex-col items-end gap-2">
           {/* Share Button */}
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg animate-in slide-in-from-bottom-2 duration-300 ease-out"
             style={{ 
               borderColor: '#b427b4',
               pointerEvents: 'auto',
-              touchAction: 'manipulation'
+              touchAction: 'manipulation',
+              animationDelay: '0ms'
             }}
             title="Share"
             onClick={() => {
@@ -933,7 +938,6 @@ export default function MobileControls({
               console.log('📱 [Mobile Controls] Share button touch start');
               e.stopPropagation();
             }}
-            disabled={isCapturing}
           >
             {isCapturing ? (
               <Camera className="w-6 h-6 animate-pulse" />
@@ -947,12 +951,13 @@ export default function MobileControls({
             <Button
               size="icon"
               variant="secondary"
-              className="w-12 h-12 backdrop-blur border-2 rounded-full shadow-lg"
+              className="w-12 h-12 backdrop-blur border-2 rounded-full shadow-lg animate-in slide-in-from-bottom-2 duration-300 ease-out"
               style={{ 
                 backgroundColor: '#F2A6E0', 
                 borderColor: '#F2A6E0',
                 pointerEvents: 'auto',
-                touchAction: 'manipulation'
+                touchAction: 'manipulation',
+                animationDelay: '50ms'
               }}
               title="Back to First Degree"
               onClick={() => {
@@ -974,11 +979,12 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg animate-in slide-in-from-bottom-2 duration-300 ease-out"
             style={{ 
               borderColor: '#b427b4',
               pointerEvents: 'auto',
-              touchAction: 'manipulation'
+              touchAction: 'manipulation',
+              animationDelay: '100ms'
             }}
             title="Settings"
             onClick={() => {
@@ -998,11 +1004,12 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg animate-in slide-in-from-bottom-2 duration-300 ease-out"
             style={{ 
               borderColor: '#b427b4',
               pointerEvents: 'auto',
-              touchAction: 'manipulation'
+              touchAction: 'manipulation',
+              animationDelay: '150ms'
             }}
             title="Help"
             onClick={() => {
@@ -1022,11 +1029,12 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="destructive"
-            className="w-12 h-12 bg-red-900/90 backdrop-blur hover:bg-red-800 border-2 rounded-full shadow-lg"
+            className="w-12 h-12 bg-red-900/90 backdrop-blur hover:bg-red-800 border-2 rounded-full shadow-lg animate-in slide-in-from-bottom-2 duration-300 ease-out"
             style={{ 
               borderColor: '#b427b4',
               pointerEvents: 'auto',
-              touchAction: 'manipulation'
+              touchAction: 'manipulation',
+              animationDelay: '200ms'
             }}
             title="Close Menu"
             onClick={() => {
