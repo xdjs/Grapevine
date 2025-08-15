@@ -938,6 +938,7 @@ export default function MobileControls({
               console.log('📱 [Mobile Controls] Share button touch start');
               e.stopPropagation();
             }}
+            disabled={isCapturing}
           >
             {isCapturing ? (
               <Camera className="w-6 h-6 animate-pulse" />
