@@ -889,7 +889,7 @@ export default function MobileControls({
         size="icon"
         variant="secondary"
         className={`fixed bottom-4 right-4 z-50 w-14 h-14 bg-gray-900/95 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-xl transition-all duration-500 ease-out ${
-          showMenu ? 'scale-105 rotate-6' : 'scale-100 rotate-0'
+          showMenu ? 'scale-105 rotate-180' : 'scale-100 rotate-0'
         }`}
         style={{ 
           borderColor: '#b427b4',
@@ -911,7 +911,7 @@ export default function MobileControls({
         }}
       >
         <MoreHorizontal className={`w-7 h-7 text-white transition-all duration-500 ease-out ${
-          showMenu ? 'rotate-90' : 'rotate-0'
+          showMenu ? 'rotate-180' : 'rotate-0'
         }`} />
       </Button>
 
