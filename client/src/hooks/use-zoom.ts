@@ -104,7 +104,7 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
 
   const handlePinchZoomOut = useCallback((focalX: number, focalY: number) => {
     setCurrentZoom(prevZoom => {
-      const newZoom = Math.max(0.00001, prevZoom / 3.0); // Very responsive zoom out
+      const newZoom = Math.max(0.00001, prevZoom / 1.2); // Much slower zoom out
       console.log(`🤏 Pinch zoom out: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
       applyPinchZoom(newZoom, focalX, focalY);
       return newZoom;
