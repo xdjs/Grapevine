@@ -26,7 +26,7 @@ export function useTouchGestures({
     let initialDistance = 0;
     let lastScale = 1;
     let isPinching = false;
-    const pinchThreshold = 0.5; // More responsive - easier to register pinch gestures
+    const pinchThreshold = 0.05; // Much more sensitive for mobile touch screens
     let pinchCenterX = 0;
     let pinchCenterY = 0;
 
@@ -72,13 +72,19 @@ export function useTouchGestures({
         if (initialDistance > 0) {
           const scaleChange = currentDistance / initialDistance;
           
+          // Debug logging for touch sensitivity
+          console.log(`🤏 Touch: scaleChange=${scaleChange.toFixed(3)}, lastScale=${lastScale.toFixed(3)}, threshold=${pinchThreshold}, diff=${Math.abs(scaleChange - lastScale).toFixed(3)}`);
+          
           // Use threshold to prevent too frequent updates
           if (Math.abs(scaleChange - lastScale) > pinchThreshold) {
+            console.log(`🤏 Touch gesture triggered! scaleChange=${scaleChange.toFixed(3)}, lastScale=${lastScale.toFixed(3)}`);
             if (scaleChange > lastScale) {
               // Pinch out - zoom in using focal point
+              console.log(`🤏 Touch: Pinch OUT detected - zooming IN`);
               onPinchZoomIn(currentCenterX, currentCenterY);
             } else {
               // Pinch in - zoom out using focal point
+              console.log(`🤏 Touch: Pinch IN detected - zooming OUT`);
               onPinchZoomOut(currentCenterX, currentCenterY);
             }
             lastScale = scaleChange;
