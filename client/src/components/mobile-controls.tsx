@@ -145,6 +145,26 @@ export default function MobileControls({
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
+  // Debug logging
+  useEffect(() => {
+    console.log('📱 [Mobile Controls] Component mounted, isMobile:', isMobile);
+    console.log('📱 [Mobile Controls] Window dimensions:', {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      devicePixelRatio: window.devicePixelRatio
+    });
+  }, [isMobile]);
+
+  // Debug logging for controls state
+  useEffect(() => {
+    console.log('📱 [Mobile Controls] Controls state changed:', {
+      showControls,
+      showMenu,
+      isDragging,
+      dragPosition
+    });
+  }, [showControls, showMenu, isDragging, dragPosition]);
+
   // Local state for artist social data (simplified)
   const [artistSocialData, setArtistSocialData] = useState<ArtistSocialData | null>(null);
 
@@ -908,11 +928,32 @@ export default function MobileControls({
             style={{ borderColor: '#b427b4' }}
             title="Settings"
             onClick={() => {
+              console.log('📱 [Mobile Controls] Opening zoom controls panel');
               setShowControls(true);
               setShowMenu(false);
             }}
           >
             <Settings className="w-6 h-6" />
+          </Button>
+
+          {/* Test Button - Debug */}
+          <Button
+            size="icon"
+            variant="secondary"
+            className="w-12 h-12 bg-blue-600/90 backdrop-blur hover:bg-blue-700 border-2 rounded-full shadow-lg"
+            style={{ borderColor: '#3b82f6' }}
+            title="Test - Debug"
+            onClick={() => {
+              console.log('📱 [Mobile Controls] Test button clicked');
+              toast({
+                title: "Mobile Controls Working!",
+                description: "The mobile controls component is functioning correctly.",
+                className: "bg-blue-600 border-blue-500 text-white",
+                duration: 3000,
+              });
+            }}
+          >
+            <HelpCircle className="w-6 h-6" />
           </Button>
 
           {/* Help Button */}
