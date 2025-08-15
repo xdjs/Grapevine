@@ -141,7 +141,7 @@ describe('useFilterVisibility', () => {
         id: 'producer1',
         name: 'Producer 1',
         type: 'producer',
-        size: 15
+        size: 20
       };
 
       expect(result.current.isNodeVisible(producerNode)).toBe(true);
@@ -160,7 +160,7 @@ describe('useFilterVisibility', () => {
         id: 'producer1',
         name: 'Producer 1',
         type: 'producer',
-        size: 15
+        size: 20
       };
 
       expect(result.current.isNodeVisible(producerNode)).toBe(false);
@@ -179,7 +179,7 @@ describe('useFilterVisibility', () => {
         id: 'songwriter1',
         name: 'Songwriter 1',
         type: 'songwriter',
-        size: 15
+        size: 20
       };
 
       expect(result.current.isNodeVisible(songwriterNode)).toBe(true);
@@ -198,7 +198,7 @@ describe('useFilterVisibility', () => {
         id: 'songwriter1',
         name: 'Songwriter 1',
         type: 'songwriter',
-        size: 15
+        size: 20
       };
 
       expect(result.current.isNodeVisible(songwriterNode)).toBe(false);
@@ -339,7 +339,7 @@ describe('useFilterVisibility', () => {
           id: 'unknown1',
           name: 'Unknown Type',
           type: 'unknown' as any,
-          size: 15
+          size: 20
         };
 
         expect(result.current.isNodeVisible(unknownTypeNode)).toBe(true);
@@ -494,7 +494,7 @@ describe('useFilterVisibility', () => {
         id: 'target1',
         name: 'Target Producer',
         type: 'producer',
-        size: 15
+        size: 20
       };
 
       mockLink = {
@@ -668,7 +668,7 @@ describe('useFilterVisibility', () => {
           id: `test-${type}`,
           name: `Test ${type}`,
           type: type as any,
-          size: 15
+          size: 20
         };
 
         const filterState = {

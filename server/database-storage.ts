@@ -381,7 +381,7 @@ export class DatabaseStorage implements IStorage {
                       name: branchingArtist,
                       type: enhancedBranchingRoles[0],
                       types: enhancedBranchingRoles,
-                      size: 16,
+                      size: 20, // Fixed size for all collaborators (same as other collaborators)
                     });
                     
                     nodeMap.set(branchingArtist, branchingNode);

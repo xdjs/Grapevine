@@ -353,7 +353,7 @@ export class MemStorage implements IStorage {
               name: branchingArtistName,
               type: branchingArtistRoles[0],
               types: branchingArtistRoles,
-              size: 16, // Smaller size for branching artists
+              size: 20, // Fixed size for all collaborators (same as other collaborators)
               artistId: branchingArtistMusicNerdId,
             };
             

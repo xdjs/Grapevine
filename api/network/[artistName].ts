@@ -560,7 +560,7 @@ Guidelines:
             type: enhancedRoles[0],
             types: enhancedRoles, // Always an array of all roles
             color: color,
-            size: 20, // Smaller size for collaborators
+            size: 20, // Fixed size for all collaborators
             artistId: null,
             collaborations: collaborator.topCollaborators || []
           };
@@ -609,7 +609,7 @@ Guidelines:
               type: branchingRoles[0],
               types: branchingRoles, // Always an array of all roles
               color: '#FF69B4',
-              size: 16,
+              size: 20, // Fixed size for all collaborators (same as other collaborators)
               artistId: null
             };
 
