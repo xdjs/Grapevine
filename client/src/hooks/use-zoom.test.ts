@@ -183,7 +183,7 @@ describe('useZoom', () => {
   });
 
   describe('zoom bounds', () => {
-    it('should respect maximum zoom limit of 5x', async () => {
+    it('should respect maximum zoom limit of 20x', async () => {
       const { result } = renderHook(() =>
         useZoom({
           svgRef: mockSvgRef,
@@ -193,16 +193,16 @@ describe('useZoom', () => {
       );
 
       // Zoom in multiple times to exceed limit
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 20; i++) {
         await act(async () => {
           result.current.handleZoomIn();
         });
       }
 
-      expect(result.current.currentZoom).toBe(5);
+      expect(result.current.currentZoom).toBe(20);
     });
 
-    it('should respect minimum zoom limit of 0.2x', async () => {
+    it('should respect minimum zoom limit of 0.05x', async () => {
       const { result } = renderHook(() =>
         useZoom({
           svgRef: mockSvgRef,
@@ -212,13 +212,13 @@ describe('useZoom', () => {
       );
 
       // Zoom out multiple times to exceed limit
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 20; i++) {
         await act(async () => {
           result.current.handleZoomOut();
         });
       }
 
-      expect(result.current.currentZoom).toBe(0.2);
+      expect(result.current.currentZoom).toBe(0.05);
     });
   });
 
@@ -333,7 +333,7 @@ describe('useZoom', () => {
       });
 
       expect(d3.zoom).toHaveBeenCalled();
-      expect(mockZoomBehavior.scaleExtent).toHaveBeenCalledWith([0.2, 8]);
+      expect(mockZoomBehavior.scaleExtent).toHaveBeenCalledWith([0.05, 20]);
     });
 
     it('should disable D3 touch events', () => {

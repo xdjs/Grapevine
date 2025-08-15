@@ -30,17 +30,17 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
   // Zoom function for buttons (centered zoom)
   const applyZoom = useCallback((scale: number) => {
     if (!svgRef.current) return;
-    
+   
     const container = svgRef.current.parentElement;
     const width = container ? container.clientWidth : window.innerWidth;
     const height = container ? container.clientHeight : window.innerHeight;
-    
+   
     // Calculate new viewBox dimensions centered
     const newWidth = width / scale;
     const newHeight = height / scale;
     const offsetX = (width - newWidth) / 2;
     const offsetY = (height - newHeight) / 2;
-    
+   
     // Apply smooth transition
     const svg = d3.select(svgRef.current);
     svg.transition()
@@ -59,27 +59,27 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
   // Zoom function for pinch gestures (zoom around focal point)
   const applyPinchZoom = useCallback((scale: number, focalX: number, focalY: number) => {
     if (!svgRef.current) return;
-    
+   
     const container = svgRef.current.parentElement;
     const width = container ? container.clientWidth : window.innerWidth;
     const height = container ? container.clientHeight : window.innerHeight;
-    
+   
     // Get current viewBox
     const currentViewBox = svgRef.current.getAttribute('viewBox') || `0 0 ${width} ${height}`;
     const [currentX, currentY, currentWidth, currentHeight] = currentViewBox.split(' ').map(Number);
-    
+   
     // Calculate new dimensions
     const newWidth = width / scale;
     const newHeight = height / scale;
-    
+   
     // Calculate focal point in viewBox coordinates
     const focalXInViewBox = currentX + (focalX / width) * currentWidth;
     const focalYInViewBox = currentY + (focalY / height) * currentHeight;
-    
+   
     // Calculate new viewBox position to keep focal point in same screen position
     const newX = focalXInViewBox - (focalX / width) * newWidth;
     const newY = focalYInViewBox - (focalY / height) * newHeight;
-    
+   
     // Apply transition
     const svg = d3.select(svgRef.current);
     svg.transition()
@@ -93,10 +93,9 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
       });
   }, [svgRef]);
 
-  // Pinch zoom helpers
   const handlePinchZoomIn = useCallback((focalX: number, focalY: number) => {
     setCurrentZoom(prevZoom => {
-      const newZoom = Math.min(5, prevZoom * 1.2); // Cap at 5x
+      const newZoom = Math.min(10000, prevZoom * 2.0); // Cap at 10000x for pinch zoom
       console.log(`🤏 Pinch zoom in: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
       applyPinchZoom(newZoom, focalX, focalY);
       return newZoom;
@@ -105,7 +104,7 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
 
   const handlePinchZoomOut = useCallback((focalX: number, focalY: number) => {
     setCurrentZoom(prevZoom => {
-      const newZoom = Math.max(0.2, prevZoom / 1.2); // Min 0.2x
+      const newZoom = Math.max(0.00001, prevZoom / 2.0); // Min 0.00001x for pinch zoom
       console.log(`🤏 Pinch zoom out: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
       applyPinchZoom(newZoom, focalX, focalY);
       return newZoom;
@@ -114,14 +113,14 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
 
   // Button zoom handlers
   const handleZoomIn = useCallback(() => {
-    const newZoom = Math.min(5, currentZoom * 1.2); // Cap at 5x
+    const newZoom = Math.min(20, currentZoom * 1.2); // Cap at 20x
     setCurrentZoom(newZoom);
     applyZoom(newZoom);
     console.log(`Zooming from ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
   }, [currentZoom, applyZoom]);
 
   const handleZoomOut = useCallback(() => {
-    const newZoom = Math.max(0.2, currentZoom / 1.2); // Min 0.2x
+    const newZoom = Math.max(0.05, currentZoom / 1.2); // Min 0.05x
     setCurrentZoom(newZoom);
     applyZoom(newZoom);
     console.log(`Zooming from ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
@@ -152,28 +151,28 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     let initialDistance = 0;
     let lastScale = 1;
     let isPinching = false;
-    const pinchThreshold = 0.2;
+    const pinchThreshold = 0.3; // Increased for less sensitivity and more control
     let pinchCenterX = 0;
     let pinchCenterY = 0;
 
-    // Custom touch event handlers
+    // Custom touch event handlers using existing zoom functions
     const handleTouchStart = (event: TouchEvent) => {
       if (event.touches.length === 2) {
         console.log("🤏 Starting pinch gesture");
         isPinching = true;
         const touch1 = event.touches[0];
         const touch2 = event.touches[1];
-        
+       
         // Calculate initial distance and center point
         initialDistance = Math.sqrt(
-          Math.pow(touch2.clientX - touch1.clientX, 2) + 
+          Math.pow(touch2.clientX - touch1.clientX, 2) +
           Math.pow(touch2.clientY - touch1.clientY, 2)
         );
-        
+       
         // Store the center point of the pinch gesture
         pinchCenterX = (touch1.clientX + touch2.clientX) / 2;
         pinchCenterY = (touch1.clientY + touch2.clientY) / 2;
-        
+       
         lastScale = 1;
         event.preventDefault();
         event.stopPropagation();
@@ -187,17 +186,17 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
         const touch1 = event.touches[0];
         const touch2 = event.touches[1];
         const currentDistance = Math.sqrt(
-          Math.pow(touch2.clientX - touch1.clientX, 2) + 
+          Math.pow(touch2.clientX - touch1.clientX, 2) +
           Math.pow(touch2.clientY - touch1.clientY, 2)
         );
-        
+       
         // Update the center point of the pinch gesture
         const currentCenterX = (touch1.clientX + touch2.clientX) / 2;
         const currentCenterY = (touch1.clientY + touch2.clientY) / 2;
-        
+       
         if (initialDistance > 0) {
           const scaleChange = currentDistance / initialDistance;
-          
+         
           // Use threshold to prevent too frequent updates
           if (Math.abs(scaleChange - lastScale) > pinchThreshold) {
             if (scaleChange > lastScale) {
@@ -278,7 +277,7 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     // Create zoom behavior for mouse/touch interaction
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.2, 8])
+      .scaleExtent([0.00001, 10000])
       .filter((event) => {
         // Block all wheel events since we handle them manually for better zoom control
         // Block touch events since we handle them manually for better pinch zoom control
