@@ -922,12 +922,12 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg animate-in zoom-in-95 duration-500 ease-out"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg animate-in zoom-in-95 duration-700 ease-out"
             style={{ 
               borderColor: '#b427b4',
               pointerEvents: 'auto',
               touchAction: 'manipulation',
-              animationDelay: '400ms',
+              animationDelay: '600ms',
               transformOrigin: 'bottom right'
             }}
             title="Share"
@@ -953,13 +953,13 @@ export default function MobileControls({
             <Button
               size="icon"
               variant="secondary"
-              className="w-12 h-12 backdrop-blur border-2 rounded-full shadow-lg animate-in zoom-in-95 duration-500 ease-out"
+              className="w-12 h-12 backdrop-blur border-2 rounded-full shadow-lg animate-in zoom-in-95 duration-700 ease-out"
               style={{ 
                 backgroundColor: '#F2A6E0', 
                 borderColor: '#F2A6E0',
                 pointerEvents: 'auto',
                 touchAction: 'manipulation',
-                animationDelay: '300ms',
+                animationDelay: '450ms',
                 transformOrigin: 'bottom right'
               }}
               title="Back to First Degree"
@@ -982,12 +982,12 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg animate-in zoom-in-95 duration-500 ease-out"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg animate-in zoom-in-95 duration-700 ease-out"
             style={{ 
               borderColor: '#b427b4',
               pointerEvents: 'auto',
               touchAction: 'manipulation',
-              animationDelay: '200ms',
+              animationDelay: '300ms',
               transformOrigin: 'bottom right'
             }}
             title="Settings"
@@ -1008,12 +1008,12 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg animate-in zoom-in-95 duration-500 ease-out"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg animate-in zoom-in-95 duration-700 ease-out"
             style={{ 
               borderColor: '#b427b4',
               pointerEvents: 'auto',
               touchAction: 'manipulation',
-              animationDelay: '100ms',
+              animationDelay: '150ms',
               transformOrigin: 'bottom right'
             }}
             title="Help"
@@ -1034,7 +1034,7 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="destructive"
-            className="w-12 h-12 bg-red-900/90 backdrop-blur hover:bg-red-800 border-2 rounded-full shadow-lg animate-in zoom-in-95 duration-500 ease-out"
+            className="w-12 h-12 bg-red-900/90 backdrop-blur hover:bg-red-800 border-2 rounded-full shadow-lg animate-in zoom-in-95 duration-700 ease-out"
             style={{ 
               borderColor: '#b427b4',
               pointerEvents: 'auto',
