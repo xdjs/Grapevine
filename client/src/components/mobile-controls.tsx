@@ -927,7 +927,7 @@ export default function MobileControls({
               borderColor: '#b427b4',
               pointerEvents: 'auto',
               touchAction: 'manipulation',
-              animationDelay: '0ms',
+              animationDelay: '400ms',
               transformOrigin: 'bottom right'
             }}
             title="Share"
@@ -959,7 +959,7 @@ export default function MobileControls({
                 borderColor: '#F2A6E0',
                 pointerEvents: 'auto',
                 touchAction: 'manipulation',
-                animationDelay: '100ms',
+                animationDelay: '300ms',
                 transformOrigin: 'bottom right'
               }}
               title="Back to First Degree"
@@ -1013,7 +1013,7 @@ export default function MobileControls({
               borderColor: '#b427b4',
               pointerEvents: 'auto',
               touchAction: 'manipulation',
-              animationDelay: '300ms',
+              animationDelay: '100ms',
               transformOrigin: 'bottom right'
             }}
             title="Help"
@@ -1039,7 +1039,7 @@ export default function MobileControls({
               borderColor: '#b427b4',
               pointerEvents: 'auto',
               touchAction: 'manipulation',
-              animationDelay: '400ms',
+              animationDelay: '0ms',
               transformOrigin: 'bottom right'
             }}
             title="Close Menu"
