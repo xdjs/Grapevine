@@ -994,34 +994,6 @@ export default function MobileControls({
             <Settings className="w-6 h-6" />
           </Button>
 
-          {/* Test Button - Debug */}
-          <Button
-            size="icon"
-            variant="secondary"
-            className="w-12 h-12 bg-blue-600/90 backdrop-blur hover:bg-blue-700 border-2 rounded-full shadow-lg"
-            style={{ 
-              borderColor: '#3b82f6',
-              pointerEvents: 'auto',
-              touchAction: 'manipulation'
-            }}
-            title="Test - Debug"
-            onClick={() => {
-              console.log('📱 [Mobile Controls] Test button clicked');
-              toast({
-                title: "Mobile Controls Working!",
-                description: "The mobile controls component is functioning correctly.",
-                className: "bg-blue-600 border-blue-500 text-white",
-                duration: 3000,
-              });
-            }}
-            onTouchStart={(e) => {
-              console.log('📱 [Mobile Controls] Test button touch start');
-              e.stopPropagation();
-            }}
-          >
-            <HelpCircle className="w-6 h-6" />
-          </Button>
-
           {/* Help Button */}
           <Button
             size="icon"
