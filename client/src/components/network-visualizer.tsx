@@ -16,7 +16,10 @@ import CollaborationDetailsPopup from "./collaboration-details-popup";
 import NetworkTooltip from "./network-tooltip";
 import ZoomControlsEnhanced from "./zoom-controls-enhanced";
 import NetworkResetButton from "./network-reset-button";
+import FactModeButton from "./fact-mode-button";
+import FloatingFactsBox from "./floating-facts-box";
 import { useIsMobile } from "@/hooks/use-mobile";
+import factsService from "@/lib/facts-service";
 
 interface NetworkVisualizerProps {
   data: NetworkData;
@@ -59,6 +62,12 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 3;
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  
+  // Fact Mode state
+  const [isFactModeActive, setIsFactModeActive] = useState(false);
+  const [currentFacts, setCurrentFacts] = useState<string[]>([]);
+  const [currentFactArtist, setCurrentFactArtist] = useState<string>('');
+  const [isGeneratingFacts, setIsGeneratingFacts] = useState(false);
   
   // Configuration management hook
   const { 
@@ -125,6 +134,37 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
     batchSize: 20
   });
 
+  // Fact Mode functions
+  const handleFactModeToggle = useCallback(() => {
+    setIsFactModeActive(prev => !prev);
+    if (isFactModeActive) {
+      // Clear facts when disabling fact mode
+      setCurrentFacts([]);
+      setCurrentFactArtist('');
+    }
+  }, [isFactModeActive]);
+
+  const handleCollaborationClick = useCallback(async (artistName: string) => {
+    if (!isFactModeActive) return;
+    
+    setIsGeneratingFacts(true);
+    try {
+      const facts = await factsService.generateFacts(artistName);
+      setCurrentFacts(facts);
+      setCurrentFactArtist(artistName);
+    } catch (error) {
+      console.error('Failed to generate facts:', error);
+      setToast({ message: 'Failed to generate facts', type: 'error' });
+    } finally {
+      setIsGeneratingFacts(false);
+    }
+  }, [isFactModeActive]);
+
+  const handleCloseFacts = useCallback(() => {
+    setCurrentFacts([]);
+    setCurrentFactArtist('');
+  }, []);
+
   // Immediately trigger image fetch and apply results in place to avoid D3 re-simulation
   useEffect(() => {
     (async () => {
@@ -154,6 +194,14 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
       }
     })();
   }, [finalDisplayData?.nodes, finalDisplayData?.links]);
+
+  // Watch for collaboration popup opening to trigger fact generation
+  useEffect(() => {
+    if (modals.showCollaborationPopup && isFactModeActive && modals.collaborationCollaborator) {
+      // Generate facts for the collaborator when collaboration popup opens
+      handleCollaborationClick(modals.collaborationCollaborator);
+    }
+  }, [modals.showCollaborationPopup, modals.collaborationCollaborator, isFactModeActive, handleCollaborationClick]);
 
   // Tooltip management hook
   const tooltip = useTooltip({
@@ -410,6 +458,21 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
 
           {/* Expand Loading Overlay */}
           <ExpandLoading isVisible={Boolean((tooltip as any).isExpandLoading)} artistName={(tooltip as any).expandTargetName || (tooltip as any).currentNode?.name} />
+
+          {/* Fact Mode Button - Top left corner */}
+          <FactModeButton
+            isActive={isFactModeActive}
+            onToggle={handleFactModeToggle}
+            disabled={isGeneratingFacts}
+          />
+
+          {/* Floating Facts Box */}
+          <FloatingFactsBox
+            isVisible={isFactModeActive && currentFacts.length > 0}
+            facts={currentFacts}
+            artistName={currentFactArtist}
+            onClose={handleCloseFacts}
+          />
 
           {/* Enhanced Zoom Controls - Hidden on mobile */}
           {!isMobile && (
