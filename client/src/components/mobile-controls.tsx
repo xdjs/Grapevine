@@ -908,7 +908,7 @@ export default function MobileControls({
           e.stopPropagation();
         }}
       >
-        <MoreVertical className="w-7 h-7 text-white" />
+        <MoreHorizontal className="w-7 h-7 text-white" />
       </Button>
 
       {/* Options Menu */}
