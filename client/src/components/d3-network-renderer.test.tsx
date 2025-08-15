@@ -144,7 +144,7 @@ describe('D3NetworkRenderer', () => {
       nodes: [
         { id: 'node1', name: 'Artist 1', type: 'artist', size: 30, x: 100, y: 100 },
         { id: 'node2', name: 'Producer 1', type: 'producer', size: 20, x: 200, y: 200 },
-        { id: 'node3', name: 'Songwriter 1', type: 'songwriter', size: 15, x: 300, y: 300 },
+        { id: 'node3', name: 'Songwriter 1', type: 'songwriter', size: 20, x: 300, y: 300 },
         { id: 'node4', name: 'Multi Role', type: 'artist', types: ['artist', 'producer'], size: 25, x: 400, y: 400 },
       ],
       links: [
@@ -733,7 +733,7 @@ describe('D3NetworkRenderer', () => {
             id: `artist-${i}`,
             name: `Artist ${i}`,
             type: 'artist' as const,
-            size: 20 + Math.random() * 20,
+            size: 20,
             imageUrl: i % 2 === 0 ? `https://example.com/image-${i}.jpg` : null,
           })),
           links: [],
