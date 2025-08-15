@@ -91,7 +91,7 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
     svgRef,
     visible,
     onPinchZoomIn: (focalX: number, focalY: number) => {
-      const newZoom = Math.min(10000, currentZoom * 1.5);
+      const newZoom = Math.min(50000, currentZoom * 1.5);
       console.log(`🤏 Pinch zoom in: ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
       applyPinchZoom(newZoom, focalX, focalY);
     },
