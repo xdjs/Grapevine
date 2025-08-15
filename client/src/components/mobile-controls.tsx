@@ -1244,7 +1244,7 @@ export default function MobileControls({
                     Download
                   </Button>
                 </div>
-                <div className="border border-gray-600 rounded overflow-hidden">
+                <div className="border border-gray-600 rounded overflow-hidden flex justify-center">
                   <img 
                     src={snapshotDataUrl} 
                     alt="Network snapshot" 
