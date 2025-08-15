@@ -26,7 +26,7 @@ export function useTouchGestures({
     let initialDistance = 0;
     let lastScale = 1;
     let isPinching = false;
-    const pinchThreshold = 2.0; // Much less sensitive - requires very deliberate pinch movement
+    const pinchThreshold = 0.5; // More responsive - easier to register pinch gestures
     let pinchCenterX = 0;
     let pinchCenterY = 0;
 
