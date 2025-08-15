@@ -917,17 +917,18 @@ export default function MobileControls({
 
       {/* Options Menu with Staggered Animation */}
       {showMenu && (
-        <div className="fixed bottom-24 sm:bottom-20 right-4 z-50 flex flex-col items-end gap-2">
+        <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
           {/* Share Button */}
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg animate-in slide-in-from-bottom-1 duration-500 ease-out"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg animate-in zoom-in-95 duration-500 ease-out"
             style={{ 
               borderColor: '#b427b4',
               pointerEvents: 'auto',
               touchAction: 'manipulation',
-              animationDelay: '0ms'
+              animationDelay: '0ms',
+              transformOrigin: 'bottom right'
             }}
             title="Share"
             onClick={() => {
@@ -952,13 +953,14 @@ export default function MobileControls({
             <Button
               size="icon"
               variant="secondary"
-              className="w-12 h-12 backdrop-blur border-2 rounded-full shadow-lg animate-in slide-in-from-bottom-1 duration-500 ease-out"
+              className="w-12 h-12 backdrop-blur border-2 rounded-full shadow-lg animate-in zoom-in-95 duration-500 ease-out"
               style={{ 
                 backgroundColor: '#F2A6E0', 
                 borderColor: '#F2A6E0',
                 pointerEvents: 'auto',
                 touchAction: 'manipulation',
-                animationDelay: '100ms'
+                animationDelay: '100ms',
+                transformOrigin: 'bottom right'
               }}
               title="Back to First Degree"
               onClick={() => {
@@ -980,12 +982,13 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg animate-in slide-in-from-bottom-1 duration-500 ease-out"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg animate-in zoom-in-95 duration-500 ease-out"
             style={{ 
               borderColor: '#b427b4',
               pointerEvents: 'auto',
               touchAction: 'manipulation',
-              animationDelay: '200ms'
+              animationDelay: '200ms',
+              transformOrigin: 'bottom right'
             }}
             title="Settings"
             onClick={() => {
@@ -1005,12 +1008,13 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg animate-in slide-in-from-bottom-1 duration-500 ease-out"
+            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg animate-in zoom-in-95 duration-500 ease-out"
             style={{ 
               borderColor: '#b427b4',
               pointerEvents: 'auto',
               touchAction: 'manipulation',
-              animationDelay: '300ms'
+              animationDelay: '300ms',
+              transformOrigin: 'bottom right'
             }}
             title="Help"
             onClick={() => {
@@ -1030,12 +1034,13 @@ export default function MobileControls({
           <Button
             size="icon"
             variant="destructive"
-            className="w-12 h-12 bg-red-900/90 backdrop-blur hover:bg-red-800 border-2 rounded-full shadow-lg animate-in slide-in-from-bottom-1 duration-500 ease-out"
+            className="w-12 h-12 bg-red-900/90 backdrop-blur hover:bg-red-800 border-2 rounded-full shadow-lg animate-in zoom-in-95 duration-500 ease-out"
             style={{ 
               borderColor: '#b427b4',
               pointerEvents: 'auto',
               touchAction: 'manipulation',
-              animationDelay: '400ms'
+              animationDelay: '400ms',
+              transformOrigin: 'bottom right'
             }}
             title="Close Menu"
             onClick={() => {
