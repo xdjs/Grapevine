@@ -883,7 +883,7 @@ export default function MobileControls({
 
       {/* Options Menu */}
       {showMenu && (
-        <div className="fixed bottom-24 sm:bottom-20 right-4 z-15 flex flex-col items-end gap-2">
+        <div className="fixed bottom-24 sm:bottom-20 right-4 z-5 flex flex-col items-end gap-2">
           {/* Share Button */}
           <Button
             size="icon"
@@ -987,7 +987,7 @@ export default function MobileControls({
       {/* Background overlay to close controls - only show when controls are open */}
       {showControls && (
         <div
-          className="fixed inset-0 z-5 bg-transparent"
+          className="fixed inset-0 z-1 bg-transparent"
           onClick={() => setShowControls(false)}
         />
       )}
@@ -997,7 +997,7 @@ export default function MobileControls({
         <Card 
           ref={controlsRef}
           data-card-background
-          className={`fixed z-15 bg-gray-900/95 backdrop-blur p-3 max-w-[calc(100vw-2rem)] border-2 transition-all duration-200 ${
+          className={`fixed z-5 bg-gray-900/95 backdrop-blur p-3 max-w-[calc(100vw-2rem)] border-2 transition-all duration-200 ${
             isDragging ? 'select-none shadow-2xl ring-2 ring-purple-400/50' : 'shadow-lg'
           }`} 
           style={{ 
@@ -1010,9 +1010,7 @@ export default function MobileControls({
             maxWidth: '280px',
             minWidth: '200px',
             position: 'fixed',
-            zIndex: 15,
-            // Test: Add a distinctive background to see if this is causing issues
-            backgroundColor: 'rgba(34, 34, 34, 0.95)'
+            zIndex: 5
           }}
           onMouseDown={handleDragStart}
           onTouchStart={handleDragStart}

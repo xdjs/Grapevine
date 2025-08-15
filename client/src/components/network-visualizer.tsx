@@ -441,23 +441,6 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
             mainArtistNode={mainArtistNode}
           />
           
-          {/* Debug information - remove after fixing */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="fixed top-20 left-4 z-50 bg-black/80 text-white p-4 rounded text-xs max-w-xs">
-              <h3 className="font-bold mb-2">Debug Info</h3>
-              <div>Visible: {visible ? 'Yes' : 'No'}</div>
-              <div>Data nodes: {finalDisplayData?.nodes?.length || 0}</div>
-              <div>Data links: {finalDisplayData?.links?.length || 0}</div>
-              <div>Main artist: {mainArtistNode?.name || 'None'}</div>
-              <div>SVG ref: {svgRef.current ? 'Yes' : 'No'}</div>
-              <div>Error: {componentError ? componentError.message : 'None'}</div>
-              <div>Is Mobile: {isMobile ? 'Yes' : 'No'}</div>
-              <div>Screen: {window.innerWidth}x{window.innerHeight}</div>
-              <div>Network Container: {document.querySelector('.mobile-network-container') ? 'Found' : 'Not Found'}</div>
-              <div>SVG Element: {document.querySelector('.mobile-network-container svg') ? 'Found' : 'Not Found'}</div>
-            </div>
-          )}
-          
           {/* Top-right shrink button removed: shrinking is available via tooltip per-node action */}
           
           <ArtistSelectionModal

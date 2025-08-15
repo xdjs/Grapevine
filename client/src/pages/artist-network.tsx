@@ -190,17 +190,12 @@ export default function ArtistNetwork() {
         onHistorySave={handleHistorySave}
       />
 
-      {/* Test element to see if page renders at all on mobile */}
-      <div className="fixed top-20 right-4 z-50 bg-blue-500 text-white p-4 rounded text-sm">
-        TEST: Page loaded! IsMobile: {isMobile ? 'Yes' : 'No'}, HasData: {networkData ? 'Yes' : 'No'}
-      </div>
-
       {/* Network Visualization - Only show when network data exists */}
       {networkData && (
         <div className="mobile-network-container network-visible">
-          {/* Test element to see if anything renders on mobile */}
-          <div className="fixed top-32 left-4 z-50 bg-red-500 text-white p-4 rounded text-sm">
-            TEST: Network data loaded! Nodes: {networkData.nodes.length}, Links: {networkData.links.length}
+          {/* Simple status indicator */}
+          <div className="fixed top-20 left-4 z-50 bg-green-500 text-white p-2 rounded text-xs">
+            ✓ Network loaded: {networkData.nodes.length} nodes, {networkData.links.length} links
           </div>
           
           <NetworkVisualizer
@@ -214,6 +209,20 @@ export default function ArtistNetwork() {
             onClearAll={handleClearNetwork}
             ref={networkVisualizerRef}
           />
+        </div>
+      )}
+
+      {/* Show when no network data */}
+      {!networkData && !isLoading && (
+        <div className="fixed top-20 left-4 z-50 bg-gray-500 text-white p-2 rounded text-xs">
+          No network data - search for an artist to begin
+        </div>
+      )}
+
+      {/* Show loading status */}
+      {isLoading && (
+        <div className="fixed top-20 left-4 z-50 bg-blue-500 text-white p-2 rounded text-xs">
+          🔄 Loading network for: {currentArtistName}
         </div>
       )}
 
