@@ -227,8 +227,7 @@ export default function MobileControls({
 
   if (!isMobile) return null;
 
-  // TEMPORARILY DISABLE MOBILE CONTROLS TO TEST BLACK SCREEN ISSUE
-  return null;
+  // Mobile controls are now restored - no longer disabled for debugging
 
   // Platform-specific share functions - direct URL sharing
   const shareToFacebook = () => {
