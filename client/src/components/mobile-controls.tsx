@@ -15,6 +15,8 @@ import {
   Download,
   Facebook,
   Instagram,
+  ZoomIn,
+  Users,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -50,6 +52,8 @@ interface MobileControlsProps {
   onZoomReset: () => void;
   onBackToFirstDegree?: () => void;
   onClearAll: () => void;
+  onShare: () => void;
+  onShowCollaborationDetails: () => void;
 
   artistId?: string | null;
 
@@ -61,6 +65,8 @@ export default function MobileControls({
   onZoomReset,
   onBackToFirstDegree,
   onClearAll,
+  onShare,
+  onShowCollaborationDetails,
 
   artistId,
 
@@ -900,124 +906,77 @@ export default function MobileControls({
 
       {/* Options Menu */}
       {showMenu && (
-        <div className="fixed bottom-24 sm:bottom-20 right-4 z-5 flex flex-col items-end gap-2">
-          {/* Share Button */}
-          <Button
-            size="icon"
-            variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
-            style={{ borderColor: '#b427b4' }}
-            title="Share"
-            onClick={handleShareClick}
-            disabled={isCapturing}
-          >
-            {isCapturing ? (
-              <Camera className="w-6 h-6 animate-pulse" />
-            ) : (
-              <Share2 className="w-6 h-6" />
-            )}
-          </Button>
-
-          {/* Reset Button */}
-          {onBackToFirstDegree && (
-            <Button
-              size="icon"
-              variant="secondary"
-              className="w-12 h-12 backdrop-blur border-2 rounded-full shadow-lg"
-              style={{ 
-                backgroundColor: '#F2A6E0', 
-                borderColor: '#F2A6E0'
-              }}
-              title="Back to First Degree"
-              onClick={onBackToFirstDegree}
-            >
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M19 12H5M12 19L5 12L12 5" stroke="#282A36" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </Button>
-          )}
-
-          {/* Settings Button – opens existing controls panel */}
-          <Button
-            size="icon"
-            variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
-            style={{ borderColor: '#b427b4' }}
-            title="Settings"
-            onClick={() => {
-              console.log('📱 [Mobile Controls] Opening zoom controls panel');
-              setShowControls(true);
-              setShowMenu(false);
-            }}
-          >
-            <Settings className="w-6 h-6" />
-          </Button>
-
-          {/* Test Button - Debug */}
-          <Button
-            size="icon"
-            variant="secondary"
-            className="w-12 h-12 bg-blue-600/90 backdrop-blur hover:bg-blue-700 border-2 rounded-full shadow-lg"
-            style={{ borderColor: '#3b82f6' }}
-            title="Test - Debug"
-            onClick={() => {
-              console.log('📱 [Mobile Controls] Test button clicked');
-              toast({
-                title: "Mobile Controls Working!",
-                description: "The mobile controls component is functioning correctly.",
-                className: "bg-blue-600 border-blue-500 text-white",
-                duration: 3000,
-              });
-            }}
-          >
-            <HelpCircle className="w-6 h-6" />
-          </Button>
-
-          {/* Help Button */}
-          <Button
-            size="icon"
-            variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg"
-            title="Help"
-            onClick={() => {
-              setShowHelp(true);
-              setShowMenu(false);
-            }}
-          >
-            <HelpCircle className="w-6 h-6" />
-          </Button>
-
-          {/* Close Button */}
-          <Button
-            size="icon"
-            variant="destructive"
-            className="w-12 h-12 bg-red-900/90 backdrop-blur hover:bg-red-800 border-2 rounded-full shadow-lg"
-            style={{ borderColor: '#b427b4' }}
-            title="Close Menu"
-            onClick={() => setShowMenu(false)}
-          >
-            <X className="w-6 h-6" />
-          </Button>
+        <div className="fixed bottom-24 sm:bottom-20 right-4 z-50 flex flex-col items-end gap-2">
+          <Card className="bg-gray-900/95 backdrop-blur p-3 border-2 border-purple-500 shadow-xl">
+            <div className="flex flex-col gap-2">
+              {/* Zoom Controls Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowControls(true);
+                  setShowMenu(false);
+                }}
+                className="text-white hover:bg-purple-600/20 hover:text-purple-300 transition-colors"
+              >
+                <ZoomIn className="w-4 h-4 mr-2" />
+                Zoom Controls
+              </Button>
+              
+              {/* Share Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (onShare) {
+                    onShare();
+                  }
+                  setShowMenu(false);
+                }}
+                className="text-white hover:bg-purple-600/20 hover:text-purple-300 transition-colors"
+              >
+                <Share2 className="w-4 h-4 mr-2" />
+                Share
+              </Button>
+              
+              {/* Collaboration Details Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (onShowCollaborationDetails) {
+                    onShowCollaborationDetails();
+                  }
+                  setShowMenu(false);
+                }}
+                className="text-white hover:bg-purple-600/20 hover:text-purple-300 transition-colors"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Collaboration Details
+              </Button>
+            </div>
+          </Card>
         </div>
       )}
 
-      {/* Background overlay to close controls - only show when controls are open */}
+      {/* Background overlay - only when controls are open */}
       {showControls && (
         <div
-          className="fixed inset-0 z-1 bg-transparent"
+          className="fixed inset-0 z-40 bg-transparent"
           onClick={() => setShowControls(false)}
+          style={{ pointerEvents: 'auto' }}
         />
       )}
 
-      {/* Mobile Controls Panel */}
+      {/* Zoom Controls Panel */}
       {showControls && (
-        <Card 
+        <Card
           ref={controlsRef}
           data-card-background
-          className={`fixed z-5 bg-gray-900/95 backdrop-blur p-3 max-w-[calc(100vw-2rem)] border-2 transition-all duration-200 ${
+          className={`fixed z-50 bg-gray-900/95 backdrop-blur p-3 max-w-[calc(100vw-2rem)] border-2 transition-all duration-200 ${
             isDragging ? 'select-none shadow-2xl ring-2 ring-purple-400/50' : 'shadow-lg'
-          }`} 
-          style={{ 
+          }`}
+          style={{
             borderColor: '#b427b4',
             left: `${dragPosition.x}px`,
             top: `${dragPosition.y}px`,
@@ -1027,7 +986,7 @@ export default function MobileControls({
             maxWidth: '280px',
             minWidth: '200px',
             position: 'fixed',
-            zIndex: 5
+            zIndex: 50 // Ensure it's above everything
           }}
           onMouseDown={handleDragStart}
           onTouchStart={handleDragStart}
