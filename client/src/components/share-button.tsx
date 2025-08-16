@@ -410,65 +410,8 @@ export default function ShareButton({ artistId, networkData }: ShareButtonProps 
         currentDialog.style.display = dialogDisplay;
       }
 
-      // Find the bounds of the network content by analyzing the SVG
-      let networkBounds = { minX: 0, minY: 0, maxX: canvas.width, maxY: canvas.height };
-      
-      if (svg) {
-        try {
-          // Get all network nodes and their positions
-          const nodes = svg.querySelectorAll('.node-group');
-          if (nodes.length > 0) {
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            
-                          nodes.forEach((node) => {
-                const transform = node.getAttribute('transform');
-                if (transform) {
-                  const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
-                  if (match) {
-                    // Scale the node positions to match the high-resolution canvas
-                    const x = parseFloat(match[1]) * highScale;
-                    const y = parseFloat(match[2]) * highScale;
-                    minX = Math.min(minX, x);
-                    minY = Math.min(minY, y);
-                    maxX = Math.max(maxX, x);
-                    maxY = Math.max(maxY, y);
-                  }
-                }
-              });
-            
-            // Add padding around the network (scaled for high resolution)
-            const padding = 80 * highScale;
-            minX = Math.max(0, minX - padding);
-            minY = Math.max(0, minY - padding);
-            maxX = Math.min(canvas.width, maxX + padding);
-            maxY = Math.min(canvas.height, maxY + padding);
-            
-            networkBounds = { minX, minY, maxX, maxY };
-          }
-        } catch (error) {
-          console.warn('Could not calculate network bounds:', error);
-        }
-      }
-
-      // Calculate network dimensions
-      const networkWidth = networkBounds.maxX - networkBounds.minX;
-      const networkHeight = networkBounds.maxY - networkBounds.minY;
-      
-      // FORCE a perfect square - use the larger dimension for BOTH width and height
-      // Ensure minimum size (scaled for high resolution)
-      const minSize = 400 * highScale;
-      const squareSize = Math.max(minSize, Math.max(networkWidth, networkHeight));
-      
-      // Center the square crop around the network center
-      const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
-      const networkCenterY = (networkBounds.minY + networkBounds.maxY) / 2;
-      
-      // Calculate square crop coordinates - FORCE square dimensions
-      const halfSquare = squareSize / 2;
-      const cropX = Math.max(0, Math.min(canvas.width - squareSize, networkCenterX - halfSquare));
-      const cropY = Math.max(0, Math.min(canvas.height - squareSize, networkCenterY - halfSquare));
-
-      // Create a PERFECTLY SQUARE canvas
+      // Create a PERFECTLY SQUARE canvas and center the full screenshot within it
+      const squareSize = Math.min(canvas.width, canvas.height);
       const watermarkedCanvas = document.createElement('canvas');
       const ctx = watermarkedCanvas.getContext('2d');
       
@@ -484,12 +427,13 @@ export default function ShareButton({ artistId, networkData }: ShareButtonProps 
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, squareSize, squareSize);
 
-      // Draw EXACTLY a square crop - source and destination are both perfect squares
-      ctx.drawImage(
-        canvas,
-        cropX, cropY, squareSize, squareSize, // Source: SQUARE crop from original
-        0, 0, squareSize, squareSize // Destination: SQUARE on new canvas
-      );
+      // Draw the ENTIRE original canvas, scaled to fit and centered (object-contain semantics)
+      const scale = Math.min(squareSize / canvas.width, squareSize / canvas.height);
+      const scaledWidth = canvas.width * scale;
+      const scaledHeight = canvas.height * scale;
+      const destX = (squareSize - scaledWidth) / 2;
+      const destY = (squareSize - scaledHeight) / 2;
+      ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, destX, destY, scaledWidth, scaledHeight);
 
       // Load the Grapevine logo
       const logo = new Image();
@@ -682,11 +626,11 @@ export default function ShareButton({ artistId, networkData }: ShareButtonProps 
                           Download
                         </Button>
                       </div>
-                      <div className="border border-gray-600 rounded overflow-hidden">
+                      <div className="border border-gray-600 rounded overflow-hidden flex items-center justify-center aspect-square w-full max-w-md mx-auto">
                         <img 
                           src={snapshotDataUrl} 
                           alt="Network snapshot" 
-                          className="w-full max-h-96 object-contain bg-black"
+                          className="w-full h-full object-contain bg-black"
                         />
                       </div>
                     </div>
