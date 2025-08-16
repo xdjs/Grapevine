@@ -682,11 +682,11 @@ export default function ShareButton({ artistId, networkData }: ShareButtonProps 
                           Download
                         </Button>
                       </div>
-                      <div className="border border-gray-600 rounded overflow-hidden flex justify-center">
+                      <div className="border border-gray-600 rounded overflow-hidden flex items-center justify-center aspect-square w-full max-w-md mx-auto">
                         <img 
                           src={snapshotDataUrl} 
                           alt="Network snapshot" 
-                          className="w-full max-h-96 object-contain bg-black"
+                          className="w-full h-full object-contain bg-black"
                         />
                       </div>
                     </div>
