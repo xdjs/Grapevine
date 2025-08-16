@@ -592,25 +592,13 @@ export default function MobileControls({
         }
       }
 
-      // Calculate network dimensions
-      const networkWidth = networkBounds.maxX - networkBounds.minX;
-      const networkHeight = networkBounds.maxY - networkBounds.minY;
-      
-      // FORCE a perfect square - use the larger dimension for BOTH width and height
-      // Ensure minimum size (scaled for high resolution)
-      const minSize = 400 * highScale;
-      const squareSize = Math.max(minSize, Math.max(networkWidth, networkHeight));
-      
-      console.log(`🔳 SQUARE DEBUG: networkWidth=${networkWidth}, networkHeight=${networkHeight}, squareSize=${squareSize}`);
-      
-      // Center the square crop around the network center
-      const networkCenterX = (networkBounds.minX + networkBounds.maxX) / 2;
-      const networkCenterY = (networkBounds.minY + networkBounds.maxY) / 2;
-      
-      // Calculate square crop coordinates - FORCE square dimensions
-      const halfSquare = squareSize / 2;
-      const cropX = Math.max(0, Math.min(canvas.width - squareSize, networkCenterX - halfSquare));
-      const cropY = Math.max(0, Math.min(canvas.height - squareSize, networkCenterY - halfSquare));
+      // Centered viewport crop (robust on mobile):
+      // Use the visible viewport center rather than calculated node bounds.
+      // This guarantees the screenshot is centered in the middle of the screen.
+      const viewportSquare = Math.min(canvas.width, canvas.height);
+      const squareSize = viewportSquare;
+      const cropX = Math.max(0, Math.floor((canvas.width - squareSize) / 2));
+      const cropY = Math.max(0, Math.floor((canvas.height - squareSize) / 2));
 
       // Create a PERFECTLY SQUARE canvas
       const watermarkedCanvas = document.createElement('canvas');
@@ -633,7 +621,7 @@ export default function MobileControls({
       // Draw EXACTLY a square crop - source and destination are both perfect squares
       ctx.drawImage(
         canvas,
-        cropX, cropY, squareSize, squareSize, // Source: SQUARE crop from original
+        cropX, cropY, squareSize, squareSize, // Source: centered square from original
         0, 0, squareSize, squareSize // Destination: SQUARE on new canvas
       );
 
