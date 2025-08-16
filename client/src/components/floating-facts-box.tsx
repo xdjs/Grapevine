@@ -31,7 +31,7 @@ export default function FloatingFactsBox({ isVisible, facts, artistName, onClose
 
   return (
     <div className="fixed top-32 left-4 z-20 max-w-xs">
-      <div className="bg-black/20 backdrop-blur-sm border border-yellow-500/20 rounded-lg p-4 shadow-lg">
+      <div className="bg-gray-900/90 backdrop-blur-sm border border-yellow-500/50 rounded-lg p-4 shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -40,7 +40,7 @@ export default function FloatingFactsBox({ isVisible, facts, artistName, onClose
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors p-1 rounded"
+            className="text-gray-300 hover:text-white transition-colors p-1 rounded hover:bg-gray-700/50"
             title="Close facts"
           >
             <X className="w-4 h-4" />
@@ -53,7 +53,7 @@ export default function FloatingFactsBox({ isVisible, facts, artistName, onClose
         </div>
 
         {/* Current Fact */}
-        <div className="text-gray-300 text-sm leading-relaxed">
+        <div className="text-gray-100 text-sm leading-relaxed">
           <div 
             className={`transition-opacity duration-300 ${isAnimating ? 'opacity-0' : 'opacity-100'}`}
           >
@@ -71,7 +71,7 @@ export default function FloatingFactsBox({ isVisible, facts, artistName, onClose
                   className={`w-2 h-2 rounded-full transition-all duration-300 ${
                     index === currentFactIndex 
                       ? 'bg-yellow-400' 
-                      : 'bg-gray-600/50'
+                      : 'bg-gray-500'
                   }`}
                 />
               ))}
