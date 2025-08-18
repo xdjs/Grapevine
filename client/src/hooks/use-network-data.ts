@@ -560,6 +560,11 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
             addedNodeIds: Array.from(v.addedNodeIds),
             addedLinkKeys: Array.from(v.addedLinkKeys),
             neighborIds: Array.from(v.neighborIds || []),
+            batches: (v.batches || []).map(b => ({
+              addedNodeIds: Array.from(b.addedNodeIds || []),
+              addedLinkKeys: Array.from(b.addedLinkKeys || []),
+              neighborIds: Array.from(b.neighborIds || []),
+            })),
           })),
         } as any;
         const existing = (typeof window !== 'undefined' && (window as any).grapevineExpandedState) || (sessionStorage.getItem(PERSIST_KEY) ? JSON.parse(sessionStorage.getItem(PERSIST_KEY) as string) : null);
@@ -962,17 +967,12 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         if (Array.isArray(saved.expandedNodes)) setExpandedNodes(new Set<string>(saved.expandedNodes));
         if (saved.baseGraph) baseGraphRef.current = saved.baseGraph as NetworkData;
         if (Array.isArray(saved.contributions)) {
-          const map = new Map<string, Contribution>();
+          const map = new Map<string, { addedNodeIds: Set<string>; addedLinkKeys: Set<string>; neighborIds: Set<string> }>();
           for (const c of saved.contributions) {
             map.set(String(c.key), {
               addedNodeIds: new Set<string>(c.addedNodeIds || []),
               addedLinkKeys: new Set<string>(c.addedLinkKeys || []),
               neighborIds: new Set<string>(c.neighborIds || []),
-              batches: Array.isArray(c.batches) ? c.batches.map((b: any) => ({
-                addedNodeIds: Array.isArray(b.addedNodeIds) ? b.addedNodeIds.slice() : [],
-                addedLinkKeys: Array.isArray(b.addedLinkKeys) ? b.addedLinkKeys.slice() : [],
-                neighborIds: Array.isArray(b.neighborIds) ? b.neighborIds.slice() : [],
-              })) : [],
             });
           }
           contributionsRef.current = map;
@@ -1132,19 +1132,12 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
             // Restore baseGraph and contributions so shrink works after tab switch
             if (saved.baseGraph) baseGraphRef.current = saved.baseGraph as NetworkData;
             if (Array.isArray(saved.contributions)) {
-              const map = new Map<string, Contribution>();
+              const map = new Map<string, { addedNodeIds: Set<string>; addedLinkKeys: Set<string>; neighborIds: Set<string> }>();
               for (const c of saved.contributions) {
                 map.set(String(c.key), {
                   addedNodeIds: new Set<string>(c.addedNodeIds || []),
                   addedLinkKeys: new Set<string>(c.addedLinkKeys || []),
                   neighborIds: new Set<string>(c.neighborIds || []),
-                  batches: Array.isArray(c.batches)
-                    ? c.batches.map((b: any) => ({
-                        addedNodeIds: Array.isArray(b.addedNodeIds) ? b.addedNodeIds.slice() : [],
-                        addedLinkKeys: Array.isArray(b.addedLinkKeys) ? b.addedLinkKeys.slice() : [],
-                        neighborIds: Array.isArray(b.neighborIds) ? b.neighborIds.slice() : [],
-                      }))
-                    : [],
                 });
               }
               contributionsRef.current = map;
