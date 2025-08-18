@@ -1,32 +1,64 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, ExternalLink, Music, Disc3, Mic2, Users, Loader2 } from 'lucide-react';
 import { CollaborationDetails } from '@/types/network';
 
-// Tiny inline SVGs for mobile only (fixed size, cannot scale)
-const MobileUsersIcon = () => (
-  <svg aria-hidden width="12" height="12" viewBox="0 0 24 24" fill="none" className="inline-block" style={{ minWidth: 12, minHeight: 12, maxWidth: 12, maxHeight: 12 }}>
-    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" />
-    <path d="M22 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    <path d="M16 3.13A4 4 0 1 1 16 10.9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-  </svg>
-);
+// Utility to rasterize an SVG into a PNG data URL for crisp mobile icons
+const useSvgPng = (svg: string, px: number) => {
+  return useMemo(() => {
+    if (typeof document === 'undefined') return '';
+    const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
+    const size = px * dpr;
+    const svgUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    const img = new Image();
+    return new Promise<string>((resolve) => {
+      img.onload = () => {
+        ctx.scale(dpr, dpr);
+        ctx.clearRect(0, 0, px, px);
+        ctx.drawImage(img, 0, 0, px, px);
+        try { resolve(canvas.toDataURL('image/png')); } catch { resolve(svgUrl); }
+      };
+      img.src = svgUrl;
+    }) as unknown as string;
+  }, [svg, px]);
+};
 
-const MobileMusicIcon = () => (
-  <svg aria-hidden width="12" height="12" viewBox="0 0 24 24" fill="none" className="inline-block" style={{ minWidth: 12, minHeight: 12, maxWidth: 12, maxHeight: 12 }}>
-    <path d="M9 18V5l10-2v13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <circle cx="7" cy="18" r="3" stroke="currentColor" strokeWidth="2" />
-    <circle cx="17" cy="16" r="3" stroke="currentColor" strokeWidth="2" />
-  </svg>
-);
-
-const MobileExternalIcon = () => (
-  <svg aria-label="Open on Spotify" width="14" height="14" viewBox="0 0 24 24" fill="none" className="inline-block" style={{ minWidth: 14, minHeight: 14, maxWidth: 14, maxHeight: 14 }}>
-    <path d="M14 3h7v7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M10 14L21 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    <path d="M21 14v7H3V3h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
+// Prebuilt SVG strings matching desktop lucide icons, stroked purple for mobile
+const PURPLE = '#a855f7';
+const usersSvg12 = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H6C4.93913 15 3.92172 15.4214 3.17157 16.1716C2.42143 16.9217 2 17.9391 2 19V21" stroke="${PURPLE}" stroke-width="2" stroke-linecap="round" />
+  <circle cx="9" cy="7" r="4" stroke="${PURPLE}" stroke-width="2" />
+  <path d="M22 21V19C21.9993 18.1137 21.7044 17.2528 21.1614 16.5523C20.6184 15.8519 19.8581 15.3516 19 15.13" stroke="${PURPLE}" stroke-width="2" stroke-linecap="round" />
+  <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89317 18.7122 8.75608 18.1676 9.45768C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="${PURPLE}" stroke-width="2" stroke-linecap="round" />
+</svg>`;
+const musicSvg12 = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M9 18V5l10-2v13" stroke="${PURPLE}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="7" cy="18" r="3" stroke="${PURPLE}" stroke-width="2" />
+  <circle cx="17" cy="16" r="3" stroke="${PURPLE}" stroke-width="2" />
+</svg>`;
+const discSvg12 = `<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="12" cy="12" r="10" stroke="${PURPLE}" stroke-width="2" />
+  <circle cx="12" cy="12" r="2" stroke="${PURPLE}" stroke-width="2" />
+</svg>`;
+const micSvg12 = `<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="9" y="2" width="6" height="11" rx="3" stroke="${PURPLE}" stroke-width="2" />
+  <path d="M12 19v3" stroke="${PURPLE}" stroke-width="2" stroke-linecap="round" />
+  <path d="M19 11a7 7 0 0 1-14 0" stroke="${PURPLE}" stroke-width="2" stroke-linecap="round" />
+</svg>`;
+const externalSvg14 = `<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M14 3h7v7" stroke="${PURPLE}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M10 14L21 3" stroke="${PURPLE}" stroke-width="2" stroke-linecap="round" />
+  <path d="M21 14v7H3V3h7" stroke="${PURPLE}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+</svg>`;
 
 interface CollaborationDetailsPopupProps {
   isOpen: boolean;
@@ -337,7 +369,7 @@ export default function CollaborationDetailsPopup({
                   isMobile ? 'text-base' : 'text-lg'
                 }`}>
                   {isMobile ? (
-                    <span className="text-purple-400" aria-hidden>•</span>
+                    <img src={('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(usersSvg12))} alt="" width={12} height={12} style={{ minWidth: 12, minHeight: 12, maxWidth: 12, maxHeight: 12 }} />
                   ) : (
                     <Users className="text-purple-400 flex-shrink-0 w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4" />
                   )}
@@ -353,7 +385,7 @@ export default function CollaborationDetailsPopup({
                     isMobile ? 'text-base' : 'text-lg'
                   }`}>
                     {isMobile ? (
-                      <span className="text-purple-400" aria-hidden>•</span>
+                      <img src={('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(musicSvg12))} alt="" width={12} height={12} style={{ minWidth: 12, minHeight: 12, maxWidth: 12, maxHeight: 12 }} />
                     ) : (
                       <Music className="text-purple-400 flex-shrink-0 w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4" />
                     )}
@@ -369,7 +401,7 @@ export default function CollaborationDetailsPopup({
                       >
                         <div className="flex items-center space-x-3">
                           {isMobile ? (
-                            <span className="text-purple-400" aria-hidden>•</span>
+                            <img src={(('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent((project.type === 'album' || project.type === 'ep') ? discSvg12 : project.type === 'single' ? micSvg12 : musicSvg12)))} alt="" width={12} height={12} style={{ minWidth: 12, minHeight: 12, maxWidth: 12, maxHeight: 12 }} />
                           ) : (
                             <div className="text-purple-400">{getProjectIcon(project.type)}</div>
                           )}
@@ -395,7 +427,7 @@ export default function CollaborationDetailsPopup({
                                 className="inline-flex items-center px-2 py-1 rounded-md text-green-400 hover:text-green-300 underline text-xs"
                                 title="Open on Spotify"
                               >
-                                Spotify
+                                <img src={('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(externalSvg14))} alt="Open on Spotify" width={14} height={14} style={{ minWidth: 14, minHeight: 14, maxWidth: 14, maxHeight: 14 }} />
                               </a>
                             ) : (
                               <a
