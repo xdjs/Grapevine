@@ -858,35 +858,7 @@ export default function MobileControls({
       {/* Options Menu with Staggered Animation */}
       {showMenu && (
         <div className="fixed bottom-20 right-4 z-50 flex flex-col items-end gap-2">
-          {/* Share Button */}
-          <Button
-            size="icon"
-            variant="secondary"
-            className="w-12 h-12 bg-gray-900/90 backdrop-blur hover:bg-gray-800 border-2 rounded-full shadow-lg animate-in zoom-in-95 duration-700 ease-out"
-            style={{ 
-              borderColor: '#b427b4',
-              pointerEvents: 'auto',
-              touchAction: 'manipulation',
-              animationDelay: '600ms',
-              transformOrigin: 'bottom right'
-            }}
-            title="Share"
-            onClick={() => {
-              console.log('📱 [Mobile Controls] Share button clicked');
-              handleShareClick();
-            }}
-            onTouchStart={(e) => {
-              console.log('📱 [Mobile Controls] Share button touch start');
-              e.stopPropagation();
-            }}
-            disabled={isCapturing}
-          >
-            {isCapturing ? (
-              <Camera className="w-6 h-6 animate-pulse" />
-            ) : (
-              <Share2 className="w-6 h-6" />
-            )}
-          </Button>
+          {/* Share Button hidden on mobile */}
 
           {/* Reset Button */}
           {onBackToFirstDegree && (

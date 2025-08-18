@@ -449,8 +449,10 @@ export default function Home() {
 
 
 
-      {/* Share Button - Visible when network is shown on all devices */}
-      {showNetworkView && <ShareButton artistId={currentArtistId} networkData={networkData} />}
+      {/* Share Button - Desktop/tablet only; hidden on mobile */}
+      {showNetworkView && !isMobile && (
+        <ShareButton artistId={currentArtistId} networkData={networkData} />
+      )}
 
 
       {/* Help Button - Always visible */}
