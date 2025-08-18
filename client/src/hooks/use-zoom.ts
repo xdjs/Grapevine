@@ -27,19 +27,33 @@ export interface UseZoomReturn {
 export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoomReturn {
   const [currentZoom, setCurrentZoom] = useState(1);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  const pendingScaleRef = useRef<number | null>(null);
+  const pendingScalePointRef = useRef<[number, number] | null>(null);
 
   // Zoom function for buttons (centered zoom) - use d3.zoom to keep pan/zoom consistent
   const applyZoom = useCallback((scale: number) => {
-    if (!svgRef.current || !zoomRef.current) return;
+    if (!svgRef.current) return;
     const svg = d3.select(svgRef.current);
-    (zoomRef.current as any).scaleTo(svg, scale);
+    if (zoomRef.current) {
+      (zoomRef.current as any).scaleTo(svg, scale);
+    } else {
+      // Defer until zoom behavior is initialized
+      pendingScaleRef.current = scale;
+      pendingScalePointRef.current = null;
+    }
   }, [svgRef]);
 
   // Zoom function for pinch gestures (zoom around focal point) via d3.zoom
   const applyPinchZoom = useCallback((scale: number, focalX: number, focalY: number) => {
-    if (!svgRef.current || !zoomRef.current) return;
+    if (!svgRef.current) return;
     const svg = d3.select(svgRef.current);
-    (zoomRef.current as any).scaleTo(svg, scale, [focalX, focalY]);
+    if (zoomRef.current) {
+      (zoomRef.current as any).scaleTo(svg, scale, [focalX, focalY]);
+    } else {
+      // Defer until zoom behavior is initialized
+      pendingScaleRef.current = scale;
+      pendingScalePointRef.current = [focalX, focalY];
+    }
   }, [svgRef]);
 
   // Pinch zoom helpers
@@ -92,7 +106,7 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     let initialDistance = 0;
     let lastScale = 1;
     let isPinching = false;
-    const pinchThreshold = 0.5; // Increased threshold for less sensitivity
+    const pinchThreshold = 0.05; // Low threshold for responsive pinch
     let pinchCenterX = 0;
     let pinchCenterY = 0;
 
@@ -167,12 +181,9 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     // Universal wheel event handler for mouse scroll and trackpad pinch
     let lastWheelTime = 0;
     const handleWheelZoom = (event: WheelEvent) => {
-      // Only intercept for ctrl/trackpad pinch or when explicitly over the SVG; otherwise allow page scroll
-      const isPinchGesture = event.ctrlKey || Math.abs(event.deltaY) < 1;
+      // Only handle wheel when cursor is over the SVG; otherwise allow page scroll
       const targetIsSvg = (event.target as Element)?.closest('svg') === svgRef.current;
-      if (!isPinchGesture && !targetIsSvg) {
-        return; // allow normal page scroll
-      }
+      if (!targetIsSvg) return;
       event.preventDefault();
       
       // Reduced sensitivity with longer throttling
@@ -225,10 +236,11 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.001, 1000])
-      .filter((event) => {
-        // Block only wheel (we handle manually) and touch (we handle manually). Allow mouse/pointer for panning.
+      .filter((event: any) => {
+        // Block wheel (manual), and any touch pointer/touch events (manual pinch). Allow mouse for panning.
         if (event.type === 'wheel') return false;
-        if (event.type.startsWith('touch')) return false;
+        if (event.type && event.type.startsWith('touch')) return false;
+        if (event.pointerType === 'touch') return false;
         return true;
       })
       .on("zoom", (event) => {
@@ -258,6 +270,19 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     // Apply zoom behavior but prevent background dragging and clicking
     svg.call(zoom);
     zoomRef.current = zoom;
+
+    // If a zoom was requested before initialization, apply it now
+    if (pendingScaleRef.current != null) {
+      const pendingScale = pendingScaleRef.current;
+      const pendingPoint = pendingScalePointRef.current;
+      pendingScaleRef.current = null;
+      pendingScalePointRef.current = null;
+      if (pendingPoint) {
+        (zoomRef.current as any).scaleTo(svg, pendingScale, pendingPoint);
+      } else {
+        (zoomRef.current as any).scaleTo(svg, pendingScale);
+      }
+    }
 
     // Disable only touch and double-click zoom behaviors; keep mouse drag for panning
     svg
