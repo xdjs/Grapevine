@@ -130,44 +130,42 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
     ctx.stroke();
     return canvas.toDataURL('image/png');
   }, [isMobile]);
-  const mobileCollabIconSrc = useMemo(() => {
-    if (!isMobile) return '';
-    if (typeof document === 'undefined') return '';
-    const canvas = document.createElement('canvas');
-    const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
-    const size = mobileIconPx * dpr;
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return '';
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, mobileIconPx, mobileIconPx);
-    // Draw two-person icon in pink to match desktop style
-    ctx.strokeStyle = '#ff69b4';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    // Heads
-    const headR = 2;
-    const headY = 5;
-    const cxLeft = (mobileIconPx / 2) - 2.5;
-    const cxRight = (mobileIconPx / 2) + 2.5;
-    ctx.beginPath();
-    ctx.arc(cxLeft, headY, headR, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(cxRight, headY, headR, 0, Math.PI * 2);
-    ctx.stroke();
-    // Shoulders/torso (semi-circles)
-    const torsoY = 10;
-    const torsoR = 3.5;
-    ctx.beginPath();
-    ctx.arc(cxLeft, torsoY, torsoR, Math.PI, 0);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(cxRight, torsoY, torsoR, Math.PI, 0);
-    ctx.stroke();
-    return canvas.toDataURL('image/png');
-  }, [isMobile]);
+  const [mobileCollabIconSrc, setMobileCollabIconSrc] = useState<string>('');
+  useEffect(() => {
+    if (!isMobile) {
+      setMobileCollabIconSrc('');
+      return;
+    }
+    if (typeof document === 'undefined') return;
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${mobileIconPx}" height="${mobileIconPx}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H6C4.93913 15 3.92172 15.4214 3.17157 16.1716C2.42143 16.9217 2 17.9391 2 19V21" stroke="#ff69b4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="9" cy="7" r="4" stroke="#ff69b4" stroke-width="2" />
+  <path d="M22 21V19C21.9993 18.1137 21.7044 17.2528 21.1614 16.5523C20.6184 15.8519 19.8581 15.3516 19 15.13" stroke="#ff69b4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89317 18.7122 8.75608 18.1676 9.45768C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="#ff69b4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+    const svgUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+    const img = new Image();
+    img.onload = () => {
+      const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
+      const size = mobileIconPx * dpr;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, mobileIconPx, mobileIconPx);
+      ctx.drawImage(img, 0, 0, mobileIconPx, mobileIconPx);
+      try {
+        const png = canvas.toDataURL('image/png');
+        setMobileCollabIconSrc(png);
+      } catch {
+        setMobileCollabIconSrc(svgUrl); // graceful fallback
+      }
+    };
+    img.src = svgUrl;
+  }, [isMobile, mobileIconPx]);
   const titleFontSize = isMobile ? '14px' : '16px';
   const roleFontSize = isMobile ? '11px' : '12px';
   const linkFontSize = isMobile ? '11px' : '12px';
@@ -613,7 +611,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                 {collaborationIconSvg}
               </div>
             )}
-            {isMobile && (
+            {isMobile && mobileCollabIconSrc && (
               <img
                 src={mobileCollabIconSrc}
                 alt={'Collaboration icon'}
