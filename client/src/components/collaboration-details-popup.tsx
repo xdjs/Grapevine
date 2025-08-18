@@ -194,7 +194,7 @@ export default function CollaborationDetailsPopup({
   };
 
   const getProjectIcon = (type: string) => {
-    const iconClass = isMobile ? "w-2 h-2 min-w-2 min-h-2 max-w-2 max-h-2 flex-shrink-0" : "w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4 flex-shrink-0"; // Ultra small mobile icons
+    const iconClass = isMobile ? "w-2 h-2 min-w-2 min-h-2 max-w-2 max-h-2 flex-shrink-0" : "w-5 h-5 min-w-5 min-h-5 max-w-5 max-h-5 flex-shrink-0"; // Slightly larger desktop icons
     switch (type) {
       case 'song':
         return <Music className={iconClass} />;
@@ -266,7 +266,7 @@ export default function CollaborationDetailsPopup({
             {/* Desktop header icon; hidden on mobile to avoid layout/overlay issues */}
             {!isMobile && (
               <div className="flex items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30 flex-shrink-0 w-8 h-8 min-w-8 min-h-8 max-w-8 max-h-8">
-                <Users className="text-purple-400 flex-shrink-0 h-4 w-4 min-h-4 min-w-4 max-h-4 max-w-4" />
+                <Users className="text-purple-400 flex-shrink-0 h-5 w-5 min-h-5 min-w-5 max-h-5 max-w-5" />
               </div>
             )}
             <div>
@@ -369,9 +369,9 @@ export default function CollaborationDetailsPopup({
                   isMobile ? 'text-base' : 'text-lg'
                 }`}>
                   {isMobile ? (
-                    <img src={('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(usersSvg12))} alt="" width={12} height={12} style={{ minWidth: 12, minHeight: 12, maxWidth: 12, maxHeight: 12 }} />
+                    <img src={('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(usersSvg12))} alt="" width={14} height={14} style={{ minWidth: 14, minHeight: 14, maxWidth: 14, maxHeight: 14 }} />
                   ) : (
-                    <Users className="text-purple-400 flex-shrink-0 w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4" />
+                    <Users className="text-purple-400 flex-shrink-0 w-5 h-5 min-w-5 min-h-5 max-w-5 max-h-5" />
                   )}
                   Collaboration
                 </h3>
@@ -385,9 +385,9 @@ export default function CollaborationDetailsPopup({
                     isMobile ? 'text-base' : 'text-lg'
                   }`}>
                     {isMobile ? (
-                      <img src={('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(musicSvg12))} alt="" width={12} height={12} style={{ minWidth: 12, minHeight: 12, maxWidth: 12, maxHeight: 12 }} />
+                      <img src={('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(musicSvg12))} alt="" width={14} height={14} style={{ minWidth: 14, minHeight: 14, maxWidth: 14, maxHeight: 14 }} />
                     ) : (
-                      <Music className="text-purple-400 flex-shrink-0 w-4 h-4 min-w-4 min-h-4 max-w-4 max-h-4" />
+                      <Music className="text-purple-400 flex-shrink-0 w-5 h-5 min-w-5 min-h-5 max-w-5 max-h-5" />
                     )}
                     Projects Together
                   </h3>
@@ -401,7 +401,7 @@ export default function CollaborationDetailsPopup({
                       >
                         <div className="flex items-center space-x-3">
                           {isMobile ? (
-                            <img src={(('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent((project.type === 'album' || project.type === 'ep') ? discSvg12 : project.type === 'single' ? micSvg12 : musicSvg12)))} alt="" width={12} height={12} style={{ minWidth: 12, minHeight: 12, maxWidth: 12, maxHeight: 12 }} />
+                            <img src={(('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent((project.type === 'album' || project.type === 'ep') ? discSvg12 : project.type === 'single' ? micSvg12 : musicSvg12)))} alt="" width={14} height={14} style={{ minWidth: 14, minHeight: 14, maxWidth: 14, maxHeight: 14 }} />
                           ) : (
                             <div className="text-purple-400">{getProjectIcon(project.type)}</div>
                           )}
@@ -427,7 +427,7 @@ export default function CollaborationDetailsPopup({
                                 className="inline-flex items-center px-2 py-1 rounded-md text-green-400 hover:text-green-300 underline text-xs"
                                 title="Open on Spotify"
                               >
-                                <img src={('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(externalSvg14))} alt="Open on Spotify" width={14} height={14} style={{ minWidth: 14, minHeight: 14, maxWidth: 14, maxHeight: 14 }} />
+                                <img src={('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(externalSvg14))} alt="Open on Spotify" width={16} height={16} style={{ minWidth: 16, minHeight: 16, maxWidth: 16, maxHeight: 16 }} />
                               </a>
                             ) : (
                               <a
@@ -437,7 +437,7 @@ export default function CollaborationDetailsPopup({
                                 className="inline-flex items-center p-2 rounded-md text-green-400 hover:text-green-300 hover:bg-green-500/10 transition-colors"
                                 title="Open on Spotify"
                               >
-                                <ExternalLink className="w-5 h-5" style={{ minWidth: 20, minHeight: 20, maxWidth: 20, maxHeight: 20 }} />
+                                <ExternalLink className="w-6 h-6" style={{ minWidth: 24, minHeight: 24, maxWidth: 24, maxHeight: 24 }} />
                               </a>
                             )}
                           </div>
@@ -464,7 +464,7 @@ export default function CollaborationDetailsPopup({
               {(!details.projects || details.projects.length === 0) && (
                 <div className={`text-center text-gray-400 ${isMobile ? 'py-8' : 'py-12'}`}>
 {!isMobile && (
-                    <Music className="mx-auto mb-4 text-gray-600 w-8 h-8" />
+                    <Music className="mx-auto mb-4 text-gray-600 w-9 h-9" />
                   )}
                   <p className={isMobile ? 'text-base' : 'text-lg'}>No specific collaboration projects found between these artists.</p>
                   <p className={`text-gray-500 mt-2 ${
