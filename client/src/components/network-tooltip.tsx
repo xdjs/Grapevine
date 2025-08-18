@@ -130,6 +130,34 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
     ctx.stroke();
     return canvas.toDataURL('image/png');
   }, [isMobile]);
+  const mobileCollabIconSrc = useMemo(() => {
+    if (!isMobile) return '';
+    if (typeof document === 'undefined') return '';
+    const canvas = document.createElement('canvas');
+    const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
+    const size = mobileIconPx * dpr;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, mobileIconPx, mobileIconPx);
+    // Draw two overlapping circles to represent collaboration
+    ctx.strokeStyle = '#a855f7';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    const r = 5; // radius for each small circle
+    const cy = mobileIconPx / 2;
+    const cx1 = cy - 2; // left circle center
+    const cx2 = cy + 2; // right circle center
+    ctx.beginPath();
+    ctx.arc(cx1, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx2, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+    return canvas.toDataURL('image/png');
+  }, [isMobile]);
   const titleFontSize = isMobile ? '14px' : '16px';
   const roleFontSize = isMobile ? '11px' : '12px';
   const linkFontSize = isMobile ? '11px' : '12px';
@@ -576,12 +604,9 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
               </div>
             )}
             {isMobile && (
-              <svg
-                width={mobileIconPx}
-                height={mobileIconPx}
-                viewBox="0 0 24 24"
-                aria-label="Collaboration icon"
-                xmlns="http://www.w3.org/2000/svg"
+              <img
+                src={mobileCollabIconSrc}
+                alt={'Collaboration icon'}
                 style={{
                   width: `${mobileIconPx}px`,
                   height: `${mobileIconPx}px`,
@@ -591,11 +616,9 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                   maxHeight: `${mobileIconPx}px`,
                   display: 'block',
                   flexShrink: 0,
+                  background: 'transparent',
                 }}
-              >
-                <circle cx="9" cy="12" r="5" stroke="#a855f7" strokeWidth="2" fill="none" />
-                <circle cx="15" cy="12" r="5" stroke="#a855f7" strokeWidth="2" fill="none" opacity="0.85" />
-              </svg>
+              />
             )}
             <span
               style={{
