@@ -631,6 +631,33 @@ export default function D3NetworkRenderer({
           .attr("stroke-width", 2);
       }
 
+      // Early loading indicator for any node that should get a profile picture but doesn't have a URL yet
+      if (!d.imageUrl) {
+        const profileImageSize = d.size - 4;
+        const optimalSize = ImageLoadingManager.getOptimalImageSize(d, svgRef.current || undefined);
+        const loadingGroup = group.append("g")
+          .attr("class", "loading-spinner")
+          .style("opacity", 1);
+
+        const spinnerSize = Math.max(6, Math.min(12, profileImageSize * 0.3));
+        loadingGroup.append("circle")
+          .attr("r", spinnerSize)
+          .attr("fill", "none")
+          .attr("stroke", optimalSize.quality === 'high' ? "#888" : "#666")
+          .attr("stroke-width", optimalSize.quality === 'high' ? 2 : 1)
+          .attr("stroke-dasharray", "12.57")
+          .attr("stroke-linecap", "round")
+          .style("animation", "spin 1s linear infinite");
+
+        const bgSize = profileImageSize * (optimalSize.quality === 'high' ? 0.9 : 0.7);
+        loadingGroup.append("circle")
+          .attr("r", bgSize)
+          .attr("fill", "rgba(255, 255, 255, 0.05)")
+          .attr("stroke", "rgba(255, 255, 255, 0.1)")
+          .attr("stroke-width", 1)
+          .style("animation", "pulse 2s ease-in-out infinite");
+      }
+
       // Add profile picture support for any node with an imageUrl (optimized)
       if (d.imageUrl) {
         const profileImageSize = d.size - 4; // Leave minimal space for border
