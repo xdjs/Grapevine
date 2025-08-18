@@ -31,7 +31,7 @@ export default function LoadingScreen({ isVisible, artistName }: LoadingScreenPr
         <div className="flex items-center justify-center space-x-4 text-xs text-gray-400">
           <div className="flex items-center space-x-1">
             <Database className="h-3 w-3 text-pink-500" />
-            <span>MusicBrainz</span>
+            <span>Data Sources</span>
           </div>
           <div className="flex items-center space-x-1">
             <Music className="h-3 w-3 text-pink-500" />
