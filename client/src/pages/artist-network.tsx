@@ -328,8 +328,8 @@ export default function ArtistNetwork() {
         />
       </>
 
-      {/* Floating actions */}
-      {networkData && (
+      {/* Floating actions - hidden on mobile */}
+      {!isMobile && networkData && (
         <>
           <ShareButton artistId={currentArtistId} networkData={networkData} />
           <HelpButton />
