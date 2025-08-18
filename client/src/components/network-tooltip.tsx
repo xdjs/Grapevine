@@ -88,7 +88,11 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
     ctx.strokeStyle = '#ff69b4';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
-    const pad = 4;
+    const pad = 5; // slightly larger padding to fit circle border
+    // Circular border
+    ctx.beginPath();
+    ctx.arc(mobileIconPx / 2, mobileIconPx / 2, (mobileIconPx / 2) - 1.5, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.beginPath();
     // horizontal
     ctx.moveTo(pad, mobileIconPx / 2);
@@ -114,7 +118,11 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
     ctx.strokeStyle = '#ff69b4';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
-    const pad = 4;
+    const pad = 5; // slightly larger padding to fit circle border
+    // Circular border
+    ctx.beginPath();
+    ctx.arc(mobileIconPx / 2, mobileIconPx / 2, (mobileIconPx / 2) - 1.5, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.beginPath();
     // horizontal only (minus)
     ctx.moveTo(pad, mobileIconPx / 2);
