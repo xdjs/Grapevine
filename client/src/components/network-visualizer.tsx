@@ -398,7 +398,7 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
             role="img" 
             aria-label="Music collaboration network visualization"
             style={{ 
-              touchAction: 'none',
+              touchAction: 'pan-y pinch-zoom',
               WebkitTouchCallout: 'none',
               WebkitUserSelect: 'none',
               userSelect: 'none'

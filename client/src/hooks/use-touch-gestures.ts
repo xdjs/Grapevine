@@ -36,9 +36,11 @@ export function useTouchGestures({
     const handleTouchStart = (event: TouchEvent) => {
       console.log(`🤏 Touch start: ${event.touches.length} touches`);
       
-      // Prevent default to ensure we handle all touch events
-      event.preventDefault();
-      event.stopPropagation();
+      // Only prevent default for multi-touch pinch; allow single-touch vertical scroll to bubble
+      if (event.touches.length >= 2) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
       
       touchStartTime = Date.now();
       lastTouchCount = event.touches.length;
@@ -70,9 +72,11 @@ export function useTouchGestures({
     const handleTouchMove = (event: TouchEvent) => {
       console.log(`🤏 Touch move: ${event.touches.length} touches, isPinching: ${isPinching}`);
       
-      // Always prevent default to ensure we handle all touch events
-      event.preventDefault();
-      event.stopPropagation();
+      // Only prevent default during active pinch (2+ touches)
+      if (event.touches.length >= 2 || isPinching) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
       
       // Fallback: if we detect 2 touches during move but weren't pinching, start pinching
       if (!isPinching && event.touches.length === 2) {

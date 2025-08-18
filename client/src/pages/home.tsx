@@ -145,18 +145,18 @@ export default function Home() {
     
     if (showNetworkView) {
       body.classList.add('network-visible');
-      // Allow scrolling when network is visible and may need it
-      body.style.overflow = 'hidden';
+      // Allow scrolling when network is visible
+      body.style.overflow = 'auto';
     } else {
       body.classList.add('network-hidden');
-      // No scrolling on home page
+      // Lock scroll on home page when network not shown
       body.style.overflow = 'hidden';
     }
     
     // Cleanup on unmount
     return () => {
       body.classList.remove('network-visible', 'network-hidden');
-      body.style.overflow = 'hidden';
+      body.style.overflow = '';
     };
   }, [showNetworkView]);
 

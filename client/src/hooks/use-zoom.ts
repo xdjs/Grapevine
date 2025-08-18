@@ -228,6 +228,12 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     // Universal wheel event handler for mouse scroll and trackpad pinch
     let lastWheelTime = 0;
     const handleWheelZoom = (event: WheelEvent) => {
+      // Only intercept for ctrl/trackpad pinch or when explicitly over the SVG; otherwise allow page scroll
+      const isPinchGesture = event.ctrlKey || Math.abs(event.deltaY) < 1;
+      const targetIsSvg = (event.target as Element)?.closest('svg') === svgRef.current;
+      if (!isPinchGesture && !targetIsSvg) {
+        return; // allow normal page scroll
+      }
       event.preventDefault();
       
       // Reduced sensitivity with longer throttling

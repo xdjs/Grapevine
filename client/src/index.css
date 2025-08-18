@@ -105,7 +105,7 @@
   }
   
   body.network-visible {
-    overflow: hidden !important;
+    overflow: auto !important;
   }
   
   /* Hide scrollbars everywhere except dropdown */
@@ -170,7 +170,7 @@
     html, body {
       height: 100% !important;
       min-height: 100vh !important;
-      overflow: hidden !important; /* Prevent scrolling on home page */
+      overflow: auto !important; /* Allow scrolling when needed */
     }
     
     /* Handle dynamic viewport height on mobile browsers */
@@ -208,7 +208,7 @@
       width: 100% !important;
       height: calc(100vh - 60px - env(safe-area-inset-bottom, 0px)) !important;
       height: calc(calc(var(--vh, 1vh) * 100) - 60px - env(safe-area-inset-bottom, 0px)) !important;
-      overflow: hidden !important;
+      overflow: auto !important;
       padding-bottom: env(safe-area-inset-bottom, 0px) !important; /* Additional padding for safety */
       max-height: calc(100vh - 60px - env(safe-area-inset-bottom, 0px)) !important; /* Prevent overflow */
       max-height: calc(calc(var(--vh, 1vh) * 100) - 60px - env(safe-area-inset-bottom, 0px)) !important;
@@ -243,9 +243,9 @@
     
     /* Prevent any touch scrolling on the network container - only when network is visible */
     .mobile-network-container.network-visible {
-      touch-action: none !important;
-      -webkit-overflow-scrolling: none !important;
-      overscroll-behavior: none !important;
+      touch-action: pan-y !important;
+      -webkit-overflow-scrolling: touch !important;
+      overscroll-behavior: auto !important;
     }
     
     /* Ensure the network group stays within bounds - only when network is visible */
@@ -265,7 +265,7 @@
     
     /* Only hide overflow when network is visible */
     .main-container.network-visible {
-      overflow: hidden !important;
+      overflow: auto !important;
     }
     
     /* Hide footer content on mobile when network is visible */
