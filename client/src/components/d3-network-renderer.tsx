@@ -560,8 +560,6 @@ export default function D3NetworkRenderer({
    * Render node elements with multi-role support and optimized progressive image loading.
    * Single-role nodes get simple circles, multi-role nodes get segmented circles.
    * Includes performance optimizations: lazy loading, viewport culling, and memory management.
-   * 
-   * MODIFIED: Nodes are now displayed immediately with loading spinners, then profile pictures load asynchronously.
    */
   const renderNodes = (
     networkGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
@@ -633,10 +631,11 @@ export default function D3NetworkRenderer({
           .attr("stroke-width", 2);
       }
 
-      // IMMEDIATE DISPLAY: Always show loading spinner for nodes with imageUrl, then load profile pictures asynchronously
+      // Add profile picture support for any node with an imageUrl (optimized)
       if (d.imageUrl) {
         const profileImageSize = d.size - 4; // Leave minimal space for border
         const nodeIndex = nodes.indexOf(d);
+        const shouldLoad = ImageLoadingManager.shouldLoadImage(d, nodeIndex, svgRef.current || undefined);
         
         // Create clipPath for circular image
         const clipId = `clip-${d.id.replace(/[^a-zA-Z0-9]/g, '_')}`;
@@ -666,122 +665,172 @@ export default function D3NetworkRenderer({
         // Add data attribute for viewport culling reference
         group.attr("data-node-id", d.id);
 
-                 // IMMEDIATE DISPLAY: Show loading spinner immediately with enhanced visibility
-         const loadingGroup = group.append("g")
-           .attr("class", "loading-spinner")
-           .style("opacity", 1)
-           .style("z-index", "10") // Ensure spinner appears above other elements
-           .style("pointer-events", "none"); // Prevent interference with node interactions
-         
-         // Get optimal sizing for this node
-         const optimalSize = ImageLoadingManager.getOptimalImageSize(d, svgRef.current || undefined);
-         
-         // Enhanced loading spinner with more prominent styling and faster animation
-         const spinnerSize = Math.max(8, Math.min(16, profileImageSize * 0.4)); // Larger spinner
-         const spinnerCircle = loadingGroup.append("circle")
-           .attr("r", spinnerSize)
-           .attr("fill", "none")
-           .attr("stroke", "#FF0ACF") // Use the same color as artist nodes for consistency
-           .attr("stroke-width", 3) // Thicker stroke for better visibility
-           .attr("stroke-dasharray", "15.7") // Larger dash for better visibility
-           .attr("stroke-linecap", "round")
-           .style("animation", "spin 0.8s linear infinite"); // Faster animation
-         
-         // Add more prominent pulsing background circle
-         const bgSize = profileImageSize * 0.85;
-         loadingGroup.append("circle")
-           .attr("r", bgSize)
-           .attr("fill", "rgba(255, 10, 207, 0.1)") // Semi-transparent magenta
-           .attr("stroke", "rgba(255, 10, 207, 0.3)")
-           .attr("stroke-width", 2)
-           .style("animation", "pulse 1.5s ease-in-out infinite"); // Faster pulse
-         
-         // Add a subtle glow effect for better visibility
-         loadingGroup.append("circle")
-           .attr("r", bgSize + 2)
-           .attr("fill", "none")
-           .attr("stroke", "rgba(255, 10, 207, 0.2)")
-           .attr("stroke-width", 1)
-           .style("animation", "glow 2s ease-in-out infinite");
-         
-         // ASYNCHRONOUS LOADING: Start loading profile picture immediately (no delay)
-         const priority = nodeIndex < ImageLoadingManager.LAZY_LOADING_THRESHOLD ? 'high' : 
-                         d.type === 'artist' ? 'normal' : 'low';
-         
-         // Start loading immediately without setTimeout delay
-         ImageLoadingManager.preloadImage(d.imageUrl, priority)
-           .then((success) => {
-             if (success) {
-               // Image loaded successfully - transition to display with optimal sizing
-               const optimalSize = ImageLoadingManager.getOptimalImageSize(d, svgRef.current || undefined);
-               
-               const image = group.append("image")
-                 .attr("class", "profile-image")
-                 .attr("data-quality", optimalSize.quality)
-                 .attr("x", -profileImageSize)
-                 .attr("y", -profileImageSize)
-                 .attr("width", profileImageSize * 2)
-                 .attr("height", profileImageSize * 2)
-                 .attr("clip-path", `url(#${clipId})`)
+        // Optimized progressive loading with viewport culling
+        if (!shouldLoad) {
+          // For nodes outside viewport or low priority, show placeholder initially
+          const placeholderGroup = group.append("g")
+            .attr("class", "image-placeholder-lazy")
+            .style("opacity", 0.7);
+            
+          placeholderGroup.append("circle")
+            .attr("r", profileImageSize)
+            .attr("fill", "#1a1a1a")
+            .attr("stroke", "#444")
+            .attr("stroke-width", 1);
+            
+          placeholderGroup.append("text")
+            .attr("text-anchor", "middle")
+            .attr("dy", "0.35em")
+            .attr("font-size", "10px")
+            .attr("fill", "#666")
+            .text("⏳");
+          
+          // Mark as not in viewport initially for lazy loading
+          ImageLoadingManager.viewportCache.set(d.id, false);
+            
+        } else if (ImageLoadingManager.isImageReady(d.imageUrl)) {
+          // Mark as loaded and in viewport
+          ImageLoadingManager.viewportCache.set(d.id, true);
+          
+          // Image is already loaded - display immediately with optimal sizing
+          const optimalSize = ImageLoadingManager.getOptimalImageSize(d, svgRef.current || undefined);
+          
+          const image = group.append("image")
+            .attr("class", "profile-image")
+            .attr("data-quality", optimalSize.quality)
+            .attr("x", -profileImageSize)
+            .attr("y", -profileImageSize)
+            .attr("width", profileImageSize * 2)
+            .attr("height", profileImageSize * 2)
+            .attr("clip-path", `url(#${clipId})`)
+            .attr("href", d.imageUrl || '')
+            .attr("crossorigin", "anonymous")
+            .style("opacity", 1)
+            .style("image-rendering", optimalSize.quality === 'low' ? 'pixelated' : 'auto');
+            
+        } else if (ImageLoadingManager.hasImageFailed(d.imageUrl)) {
+          // Image has failed to load - show fallback placeholder
+          const placeholderGroup = group.append("g")
+            .attr("class", "image-placeholder");
+            
+          placeholderGroup.append("circle")
+            .attr("r", profileImageSize)
+            .attr("fill", "#2a2a2a")
+            .attr("stroke", "#555")
+            .attr("stroke-width", 1);
+            
+          placeholderGroup.append("text")
+            .attr("text-anchor", "middle")
+            .attr("dy", "0.35em")
+            .attr("font-size", "12px")
+            .attr("fill", "#888")
+            .text("?");
+            
+        } else {
+          // Image is not yet loaded - show loading spinner and start progressive loading
+          const loadingGroup = group.append("g")
+            .attr("class", "loading-spinner")
+            .style("opacity", 1);
+          
+          // Get optimal sizing for this node
+          const optimalSize = ImageLoadingManager.getOptimalImageSize(d, svgRef.current || undefined);
+          
+          // Enhanced loading spinner with pulsing effect (scaled appropriately)
+          const spinnerSize = Math.max(6, Math.min(12, profileImageSize * 0.3));
+          const spinnerCircle = loadingGroup.append("circle")
+            .attr("r", spinnerSize)
+            .attr("fill", "none")
+            .attr("stroke", optimalSize.quality === 'high' ? "#888" : "#666")
+            .attr("stroke-width", optimalSize.quality === 'high' ? 2 : 1)
+            .attr("stroke-dasharray", "12.57")
+            .attr("stroke-linecap", "round")
+            .style("animation", "spin 1s linear infinite");
+          
+          // Add pulsing background circle (size-optimized)
+          const bgSize = profileImageSize * (optimalSize.quality === 'high' ? 0.9 : 0.7);
+          loadingGroup.append("circle")
+            .attr("r", bgSize)
+            .attr("fill", "rgba(255, 255, 255, 0.05)")
+            .attr("stroke", "rgba(255, 255, 255, 0.1)")
+            .attr("stroke-width", 1)
+            .style("animation", "pulse 2s ease-in-out infinite");
+          
+          // Start progressive loading with priority based on node importance
+          const priority = nodeIndex < ImageLoadingManager.LAZY_LOADING_THRESHOLD ? 'high' : 
+                          d.type === 'artist' ? 'normal' : 'low';
+          
+          ImageLoadingManager.preloadImage(d.imageUrl, priority).then((success) => {
+            if (success) {
+              // Image loaded successfully - transition to display with optimal sizing
+              const optimalSize = ImageLoadingManager.getOptimalImageSize(d, svgRef.current || undefined);
+              
+              const image = group.append("image")
+                .attr("class", "profile-image")
+                .attr("data-quality", optimalSize.quality)
+                .attr("x", -profileImageSize)
+                .attr("y", -profileImageSize)
+                .attr("width", profileImageSize * 2)
+                .attr("height", profileImageSize * 2)
+                .attr("clip-path", `url(#${clipId})`)
                  .attr("href", d.imageUrl || '')
-                 .attr("crossorigin", "anonymous")
-                 .style("opacity", 0)
-                 .style("image-rendering", optimalSize.quality === 'low' ? 'pixelated' : 'auto');
-               
-               // Smooth transition from loading to image
-               loadingGroup.transition()
-                 .duration(300)
-                 .style("opacity", 0)
-                 .on("end", () => loadingGroup.remove());
-               
-               image.transition()
-                 .duration(300)
-                 .style("opacity", 1);
-                 
-             } else {
-               // Image failed to load - transition to placeholder
-               const placeholderGroup = group.append("g")
-                 .attr("class", "image-placeholder")
-                 .style("opacity", 0);
-                 
-               placeholderGroup.append("circle")
-                 .attr("r", profileImageSize)
-                 .attr("fill", "#2a2a2a")
-                 .attr("stroke", "#555")
-                 .attr("stroke-width", 1);
-                 
-               placeholderGroup.append("text")
-                 .attr("text-anchor", "middle")
-                 .attr("dy", "0.35em")
-                 .attr("font-size", "12px")
-                 .attr("fill", "#888")
-                 .text("?");
-               
-               // Smooth transition from loading to placeholder
-               loadingGroup.transition()
-                 .duration(300)
-                 .style("opacity", 0)
-                 .on("end", () => loadingGroup.remove());
-               
-               placeholderGroup.transition()
-                 .duration(300)
-                 .style("opacity", 1);
-             }
-           })
-           .catch((error) => {
-             console.error(`❌ [ImageLoader] Error loading ${d.imageUrl}:`, error);
-             // Remove loading spinner on error
-             loadingGroup.transition()
-               .duration(300)
-               .style("opacity", 0)
-               .on("end", () => loadingGroup.remove());
-           });
-         } // No delay - start loading immediately
-	  })
-	      .on("click", function(event, d) {
-	        // Use the node interactions hook for click handling
-	        nodeInteractions.handleNodeClick(event as MouseEvent, d, this);
-	      });
+                .attr("crossorigin", "anonymous")
+                .style("opacity", 0)
+                .style("image-rendering", optimalSize.quality === 'low' ? 'pixelated' : 'auto');
+              
+              // Smooth transition from loading to image
+              loadingGroup.transition()
+                .duration(300)
+                .style("opacity", 0)
+                .on("end", () => loadingGroup.remove());
+              
+              image.transition()
+                .duration(300)
+                .style("opacity", 1);
+                
+            } else {
+              // Image failed to load - transition to placeholder
+              const placeholderGroup = group.append("g")
+                .attr("class", "image-placeholder")
+                .style("opacity", 0);
+                
+              placeholderGroup.append("circle")
+                .attr("r", profileImageSize)
+                .attr("fill", "#2a2a2a")
+                .attr("stroke", "#555")
+                .attr("stroke-width", 1);
+                
+              placeholderGroup.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", "0.35em")
+                .attr("font-size", "12px")
+                .attr("fill", "#888")
+                .text("?");
+              
+              // Smooth transition from loading to placeholder
+              loadingGroup.transition()
+                .duration(300)
+                .style("opacity", 0)
+                .on("end", () => loadingGroup.remove());
+              
+              placeholderGroup.transition()
+                .duration(300)
+                .style("opacity", 1);
+            }
+          }).catch((error) => {
+            console.error(`❌ [ImageLoader] Error loading ${d.imageUrl}:`, error);
+            // Remove loading spinner on error
+            loadingGroup.transition()
+              .duration(300)
+              .style("opacity", 0)
+              .on("end", () => loadingGroup.remove());
+          });
+        }
+      }
+    })
+      .on("click", function(event, d) {
+        // Use the node interactions hook for click handling
+        nodeInteractions.handleNodeClick(event as MouseEvent, d, this);
+      });
 
     // Setup drag behavior using the node interactions hook
     nodeInteractions.setupDragBehavior(nodeElements);
@@ -1001,7 +1050,7 @@ export default function D3NetworkRenderer({
     });
     // Do NOT override with data.links; when validLinks is empty, render no links.
 
-    // IMMEDIATE DISPLAY: Start background preloading of profile pictures without blocking node rendering
+    // Start optimized batch preloading of profile pictures
     // Only preload for nodes we haven't already batch-preloaded in this session
     const nodesToPreload = data.nodes.filter(node => !preloadedNodeIdsRef.current.has(node.id));
     const imagesToLoad = nodesToPreload
@@ -1014,22 +1063,21 @@ export default function D3NetworkRenderer({
       }))
       .filter(({ url }) => !ImageLoadingManager.isImageReady(url) && !ImageLoadingManager.hasImageFailed(url));
     
-         if (imagesToLoad.length > 0) {
-       console.log(`🚀 [D3Renderer] Starting background preload of ${imagesToLoad.length} profile pictures (non-blocking)`);
-       console.log(`📊 [D3Renderer] Performance stats before loading:`, ImageLoadingManager.getPerformanceStats());
-       
-       // Start background preloading immediately without delay
-       ImageLoadingManager.batchPreloadImages(imagesToLoad).then(() => {
-         console.log(`✅ [D3Renderer] Background preload complete`);
-         console.log(`📊 [D3Renderer] Performance stats after loading:`, ImageLoadingManager.getPerformanceStats());
-         // Mark these nodes as preloaded to prevent future batch preloads for the same set
-         for (const { node } of imagesToLoad) {
-           preloadedNodeIdsRef.current.add(node.id);
-         }
-       }).catch(error => {
-         console.error(`❌ [D3Renderer] Background preload error:`, error);
-       });
-     }
+    if (imagesToLoad.length > 0) {
+      console.log(`🚀 [D3Renderer] Starting optimized batch preload of ${imagesToLoad.length} profile pictures`);
+      console.log(`📊 [D3Renderer] Performance stats before loading:`, ImageLoadingManager.getPerformanceStats());
+      
+      ImageLoadingManager.batchPreloadImages(imagesToLoad).then(() => {
+        console.log(`✅ [D3Renderer] Optimized batch preload complete`);
+        console.log(`📊 [D3Renderer] Performance stats after loading:`, ImageLoadingManager.getPerformanceStats());
+        // Mark these nodes as preloaded to prevent future batch preloads for the same set
+        for (const { node } of imagesToLoad) {
+          preloadedNodeIdsRef.current.add(node.id);
+        }
+      }).catch(error => {
+        console.error(`❌ [D3Renderer] Batch preload error:`, error);
+      });
+    }
 
     // Create network group
     const networkGroup = svg.append("g").attr("class", "network-group");
