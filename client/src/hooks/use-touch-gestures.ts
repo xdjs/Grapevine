@@ -26,21 +26,64 @@ export function useTouchGestures({
     let initialDistance = 0;
     let lastScale = 1;
     let isPinching = false;
-    const pinchThreshold = 0.2; // Increased from 0.1 to 0.2 for less sensitivity
+    const pinchThreshold = 0.05; // Very low threshold for immediate response to pinch gestures
     let pinchCenterX = 0;
     let pinchCenterY = 0;
+    let touchStartTime = 0;
+    let lastTouchCount = 0;
 
     // Custom touch event handlers using existing zoom functions
     const handleTouchStart = (event: TouchEvent) => {
+      console.log(`🤏 Touch start: ${event.touches.length} touches`);
+      
+      // Prevent default to ensure we handle all touch events
+      event.preventDefault();
+      event.stopPropagation();
+      
+      touchStartTime = Date.now();
+      lastTouchCount = event.touches.length;
+      
       if (event.touches.length === 2) {
         console.log("🤏 Starting pinch gesture");
+        isPinching = true;
+        const touch1 = event.touches[0];
+        const touch2 = event.touches[1];
+       
+        // Calculate initial distance and center point
+        initialDistance = Math.sqrt(
+          Math.pow(touch2.clientX - touch1.clientX, 2) +
+          Math.pow(touch2.clientY - touch1.clientY, 2)
+        );
+       
+        // Store the center point of the pinch gesture
+        pinchCenterX = (touch1.clientX + touch2.clientX) / 2;
+        pinchCenterY = (touch1.clientY + touch2.clientY) / 2;
+       
+        lastScale = 1;
+        console.log(`🤏 Initial pinch distance: ${initialDistance.toFixed(2)}, center: (${pinchCenterX.toFixed(2)}, ${pinchCenterY.toFixed(2)})`);
+      } else if (event.touches.length === 1) {
+        // Single touch - could be start of a gesture
+        console.log("🤏 Single touch detected");
+      }
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      console.log(`🤏 Touch move: ${event.touches.length} touches, isPinching: ${isPinching}`);
+      
+      // Always prevent default to ensure we handle all touch events
+      event.preventDefault();
+      event.stopPropagation();
+      
+      // Fallback: if we detect 2 touches during move but weren't pinching, start pinching
+      if (!isPinching && event.touches.length === 2) {
+        console.log("🤏 Fallback: Starting pinch gesture during move");
         isPinching = true;
         const touch1 = event.touches[0];
         const touch2 = event.touches[1];
         
         // Calculate initial distance and center point
         initialDistance = Math.sqrt(
-          Math.pow(touch2.clientX - touch1.clientX, 2) + 
+          Math.pow(touch2.clientX - touch1.clientX, 2) +
           Math.pow(touch2.clientY - touch1.clientY, 2)
         );
         
@@ -49,44 +92,48 @@ export function useTouchGestures({
         pinchCenterY = (touch1.clientY + touch2.clientY) / 2;
         
         lastScale = 1;
-        event.preventDefault();
-        event.stopPropagation();
-      } else if (event.touches.length === 1) {
-        event.preventDefault();
+        console.log(`🤏 Fallback initial pinch distance: ${initialDistance.toFixed(2)}, center: (${pinchCenterX.toFixed(2)}, ${pinchCenterY.toFixed(2)})`);
       }
-    };
-
-    const handleTouchMove = (event: TouchEvent) => {
+      
       if (isPinching && event.touches.length === 2) {
         const touch1 = event.touches[0];
         const touch2 = event.touches[1];
         const currentDistance = Math.sqrt(
-          Math.pow(touch2.clientX - touch1.clientX, 2) + 
+          Math.pow(touch2.clientX - touch1.clientX, 2) +
           Math.pow(touch2.clientY - touch1.clientY, 2)
         );
-        
+       
         // Update the center point of the pinch gesture
         const currentCenterX = (touch1.clientX + touch2.clientX) / 2;
         const currentCenterY = (touch1.clientY + touch2.clientY) / 2;
-        
+       
+        console.log(`🤏 Pinch distance: ${currentDistance.toFixed(2)}, scale change: ${(currentDistance / initialDistance).toFixed(2)}`);
+       
         if (initialDistance > 0) {
           const scaleChange = currentDistance / initialDistance;
-          
+         
           // Use threshold to prevent too frequent updates
           if (Math.abs(scaleChange - lastScale) > pinchThreshold) {
+            console.log(`🤏 Triggering zoom: scale change ${scaleChange.toFixed(2)} vs last ${lastScale.toFixed(2)}, threshold ${pinchThreshold}`);
             if (scaleChange > lastScale) {
               // Pinch out - zoom in using focal point
+              console.log(`🤏 Pinch out - zooming in at (${currentCenterX.toFixed(2)}, ${currentCenterY.toFixed(2)})`);
               onPinchZoomIn(currentCenterX, currentCenterY);
             } else {
               // Pinch in - zoom out using focal point
+              console.log(`🤏 Pinch in - zooming out at (${currentCenterX.toFixed(2)}, ${currentCenterY.toFixed(2)})`);
               onPinchZoomOut(currentCenterX, currentCenterY);
             }
             lastScale = scaleChange;
           }
         }
-        event.preventDefault();
-        event.stopPropagation();
+      } else if (event.touches.length === 1) {
+        // Single touch move - could be part of a gesture
+        console.log("🤏 Single touch move detected");
       }
+      
+      // Update last touch count for fallback detection
+      lastTouchCount = event.touches.length;
     };
 
     const handleTouchEnd = (event: TouchEvent) => {
@@ -105,7 +152,7 @@ export function useTouchGestures({
       
       // Reduced sensitivity with longer throttling
       const now = Date.now();
-      if (now - lastWheelTime < 50) { // Increased from 8ms to 50ms for less sensitivity
+      if (now - lastWheelTime < 150) { // Increased from 50ms to 150ms for much less sensitivity
         return;
       }
       lastWheelTime = now;
@@ -129,6 +176,7 @@ export function useTouchGestures({
 
     // Add touch and wheel event listeners directly to the SVG element
     const svgElement = svgRef.current;
+    console.log('🤏 Setting up touch event listeners on SVG element:', svgElement);
     svgElement.addEventListener('touchstart', handleTouchStart, { passive: false });
     svgElement.addEventListener('touchmove', handleTouchMove, { passive: false });
     svgElement.addEventListener('touchend', handleTouchEnd, { passive: false });

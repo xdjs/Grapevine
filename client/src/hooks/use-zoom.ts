@@ -15,6 +15,7 @@ interface UseZoomProps {
 
 export interface UseZoomReturn {
   currentZoom: number;
+  setCurrentZoom: (zoom: number | ((prev: number) => number)) => void;
   handleZoomIn: () => void;
   handleZoomOut: () => void;
   handleZoomReset: () => void;
@@ -94,34 +95,34 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
   }, [svgRef]);
 
   // Pinch zoom helpers
-  const handlePinchZoomIn = useCallback((focalX: number, focalY: number) => {
-    setCurrentZoom(prevZoom => {
-      const newZoom = Math.min(5, prevZoom * 1.2); // Cap at 5x
-      console.log(`🤏 Pinch zoom in: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
-      applyPinchZoom(newZoom, focalX, focalY);
-      return newZoom;
-    });
-  }, [applyPinchZoom]);
+      const handlePinchZoomIn = useCallback((focalX: number, focalY: number) => {
+      setCurrentZoom(prevZoom => {
+        const newZoom = Math.min(1000, prevZoom * 1.15); // Cap at 1000x (more responsive zoom - 15% increase)
+        console.log(`🤏 Pinch zoom in: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+        applyPinchZoom(newZoom, focalX, focalY);
+        return newZoom;
+      });
+    }, [applyPinchZoom]);
 
-  const handlePinchZoomOut = useCallback((focalX: number, focalY: number) => {
-    setCurrentZoom(prevZoom => {
-      const newZoom = Math.max(0.2, prevZoom / 1.2); // Min 0.2x
-      console.log(`🤏 Pinch zoom out: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
-      applyPinchZoom(newZoom, focalX, focalY);
-      return newZoom;
-    });
-  }, [applyPinchZoom]);
+    const handlePinchZoomOut = useCallback((focalX: number, focalY: number) => {
+      setCurrentZoom(prevZoom => {
+        const newZoom = Math.max(0.001, prevZoom / 1.15); // Min 0.001x (more responsive zoom - 15% decrease)
+        console.log(`🤏 Pinch zoom out: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+        applyPinchZoom(newZoom, focalX, focalY);
+        return newZoom;
+      });
+    }, [applyPinchZoom]);
 
   // Button zoom handlers
   const handleZoomIn = useCallback(() => {
-    const newZoom = Math.min(5, currentZoom * 1.2); // Cap at 5x
+    const newZoom = Math.min(1000, currentZoom * 1.2); // Cap at 1000x (dramatic zoom)
     setCurrentZoom(newZoom);
     applyZoom(newZoom);
     console.log(`Zooming from ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
   }, [currentZoom, applyZoom]);
 
   const handleZoomOut = useCallback(() => {
-    const newZoom = Math.max(0.2, currentZoom / 1.2); // Min 0.2x
+    const newZoom = Math.max(0.001, currentZoom / 1.2); // Min 0.001x (dramatic zoom out)
     setCurrentZoom(newZoom);
     applyZoom(newZoom);
     console.log(`Zooming from ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
@@ -152,7 +153,7 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     let initialDistance = 0;
     let lastScale = 1;
     let isPinching = false;
-    const pinchThreshold = 0.2;
+    const pinchThreshold = 0.5; // Increased threshold for less sensitivity
     let pinchCenterX = 0;
     let pinchCenterY = 0;
 
@@ -231,7 +232,7 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
       
       // Reduced sensitivity with longer throttling
       const now = Date.now();
-      if (now - lastWheelTime < 50) { // Increased from 8ms to 50ms for less sensitivity
+      if (now - lastWheelTime < 150) { // Increased from 50ms to 150ms for much less sensitivity
         return;
       }
       lastWheelTime = now;
@@ -278,7 +279,7 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     // Create zoom behavior for mouse/touch interaction
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.2, 8])
+      .scaleExtent([0.001, 1000])
       .filter((event) => {
         // Block all wheel events since we handle them manually for better zoom control
         // Block touch events since we handle them manually for better pinch zoom control
@@ -377,6 +378,7 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
 
   return {
     currentZoom,
+    setCurrentZoom,
     handleZoomIn,
     handleZoomOut,
     handleZoomReset,

@@ -79,6 +79,7 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
   const zoom = useZoom({ svgRef, visible, onZoomChange });
   const { 
     currentZoom, 
+    setCurrentZoom,
     handleZoomIn, 
     handleZoomOut, 
     handleZoomReset, 
@@ -91,13 +92,15 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
     svgRef,
     visible,
     onPinchZoomIn: (focalX: number, focalY: number) => {
-      const newZoom = Math.min(5, currentZoom * 1.2);
+      const newZoom = Math.min(1000, currentZoom * 1.15); // Cap at 1000x (more responsive zoom - 15% increase)
       console.log(`🤏 Pinch zoom in: ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+      setCurrentZoom(newZoom); // Update the zoom state
       applyPinchZoom(newZoom, focalX, focalY);
     },
     onPinchZoomOut: (focalX: number, focalY: number) => {
-      const newZoom = Math.max(0.2, currentZoom / 1.2);
+      const newZoom = Math.max(0.001, currentZoom / 1.15); // Min 0.001x (more responsive zoom - 15% decrease)
       console.log(`🤏 Pinch zoom out: ${currentZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+      setCurrentZoom(newZoom); // Update the zoom state
       applyPinchZoom(newZoom, focalX, focalY);
     }
   });
@@ -394,6 +397,12 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
             className="w-full h-full" 
             role="img" 
             aria-label="Music collaboration network visualization"
+            style={{ 
+              touchAction: 'none',
+              WebkitTouchCallout: 'none',
+              WebkitUserSelect: 'none',
+              userSelect: 'none'
+            }}
           />
 
           {toast && (
