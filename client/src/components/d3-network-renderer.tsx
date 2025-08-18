@@ -565,6 +565,7 @@ export default function D3NetworkRenderer({
     networkGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
     nodes: NetworkNode[]
   ) => {
+    const MIN_PROFILE_SPINNER_MS = 1000; // Ensure spinner is visible briefly before showing images
     const nodeElements = networkGroup
       .selectAll(".node")
       .data(nodes)
@@ -656,6 +657,9 @@ export default function D3NetworkRenderer({
           .attr("stroke", "rgba(255, 255, 255, 0.1)")
           .attr("stroke-width", 1)
           .style("animation", "pulse 2s ease-in-out infinite");
+
+        // Record spinner start time so we can ensure a minimum visible duration
+        group.attr("data-spinner-start", String(Date.now()));
       }
 
       // Add profile picture support for any node with an imageUrl (optimized)
@@ -719,9 +723,33 @@ export default function D3NetworkRenderer({
           // Mark as loaded and in viewport
           ImageLoadingManager.viewportCache.set(d.id, true);
           
-          // Image is already loaded - display immediately with optimal sizing
+          // Ensure a visible loading indicator even if the image is already in cache
+          let loadingGroup = group.select<SVGGElement>("g.loading-spinner");
+          if (loadingGroup.empty()) {
+            const spinnerSize = Math.max(6, Math.min(12, profileImageSize * 0.3));
+            const spinner = group.append("g").attr("class", "loading-spinner").style("opacity", 1);
+            spinner.append("circle")
+              .attr("r", spinnerSize)
+              .attr("fill", "none")
+              .attr("stroke", "#888")
+              .attr("stroke-width", 2)
+              .attr("stroke-dasharray", "12.57")
+              .attr("stroke-linecap", "round")
+              .style("animation", "spin 1s linear infinite");
+            spinner.append("circle")
+              .attr("r", profileImageSize * 0.9)
+              .attr("fill", "rgba(255, 255, 255, 0.05)")
+              .attr("stroke", "rgba(255, 255, 255, 0.1)")
+              .attr("stroke-width", 1)
+              .style("animation", "pulse 2s ease-in-out infinite");
+            loadingGroup = spinner as any;
+            if (!group.attr("data-spinner-start")) {
+              group.attr("data-spinner-start", String(Date.now()));
+            }
+          }
+
+          // Prepare image with fade-in after minimum spinner time
           const optimalSize = ImageLoadingManager.getOptimalImageSize(d, svgRef.current || undefined);
-          
           const image = group.append("image")
             .attr("class", "profile-image")
             .attr("data-quality", optimalSize.quality)
@@ -732,8 +760,23 @@ export default function D3NetworkRenderer({
             .attr("clip-path", `url(#${clipId})`)
             .attr("href", d.imageUrl || '')
             .attr("crossorigin", "anonymous")
-            .style("opacity", 1)
+            .style("opacity", 0)
             .style("image-rendering", optimalSize.quality === 'low' ? 'pixelated' : 'auto');
+
+          const startAttrReady = group.attr("data-spinner-start");
+          const startMsReady = startAttrReady ? parseInt(startAttrReady, 10) : Date.now();
+          const elapsedReady = Date.now() - startMsReady;
+          const remainingReady = Math.max(0, MIN_PROFILE_SPINNER_MS - elapsedReady);
+
+          (image as any).transition()
+            .delay(remainingReady)
+            .duration(300)
+            .style("opacity", 1);
+          (loadingGroup as any).transition()
+            .delay(remainingReady)
+            .duration(300)
+            .style("opacity", 0)
+            .on("end", () => (loadingGroup as any).remove());
             
         } else if (ImageLoadingManager.hasImageFailed(d.imageUrl)) {
           // Image has failed to load - show fallback placeholder
@@ -782,6 +825,9 @@ export default function D3NetworkRenderer({
             .attr("stroke-width", 1)
             .style("animation", "pulse 2s ease-in-out infinite");
           
+          // Record spinner start to enforce minimum visible time
+          group.attr("data-spinner-start", String(Date.now()));
+
           // Start progressive loading with priority based on node importance
           const priority = nodeIndex < ImageLoadingManager.LAZY_LOADING_THRESHOLD ? 'high' : 
                           d.type === 'artist' ? 'normal' : 'low';
@@ -804,13 +850,20 @@ export default function D3NetworkRenderer({
                 .style("opacity", 0)
                 .style("image-rendering", optimalSize.quality === 'low' ? 'pixelated' : 'auto');
               
-              // Smooth transition from loading to image
+              // Enforce minimum spinner time before showing the image
+              const startAttr = group.attr("data-spinner-start");
+              const startMs = startAttr ? parseInt(startAttr, 10) : Date.now();
+              const elapsed = Date.now() - startMs;
+              const remaining = Math.max(0, MIN_PROFILE_SPINNER_MS - elapsed);
+
               loadingGroup.transition()
+                .delay(remaining)
                 .duration(300)
                 .style("opacity", 0)
                 .on("end", () => loadingGroup.remove());
               
               image.transition()
+                .delay(remaining)
                 .duration(300)
                 .style("opacity", 1);
                 
@@ -833,20 +886,32 @@ export default function D3NetworkRenderer({
                 .attr("fill", "#888")
                 .text("?");
               
-              // Smooth transition from loading to placeholder
+              // Enforce minimum spinner time before showing the placeholder
+              const startAttr = group.attr("data-spinner-start");
+              const startMs = startAttr ? parseInt(startAttr, 10) : Date.now();
+              const elapsed = Date.now() - startMs;
+              const remaining = Math.max(0, MIN_PROFILE_SPINNER_MS - elapsed);
+
               loadingGroup.transition()
+                .delay(remaining)
                 .duration(300)
                 .style("opacity", 0)
                 .on("end", () => loadingGroup.remove());
               
               placeholderGroup.transition()
+                .delay(remaining)
                 .duration(300)
                 .style("opacity", 1);
             }
           }).catch((error) => {
             console.error(`❌ [ImageLoader] Error loading ${d.imageUrl}:`, error);
             // Remove loading spinner on error
+            const startAttr = group.attr("data-spinner-start");
+            const startMs = startAttr ? parseInt(startAttr, 10) : Date.now();
+            const elapsed = Date.now() - startMs;
+            const remaining = Math.max(0, MIN_PROFILE_SPINNER_MS - elapsed);
             loadingGroup.transition()
+              .delay(remaining)
               .duration(300)
               .style("opacity", 0)
               .on("end", () => loadingGroup.remove());
