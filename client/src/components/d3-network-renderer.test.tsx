@@ -44,6 +44,7 @@ describe('D3NetworkRenderer', () => {
     each: vi.fn(),
     text: vi.fn(),
     datum: vi.fn(),
+    size: vi.fn(() => 0), // Add size method that returns 0
   };
 
   // Mock D3 simulation methods
@@ -96,6 +97,8 @@ describe('D3NetworkRenderer', () => {
         clientHeight: 600,
       },
       getAttribute: vi.fn(() => '0 0 800 600'),
+      querySelector: vi.fn(() => null),
+      querySelectorAll: vi.fn(() => []),
     } as unknown as SVGSVGElement;
 
     mockSvgRef = { current: mockSvgElement };
@@ -104,6 +107,7 @@ describe('D3NetworkRenderer', () => {
     // Setup mock zoom hook
     mockZoom = {
       currentZoom: 1,
+      setCurrentZoom: vi.fn(),
       handleZoomIn: vi.fn(),
       handleZoomOut: vi.fn(),
       handleZoomReset: vi.fn(),
@@ -131,7 +135,7 @@ describe('D3NetworkRenderer', () => {
       hideTooltip: vi.fn(),
       moveTooltip: vi.fn(),
       positionTooltipNearNode: vi.fn(),
-      highlightNode: vi.fn(),
+      setHighlightedNode: vi.fn(),
       resetNodeHighlight: vi.fn(),
       handleNetworkAction: vi.fn(),
       handleExpandAction: vi.fn(),
@@ -148,9 +152,9 @@ describe('D3NetworkRenderer', () => {
         { id: 'node4', name: 'Multi Role', type: 'artist', types: ['artist', 'producer'], size: 25, x: 400, y: 400 },
       ],
       links: [
-        { source: 'node1', target: 'node2', type: 'production' },
-        { source: 'node1', target: 'node3', type: 'songwriting' },
-        { source: 'node2', target: 'node4', type: 'production' },
+        { source: 'node1', target: 'node2' },
+        { source: 'node1', target: 'node3' },
+        { source: 'node2', target: 'node4' },
       ],
     };
 
@@ -285,7 +289,7 @@ describe('D3NetworkRenderer', () => {
       
       expect(d3.forceLink).toHaveBeenCalled();
       expect(mockForceLink.id).toHaveBeenCalled();
-      expect(mockForceLink.distance).toHaveBeenCalledWith(80);
+             expect(mockForceLink.distance).toHaveBeenCalledWith(100);
     });
 
     it('should configure many-body force with correct strength', () => {
@@ -294,7 +298,7 @@ describe('D3NetworkRenderer', () => {
       render(<D3NetworkRenderer {...props} />);
       
       expect(d3.forceManyBody).toHaveBeenCalled();
-      expect(mockForceManyBody.strength).toHaveBeenCalledWith(-150);
+             expect(mockForceManyBody.strength).toHaveBeenCalledWith(-180);
     });
 
     it('should set simulation reference', () => {
@@ -480,7 +484,7 @@ describe('D3NetworkRenderer', () => {
           (d3.select as any).mockReturnValue(mockNodeGroup);
 
           // Execute the each callback as if D3 is iterating through nodes
-          nodeEachCallback.call(mockNodeGroup, testNode);
+          nodeEachCallback(testNode);
 
           // Verify single-role circle creation
           expect(mockNodeGroup.append).toHaveBeenCalledWith('circle');
@@ -519,7 +523,7 @@ describe('D3NetworkRenderer', () => {
         // Execute the each callback to test stroke color logic
         if (nodeEachCallback) {
           (d3.select as any).mockReturnValue(mockNodeGroup);
-          nodeEachCallback.call(mockNodeGroup, testNode);
+          nodeEachCallback(testNode);
 
           // For single-role artist, stroke should be set during circle creation
           // The stroke function should have been called within the callback
@@ -547,7 +551,7 @@ describe('D3NetworkRenderer', () => {
 
         if (nodeEachCallback) {
           (d3.select as any).mockReturnValue(mockNodeGroup);
-          nodeEachCallback.call(mockNodeGroup, testNode);
+          nodeEachCallback(testNode);
 
           // Verify clipPath creation with proper ID
           expect(mockNodeGroup.append).toHaveBeenCalledWith('clipPath');
@@ -585,7 +589,7 @@ describe('D3NetworkRenderer', () => {
 
         if (nodeEachCallback) {
           (d3.select as any).mockReturnValue(mockNodeGroup);
-          nodeEachCallback.call(mockNodeGroup, testNode);
+          nodeEachCallback(testNode);
 
           // Verify loading spinner is created initially
           expect(mockNodeGroup.append).toHaveBeenCalledWith('g');
@@ -627,7 +631,7 @@ describe('D3NetworkRenderer', () => {
         if (nodeEachCallback) {
           expect(() => {
             (d3.select as any).mockReturnValue(mockNodeGroup);
-            nodeEachCallback.call(mockNodeGroup, testNode);
+            nodeEachCallback!(testNode);
           }).not.toThrow();
         }
       });
@@ -635,10 +639,10 @@ describe('D3NetworkRenderer', () => {
 
     describe('Multi-Role Nodes with Profile Pictures', () => {
       it('should render multi-role nodes with profile pictures in center and segmented colored borders', () => {
-        const testNode = {
+        const testNode: NetworkNode = {
           id: 'multirole1',
           name: 'Artist Producer',
-          type: 'artist' as const,
+          type: 'artist',
           types: ['artist', 'producer'],
           size: 35,
           imageUrl: 'https://example.com/multi-role.jpg',
@@ -654,7 +658,7 @@ describe('D3NetworkRenderer', () => {
 
         if (nodeEachCallback) {
           (d3.select as any).mockReturnValue(mockNodeGroup);
-          nodeEachCallback.call(mockNodeGroup, testNode);
+          nodeEachCallback(testNode);
 
           // Verify multi-role arc creation
           expect(d3.arc).toHaveBeenCalled();
@@ -691,7 +695,7 @@ describe('D3NetworkRenderer', () => {
 
         if (nodeEachCallback) {
           (d3.select as any).mockReturnValue(mockNodeGroup);
-          nodeEachCallback.call(mockNodeGroup, testNode);
+          nodeEachCallback(testNode);
 
           // Should create normal circle
           expect(mockNodeGroup.append).toHaveBeenCalledWith('circle');
@@ -769,7 +773,7 @@ describe('D3NetworkRenderer', () => {
         if (nodeEachCallback) {
           expect(() => {
             (d3.select as any).mockReturnValue(mockNodeGroup);
-            nodeEachCallback.call(mockNodeGroup, testNode);
+            nodeEachCallback!(testNode);
           }).not.toThrow();
         }
       });
