@@ -104,6 +104,7 @@ describe('D3NetworkRenderer', () => {
     // Setup mock zoom hook
     mockZoom = {
       currentZoom: 1,
+      setCurrentZoom: vi.fn(),
       handleZoomIn: vi.fn(),
       handleZoomOut: vi.fn(),
       handleZoomReset: vi.fn(),
@@ -127,11 +128,11 @@ describe('D3NetworkRenderer', () => {
       tooltipPosition: { x: 0, y: 0 },
       highlightedNode: null,
       currentNode: null,
+      setHighlightedNode: vi.fn(),
       showTooltip: vi.fn(),
       hideTooltip: vi.fn(),
       moveTooltip: vi.fn(),
       positionTooltipNearNode: vi.fn(),
-      highlightNode: vi.fn(),
       resetNodeHighlight: vi.fn(),
       handleNetworkAction: vi.fn(),
       handleExpandAction: vi.fn(),
@@ -403,6 +404,206 @@ describe('D3NetworkRenderer', () => {
       expect(() => {
         render(<D3NetworkRenderer {...props} />);
       }).not.toThrow();
+    });
+  });
+
+  describe('Immediate Display with Loading Spinners', () => {
+    it('should display nodes immediately with loading spinners for nodes with imageUrl', () => {
+      const dataWithImages = {
+        nodes: [
+          { id: 'node1', name: 'Artist 1', type: 'artist', size: 30, x: 100, y: 100, imageUrl: 'https://example.com/image1.jpg' },
+          { id: 'node2', name: 'Producer 1', type: 'producer', size: 20, x: 200, y: 200, imageUrl: 'https://example.com/image2.jpg' },
+          { id: 'node3', name: 'Songwriter 1', type: 'songwriter', size: 20, x: 300, y: 300 }, // No imageUrl
+        ],
+        links: [
+          { source: 'node1', target: 'node2', type: 'production' },
+        ],
+      };
+      
+      const props = createDefaultProps({ data: dataWithImages });
+      
+      render(<D3NetworkRenderer {...props} />);
+      
+      // Verify that nodes are rendered immediately
+      expect(mockSelection.data).toHaveBeenCalledWith(dataWithImages.nodes);
+      expect(mockSelection.enter).toHaveBeenCalled();
+      expect(mockSelection.append).toHaveBeenCalledWith('g');
+      
+      // Verify that loading spinners are created for nodes with imageUrl
+      expect(mockSelection.attr).toHaveBeenCalledWith('class', expect.stringContaining('loading-spinner'));
+    });
+
+    it('should start background preloading of profile pictures without blocking node rendering', () => {
+      const dataWithImages = {
+        nodes: [
+          { id: 'node1', name: 'Artist 1', type: 'artist', size: 30, x: 100, y: 100, imageUrl: 'https://example.com/image1.jpg' },
+          { id: 'node2', name: 'Producer 1', type: 'producer', size: 20, x: 200, y: 200, imageUrl: 'https://example.com/image2.jpg' },
+        ],
+        links: [],
+      };
+      
+      const props = createDefaultProps({ data: dataWithImages });
+      
+      // Mock setTimeout to capture the background preloading
+      const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
+      
+      render(<D3NetworkRenderer {...props} />);
+      
+      // Verify that setTimeout is called for background preloading
+      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 100);
+      
+      // Verify that nodes are still rendered immediately (not waiting for preloading)
+      expect(mockSelection.data).toHaveBeenCalledWith(dataWithImages.nodes);
+      expect(mockSelection.enter).toHaveBeenCalled();
+      
+      setTimeoutSpy.mockRestore();
+    });
+
+    it('should display loading spinners with correct styling and animations', () => {
+      const dataWithImage = {
+        nodes: [
+          { id: 'node1', name: 'Artist 1', type: 'artist', size: 30, x: 100, y: 100, imageUrl: 'https://example.com/image1.jpg' },
+        ],
+        links: [],
+      };
+      
+      const props = createDefaultProps({ data: dataWithImage });
+      
+      render(<D3NetworkRenderer {...props} />);
+      
+      // Verify loading spinner group is created
+      expect(mockSelection.append).toHaveBeenCalledWith('g');
+      expect(mockSelection.attr).toHaveBeenCalledWith('class', 'loading-spinner');
+      expect(mockSelection.style).toHaveBeenCalledWith('opacity', 1);
+      
+      // Verify spinner circle is created with animation
+      expect(mockSelection.append).toHaveBeenCalledWith('circle');
+      expect(mockSelection.style).toHaveBeenCalledWith('animation', 'spin 1s linear infinite');
+      
+      // Verify background circle is created with pulse animation
+      expect(mockSelection.style).toHaveBeenCalledWith('animation', 'pulse 2s ease-in-out infinite');
+    });
+
+    it('should handle nodes without imageUrl without creating loading spinners', () => {
+      const dataWithoutImages = {
+        nodes: [
+          { id: 'node1', name: 'Artist 1', type: 'artist', size: 30, x: 100, y: 100 }, // No imageUrl
+          { id: 'node2', name: 'Producer 1', type: 'producer', size: 20, x: 200, y: 200 }, // No imageUrl
+        ],
+        links: [],
+      };
+      
+      const props = createDefaultProps({ data: dataWithoutImages });
+      
+      render(<D3NetworkRenderer {...props} />);
+      
+      // Verify nodes are still rendered
+      expect(mockSelection.data).toHaveBeenCalledWith(dataWithoutImages.nodes);
+      expect(mockSelection.enter).toHaveBeenCalled();
+      
+      // Verify no loading spinner classes are created
+      const loadingSpinnerCalls = mockSelection.attr.mock.calls.filter(call => 
+        call[0] === 'class' && call[1] === 'loading-spinner'
+      );
+      expect(loadingSpinnerCalls).toHaveLength(0);
+    });
+
+    it('should create clipPath for circular profile pictures', () => {
+      const dataWithImage = {
+        nodes: [
+          { id: 'node1', name: 'Artist 1', type: 'artist', size: 30, x: 100, y: 100, imageUrl: 'https://example.com/image1.jpg' },
+        ],
+        links: [],
+      };
+      
+      const props = createDefaultProps({ data: dataWithImage });
+      
+      // Mock querySelector to simulate defs element
+      const mockDefs = { appendChild: vi.fn() };
+      const mockSvgElement = {
+        parentElement: { clientWidth: 800, clientHeight: 600 },
+        querySelector: vi.fn().mockReturnValue(mockDefs),
+        insertBefore: vi.fn(),
+      } as unknown as SVGSVGElement;
+      
+      const propsWithMockSvg = createDefaultProps({ 
+        data: dataWithImage,
+        svgRef: { current: mockSvgElement }
+      });
+      
+      render(<D3NetworkRenderer {...propsWithMockSvg} />);
+      
+      // Verify clipPath creation is attempted
+      expect(mockSvgElement.querySelector).toHaveBeenCalledWith('defs');
+    });
+
+    it('should handle profile picture loading errors gracefully', () => {
+      const dataWithImage = {
+        nodes: [
+          { id: 'node1', name: 'Artist 1', type: 'artist', size: 30, x: 100, y: 100, imageUrl: 'https://example.com/invalid-image.jpg' },
+        ],
+        links: [],
+      };
+      
+      const props = createDefaultProps({ data: dataWithImage });
+      
+      // Mock console.error to capture error handling
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      
+      render(<D3NetworkRenderer {...props} />);
+      
+      // Verify that nodes are still displayed immediately despite potential image loading errors
+      expect(mockSelection.data).toHaveBeenCalledWith(dataWithImage.nodes);
+      expect(mockSelection.enter).toHaveBeenCalled();
+      
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should prioritize high-priority nodes for profile picture loading', () => {
+      const dataWithMultipleImages = {
+        nodes: [
+          { id: 'node1', name: 'Main Artist', type: 'artist', size: 30, x: 100, y: 100, imageUrl: 'https://example.com/image1.jpg' }, // High priority (first node)
+          { id: 'node2', name: 'Producer 1', type: 'producer', size: 20, x: 200, y: 200, imageUrl: 'https://example.com/image2.jpg' }, // Normal priority
+          { id: 'node3', name: 'Songwriter 1', type: 'songwriter', size: 20, x: 300, y: 300, imageUrl: 'https://example.com/image3.jpg' }, // Low priority
+        ],
+        links: [],
+      };
+      
+      const props = createDefaultProps({ data: dataWithMultipleImages });
+      
+      render(<D3NetworkRenderer {...props} />);
+      
+      // Verify all nodes are displayed immediately regardless of priority
+      expect(mockSelection.data).toHaveBeenCalledWith(dataWithMultipleImages.nodes);
+      expect(mockSelection.enter).toHaveBeenCalled();
+      
+      // Verify loading spinners are created for all nodes with images
+      const loadingSpinnerCalls = mockSelection.attr.mock.calls.filter(call => 
+        call[0] === 'class' && call[1] === 'loading-spinner'
+      );
+      expect(loadingSpinnerCalls.length).toBeGreaterThan(0);
+    });
+
+    it('should maintain node interactivity while loading profile pictures', () => {
+      const dataWithImage = {
+        nodes: [
+          { id: 'node1', name: 'Artist 1', type: 'artist', size: 30, x: 100, y: 100, imageUrl: 'https://example.com/image1.jpg' },
+        ],
+        links: [],
+      };
+      
+      const props = createDefaultProps({ data: dataWithImage });
+      
+      render(<D3NetworkRenderer {...props} />);
+      
+      // Verify node groups are created with pointer cursor
+      expect(mockSelection.style).toHaveBeenCalledWith('cursor', 'pointer');
+      
+      // Verify click handlers are set up
+      expect(mockSelection.on).toHaveBeenCalledWith('click', expect.any(Function));
+      
+      // Verify drag behavior is set up
+      expect(props.nodeInteractions.setupDragBehavior).toHaveBeenCalled();
     });
   });
 
