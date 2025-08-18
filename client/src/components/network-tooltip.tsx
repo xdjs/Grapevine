@@ -142,29 +142,29 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
     if (!ctx) return '';
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, mobileIconPx, mobileIconPx);
-    // Draw two-person icon in pink (match other icons)
+    // Draw two-person icon in pink to match desktop style
     ctx.strokeStyle = '#ff69b4';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
-    const headR = 2; 
-    const headY = 5; 
-    const cx1 = (mobileIconPx / 2) - 2.5; // left head center
-    const cx2 = (mobileIconPx / 2) + 2.5; // right head center
     // Heads
+    const headR = 2;
+    const headY = 5;
+    const cxLeft = (mobileIconPx / 2) - 2.5;
+    const cxRight = (mobileIconPx / 2) + 2.5;
     ctx.beginPath();
-    ctx.arc(cx1, headY, headR, 0, Math.PI * 2);
+    ctx.arc(cxLeft, headY, headR, 0, Math.PI * 2);
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(cx2, headY, headR, 0, Math.PI * 2);
+    ctx.arc(cxRight, headY, headR, 0, Math.PI * 2);
     ctx.stroke();
     // Shoulders/torso (semi-circles)
     const torsoY = 10;
     const torsoR = 3.5;
     ctx.beginPath();
-    ctx.arc(cx1, torsoY, torsoR, Math.PI, 0);
+    ctx.arc(cxLeft, torsoY, torsoR, Math.PI, 0);
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(cx2, torsoY, torsoR, Math.PI, 0);
+    ctx.arc(cxRight, torsoY, torsoR, Math.PI, 0);
     ctx.stroke();
     return canvas.toDataURL('image/png');
   }, [isMobile]);
