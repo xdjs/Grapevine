@@ -27,14 +27,13 @@ export interface UseZoomReturn {
 export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoomReturn {
   const [currentZoom, setCurrentZoom] = useState(1);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
-  const pendingScaleRef = useRef<number | null>(null);
+  const pendingZoomRef = useRef<{ scale: number; focal?: [number, number] } | null>(null);
 
   // Zoom function for buttons (centered zoom) - use d3.zoom to keep pan/zoom consistent
   const applyZoom = useCallback((scale: number) => {
-    if (!svgRef.current) return;
-    if (!zoomRef.current) {
-      // Defer until zoom behavior is initialized
-      pendingScaleRef.current = scale;
+    if (!svgRef.current || !zoomRef.current) {
+      // Defer until zoom is initialized
+      pendingZoomRef.current = { scale };
       return;
     }
     const svg = d3.select(svgRef.current);
@@ -43,16 +42,16 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
 
   // Zoom function for pinch gestures (zoom around focal point) via d3.zoom
   const applyPinchZoom = useCallback((scale: number, focalX: number, focalY: number) => {
-    if (!svgRef.current) return;
-    if (!zoomRef.current) {
-      pendingScaleRef.current = scale;
+    if (!svgRef.current || !zoomRef.current) {
+      pendingZoomRef.current = { scale, focal: [focalX, focalY] };
       return;
     }
-    const svgSel = d3.select(svgRef.current);
-    const rect = svgRef.current.getBoundingClientRect();
+    const svgEl = svgRef.current;
+    const rect = svgEl.getBoundingClientRect();
     const localX = focalX - rect.left;
     const localY = focalY - rect.top;
-    (zoomRef.current as any).scaleTo(svgSel, scale, [localX, localY]);
+    const svg = d3.select(svgEl);
+    (zoomRef.current as any).scaleTo(svg, scale, [localX, localY]);
   }, [svgRef]);
 
   // Pinch zoom helpers
@@ -97,7 +96,137 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     console.log('Zoom and position reset to center');
   }, [svgRef]);
 
-  // Touch and wheel are handled by useTouchGestures to avoid conflicts here
+  // Touch and wheel event handlers
+  const setupTouchAndWheelHandlers = useCallback(() => {
+    if (!svgRef.current) return () => {};
+
+    // Pinch zoom variables
+    let initialDistance = 0;
+    let lastScale = 1;
+    let isPinching = false;
+    const pinchThreshold = 0.5; // Increased threshold for less sensitivity
+    let pinchCenterX = 0;
+    let pinchCenterY = 0;
+
+    // Custom touch event handlers
+    const handleTouchStart = (event: TouchEvent) => {
+      if (event.touches.length === 2) {
+        console.log("🤏 Starting pinch gesture");
+        isPinching = true;
+        const touch1 = event.touches[0];
+        const touch2 = event.touches[1];
+        
+        // Calculate initial distance and center point
+        initialDistance = Math.sqrt(
+          Math.pow(touch2.clientX - touch1.clientX, 2) + 
+          Math.pow(touch2.clientY - touch1.clientY, 2)
+        );
+        
+        // Store the center point of the pinch gesture
+        pinchCenterX = (touch1.clientX + touch2.clientX) / 2;
+        pinchCenterY = (touch1.clientY + touch2.clientY) / 2;
+        
+        lastScale = 1;
+        event.preventDefault();
+        event.stopPropagation();
+      } else if (event.touches.length === 1) {
+        event.preventDefault();
+      }
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (isPinching && event.touches.length === 2) {
+        const touch1 = event.touches[0];
+        const touch2 = event.touches[1];
+        const currentDistance = Math.sqrt(
+          Math.pow(touch2.clientX - touch1.clientX, 2) + 
+          Math.pow(touch2.clientY - touch1.clientY, 2)
+        );
+        
+        // Update the center point of the pinch gesture
+        const currentCenterX = (touch1.clientX + touch2.clientX) / 2;
+        const currentCenterY = (touch1.clientY + touch2.clientY) / 2;
+        
+        if (initialDistance > 0) {
+          const scaleChange = currentDistance / initialDistance;
+          
+          // Use threshold to prevent too frequent updates
+          if (Math.abs(scaleChange - lastScale) > pinchThreshold) {
+            if (scaleChange > lastScale) {
+              // Pinch out - zoom in using focal point
+              handlePinchZoomIn(currentCenterX, currentCenterY);
+            } else {
+              // Pinch in - zoom out using focal point
+              handlePinchZoomOut(currentCenterX, currentCenterY);
+            }
+            lastScale = scaleChange;
+          }
+        }
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      if (isPinching) {
+        console.log("🤏 Ending pinch gesture");
+        isPinching = false;
+        initialDistance = 0;
+        lastScale = 1;
+      }
+    };
+
+    // Universal wheel event handler for mouse scroll and trackpad pinch
+    let lastWheelTime = 0;
+    const handleWheelZoom = (event: WheelEvent) => {
+      // Only intercept for ctrl/trackpad pinch or when explicitly over the SVG; otherwise allow page scroll
+      const isPinchGesture = event.ctrlKey || Math.abs(event.deltaY) < 1;
+      const targetIsSvg = (event.target as Element)?.closest('svg') === svgRef.current;
+      if (!isPinchGesture && !targetIsSvg) {
+        return; // allow normal page scroll
+      }
+      event.preventDefault();
+      
+      // Reduced sensitivity with longer throttling
+      const now = Date.now();
+      if (now - lastWheelTime < 150) { // Increased from 50ms to 150ms for much less sensitivity
+        return;
+      }
+      lastWheelTime = now;
+      
+      // Use mouse position (element-local) as focal point for wheel zoom
+      const rect = svgRef.current!.getBoundingClientRect();
+      const focalX = event.clientX - rect.left;
+      const focalY = event.clientY - rect.top;
+      
+      // Determine zoom direction based on deltaY
+      const zoomIn = event.deltaY < 0;
+      
+      // Immediate zoom for smooth response
+      if (zoomIn) {
+        handlePinchZoomIn(focalX, focalY);
+        console.log(event.ctrlKey ? '🖱️ Trackpad pinch zoom in' : '🖱️ Mouse wheel zoom in');
+      } else {
+        handlePinchZoomOut(focalX, focalY);
+        console.log(event.ctrlKey ? '🖱️ Trackpad pinch zoom out' : '🖱️ Mouse wheel zoom out');
+      }
+    };
+
+    // Add event listeners to SVG element
+    const svgElement = svgRef.current;
+    svgElement.addEventListener('touchstart', handleTouchStart, { passive: false });
+    svgElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+    svgElement.addEventListener('touchend', handleTouchEnd, { passive: false });
+    svgElement.addEventListener('wheel', handleWheelZoom, { passive: false });
+
+    // Return cleanup function
+    return () => {
+      svgElement.removeEventListener('touchstart', handleTouchStart);
+      svgElement.removeEventListener('touchmove', handleTouchMove);
+      svgElement.removeEventListener('touchend', handleTouchEnd);
+      svgElement.removeEventListener('wheel', handleWheelZoom);
+    };
+  }, [svgRef, handlePinchZoomIn, handlePinchZoomOut]);
 
   // Setup D3 zoom behavior
   const setupZoomBehavior = useCallback((networkGroup: d3.Selection<SVGGElement, unknown, null, undefined>) => {
@@ -143,13 +272,25 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     svg.call(zoom);
     zoomRef.current = zoom;
 
-    // Apply any pending scale if a zoom action happened before behavior was ready
-    if (pendingScaleRef.current != null) {
-      try {
-        (zoomRef.current as any).scaleTo(svg, pendingScaleRef.current);
-      } finally {
-        pendingScaleRef.current = null;
+    // Initialize identity transform and notify parent
+    const initial = d3.zoomIdentity;
+    (zoomRef.current as any).transform(svg, initial);
+    setCurrentZoom(initial.k);
+    onZoomChange({ k: initial.k, x: initial.x, y: initial.y });
+
+    // Apply any pending zoom requested before zoom initialized
+    if (pendingZoomRef.current) {
+      const { scale, focal } = pendingZoomRef.current;
+      if (focal) {
+        const rect = svgRef.current!.getBoundingClientRect();
+        const localX = focal[0] - rect.left;
+        const localY = focal[1] - rect.top;
+        (zoomRef.current as any).scaleTo(svg, scale, [localX, localY]);
+      } else {
+        (zoomRef.current as any).scaleTo(svg, scale);
       }
+      setCurrentZoom(scale);
+      pendingZoomRef.current = null;
     }
 
     // Disable only touch and double-click zoom behaviors; keep mouse drag for panning
@@ -187,7 +328,10 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     };
   }, [visible, handleZoomIn, handleZoomOut, handleZoomReset]);
 
-  // Touch/wheel handled in separate hook
+  // Touch and wheel events are handled by useTouchGestures elsewhere to avoid duplicate handlers
+  useEffect(() => {
+    return;
+  }, [visible]);
 
   return {
     currentZoom,
