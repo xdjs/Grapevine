@@ -776,13 +776,13 @@ export default function D3NetworkRenderer({
                .style("opacity", 0)
                .on("end", () => loadingGroup.remove());
            });
-                } // No delay - start loading immediately
-        }
-      })
-      .on("click", function(event, d) {
-        // Use the node interactions hook for click handling
-        nodeInteractions.handleNodeClick(event as MouseEvent, d, this);
-      });
+         } // No delay - start loading immediately
+       }
+     })
+     .on("click", function(event, d) {
+       // Use the node interactions hook for click handling
+       nodeInteractions.handleNodeClick(event as MouseEvent, d, this);
+     });
 
     // Setup drag behavior using the node interactions hook
     nodeInteractions.setupDragBehavior(nodeElements);
