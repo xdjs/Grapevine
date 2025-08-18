@@ -178,6 +178,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
 
   return (
     <div
+      className="animate-pop-in"
       role="tooltip"
       aria-label={`Tooltip for ${node.name}`}
       style={{

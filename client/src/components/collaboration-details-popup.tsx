@@ -219,7 +219,7 @@ export default function CollaborationDetailsPopup({
           isMobile ? 'overflow-y-auto' : 'overflow-hidden'
         } text-white ${
           isMobile ? 'max-w-sm mx-2' : 'max-w-2xl'
-        }`}
+        } animate-pop-in`}
         style={{
           boxShadow: '0 0 20px rgba(180, 39, 180, 0.3)',
           borderColor: '#b427b4'
