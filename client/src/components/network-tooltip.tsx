@@ -397,11 +397,25 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             role="button"
             aria-label={`Expand ${node.name}'s network`}
           >
-            {isMobile && mobileExpandIconSrc ? (
-              <img
-                src={mobileExpandIconSrc}
-                alt={'Expand icon'}
-                style={{
+            {isMobile ? (
+              mobileExpandIconSrc ? (
+                <img
+                  src={mobileExpandIconSrc}
+                  alt={'Expand icon'}
+                  style={{
+                    width: `${mobileIconPx}px`,
+                    height: `${mobileIconPx}px`,
+                    minWidth: `${mobileIconPx}px`,
+                    minHeight: `${mobileIconPx}px`,
+                    maxWidth: `${mobileIconPx}px`,
+                    maxHeight: `${mobileIconPx}px`,
+                    display: 'block',
+                    flexShrink: 0,
+                    background: 'transparent',
+                  }}
+                />
+              ) : (
+                <span style={{
                   width: `${mobileIconPx}px`,
                   height: `${mobileIconPx}px`,
                   minWidth: `${mobileIconPx}px`,
@@ -410,9 +424,8 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                   maxHeight: `${mobileIconPx}px`,
                   display: 'block',
                   flexShrink: 0,
-                  background: 'transparent',
-                }}
-              />
+                }} />
+              )
             ) : (
               <svg
                 width={iconSize}
@@ -471,11 +484,25 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             role="button"
             aria-label={`Shrink ${node.name}'s network`}
           >
-            {isMobile && mobileShrinkIconSrc ? (
-              <img
-                src={mobileShrinkIconSrc}
-                alt={'Shrink icon'}
-                style={{
+            {isMobile ? (
+              mobileShrinkIconSrc ? (
+                <img
+                  src={mobileShrinkIconSrc}
+                  alt={'Shrink icon'}
+                  style={{
+                    width: `${mobileIconPx}px`,
+                    height: `${mobileIconPx}px`,
+                    minWidth: `${mobileIconPx}px`,
+                    minHeight: `${mobileIconPx}px`,
+                    maxWidth: `${mobileIconPx}px`,
+                    maxHeight: `${mobileIconPx}px`,
+                    display: 'block',
+                    flexShrink: 0,
+                    background: 'transparent',
+                  }}
+                />
+              ) : (
+                <span style={{
                   width: `${mobileIconPx}px`,
                   height: `${mobileIconPx}px`,
                   minWidth: `${mobileIconPx}px`,
@@ -484,9 +511,8 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
                   maxHeight: `${mobileIconPx}px`,
                   display: 'block',
                   flexShrink: 0,
-                  background: 'transparent',
-                }}
-              />
+                }} />
+              )
             ) : (
               <svg
                 width={iconSize}
