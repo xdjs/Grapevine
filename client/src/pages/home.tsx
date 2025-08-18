@@ -449,12 +449,12 @@ export default function Home() {
 
 
 
-      {/* Share Button - Only visible when network is shown and not on mobile */}
-      {showNetworkView && !isMobile && <ShareButton artistId={currentArtistId} />}
+      {/* Share Button - Visible when network is shown on all devices */}
+      {showNetworkView && <ShareButton artistId={currentArtistId} networkData={networkData} />}
 
 
-      {/* Help Button - Hide on mobile when network view is shown */}
-      {(!showNetworkView || !isMobile) && <HelpButton />}
+      {/* Help Button - Always visible */}
+      <HelpButton />
     </div>
   );
 }
