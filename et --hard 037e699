@@ -1,0 +1,10 @@
+[33m36321bd[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mevie/fitting-and-finishing[m[33m, [m[1;31morigin/evie/fitting-and-finishing[m[33m)[m Enhance D3NetworkRenderer with optimized loading and display of profile pictures
+[33mba0cad2[m Refactor click event handler in D3NetworkRenderer for improved readability
+[33mace9367[m Refactor D3NetworkRenderer for improved code clarity
+[33m56bd915[m Enhance loading spinner visibility and performance in D3NetworkRenderer
+[33mf81a33d[m Enhance D3NetworkRenderer to support immediate node display with loading spinners
+[33m037e699[m Update LoadingScreen component and tests for improved clarity and consistency
+[33m3ff9db5[m Merge pull request #327 from xdjs/evie/pinch-zoom-fixing-again
+[33me763b63[m[33m ([m[1;31morigin/evie/pinch-zoom-fixing-again[m[33m, [m[1;32mevie/pinch-zoom-fixing-again[m[33m)[m Refactor NetworkVisualizer component by removing touch gesture handling and adjusting initialization state
+[33md401cbf[m Merge pull request #326 from xdjs/casey/centersharingMobile
+[33me1f4b7d[m[33m ([m[1;31morigin/casey/centersharingMobile[m[33m)[m Refactor image drawing logic in MobileControls and ShareButton for improved scaling and centering
