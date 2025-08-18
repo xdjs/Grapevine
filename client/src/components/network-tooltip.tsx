@@ -73,63 +73,65 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
   const iconSize = isMobile ? 14 : 32; // Much smaller icons on mobile
   // Mobile-only bitmap icons (pre-rendered to PNG on the fly for crisp scaling)
   const mobileIconPx = 14;
-  const mobilePlusIconSrc = useMemo(() => {
-    if (!isMobile) return '';
-    if (typeof document === 'undefined') return '';
-    const canvas = document.createElement('canvas');
-    const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
-    const size = mobileIconPx * dpr;
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return '';
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, mobileIconPx, mobileIconPx);
-    ctx.strokeStyle = '#ff69b4';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    const pad = 5; // slightly larger padding to fit circle border
-    // Circular border
-    ctx.beginPath();
-    ctx.arc(mobileIconPx / 2, mobileIconPx / 2, (mobileIconPx / 2) - 1.5, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    // horizontal
-    ctx.moveTo(pad, mobileIconPx / 2);
-    ctx.lineTo(mobileIconPx - pad, mobileIconPx / 2);
-    // vertical for plus
-    ctx.moveTo(mobileIconPx / 2, pad);
-    ctx.lineTo(mobileIconPx / 2, mobileIconPx - pad);
-    ctx.stroke();
-    return canvas.toDataURL('image/png');
-  }, [isMobile]);
-  const mobileMinusIconSrc = useMemo(() => {
-    if (!isMobile) return '';
-    if (typeof document === 'undefined') return '';
-    const canvas = document.createElement('canvas');
-    const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
-    const size = mobileIconPx * dpr;
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return '';
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, mobileIconPx, mobileIconPx);
-    ctx.strokeStyle = '#ff69b4';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    const pad = 5; // slightly larger padding to fit circle border
-    // Circular border
-    ctx.beginPath();
-    ctx.arc(mobileIconPx / 2, mobileIconPx / 2, (mobileIconPx / 2) - 1.5, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    // horizontal only (minus)
-    ctx.moveTo(pad, mobileIconPx / 2);
-    ctx.lineTo(mobileIconPx - pad, mobileIconPx / 2);
-    ctx.stroke();
-    return canvas.toDataURL('image/png');
-  }, [isMobile]);
+  const [mobileExpandIconSrc, setMobileExpandIconSrc] = useState<string>('');
+  const [mobileShrinkIconSrc, setMobileShrinkIconSrc] = useState<string>('');
+  useEffect(() => {
+    if (!isMobile) {
+      setMobileExpandIconSrc('');
+      return;
+    }
+    if (typeof document === 'undefined') return;
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${mobileIconPx}" height="${mobileIconPx}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="12" cy="12" r="10" stroke="#ff69b4" stroke-width="2" fill="none" />
+  <line x1="12" y1="7" x2="12" y2="17" stroke="#ff69b4" stroke-width="2" stroke-linecap="round" />
+  <line x1="7" y1="12" x2="17" y2="12" stroke="#ff69b4" stroke-width="2" stroke-linecap="round" />
+</svg>`;
+    const svgUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+    const img = new Image();
+    img.onload = () => {
+      const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
+      const size = mobileIconPx * dpr;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, mobileIconPx, mobileIconPx);
+      ctx.drawImage(img, 0, 0, mobileIconPx, mobileIconPx);
+      try { setMobileExpandIconSrc(canvas.toDataURL('image/png')); } catch { setMobileExpandIconSrc(svgUrl); }
+    };
+    img.src = svgUrl;
+  }, [isMobile, mobileIconPx]);
+  useEffect(() => {
+    if (!isMobile) {
+      setMobileShrinkIconSrc('');
+      return;
+    }
+    if (typeof document === 'undefined') return;
+    const svg = `<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<svg width="${mobileIconPx}" height="${mobileIconPx}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="12" cy="12" r="10" stroke="#ff69b4" stroke-width="2" fill="none" />
+  <line x1="7" y1="12" x2="17" y2="12" stroke="#ff69b4" stroke-width="2" stroke-linecap="round" />
+</svg>`;
+    const svgUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+    const img = new Image();
+    img.onload = () => {
+      const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
+      const size = mobileIconPx * dpr;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, mobileIconPx, mobileIconPx);
+      ctx.drawImage(img, 0, 0, mobileIconPx, mobileIconPx);
+      try { setMobileShrinkIconSrc(canvas.toDataURL('image/png')); } catch { setMobileShrinkIconSrc(svgUrl); }
+    };
+    img.src = svgUrl;
+  }, [isMobile, mobileIconPx]);
   const [mobileCollabIconSrc, setMobileCollabIconSrc] = useState<string>('');
   useEffect(() => {
     if (!isMobile) {
@@ -395,9 +397,9 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             role="button"
             aria-label={`Expand ${node.name}'s network`}
           >
-            {isMobile ? (
+            {isMobile && mobileExpandIconSrc ? (
               <img
-                src={mobilePlusIconSrc}
+                src={mobileExpandIconSrc}
                 alt={'Expand icon'}
                 style={{
                   width: `${mobileIconPx}px`,
@@ -469,9 +471,9 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
             role="button"
             aria-label={`Shrink ${node.name}'s network`}
           >
-            {isMobile ? (
+            {isMobile && mobileShrinkIconSrc ? (
               <img
-                src={mobileMinusIconSrc}
+                src={mobileShrinkIconSrc}
                 alt={'Shrink icon'}
                 style={{
                   width: `${mobileIconPx}px`,
