@@ -7,6 +7,8 @@ import FilterControls from "@/components/filter-controls";
 import MobileControls from "@/components/mobile-controls";
 import LoadingScreen from "@/components/loading-screen";
 import { Button } from "@/components/ui/button";
+import HelpButton from "@/components/help-button";
+import ShareButton from "@/components/share-button";
 import { Home, ArrowLeft } from "lucide-react";
 
 import { NetworkData, NetworkNode, FilterState } from "@/types/network";
@@ -325,6 +327,14 @@ export default function ArtistNetwork() {
           onBackToFirstDegree={handleResetToFirstDegree}
         />
       </>
+
+      {/* Floating actions */}
+      {networkData && (
+        <>
+          <ShareButton artistId={currentArtistId} networkData={networkData} />
+          <HelpButton />
+        </>
+      )}
     </div>
   );
 }

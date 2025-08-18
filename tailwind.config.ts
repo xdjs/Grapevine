@@ -79,10 +79,22 @@ export default {
             height: "0",
           },
         },
+        // Playful pop animations for menus/tooltips
+        "pop-in": {
+          "0%": { opacity: "0", transform: "translateY(6px) scale(0.94)" },
+          "60%": { opacity: "1", transform: "translateY(0) scale(1.02)" },
+          "100%": { opacity: "1", transform: "translateY(0) scale(1)" },
+        },
+        "pop-out": {
+          "0%": { opacity: "1", transform: "translateY(0) scale(1)" },
+          "100%": { opacity: "0", transform: "translateY(4px) scale(0.96)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "pop-in": "pop-in 220ms cubic-bezier(0.22,1,0.36,1)",
+        "pop-out": "pop-out 180ms cubic-bezier(0.22,1,0.36,1)",
       },
     },
   },

@@ -36,7 +36,9 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
   // Track base (first-degree) graph when entering expanded mode
   const baseGraphRef = useRef<NetworkData | null>(null);
   // Track per-node contributions so we can surgically remove them later
-  type Contribution = { addedNodeIds: Set<string>; addedLinkKeys: Set<string>; neighborIds: Set<string> };
+  // We keep aggregate sets for quick checks and a batch stack to support LIFO shrinking
+  type ContributionBatch = { addedNodeIds: string[]; addedLinkKeys: string[]; neighborIds: string[] };
+  type Contribution = { addedNodeIds: Set<string>; addedLinkKeys: Set<string>; neighborIds: Set<string>; batches: ContributionBatch[] };
   const contributionsRef = useRef<Map<string, Contribution>>(new Map());
   const PERSIST_KEY = 'gv_expanded_state_v1';
 
@@ -325,6 +327,9 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       // Add selected neighbor nodes (from returned data only; no fabrication)
       const addedNodeIdsForThisExpansion = new Set<string>();
       const neighborIdsForThisExpansion = new Set<string>();
+      const addedNodeIdsBatch: string[] = [];
+      const addedLinkKeysBatch: string[] = [];
+      const neighborIdsBatch: string[] = [];
       for (const nid of selectedNeighborIds) {
         const nodeToAdd = returnedNodeByKey.get(toKey(nid));
         if (nodeToAdd && !existingNodeIdsNormalized.has(normalizeId(nodeToAdd.id))) {
@@ -334,6 +339,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
           if (nodeToAdd.name) existingNodeByKey.set(keyify(nodeToAdd.name), nodeToAdd);
           vlog(`➕ [Expand] Added node: ${nodeToAdd.name} (id=${nodeToAdd.id})`);
           addedNodeIdsForThisExpansion.add(nodeToAdd.id);
+          addedNodeIdsBatch.push(nodeToAdd.id);
         }
       }
 
@@ -354,9 +360,11 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
           existingLinkKeys.add(key);
           vlog(`➕ [Expand] Added link: ${sCanon} -- ${tCanon}`);
           addedLinkKeysForThisExpansion.add(key);
+          addedLinkKeysBatch.push(key);
           // Track selected neighbors canonically
           const neighborCanon = toKey(sCanon) === toKey(clickedCanonicalFinalId) ? tCanon : sCanon;
           neighborIdsForThisExpansion.add(neighborCanon);
+          neighborIdsBatch.push(neighborCanon);
         }
       }
 
@@ -372,11 +380,14 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         addedNodeIdsForThisExpansion.forEach(id => prev.addedNodeIds.add(id));
         addedLinkKeysForThisExpansion.forEach(k => prev.addedLinkKeys.add(k));
         neighborIdsForThisExpansion.forEach(n => prev.neighborIds.add(n));
+        // push batch for LIFO shrink
+        prev.batches.push({ addedNodeIds: addedNodeIdsBatch, addedLinkKeys: addedLinkKeysBatch, neighborIds: neighborIdsBatch });
       } else {
         contributionsRef.current.set(clickedCanonicalFinalId, {
           addedNodeIds: addedNodeIdsForThisExpansion,
           addedLinkKeys: addedLinkKeysForThisExpansion,
           neighborIds: neighborIdsForThisExpansion,
+          batches: [{ addedNodeIds: addedNodeIdsBatch, addedLinkKeys: addedLinkKeysBatch, neighborIds: neighborIdsBatch }],
         });
       }
 
@@ -576,6 +587,12 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
     const contribution = contributionsRef.current.get(keyToRemove);
     if (!contribution) return;
 
+    // If we have per-click batches, remove the most recent batch first (LIFO)
+    let batchToRemove: ContributionBatch | null = null;
+    if (contribution.batches && contribution.batches.length > 0) {
+      batchToRemove = contribution.batches.pop() as ContributionBatch;
+    }
+
     // Build preservation set: nodes that belong to other expansions (anchors, their added nodes, and recorded neighbors)
     const preserveNodeIds = new Set<string>();
     contributionsRef.current.forEach((c, k) => {
@@ -593,7 +610,12 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       const s = typeof l.source === 'string' ? l.source : l.source.id;
       const t = typeof l.target === 'string' ? l.target : l.target.id;
       const key = (s.toLowerCase() < t.toLowerCase()) ? `${s.toLowerCase()}|${t.toLowerCase()}` : `${t.toLowerCase()}|${s.toLowerCase()}`;
-      if (!contribution.addedLinkKeys.has(key)) return true;
+      // If using batches, only drop links that are in the latest batch
+      if (batchToRemove) {
+        if (!batchToRemove.addedLinkKeys.includes(key)) return true;
+      } else {
+        if (!contribution.addedLinkKeys.has(key)) return true;
+      }
       // Preserve if this link connects to nodes belonging to other expansions
       if (preserveNodeIds.has(s) || preserveNodeIds.has(t)) {
         preservedLinkKeys.add(key);
@@ -634,7 +656,17 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       // Never remove the anchor node itself during its own collapse
       if (toKey(n.id) === anchorLower) return true;
       // If this node was a neighbor added by this expansion, remove it and anything exclusively under it
-      if (contribution.addedNodeIds.has(n.id) || contribution.neighborIds.has(n.id)) {
+      const wasAddedByContribution = contribution.addedNodeIds.has(n.id) || contribution.neighborIds.has(n.id);
+      if (batchToRemove) {
+        const inLatestBatch = batchToRemove.addedNodeIds.includes(n.id) || batchToRemove.neighborIds.includes(n.id);
+        if (inLatestBatch) {
+          if (!attachedNodeIds.has(n.id)) return false; // dangling
+          return true;
+        }
+        // Nodes from older batches stay for now
+        return true;
+      }
+      if (wasAddedByContribution) {
         if (!attachedNodeIds.has(n.id)) return false; // dangling
         // If still attached, keep it
         return true;
@@ -680,16 +712,39 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
 
     // Determine if any neighbor relationships were preserved due to child expansions
     const preservedNeighbors = new Set<string>();
-    contribution.neighborIds.forEach(nid => { if (preserveNodeIds.has(nid)) preservedNeighbors.add(nid); });
+    if (batchToRemove) {
+      contribution.neighborIds.forEach(nid => { if (preserveNodeIds.has(nid) || !batchToRemove!.neighborIds.includes(nid)) preservedNeighbors.add(nid); });
+    } else {
+      contribution.neighborIds.forEach(nid => { if (preserveNodeIds.has(nid)) preservedNeighbors.add(nid); });
+    }
 
     // Update expanded sets/maps
     const newExpanded = new Set(expandedNodes);
     if (preservedNeighbors.size > 0) {
       // Keep a minimal contribution so the parent still shows as shrinkable
+      const nextBatches = contribution.batches || [];
+      // Aggregate remaining batch metadata so future shrinks know what's left
+      const aggAddedNodeIds = new Set<string>();
+      const aggAddedLinkKeys = new Set<string>();
+      for (const b of nextBatches) {
+        for (const nid of b.addedNodeIds) aggAddedNodeIds.add(nid);
+        for (const lk of b.addedLinkKeys) aggAddedLinkKeys.add(lk);
+      }
+      // Only keep link keys that still exist in the graph
+      const linkKey = (a: string, b: string) => {
+        const al = a.toLowerCase();
+        const bl = b.toLowerCase();
+        return al < bl ? `${al}|${bl}` : `${bl}|${al}`;
+      };
+      const currentLinkKeys = new Set<string>(ensuredLinks.map(l => linkKey(typeof l.source === 'string' ? l.source : l.source.id, typeof l.target === 'string' ? l.target : l.target.id)));
+      const remainingContribLinkKeys = new Set<string>(
+        Array.from(aggAddedLinkKeys).filter(k => currentLinkKeys.has(k))
+      );
       contributionsRef.current.set(keyToRemove, {
-        addedNodeIds: new Set<string>(),
-        addedLinkKeys: preservedLinkKeys,
+        addedNodeIds: aggAddedNodeIds,
+        addedLinkKeys: remainingContribLinkKeys,
         neighborIds: preservedNeighbors,
+        batches: nextBatches,
       });
       newExpanded.add(keyToRemove);
     } else {
