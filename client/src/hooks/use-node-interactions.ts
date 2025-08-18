@@ -113,10 +113,23 @@ export function useNodeInteractions({
         event.stopPropagation();
         
         if (!visible) return;
-        
-        // Reset previous node highlighting
+        // Toggle tooltip if clicking the same node while tooltip is already visible
+        const isSameNode = !!(
+          tooltip.isTooltipVisible &&
+          tooltip.currentNode &&
+          ((tooltip.currentNode.id && node.id && tooltip.currentNode.id === node.id) ||
+            tooltip.currentNode.name === node.name)
+        );
+
+        if (isSameNode) {
+          tooltip.hideTooltip();
+          console.log(`🎯 Toggling tooltip off for node: ${node.name}`);
+          return;
+        }
+
+        // Reset previous node highlighting when switching to a new node
         tooltip.resetNodeHighlight();
-        
+
         // Highlight the current node group
         const currentNodeSelection = d3.select(nodeElement);
         currentNodeSelection.selectAll("circle, path")
