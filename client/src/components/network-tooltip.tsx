@@ -576,7 +576,26 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
               </div>
             )}
             {isMobile && (
-              <span style={{ color: '#a855f7', fontWeight: 700 }}>•</span>
+              <svg
+                width={mobileIconPx}
+                height={mobileIconPx}
+                viewBox="0 0 24 24"
+                aria-label="Collaboration icon"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{
+                  width: `${mobileIconPx}px`,
+                  height: `${mobileIconPx}px`,
+                  minWidth: `${mobileIconPx}px`,
+                  minHeight: `${mobileIconPx}px`,
+                  maxWidth: `${mobileIconPx}px`,
+                  maxHeight: `${mobileIconPx}px`,
+                  display: 'block',
+                  flexShrink: 0,
+                }}
+              >
+                <circle cx="9" cy="12" r="5" stroke="#a855f7" strokeWidth="2" fill="none" />
+                <circle cx="15" cy="12" r="5" stroke="#a855f7" strokeWidth="2" fill="none" opacity="0.85" />
+              </svg>
             )}
             <span
               style={{
