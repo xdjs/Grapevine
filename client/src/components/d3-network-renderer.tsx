@@ -183,10 +183,10 @@ export default function D3NetworkRenderer({
         d3
           .forceLink<NetworkNode, NetworkLink>(links)
           .id((d) => d.id)
-          .distance(80)
+          .distance(100)
       )
-      .force("charge", d3.forceManyBody().strength(-150))
-      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
+      .force("charge", d3.forceManyBody().strength(-180))
+      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 15))
       .force("boundary", boundaryForce)
       .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtist ? 0.1 : 0))
       .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtist ? 0.1 : 0));
@@ -999,7 +999,7 @@ export default function D3NetworkRenderer({
       clearTimeout(viewportUpdateTimeout);
       svg.on('zoom.viewport', null);
     };
-  }, [data.nodes, visible]);
+  }, [data?.nodes, visible]);
   
   // Main D3 visualization effect
   useEffect(() => {
