@@ -962,12 +962,17 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
         if (Array.isArray(saved.expandedNodes)) setExpandedNodes(new Set<string>(saved.expandedNodes));
         if (saved.baseGraph) baseGraphRef.current = saved.baseGraph as NetworkData;
         if (Array.isArray(saved.contributions)) {
-          const map = new Map<string, { addedNodeIds: Set<string>; addedLinkKeys: Set<string>; neighborIds: Set<string> }>();
+          const map = new Map<string, Contribution>();
           for (const c of saved.contributions) {
             map.set(String(c.key), {
               addedNodeIds: new Set<string>(c.addedNodeIds || []),
               addedLinkKeys: new Set<string>(c.addedLinkKeys || []),
               neighborIds: new Set<string>(c.neighborIds || []),
+              batches: Array.isArray(c.batches) ? c.batches.map((b: any) => ({
+                addedNodeIds: Array.isArray(b.addedNodeIds) ? b.addedNodeIds.slice() : [],
+                addedLinkKeys: Array.isArray(b.addedLinkKeys) ? b.addedLinkKeys.slice() : [],
+                neighborIds: Array.isArray(b.neighborIds) ? b.neighborIds.slice() : [],
+              })) : [],
             });
           }
           contributionsRef.current = map;
@@ -1127,12 +1132,19 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
             // Restore baseGraph and contributions so shrink works after tab switch
             if (saved.baseGraph) baseGraphRef.current = saved.baseGraph as NetworkData;
             if (Array.isArray(saved.contributions)) {
-              const map = new Map<string, { addedNodeIds: Set<string>; addedLinkKeys: Set<string>; neighborIds: Set<string> }>();
+              const map = new Map<string, Contribution>();
               for (const c of saved.contributions) {
                 map.set(String(c.key), {
                   addedNodeIds: new Set<string>(c.addedNodeIds || []),
                   addedLinkKeys: new Set<string>(c.addedLinkKeys || []),
                   neighborIds: new Set<string>(c.neighborIds || []),
+                  batches: Array.isArray(c.batches)
+                    ? c.batches.map((b: any) => ({
+                        addedNodeIds: Array.isArray(b.addedNodeIds) ? b.addedNodeIds.slice() : [],
+                        addedLinkKeys: Array.isArray(b.addedLinkKeys) ? b.addedLinkKeys.slice() : [],
+                        neighborIds: Array.isArray(b.neighborIds) ? b.neighborIds.slice() : [],
+                      }))
+                    : [],
                 });
               }
               contributionsRef.current = map;
