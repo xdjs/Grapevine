@@ -455,8 +455,8 @@ export default function Home() {
       )}
 
 
-      {/* Help Button - Always visible */}
-      <HelpButton />
+      {/* Help Button - hide on mobile when network (maps) is visible */}
+      {(!isMobile || !showNetworkView) && <HelpButton />}
     </div>
   );
 }
