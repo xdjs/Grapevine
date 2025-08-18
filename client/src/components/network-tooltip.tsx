@@ -71,9 +71,9 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
 
   const maxWidth = isMobile ? '320px' : '380px';
   const iconSize = isMobile ? 14 : 32; // Much smaller icons on mobile
-  // Mobile-only bitmap icon (pre-rendered to PNG on the fly for crisp scaling)
+  // Mobile-only bitmap icons (pre-rendered to PNG on the fly for crisp scaling)
   const mobileIconPx = 14;
-  const mobileIconSrc = useMemo(() => {
+  const mobilePlusIconSrc = useMemo(() => {
     if (!isMobile) return '';
     if (typeof document === 'undefined') return '';
     const canvas = document.createElement('canvas');
@@ -94,13 +94,34 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
     ctx.moveTo(pad, mobileIconPx / 2);
     ctx.lineTo(mobileIconPx - pad, mobileIconPx / 2);
     // vertical for plus
-    if (!isExpanded) {
-      ctx.moveTo(mobileIconPx / 2, pad);
-      ctx.lineTo(mobileIconPx / 2, mobileIconPx - pad);
-    }
+    ctx.moveTo(mobileIconPx / 2, pad);
+    ctx.lineTo(mobileIconPx / 2, mobileIconPx - pad);
     ctx.stroke();
     return canvas.toDataURL('image/png');
-  }, [isMobile, isExpanded]);
+  }, [isMobile]);
+  const mobileMinusIconSrc = useMemo(() => {
+    if (!isMobile) return '';
+    if (typeof document === 'undefined') return '';
+    const canvas = document.createElement('canvas');
+    const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
+    const size = mobileIconPx * dpr;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, mobileIconPx, mobileIconPx);
+    ctx.strokeStyle = '#ff69b4';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    const pad = 4;
+    ctx.beginPath();
+    // horizontal only (minus)
+    ctx.moveTo(pad, mobileIconPx / 2);
+    ctx.lineTo(mobileIconPx - pad, mobileIconPx / 2);
+    ctx.stroke();
+    return canvas.toDataURL('image/png');
+  }, [isMobile]);
   const titleFontSize = isMobile ? '14px' : '16px';
   const roleFontSize = isMobile ? '11px' : '12px';
   const linkFontSize = isMobile ? '11px' : '12px';
@@ -332,7 +353,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
           >
             {isMobile ? (
               <img
-                src={mobileIconSrc}
+                src={mobilePlusIconSrc}
                 alt={'Expand icon'}
                 style={{
                   width: `${mobileIconPx}px`,
@@ -406,7 +427,7 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
           >
             {isMobile ? (
               <img
-                src={mobileIconSrc}
+                src={mobileMinusIconSrc}
                 alt={'Shrink icon'}
                 style={{
                   width: `${mobileIconPx}px`,
