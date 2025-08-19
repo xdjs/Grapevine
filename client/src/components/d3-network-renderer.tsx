@@ -899,11 +899,11 @@ export default function D3NetworkRenderer({
         const linkGroup = d3.select(this);
         
         // Randomly decide how many leaves this connection will have (1 or 2)
-        const leafCount = Math.random() > 0.3 ? 2 : 1; // 70% chance of 2 leaves, 30% chance of 1
+        const leafCount = Math.random() > 0.4 ? 2 : 1; // 60% chance of 2 leaves, 40% chance of 1
         
         // Randomize leaf size for natural variation
-        const leftLeafSize = 1.5 + Math.random() * 0.8; // 1.5x to 2.3x base size - much bigger
-        const rightLeafSize = 1.5 + Math.random() * 0.8; // 1.5x to 2.3x base size - much bigger
+        const leftLeafSize = 1.2 + Math.random() * 0.6; // 1.2x to 1.8x base size
+        const rightLeafSize = 1.2 + Math.random() * 0.6; // 1.2x to 1.8x base size
         
         // Randomize leaf colors for natural variation
         const leafColors = [
@@ -1315,8 +1315,9 @@ export default function D3NetworkRenderer({
               target.x !== undefined && target.y !== undefined) {
             
                       // Calculate positions along the connection line for leaf distribution
-          const leftLeafPos = 0.3; // 30% along the line from source - closer to source node
-          const rightLeafPos = 0.7; // 70% along the line from source - closer to target node
+          // Keep leaves away from nodes (between 25% and 75% of the line)
+          const leftLeafPos = 0.25 + Math.random() * 0.25; // 25% to 50% along the line from source
+          const rightLeafPos = 0.5 + Math.random() * 0.25; // 50% to 75% along the line from source
           
           const leftX = source.x + (target.x - source.x) * leftLeafPos;
           const leftY = source.y + (target.y - source.y) * leftLeafPos;
@@ -1345,13 +1346,17 @@ export default function D3NetworkRenderer({
           // Update left leaf position and rotation (if it exists)
           const leftLeaf = leafGroup.select(".leaf-left");
           if (!leftLeaf.empty()) {
-            leftLeaf.attr("transform", `translate(${leftLeafX}, ${leftLeafY}) rotate(${(leftAngle * 180 / Math.PI) + 90})`);
+            // Add some random rotation variation for natural appearance
+            const leftRotationVariation = (Math.random() - 0.5) * 20; // ±10 degrees
+            leftLeaf.attr("transform", `translate(${leftLeafX}, ${leftLeafY}) rotate(${(leftAngle * 180 / Math.PI) + 90 + leftRotationVariation})`);
           }
           
           // Update right leaf position and rotation (if it exists)
           const rightLeaf = leafGroup.select(".leaf-right");
           if (!rightLeaf.empty()) {
-            rightLeaf.attr("transform", `translate(${rightLeafX}, ${rightLeafY}) rotate(${(rightAngle * 180 / Math.PI) + 90})`);
+            // Add some random rotation variation for natural appearance
+            const rightRotationVariation = (Math.random() - 0.5) * 20; // ±10 degrees
+            rightLeaf.attr("transform", `translate(${rightLeafX}, ${rightLeafY}) rotate(${(rightAngle * 180 / Math.PI) + 90 + rightRotationVariation})`);
           }
           }
         });
