@@ -105,18 +105,25 @@ export default function D3NetworkRenderer({
   };
 
   /**
-   * Compute the display radius for a node. On mobile, all nodes except the main artist
-   * are normalized to a consistent size for visual clarity.
+   * Compute the display radius for a node. All nodes except the main artist
+   * are normalized to a consistent size for visual clarity on both mobile and desktop.
    */
   const getDisplayNodeSize = useCallback((node: NetworkNode): number => {
-    if (!isMobile) return node.size;
     const isMain = Boolean(
       mainArtistNode && (
         node.id === mainArtistNode.id || node.name === mainArtistNode.name
       )
     );
-    return isMain ? node.size : 20; // Normalize non-main nodes to size 20 on mobile
-  }, [isMobile, mainArtistNode]);
+    
+    if (isMain) {
+      // Main artist keeps their original size
+      return node.size;
+    } else {
+      // All other nodes (including expanded ones) get the exact same size
+      // This ensures Paul Epworth, Adele, and all other nodes have identical sizing
+      return 22; // Consistent size for all non-main artist nodes
+    }
+  }, [mainArtistNode]);
 
   /**
    * Create boundary force to keep nodes within viewport with margin.
@@ -346,7 +353,7 @@ export default function D3NetworkRenderer({
     
     // Get optimal image size based on node size and zoom level
     getOptimalImageSize(node: NetworkNode, svgElement?: SVGSVGElement): { width: number; height: number; quality: 'low' | 'medium' | 'high' } {
-      const baseSize = (node.size - 4) * 2; // Base image size
+      const baseSize = (getDisplayNodeSize(node) - 4) * 2; // Base image size using display size
       
       // Get current zoom level if available
       let zoomScale = 1;
@@ -891,8 +898,34 @@ export default function D3NetworkRenderer({
         const hasProfilePicture = Boolean(d.imageUrl);
         return hasProfilePicture ? `${getDisplayNodeSize(d) + 18}px` : "0.35em";
       })
-      .attr("font-size", (d) => d.type === 'artist' ? "14px" : "11px")
-      .attr("font-weight", (d) => d.type === 'artist' ? "600" : "500")
+      .attr("font-size", (d) => {
+        // Check if this is the main artist node
+        const isMainArtist = mainArtistNode && (
+          d.id === mainArtistNode.id || d.name === mainArtistNode.name
+        );
+        
+        if (isMainArtist) {
+          // Main artist gets larger font size
+          return d.type === 'artist' ? "16px" : "14px";
+        } else {
+          // All other nodes (including expanded ones) get consistent smaller font size
+          return d.type === 'artist' ? "12px" : "11px";
+        }
+      })
+      .attr("font-weight", (d) => {
+        // Check if this is the main artist node
+        const isMainArtist = mainArtistNode && (
+          d.id === mainArtistNode.id || d.name === mainArtistNode.name
+        );
+        
+        if (isMainArtist) {
+          // Main artist gets bolder font weight
+          return d.type === 'artist' ? "700" : "600";
+        } else {
+          // All other nodes get consistent font weight
+          return d.type === 'artist' ? "500" : "500";
+        }
+      })
       .attr("fill", "white")
       .attr("pointer-events", "none")
       .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.8)")
@@ -937,7 +970,7 @@ export default function D3NetworkRenderer({
                       
                       // Create image element
                       const group = d3.select(nodeGroup);
-                      const profileImageSize = node.size - 4;
+                      const profileImageSize = getDisplayNodeSize(node) - 4;
                       const clipId = `clip-${node.id.replace(/[^a-zA-Z0-9]/g, '_')}`;
                       
                       const image = group.append("image")
@@ -969,7 +1002,7 @@ export default function D3NetworkRenderer({
                 
                 // Replace with placeholder
                 const group = d3.select(nodeGroup);
-                const profileImageSize = node.size - 4;
+                const profileImageSize = getDisplayNodeSize(node) - 4;
                 
                 const placeholderGroup = group.append("g")
                   .attr("class", "image-placeholder-lazy")
