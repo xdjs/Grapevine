@@ -25,6 +25,7 @@ export class VineDecorations {
     sourceArtist: string;
     targetArtist: string;
   }) => void) {
+    console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Setting grape click callback`);
     this.onGrapeClick = callback;
   }
 
@@ -32,14 +33,22 @@ export class VineDecorations {
    * Show grapes after OpenAI content is generated
    */
   showGrapes() {
+    console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] showGrapes called, setting grapesVisible to true`);
     this.grapesVisible = true;
     // Trigger a re-render of grapes if they exist
     if (this.defs) {
       const svg = this.defs.node()?.parentElement;
       if (svg) {
         const grapeClusters = d3.select(svg).selectAll('.grape-cluster');
+        const clusterCount = grapeClusters.size();
+        console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Found ${clusterCount} grape clusters, setting opacity to 1`);
         grapeClusters.style('opacity', 1);
+        console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Grapes are now visible in the SVG`);
+      } else {
+        console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] No SVG parent found for defs`);
       }
+    } else {
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] No defs available, cannot show grapes`);
     }
   }
 
@@ -190,12 +199,20 @@ export class VineDecorations {
   ) {
     event.stopPropagation(); // Prevent event bubbling
     
-    console.log(`🍇 [VineDecorations] Grape clicked: link ${linkIndex}, cluster ${clusterIndex}, grape ${grapeIndex}`);
+    console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Grape clicked: link ${linkIndex}, cluster ${clusterIndex}, grape ${grapeIndex}`);
     
     // Call the callback if it exists
     if (this.onGrapeClick) {
       const sourceArtist = typeof linkData.source === 'string' ? linkData.source : linkData.source.name;
       const targetArtist = typeof linkData.target === 'string' ? linkData.target : linkData.target.name;
+      
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Calling grape click callback with data:`, {
+        linkIndex,
+        clusterIndex,
+        grapeIndex,
+        sourceArtist,
+        targetArtist
+      });
       
       this.onGrapeClick({
         linkIndex,
@@ -204,6 +221,8 @@ export class VineDecorations {
         sourceArtist,
         targetArtist
       });
+    } else {
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] No grape click callback registered`);
     }
   }
 
@@ -279,6 +298,11 @@ export class VineDecorations {
     linkIndex: number
   ) {
     const linkData = linkGroup.datum();
+    const sourceArtist = typeof linkData.source === 'string' ? linkData.source : linkData.source.name;
+    const targetArtist = typeof linkData.target === 'string' ? linkData.target : linkData.target.name;
+    
+    console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Creating grapes for link ${linkIndex}: ${sourceArtist} → ${targetArtist}`);
+    
     const seed = `${linkData.source}_${linkData.target}_${linkIndex}`;
     const hash = seed.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
@@ -286,6 +310,7 @@ export class VineDecorations {
     }, 0);
     
     const grapeClusterCount = 1 + (Math.abs(hash) % 3); // 1-3 grape clusters per link
+    console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Will create ${grapeClusterCount} grape clusters for link ${linkIndex}`);
     
     for (let clusterIndex = 0; clusterIndex < grapeClusterCount; clusterIndex++) {
       const clusterSeed = Math.abs(linkIndex * 1000 + clusterIndex * 100);
@@ -296,6 +321,8 @@ export class VineDecorations {
         .attr("class", "grape-cluster")
         .attr("data-cluster-index", clusterIndex)
         .style("opacity", this.grapesVisible ? 1 : 0); // Initially hidden
+      
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Created grape cluster ${clusterIndex} with ${grapesInCluster} grapes, opacity: ${this.grapesVisible ? 1 : 0}`);
       
       // Create conical grape arrangement
       let grapeIndex = 0;

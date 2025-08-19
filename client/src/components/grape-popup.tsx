@@ -22,6 +22,19 @@ export default function GrapePopup({
   content,
   isLoading = false,
 }: GrapePopupProps) {
+  // Log popup state changes
+  React.useEffect(() => {
+    if (isOpen) {
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [GrapePopup] Popup opened`, {
+        hasGrapeData: !!grapeData,
+        hasContent: !!content,
+        contentLength: content?.length || 0,
+        isLoading
+      });
+    } else {
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [GrapePopup] Popup closed`);
+    }
+  }, [isOpen, grapeData, content, isLoading]);
   // Handle keyboard events (especially ESC key)
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -39,6 +52,7 @@ export default function GrapePopup({
   // Handle overlay click to close
   const handleOverlayClick = (event: React.MouseEvent) => {
     if (event.target === event.currentTarget) {
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [GrapePopup] Overlay clicked, closing popup`);
       onClose();
     }
   };
@@ -70,11 +84,14 @@ export default function GrapePopup({
           <h2 className="text-xl font-semibold text-white">
             Insider Information
           </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors duration-200 text-gray-400 hover:text-white"
-            aria-label="Close popup"
-          >
+                     <button
+             onClick={() => {
+               console.log(`🕐 [${new Date().toISOString()}] 🍇 [GrapePopup] Close button clicked`);
+               onClose();
+             }}
+             className="p-2 hover:bg-gray-800 rounded-lg transition-colors duration-200 text-gray-400 hover:text-white"
+             aria-label="Close popup"
+           >
             <X className="h-5 w-5" />
           </button>
         </div>

@@ -78,8 +78,18 @@ export default function D3NetworkRenderer({
 
   // Show grapes when grapesVisible prop changes
   useEffect(() => {
+    console.log(`🕐 [${new Date().toISOString()}] 🍇 [D3NetworkRenderer] Grapes visibility effect triggered:`, {
+      grapesVisible,
+      hasVineDecorations: !!vineDecorationsRef.current
+    });
+    
     if (grapesVisible && vineDecorationsRef.current) {
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [D3NetworkRenderer] Calling vineDecorations.showGrapes()`);
       vineDecorationsRef.current.showGrapes();
+    } else {
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [D3NetworkRenderer] Not showing grapes:`, {
+        reason: !grapesVisible ? 'grapesVisible is false' : !vineDecorationsRef.current ? 'vineDecorations not initialized' : 'unknown'
+      });
     }
   }, [grapesVisible]);
 
@@ -1097,10 +1107,12 @@ export default function D3NetworkRenderer({
       vineDecorationsRef.current = new VineDecorations();
       vineDecorationsRef.current.initializeDefs(svg);
       if (onGrapeClick) {
+        console.log(`🕐 [${new Date().toISOString()}] 🍇 [D3NetworkRenderer] Setting grape click callback during initialization`);
         vineDecorationsRef.current.setGrapeClickCallback(onGrapeClick);
       }
       // Show grapes if they should be visible
       if (grapesVisible) {
+        console.log(`🕐 [${new Date().toISOString()}] 🍇 [D3NetworkRenderer] Initial render with grapesVisible=true, calling showGrapes`);
         vineDecorationsRef.current.showGrapes();
       }
       console.log('🔍 [D3Renderer] Vine decorations initialized');
