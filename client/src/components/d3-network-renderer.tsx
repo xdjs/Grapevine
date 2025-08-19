@@ -902,23 +902,34 @@ export default function D3NetworkRenderer({
         const leafCount = Math.random() > 0.3 ? 2 : 1; // 70% chance of 2 leaves, 30% chance of 1
         
         // Randomize leaf size for natural variation
-        const leftLeafSize = 0.8 + Math.random() * 0.4; // 0.8x to 1.2x base size
-        const rightLeafSize = 0.8 + Math.random() * 0.4; // 0.8x to 1.2x base size
+        const leftLeafSize = 1.2 + Math.random() * 0.6; // 1.2x to 1.8x base size
+        const rightLeafSize = 1.2 + Math.random() * 0.6; // 1.2x to 1.8x base size
+        
+        // Randomize leaf colors for natural variation
+        const leafColors = [
+          "#4ade80", // Bright green
+          "#22c55e", // Medium green
+          "#16a34a", // Dark green
+          "#84cc16", // Lime green
+          "#65a30d"  // Olive green
+        ];
+        const leftLeafColor = leafColors[Math.floor(Math.random() * leafColors.length)];
+        const rightLeafColor = leafColors[Math.floor(Math.random() * leafColors.length)];
         
         if (leafCount >= 1) {
-          // Create left leaf
+          // Create left leaf with more realistic, organic shape
           linkGroup.append("path")
             .attr("class", "leaf-left")
-            .attr("d", `M0,0 C${2 * leftLeafSize},${-4 * leftLeafSize} ${4 * leftLeafSize},${-3 * leftLeafSize} ${8 * leftLeafSize},0 C${4 * leftLeafSize},${3 * leftLeafSize} ${2 * leftLeafSize},${4 * leftLeafSize} 0,0 Z`)
-            .attr("fill", "#4ade80")
+            .attr("d", `M0,0 C${3 * leftLeafSize},${-8 * leftLeafSize} ${6 * leftLeafSize},${-6 * leftLeafSize} ${12 * leftLeafSize},${-2 * leftLeafSize} C${10 * leftLeafSize},0 ${8 * leftLeafSize},${2 * leftLeafSize} ${6 * leftLeafSize},${4 * leftLeafSize} C${4 * leftLeafSize},${6 * leftLeafSize} ${2 * leftLeafSize},${7 * leftLeafSize} 0,0 Z`)
+            .attr("fill", leftLeafColor)
             .attr("stroke", "#22c55e")
-            .attr("stroke-width", 1)
+            .attr("stroke-width", 1.5)
             .style("cursor", "pointer")
             .on("mouseenter", function() {
-              d3.select(this).attr("fill", "#22c55e").attr("stroke", "#16a34a");
+              d3.select(this).attr("fill", "#16a34a").attr("stroke", "#15803d");
             })
             .on("mouseleave", function() {
-              d3.select(this).attr("fill", "#4ade80").attr("stroke", "#22c55e");
+              d3.select(this).attr("fill", leftLeafColor).attr("stroke", "#22c55e");
             })
             .on("click", (event) => {
               event.stopPropagation();
@@ -928,19 +939,19 @@ export default function D3NetworkRenderer({
         }
         
         if (leafCount >= 2) {
-          // Create right leaf
+          // Create right leaf with more realistic, organic shape
           linkGroup.append("path")
             .attr("class", "leaf-right")
-            .attr("d", `M0,0 C${2 * rightLeafSize},${-4 * rightLeafSize} ${4 * rightLeafSize},${-3 * rightLeafSize} ${8 * rightLeafSize},0 C${4 * rightLeafSize},${3 * rightLeafSize} ${2 * rightLeafSize},${4 * rightLeafSize} 0,0 Z`)
-            .attr("fill", "#4ade80")
+            .attr("d", `M0,0 C${3 * rightLeafSize},${-8 * rightLeafSize} ${6 * rightLeafSize},${-6 * rightLeafSize} ${12 * rightLeafSize},${-2 * rightLeafSize} C${10 * rightLeafSize},0 ${8 * rightLeafSize},${2 * rightLeafSize} ${6 * rightLeafSize},${4 * rightLeafSize} C${4 * rightLeafSize},${6 * rightLeafSize} ${2 * rightLeafSize},${7 * rightLeafSize} 0,0 Z`)
+            .attr("fill", rightLeafColor)
             .attr("stroke", "#22c55e")
-            .attr("stroke-width", 1)
+            .attr("stroke-width", 1.5)
             .style("cursor", "pointer")
             .on("mouseenter", function() {
-              d3.select(this).attr("fill", "#22c55e").attr("stroke", "#16a34a");
+              d3.select(this).attr("fill", "#16a34a").attr("stroke", "#15803d");
             })
             .on("mouseleave", function() {
-              d3.select(this).attr("fill", "#4ade80").attr("stroke", "#22c55e");
+              d3.select(this).attr("fill", rightLeafColor).attr("stroke", "#22c55e");
             })
             .on("click", (event) => {
               event.stopPropagation();
@@ -1304,8 +1315,8 @@ export default function D3NetworkRenderer({
               target.x !== undefined && target.y !== undefined) {
             
                       // Calculate positions along the connection line for leaf distribution
-          const leftLeafPos = 0.35; // 35% along the line from source
-          const rightLeafPos = 0.65; // 65% along the line from source
+          const leftLeafPos = 0.3; // 30% along the line from source
+          const rightLeafPos = 0.7; // 70% along the line from source
           
           const leftX = source.x + (target.x - source.x) * leftLeafPos;
           const leftY = source.y + (target.y - source.y) * leftLeafPos;
@@ -1316,7 +1327,7 @@ export default function D3NetworkRenderer({
           const angle = Math.atan2(target.y - source.y, target.x - source.x);
           
           // Position leaves very close to the line so they appear to stem from it
-          const offset = 2; // Very small offset so leaves appear to grow from the line
+          const offset = 1; // Minimal offset so leaves appear to grow directly from the line
           
           // Position left leaf (perpendicular to the left of the line)
           const leftAngle = angle + Math.PI / 2;
