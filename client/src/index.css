@@ -468,7 +468,8 @@
       -webkit-user-select: none;
       -moz-user-select: none;
       user-select: none;
-      font-size: 11px;
+      /* Remove font-size override to allow D3 to control font sizes */
+      /* font-size: 11px; */
     }
     
     /* Enable pinch zoom on SVG container */

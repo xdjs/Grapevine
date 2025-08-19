@@ -891,8 +891,34 @@ export default function D3NetworkRenderer({
         const hasProfilePicture = Boolean(d.imageUrl);
         return hasProfilePicture ? `${getDisplayNodeSize(d) + 18}px` : "0.35em";
       })
-      .attr("font-size", (d) => d.type === 'artist' ? "14px" : "11px")
-      .attr("font-weight", (d) => d.type === 'artist' ? "600" : "500")
+      .attr("font-size", (d) => {
+        // Check if this is the main artist node
+        const isMainArtist = mainArtistNode && (
+          d.id === mainArtistNode.id || d.name === mainArtistNode.name
+        );
+        
+        if (isMainArtist) {
+          // Main artist gets larger font size
+          return d.type === 'artist' ? "16px" : "14px";
+        } else {
+          // All other nodes (including expanded ones) get consistent smaller font size
+          return d.type === 'artist' ? "12px" : "11px";
+        }
+      })
+      .attr("font-weight", (d) => {
+        // Check if this is the main artist node
+        const isMainArtist = mainArtistNode && (
+          d.id === mainArtistNode.id || d.name === mainArtistNode.name
+        );
+        
+        if (isMainArtist) {
+          // Main artist gets bolder font weight
+          return d.type === 'artist' ? "700" : "600";
+        } else {
+          // All other nodes get consistent font weight
+          return d.type === 'artist' ? "500" : "500";
+        }
+      })
       .attr("fill", "white")
       .attr("pointer-events", "none")
       .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.8)")
