@@ -148,13 +148,26 @@ export class MemStorage implements IStorage {
       
       // NEW: Get Spotify "appears on" collaboration data to enhance the network
       let spotifyCollaborationData: any = { artists: [] };
-      if (openAIService.isServiceAvailable()) {
+      if (spotifyService.isConfigured()) {
         try {
-          console.log(`🎵 [DEBUG] Fetching Spotify "appears on" collaboration data for "${artistName}"`);
-          spotifyCollaborationData = await openAIService.getSpotifyAppearsOnCollaborators(artistName);
-          console.log(`🎵 [DEBUG] Spotify "appears on" returned ${spotifyCollaborationData.artists.length} verified collaborators for "${artistName}"`);
+          console.log(`🎵 [DEBUG] Fetching real Spotify "appears on" data for "${artistName}"`);
+          const realSpotifyCollaborations = await spotifyService.getArtistAppearsOnData(artistName);
+          console.log(`🎵 [DEBUG] Real Spotify API returned ${realSpotifyCollaborations.length} verified collaborations for "${artistName}"`);
+          
+          // Transform real Spotify data to our expected format
+          spotifyCollaborationData = {
+            artists: realSpotifyCollaborations.map(collab => ({
+              name: collab.artistName,
+              type: 'producer', // Map featured artist to producer for compatibility
+              topCollaborators: [], // We'll populate this later if needed
+              source: 'spotify_api_real',
+              collaborationType: collab.collaborationType,
+              verificationLevel: collab.verificationLevel,
+              spotifyItems: collab.items // Keep the actual Spotify data
+            }))
+          };
         } catch (error) {
-          console.warn(`⚠️ [DEBUG] Could not fetch Spotify "appears on" data for "${artistName}":`, error);
+          console.warn(`⚠️ [DEBUG] Could not fetch real Spotify "appears on" data for "${artistName}":`, error);
         }
       }
 

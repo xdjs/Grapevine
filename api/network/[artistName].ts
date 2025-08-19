@@ -169,7 +169,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       // Generate new network data using OpenAI
       console.log(`🤖 [Vercel] Generating network for ${artistName} using OpenAI service`);
       
-      // Import and use our OpenAI service instead of calling OpenAI directly
+      // Import and use our OpenAI service for general collaboration detection
       const { openAIService } = await import('../../server/openai-service.js');
       
       if (!openAIService.isServiceAvailable()) {
@@ -184,18 +184,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         return;
       }
 
-      // Get collaborations using our enhanced service
-      console.log(`🎵 [Vercel] Fetching collaborations for ${correctArtistName} using enhanced OpenAI service`);
+      // Get general collaborations using OpenAI (for historical/industry knowledge)
+      console.log(`🎵 [Vercel] Fetching general collaborations for ${correctArtistName} using OpenAI service`);
       const collaborationResult = await openAIService.getArtistCollaborations(correctArtistName);
       
       // Also get Spotify "appears on" collaborations to enhance the network
       let spotifyCollaborations: any = { artists: [] };
       try {
-        console.log(`🎵 [Vercel] Fetching Spotify "appears on" collaborations for ${correctArtistName}`);
-        spotifyCollaborations = await openAIService.getSpotifyAppearsOnCollaborators(correctArtistName);
-        console.log(`🎵 [Vercel] Spotify "appears on" returned ${spotifyCollaborations.artists.length} verified collaborators`);
+        console.log(`🎵 [Vercel] Fetching real Spotify "appears on" data for ${correctArtistName}`);
+        const { spotifyService } = await import('../../server/spotify.js');
+        
+        if (spotifyService.isConfigured()) {
+          const realSpotifyCollaborations = await spotifyService.getArtistAppearsOnData(correctArtistName);
+          console.log(`🎵 [Vercel] Real Spotify API returned ${realSpotifyCollaborations.length} verified collaborations`);
+          
+          // Transform real Spotify data to our expected format
+          spotifyCollaborations = {
+            artists: realSpotifyCollaborations.map(collab => ({
+              name: collab.artistName,
+              type: 'producer', // Map featured artist to producer for compatibility
+              topCollaborators: [], // We'll populate this later if needed
+              source: 'spotify_api_real',
+              collaborationType: collab.collaborationType,
+              verificationLevel: collab.verificationLevel,
+              spotifyItems: collab.items // Keep the actual Spotify data
+            }))
+          };
+        } else {
+          console.log(`⚠️ [Vercel] Spotify service not configured, skipping "appears on" data`);
+        }
       } catch (error) {
-        console.warn(`⚠️ [Vercel] Could not fetch Spotify "appears on" data for ${correctArtistName}:`, error);
+        console.warn(`⚠️ [Vercel] Could not fetch real Spotify "appears on" data for ${correctArtistName}:`, error);
       }
 
       // Merge and deduplicate collaboration data

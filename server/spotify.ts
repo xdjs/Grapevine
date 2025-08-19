@@ -34,6 +34,51 @@ export interface SpotifyTrack {
   };
 }
 
+export interface SpotifyAlbum {
+  id: string;
+  name: string;
+  album_type: 'album' | 'single' | 'compilation';
+  artists: Array<{
+    id: string;
+    name: string;
+  }>;
+  release_date: string;
+  images: Array<{
+    url: string;
+    height: number;
+    width: number;
+  }>;
+  total_tracks: number;
+}
+
+export interface SpotifyAppearsOnItem {
+  id: string;
+  name: string;
+  type: 'track' | 'album';
+  album_type?: 'album' | 'single' | 'compilation';
+  artists: Array<{
+    id: string;
+    name: string;
+  }>;
+  release_date: string;
+  images: Array<{
+    url: string;
+    height: number;
+    width: number;
+  }>;
+  total_tracks?: number;
+  track_number?: number;
+  disc_number?: number;
+}
+
+export interface SpotifyAppearsOnCollaboration {
+  artistName: string;
+  artistId: string;
+  collaborationType: 'featured artist' | 'producer' | 'songwriter' | 'guest appearance';
+  items: SpotifyAppearsOnItem[];
+  verificationLevel: 'high' | 'medium' | 'low';
+}
+
 export class SpotifyService {
   private clientId: string;
   private clientSecret: string;
@@ -374,6 +419,138 @@ export class SpotifyService {
     } catch (error) {
       console.error(`❌ [Spotify] Failed to get profile image for ${artistName}:`, error);
       return null;
+    }
+  }
+
+  /**
+   * Get real Spotify "appears on" data for an artist
+   * This fetches actual data from Spotify's API, not AI-generated content
+   */
+  async getArtistAppearsOnData(artistName: string): Promise<SpotifyAppearsOnCollaboration[]> {
+    try {
+      console.log(`🎵 [Spotify] Fetching "appears on" data for: ${artistName}`);
+      
+      // First, search for the artist to get their Spotify ID
+      const artist = await this.searchArtist(artistName);
+      if (!artist) {
+        console.log(`❌ [Spotify] No artist found for: ${artistName}`);
+        return [];
+      }
+
+      const token = await this.getAccessToken();
+      const collaborations: SpotifyAppearsOnCollaboration[] = [];
+      const processedAlbums = new Set<string>();
+
+      // Get albums where the artist appears (not just their own albums)
+      const appearsOnResponse = await axios.get(
+        `https://api.spotify.com/v1/artists/${artist.id}/albums`,
+        {
+          params: {
+            include_groups: 'appears_on',
+            limit: 50,
+            market: 'US'
+          },
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      const appearsOnAlbums = appearsOnResponse.data.items || [];
+      console.log(`🎵 [Spotify] Found ${appearsOnAlbums.length} "appears on" albums for ${artistName}`);
+
+      for (const album of appearsOnAlbums) {
+        if (processedAlbums.has(album.id)) continue;
+        processedAlbums.add(album.id);
+
+        // Skip compilation albums
+        if (album.album_type === 'compilation') {
+          console.log(`🚫 [Spotify] Skipping compilation album: ${album.name}`);
+          continue;
+        }
+
+        // Get detailed album info including tracks
+        try {
+          const albumDetailResponse = await axios.get(
+            `https://api.spotify.com/v1/albums/${album.id}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            }
+          );
+
+          const albumDetail = albumDetailResponse.data;
+          const tracks = albumDetail.tracks?.items || [];
+
+          // Find tracks where our artist appears as a featured artist
+          for (const track of tracks) {
+            const trackArtists = track.artists || [];
+            const isFeaturedArtist = trackArtists.some((trackArtist: { id: string; name: string }) => 
+              trackArtist.id === artist.id && trackArtist.name !== albumDetail.artists[0]?.name
+            );
+
+            if (isFeaturedArtist) {
+              // This is a track where our artist appears as a featured artist
+              const mainArtist = albumDetail.artists[0];
+              if (mainArtist && mainArtist.id !== artist.id) {
+                const collaboration: SpotifyAppearsOnCollaboration = {
+                  artistName: mainArtist.name,
+                  artistId: mainArtist.id,
+                  collaborationType: 'featured artist',
+                  verificationLevel: 'high', // This is real Spotify data
+                  items: [{
+                    id: track.id,
+                    name: track.name,
+                    type: 'track',
+                    album_type: albumDetail.album_type,
+                    artists: trackArtists,
+                    release_date: albumDetail.release_date,
+                    images: albumDetail.images,
+                    track_number: track.track_number,
+                    disc_number: track.disc_number
+                  }]
+                };
+
+                // Check if we already have this collaboration
+                const existingIndex = collaborations.findIndex(c => c.artistId === mainArtist.id);
+                if (existingIndex >= 0) {
+                  // Add this track to existing collaboration
+                  collaborations[existingIndex].items.push({
+                    id: track.id,
+                    name: track.name,
+                    type: 'track',
+                    album_type: albumDetail.album_type,
+                    artists: trackArtists,
+                    release_date: albumDetail.release_date,
+                    images: albumDetail.images,
+                    track_number: track.track_number,
+                    disc_number: track.disc_number
+                  });
+                } else {
+                  collaborations.push(collaboration);
+                }
+
+                console.log(`✅ [Spotify] Found featured artist appearance: ${artistName} on "${track.name}" by ${mainArtist.name}`);
+              }
+            }
+          }
+
+          // Add small delay to respect rate limits
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+        } catch (albumError) {
+          console.warn(`⚠️ [Spotify] Failed to get details for album ${album.id}:`, albumError);
+          continue;
+        }
+      }
+
+      console.log(`🎵 [Spotify] Total collaborations found for ${artistName}: ${collaborations.length}`);
+      return collaborations;
+
+    } catch (error) {
+      console.error(`❌ [Spotify] Failed to get "appears on" data for ${artistName}:`, error);
+      return [];
     }
   }
 
