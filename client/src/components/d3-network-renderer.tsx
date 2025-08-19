@@ -900,12 +900,18 @@ export default function D3NetworkRenderer({
         
         // Create two leaves - one on each side of the connection line
         // We'll position them in the tick function
+        linkGroup.append("line")
+          .attr("class", "leaf-stem-left")
+          .attr("stroke", "#22c55e")
+          .attr("stroke-width", 1.5)
+          .style("cursor", "pointer");
+          
         linkGroup.append("path")
           .attr("class", "leaf-left")
-          .attr("d", "M0,0 C2,-3 4,-2 6,0 C4,2 2,3 0,0 Z")
+          .attr("d", "M0,0 C3,-6 6,-4 12,0 C6,4 3,6 0,0 Z")
           .attr("fill", "#4ade80")
           .attr("stroke", "#22c55e")
-          .attr("stroke-width", 0.5)
+          .attr("stroke-width", 1)
           .style("cursor", "pointer")
           .on("mouseenter", function() {
             d3.select(this).attr("fill", "#22c55e").attr("stroke", "#16a34a");
@@ -919,12 +925,18 @@ export default function D3NetworkRenderer({
             // TODO: Implement leaf click functionality
           });
           
+        linkGroup.append("line")
+          .attr("class", "leaf-stem-right")
+          .attr("stroke", "#22c55e")
+          .attr("stroke-width", 1.5)
+          .style("cursor", "pointer");
+          
         linkGroup.append("path")
           .attr("class", "leaf-right")
-          .attr("d", "M0,0 C2,-3 4,-2 6,0 C4,2 2,3 0,0 Z")
+          .attr("d", "M0,0 C3,-6 6,-4 12,0 C6,4 3,6 0,0 Z")
           .attr("fill", "#4ade80")
           .attr("stroke", "#22c55e")
-          .attr("stroke-width", 0.5)
+          .attr("stroke-width", 1)
           .style("cursor", "pointer")
           .on("mouseenter", function() {
             d3.select(this).attr("fill", "#22c55e").attr("stroke", "#16a34a");
@@ -1292,32 +1304,51 @@ export default function D3NetworkRenderer({
           if (source.x !== undefined && source.y !== undefined && 
               target.x !== undefined && target.y !== undefined) {
             
-            // Calculate midpoint of the connection line
-            const midX = (source.x + target.x) / 2;
-            const midY = (source.y + target.y) / 2;
+                      // Calculate positions along the connection line for better leaf distribution
+          const leftLeafPos = 0.4; // 40% along the line from source
+          const rightLeafPos = 0.6; // 60% along the line from source
+          
+          const leftX = source.x + (target.x - source.x) * leftLeafPos;
+          const leftY = source.y + (target.y - source.y) * leftLeafPos;
+          const rightX = source.x + (target.x - source.x) * rightLeafPos;
+          const rightY = source.y + (target.y - source.y) * rightLeafPos;
+          
+          // Calculate the angle of the connection line
+          const angle = Math.atan2(target.y - source.y, target.x - source.x);
+          
+          // Calculate perpendicular offset for leaf positioning
+          const offset = 8; // Distance from the line - closer for better connection appearance
+          
+          // Position left leaf (perpendicular to the left of the line)
+          const leftAngle = angle + Math.PI / 2;
+          const leftLeafX = leftX + Math.cos(leftAngle) * offset;
+          const leftLeafY = leftY + Math.sin(leftAngle) * offset;
+          
+          // Position right leaf (perpendicular to the right of the line)
+          const rightAngle = angle - Math.PI / 2;
+          const rightLeafX = rightX + Math.cos(rightAngle) * offset;
+          const rightLeafY = rightY + Math.sin(rightAngle) * offset;
             
-            // Calculate the angle of the connection line
-            const angle = Math.atan2(target.y - source.y, target.x - source.x);
-            
-            // Calculate perpendicular offset for leaf positioning
-            const offset = 16; // Distance from the line
-            
-            // Position left leaf (perpendicular to the left of the line)
-            const leftAngle = angle + Math.PI / 2;
-            const leftX = midX + Math.cos(leftAngle) * offset;
-            const leftY = midY + Math.sin(leftAngle) * offset;
-            
-            // Position right leaf (perpendicular to the right of the line)
-            const rightAngle = angle - Math.PI / 2;
-            const rightX = midX + Math.cos(rightAngle) * offset;
-            const rightY = midY + Math.sin(rightAngle) * offset;
-            
-            // Update leaf positions and rotations
-            const leafGroup = d3.select(this);
-            leafGroup.select(".leaf-left")
-              .attr("transform", `translate(${leftX}, ${leftY}) rotate(${(leftAngle * 180 / Math.PI) + 90})`);
-            leafGroup.select(".leaf-right")
-              .attr("transform", `translate(${rightX}, ${rightY}) rotate(${(rightAngle * 180 / Math.PI) + 90})`);
+                      // Update leaf positions and rotations
+          const leafGroup = d3.select(this);
+          
+          // Update left leaf and stem
+          leafGroup.select(".leaf-stem-left")
+            .attr("x1", leftX)
+            .attr("y1", leftY)
+            .attr("x2", leftLeafX)
+            .attr("y2", leftLeafY);
+          leafGroup.select(".leaf-left")
+            .attr("transform", `translate(${leftLeafX}, ${leftLeafY}) rotate(${(leftAngle * 180 / Math.PI) + 90})`);
+          
+          // Update right leaf and stem
+          leafGroup.select(".leaf-stem-right")
+            .attr("x1", rightX)
+            .attr("y1", rightY)
+            .attr("x2", rightLeafX)
+            .attr("y2", rightLeafY);
+          leafGroup.select(".leaf-right")
+            .attr("transform", `translate(${rightLeafX}, ${rightLeafY}) rotate(${(rightAngle * 180 / Math.PI) + 90})`);
           }
         });
       }
