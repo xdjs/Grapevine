@@ -147,6 +147,9 @@ export default function CollaborationDetailsPopup({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Generate PNGs from desktop SVGs for mobile so icons match exactly but remain crisp
+  const mobileIcons = useMobilePngIcons(isMobile);
+
   useEffect(() => {
     if (isOpen && artistName && collaboratorName) {
       // Don't fetch if it's the same artist (main artist clicked on themselves)
@@ -436,7 +439,11 @@ export default function CollaborationDetailsPopup({
                     isMobile ? 'text-base' : 'text-lg'
                   }`}>
                     {isMobile ? (
-                      <img src={svgDataUrl(musicSvg12)} alt="" width={24} height={24} style={{ minWidth: 24, minHeight: 24, maxWidth: 24, maxHeight: 24 }} />
+                      mobileIcons.music ? (
+                        <img src={mobileIcons.music} alt="" width={24} height={24} style={{ minWidth: 24, minHeight: 24, maxWidth: 24, maxHeight: 24 }} />
+                      ) : (
+                        <span style={{ width: 24, height: 24, minWidth: 24, minHeight: 24, maxWidth: 24, maxHeight: 24, display: 'inline-block' }} />
+                      )
                     ) : (
                       <Music className="text-purple-400 flex-shrink-0 w-6 h-6 min-w-6 min-h-6 max-w-6 max-h-6" />
                     )}
@@ -452,7 +459,15 @@ export default function CollaborationDetailsPopup({
                       >
                         <div className="flex items-center space-x-3">
                           {isMobile ? (
-                            <img src={svgDataUrl((project.type === 'album' || project.type === 'ep') ? discSvg12 : project.type === 'single' ? micSvg12 : musicSvg12)} alt="" width={24} height={24} style={{ minWidth: 24, minHeight: 24, maxWidth: 24, maxHeight: 24 }} />
+                            project.type === 'song' ? (
+                              mobileIcons.music ? (
+                                <img src={mobileIcons.music} alt="" width={24} height={24} style={{ minWidth: 24, minHeight: 24, maxWidth: 24, maxHeight: 24 }} />
+                              ) : (
+                                <span style={{ width: 24, height: 24, minWidth: 24, minHeight: 24, maxWidth: 24, maxHeight: 24, display: 'inline-block' }} />
+                              )
+                            ) : (
+                              <img src={svgDataUrl((project.type === 'album' || project.type === 'ep') ? discSvg12 : project.type === 'single' ? micSvg12 : musicSvg12)} alt="" width={24} height={24} style={{ minWidth: 24, minHeight: 24, maxWidth: 24, maxHeight: 24 }} />
+                            )
                           ) : (
                             <div className="text-purple-400">{getProjectIcon(project.type)}</div>
                           )}
