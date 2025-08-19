@@ -5,6 +5,8 @@ export interface OpenAICollaborator {
   name: string;
   type: 'producer' | 'songwriter';
   topCollaborators: string[];
+  collaborationType?: 'featured artist' | 'producer' | 'songwriter' | 'guest appearance';
+  verificationLevel?: 'high' | 'medium' | 'low';
 }
 
 export interface OpenAICollaborationResult {
@@ -39,7 +41,7 @@ class OpenAIService {
     console.log(`🤖 [DEBUG] Querying OpenAI for collaborations with "${artistName}"`);
 
     try {
-      const prompt = `Search Spotify's "appears on" section and other collaboration data to find music industry professionals who have collaborated with ${artistName}. Focus on producers, songwriters, and other artists who have worked with them.
+      const prompt = `Provide a comprehensive list of music industry professionals who have collaborated with ${artistName}. Focus on producers, songwriters, and other artists who have worked with them.
 
 For well-known/mainstream artists (chart-topping, Grammy-nominated, major label artists): Include all documented collaborations you're aware of, as these are likely well-documented and verifiable.
 
@@ -66,15 +68,14 @@ Guidelines:
 - Never use generic placeholder names like "John Doe", "Producer X", etc.
 - Maximum 10 real collaborators if they exist
 - Be confident about well-documented collaborations for commercially successful artists
-- Focus on collaborations from official album/song credits, not rumors or speculation
-- Prioritize collaborations found in Spotify's "appears on" section and official album credits`;
+- Focus on collaborations from official album/song credits, not rumors or speculation`;
 
       const response = await this.openai!.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
             role: "system",
-            content: "You are a music industry database expert specializing in Spotify collaboration data. Focus on finding collaborators from Spotify's 'appears on' section, album credits, and official releases. For mainstream/well-known artists, confidently provide all documented collaborations. For lesser-known artists, be more selective but still inclusive of authentic collaborations. Prioritize accuracy while being comprehensive for well-documented artists."
+            content: "You are a music industry database expert. For mainstream/well-known artists, confidently provide all documented collaborations. For lesser-known artists, be more selective but still inclusive of authentic collaborations. Prioritize accuracy while being comprehensive for well-documented artists."
           },
           {
             role: "user",
@@ -114,6 +115,115 @@ Guidelines:
 
     } catch (error) {
       console.error(`❌ [DEBUG] OpenAI API error for "${artistName}":`, error);
+      throw error;
+    }
+  }
+
+  async getSpotifyAppearsOnCollaborators(artistName: string): Promise<OpenAICollaborationResult> {
+    if (!this.isConfigured || !this.openai) {
+      throw new Error('OpenAI service is not configured');
+    }
+
+    console.log(`🤖 [DEBUG] Querying OpenAI for Spotify "appears on" collaborators with "${artistName}"`);
+
+    try {
+      const prompt = `Analyze Spotify's "appears on" section for ${artistName} to identify verified music collaborations. Focus ONLY on authentic, verified collaborations and exclude compilation albums.
+
+Please respond with JSON in this exact format:
+{
+  "collaborators": [
+    {
+      "name": "Artist/Producer Name",
+      "roles": ["artist", "producer", "songwriter"],
+      "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"],
+      "collaborationType": "featured artist|producer|songwriter|guest appearance",
+      "verificationLevel": "high|medium|low"
+    }
+  ]
+}
+
+Guidelines for Spotify "Appears On" Analysis:
+
+**INCLUDE (Verified Collaborations):**
+- Featured artist appearances on other artists' tracks/albums
+- Producer credits on tracks where ${artistName} is featured
+- Songwriter credits on collaborative tracks
+- Guest appearances on verified releases
+- Remix collaborations with clear artist involvement
+- Live performance collaborations (if documented)
+
+**EXCLUDE (Not Verified Collaborations):**
+- Compilation albums (Greatest Hits, Soundtracks, Various Artists)
+- Tribute albums unless ${artistName} is directly involved
+- Playlist appearances (not actual collaborations)
+- Radio edits or remixes without artist involvement
+- Cover songs by other artists
+- Sample usage without direct collaboration
+
+**Verification Criteria:**
+- High: Direct artist credit, official release, clear collaboration
+- Medium: Likely collaboration based on release context
+- Low: Possible collaboration but needs verification
+
+**Focus Areas:**
+- Official album/track credits
+- Verified producer relationships
+- Documented songwriter partnerships
+- Clear featuring arrangements
+- Remix collaborations with artist input
+
+- Maximum 15 verified collaborators if they exist
+- Prioritize quality over quantity - only include confident collaborations
+- If no verified "appears on" collaborations exist, return: {"collaborators": []}
+- Never include compilation albums or unverified collaborations`;
+
+      const response = await this.openai!.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "You are a Spotify music collaboration expert specializing in analyzing artist 'appears on' sections. You excel at distinguishing between verified collaborations and compilation appearances. Focus on authentic, documented collaborations while filtering out compilation albums and unverified relationships."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.1, // Low temperature for more factual responses
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || '{"collaborators": []}');
+      
+      // Transform the response to our expected format
+      const collaborators: OpenAICollaborator[] = [];
+      
+      if (result.collaborators) {
+        for (const collaborator of result.collaborators) {
+          // For each person, create entries for each of their roles
+          const roles = collaborator.roles || ['artist']; // Default to artist if no roles specified
+          
+          for (const role of roles) {
+            if (role === 'producer' || role === 'songwriter' || role === 'artist') {
+              collaborators.push({
+                name: collaborator.name,
+                type: role === 'artist' ? 'producer' : role as 'producer' | 'songwriter', // Map artist to producer for compatibility
+                topCollaborators: collaborator.topCollaborators || [],
+                collaborationType: collaborator.collaborationType,
+                verificationLevel: collaborator.verificationLevel
+              });
+            }
+          }
+        }
+      }
+
+      console.log(`✅ [DEBUG] OpenAI returned ${collaborators.length} Spotify "appears on" collaborators for "${artistName}"`);
+      console.log(`🤖 [DEBUG] Artists: ${collaborators.filter(c => c.type === 'producer').length}, Producers: ${collaborators.filter(c => c.type === 'producer').length}, Songwriters: ${collaborators.filter(c => c.type === 'songwriter').length}`);
+
+      return { artists: collaborators };
+
+    } catch (error) {
+      console.error(`❌ [DEBUG] OpenAI API error for Spotify "appears on" analysis of "${artistName}":`, error);
       throw error;
     }
   }
