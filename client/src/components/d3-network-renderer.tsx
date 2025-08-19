@@ -7,24 +7,6 @@ import { UseTooltipReturn } from "@/hooks/use-tooltip";
 import { useFilterVisibility } from "@/hooks/use-filter-visibility";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-/**
- * D3 Network Renderer Component with Leaf Decorations
- * 
- * Features:
- * - SVG setup and rendering
- * - Force simulation management
- * - Node and link rendering with multi-role support
- * - Leaf decorations on connection lines (2 leaves per connection)
- * - Connected components calculation and positioning
- * - Boundary forces and viewport constraints
- * - Filter-based visibility management
- * 
- * Leaf Decorations:
- * - Two leaves per connection line, positioned perpendicular to the line
- * - Leaves are clickable and have hover effects
- * - Positioned at the midpoint of each connection
- * - Green color scheme (#4ade80 fill, #22c55e stroke)
- */
 export interface D3NetworkRendererProps {
   /** Network data to visualize */
   data: NetworkData;
@@ -881,133 +863,60 @@ export default function D3NetworkRenderer({
   };
 
   /**
-   * Render leaf decorations on connection lines.
-   */
-  const renderLeafDecorations = (
-    networkGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
-    links: NetworkLink[]
-  ) => {
-    console.log(`🍃 [LeafDecorations] Rendering ${links.length} leaf decorations`);
-    
-    return networkGroup
-      .selectAll(".leaf-decoration")
-      .data(links)
-      .enter()
-      .append("g")
-      .attr("class", "leaf-decoration")
-      .each(function(d) {
-        const linkGroup = d3.select(this);
-        
-        // Randomly decide how many leaves this connection will have (1 or 2)
-        const leafCount = Math.random() > 0.4 ? 2 : 1; // 60% chance of 2 leaves, 40% chance of 1
-        
-        // Randomize leaf size for natural variation
-        const leftLeafSize = 1.2 + Math.random() * 0.6; // 1.2x to 1.8x base size
-        const rightLeafSize = 1.2 + Math.random() * 0.6; // 1.2x to 1.8x base size
-        
-        // Randomize leaf colors for natural variation
-        const leafColors = [
-          "#4ade80", // Bright green
-          "#22c55e", // Medium green
-          "#16a34a", // Dark green
-          "#84cc16", // Lime green
-          "#65a30d"  // Olive green
-        ];
-        const leftLeafColor = leafColors[Math.floor(Math.random() * leafColors.length)];
-        const rightLeafColor = leafColors[Math.floor(Math.random() * leafColors.length)];
-        
-        // Create static rotation variations that won't change each tick
-        const leftRotationVariation = (Math.random() - 0.5) * 20; // ±10 degrees
-        const rightRotationVariation = (Math.random() - 0.5) * 20; // ±10 degrees
-        
-        // Create static position variations that won't change each tick
-        const leftLeafPos = 0.25 + Math.random() * 0.25; // 25% to 50% along the line from source
-        const rightLeafPos = 0.5 + Math.random() * 0.25; // 50% to 75% along the line from source
-        
-        if (leafCount >= 1) {
-          // Create left leaf with teardrop shape
-          linkGroup.append("path")
-            .attr("class", "leaf-left")
-            .attr("data-rotation-variation", leftRotationVariation) // Store for later use
-            .attr("data-position-ratio", leftLeafPos) // Store position ratio
-            .attr("d", `M0,0 C${2 * leftLeafSize},${-6 * leftLeafSize} ${6 * leftLeafSize},${-4 * leftLeafSize} ${10 * leftLeafSize},0 C${6 * leftLeafSize},${4 * leftLeafSize} ${2 * leftLeafSize},${6 * leftLeafSize} 0,0 Z`)
-            .attr("fill", leftLeafColor)
-            .attr("stroke", "#22c55e")
-            .attr("stroke-width", 1.5)
-            .style("cursor", "pointer")
-            .on("mouseenter", function() {
-              d3.select(this).attr("fill", "#16a34a").attr("stroke", "#15803d");
-            })
-            .on("mouseleave", function() {
-              d3.select(this).attr("fill", leftLeafColor).attr("stroke", "#22c55e");
-            })
-            .on("click", (event) => {
-              event.stopPropagation();
-              console.log("🍃 [LeafDecorations] Left leaf clicked for link:", d);
-              // TODO: Implement leaf click functionality
-            });
-            
-          // Add a small stem line to connect leaf to the connection line
-          linkGroup.append("line")
-            .attr("class", "leaf-stem-left")
-            .attr("stroke", "#22c55e")
-            .attr("stroke-width", 1)
-            .style("cursor", "pointer");
-        }
-        
-        if (leafCount >= 2) {
-          // Create right leaf with teardrop shape
-          linkGroup.append("path")
-            .attr("class", "leaf-right")
-            .attr("data-rotation-variation", rightRotationVariation) // Store for later use
-            .attr("data-position-ratio", rightLeafPos) // Store position ratio
-            .attr("d", `M0,0 C${2 * rightLeafSize},${-6 * rightLeafSize} ${6 * rightLeafSize},${-4 * rightLeafSize} ${10 * rightLeafSize},0 C${6 * rightLeafSize},${4 * rightLeafSize} ${2 * rightLeafSize},${6 * rightLeafSize} 0,0 Z`)
-            .attr("fill", rightLeafColor)
-            .attr("stroke", "#22c55e")
-            .attr("stroke-width", 1.5)
-            .style("cursor", "pointer")
-            .on("mouseenter", function() {
-              d3.select(this).attr("fill", "#16a34a").attr("stroke", "#15803d");
-            })
-            .on("mouseleave", function() {
-              d3.select(this).attr("fill", rightLeafColor).attr("stroke", "#22c55e");
-            })
-            .on("click", (event) => {
-              event.stopPropagation();
-              console.log("🍃 [LeafDecorations] Right leaf clicked for link:", d);
-              // TODO: Implement leaf click functionality
-            });
-            
-          // Add a small stem line to connect leaf to the connection line
-          linkGroup.append("line")
-            .attr("class", "leaf-stem-right")
-            .attr("stroke", "#22c55e")
-            .attr("stroke-width", 1)
-            .style("cursor", "pointer");
-        }
-      });
-  };
-
-  /**
-   * Render link elements.
+   * Render link elements with leaves on the connection lines.
    */
   const renderLinks = (
     networkGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
     links: NetworkLink[]
   ) => {
-    const linkElements = networkGroup
-      .selectAll(".link")
+    // Create link groups that will contain both the line and leaves
+    const linkGroups = networkGroup
+      .selectAll(".link-group")
       .data(links)
       .enter()
-      .append("line")
+      .append("g")
+      .attr("class", "link-group");
+
+    // Add the main connection line
+    linkGroups.append("line")
       .attr("class", "link network-link")
       .attr("stroke", "#355367")
       .attr("stroke-width", 2);
+
+    // Add leaves on each side of the connection line
+    linkGroups.each(function(d) {
+      const group = d3.select(this);
       
-    // Add leaf decorations to the links
-    renderLeafDecorations(networkGroup, links);
-    
-    return linkElements;
+      // Create left leaf (first leaf)
+      group.append("circle")
+        .attr("class", "connection-leaf leaf-left")
+        .attr("r", 4)
+        .attr("fill", "#4CAF50")
+        .attr("stroke", "#2E7D32")
+        .attr("stroke-width", 1)
+        .style("cursor", "pointer")
+        .on("click", (event) => {
+          event.stopPropagation();
+          console.log(`🍃 Left leaf clicked for connection: ${(d.source as NetworkNode).name} -> ${(d.target as NetworkNode).name}`);
+          // TODO: Implement leaf click functionality
+        });
+
+      // Create right leaf (second leaf)
+      group.append("circle")
+        .attr("class", "connection-leaf leaf-right")
+        .attr("r", 4)
+        .attr("fill", "#4CAF50")
+        .attr("stroke", "#2E7D32")
+        .attr("stroke-width", 1)
+        .style("cursor", "pointer")
+        .on("click", (event) => {
+          event.stopPropagation();
+          console.log(`🍃 Right leaf clicked for connection: ${(d.source as NetworkNode).name} -> ${(d.target as NetworkNode).name}`);
+          // TODO: Implement leaf click functionality
+        });
+    });
+
+    return linkGroups;
   };
 
   /**
@@ -1321,99 +1230,39 @@ export default function D3NetworkRenderer({
 
     // Update positions on tick
     simulation.on("tick", () => {
-      linkElements
+      // Update link positions
+      linkElements.selectAll("line")
         .attr("x1", (d) => (d.source as NetworkNode).x!)
         .attr("y1", (d) => (d.source as NetworkNode).y!)
         .attr("x2", (d) => (d.target as NetworkNode).x!)
         .attr("y2", (d) => (d.target as NetworkNode).y!);
 
-      // Update leaf decoration positions
-      const leafDecorations = networkGroup.selectAll(".leaf-decoration");
-      if (leafDecorations.size() > 0) {
-        console.log(`🍃 [LeafDecorations] Updating positions for ${leafDecorations.size()} leaf decorations`);
+      // Update leaf positions on connection lines
+      linkElements.each(function(d) {
+        const group = d3.select(this);
+        const source = d.source as NetworkNode;
+        const target = d.target as NetworkNode;
         
-        leafDecorations.each(function(d) {
-          const link = d as NetworkLink;
-          const source = link.source as NetworkNode;
-          const target = link.target as NetworkNode;
+        if (source.x !== undefined && source.y !== undefined && 
+            target.x !== undefined && target.y !== undefined) {
           
-          if (source.x !== undefined && source.y !== undefined && 
-              target.x !== undefined && target.y !== undefined) {
-            
-                      // Calculate positions along the connection line for leaf distribution
-          // Use stored position ratios to prevent leaves from moving along the lines
-          let leftX = 0, leftY = 0, rightX = 0, rightY = 0;
+          // Calculate positions for leaves at 1/3 and 2/3 along the line
+          const leftLeafX = source.x + (target.x - source.x) * 0.33;
+          const leftLeafY = source.y + (target.y - source.y) * 0.33;
+          const rightLeafX = source.x + (target.x - source.x) * 0.67;
+          const rightLeafY = source.y + (target.y - source.y) * 0.67;
           
-          // Get left leaf position if it exists
-          const leftLeaf = leafGroup.select(".leaf-left");
-          if (!leftLeaf.empty()) {
-            const leftLeafPos = parseFloat(leftLeaf.attr("data-position-ratio") || "0.35");
-            leftX = source.x + (target.x - source.x) * leftLeafPos;
-            leftY = source.y + (target.y - source.y) * leftLeafPos;
-          }
+          // Update left leaf position
+          group.select(".leaf-left")
+            .attr("cx", leftLeafX)
+            .attr("cy", leftLeafY);
           
-          // Get right leaf position if it exists
-          const rightLeaf = leafGroup.select(".leaf-right");
-          if (!rightLeaf.empty()) {
-            const rightLeafPos = parseFloat(rightLeaf.attr("data-position-ratio") || "0.65");
-            rightX = source.x + (target.x - source.x) * rightLeafPos;
-            rightY = source.y + (target.y - source.y) * rightLeafPos;
-          }
-          
-          // Calculate the angle of the connection line
-          const angle = Math.atan2(target.y - source.y, target.x - source.x);
-          
-          // Position leaves very close to the line so they appear to stem from it
-          const offset = 2; // Very small offset so leaves appear to grow from the line
-          
-          // Position left leaf (perpendicular to the left of the line)
-          const leftAngle = angle + Math.PI / 2;
-          const leftLeafX = leftX + Math.cos(leftAngle) * offset;
-          const leftLeafY = leftY + Math.sin(leftAngle) * offset;
-          
-          // Position right leaf (perpendicular to the right of the line)
-          const rightAngle = angle - Math.PI / 2;
-          const rightLeafX = rightX + Math.cos(rightAngle) * offset;
-          const rightLeafY = rightY + Math.sin(rightAngle) * offset;
-            
-                      // Update left leaf position and rotation (if it exists)
-          const leftLeaf = leafGroup.select(".leaf-left");
-          if (!leftLeaf.empty()) {
-            // Use the stored rotation variation to prevent twitching
-            const leftRotationVariation = parseFloat(leftLeaf.attr("data-rotation-variation") || "0");
-            leftLeaf.attr("transform", `translate(${leftLeafX}, ${leftLeafY}) rotate(${(leftAngle * 180 / Math.PI) + 90 + leftRotationVariation})`);
-            
-            // Update left leaf stem line
-            const leftStem = leafGroup.select(".leaf-stem-left");
-            if (!leftStem.empty()) {
-              leftStem
-                .attr("x1", leftX)
-                .attr("y1", leftY)
-                .attr("x2", leftLeafX)
-                .attr("y2", leftY);
-            }
-          }
-          
-          // Update right leaf position and rotation (if it exists)
-          const rightLeaf = leafGroup.select(".leaf-right");
-          if (!rightLeaf.empty()) {
-            // Use the stored rotation variation to prevent twitching
-            const rightRotationVariation = parseFloat(rightLeaf.attr("data-rotation-variation") || "0");
-            rightLeaf.attr("transform", `translate(${rightLeafX}, ${rightLeafY}) rotate(${(rightAngle * 180 / Math.PI) + 90 + rightRotationVariation})`);
-            
-            // Update right leaf stem line
-            const rightStem = leafGroup.select(".leaf-stem-right");
-            if (!rightStem.empty()) {
-              rightStem
-                .attr("x1", rightX)
-                .attr("y1", rightY)
-                .attr("x2", rightLeafX)
-                .attr("y2", rightY);
-            }
-          }
-          }
-        });
-      }
+          // Update right leaf position
+          group.select(".leaf-right")
+            .attr("cx", rightLeafX)
+            .attr("cy", rightLeafY);
+        }
+      });
 
       nodeElements.attr("transform", (d) => `translate(${d.x!}, ${d.y!})`);
 

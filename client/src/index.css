@@ -635,3 +635,29 @@
 .leaf:hover .leaf-shape {
   filter: brightness(1.2);
 }
+
+/* Connection leaf styles */
+.connection-leaf {
+  transition: all 0.2s ease-in-out;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+  z-index: 15;
+}
+
+.connection-leaf:hover {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+  transform: scale(1.2);
+  z-index: 16;
+}
+
+.leaf-left, .leaf-right {
+  pointer-events: auto;
+}
+
+/* Ensure leaves are above connection lines */
+.link-group {
+  z-index: 1;
+}
+
+.connection-leaf {
+  z-index: 2;
+}
