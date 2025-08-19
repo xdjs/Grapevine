@@ -7,6 +7,24 @@ import { UseTooltipReturn } from "@/hooks/use-tooltip";
 import { useFilterVisibility } from "@/hooks/use-filter-visibility";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+/**
+ * D3 Network Renderer Component with Leaf Decorations
+ * 
+ * Features:
+ * - SVG setup and rendering
+ * - Force simulation management
+ * - Node and link rendering with multi-role support
+ * - Leaf decorations on connection lines (2 leaves per connection)
+ * - Connected components calculation and positioning
+ * - Boundary forces and viewport constraints
+ * - Filter-based visibility management
+ * 
+ * Leaf Decorations:
+ * - Two leaves per connection line, positioned perpendicular to the line
+ * - Leaves are clickable and have hover effects
+ * - Positioned at the midpoint of each connection
+ * - Green color scheme (#4ade80 fill, #22c55e stroke)
+ */
 export interface D3NetworkRendererProps {
   /** Network data to visualize */
   data: NetworkData;
@@ -869,6 +887,8 @@ export default function D3NetworkRenderer({
     networkGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
     links: NetworkLink[]
   ) => {
+    console.log(`🍃 [LeafDecorations] Rendering ${links.length} leaf decorations`);
+    
     return networkGroup
       .selectAll(".leaf-decoration")
       .data(links)
@@ -879,44 +899,44 @@ export default function D3NetworkRenderer({
         const linkGroup = d3.select(this);
         
         // Create two leaves - one on each side of the connection line
-        // Each leaf will be positioned at 1/4 and 3/4 along the line for better spacing
-        const leafPositions = [0.25, 0.75];
-        
-        leafPositions.forEach((position, index) => {
-          const leafGroup = linkGroup.append("g")
-            .attr("class", "leaf")
-            .attr("data-leaf-index", index)
-            .style("cursor", "pointer")
-            .on("click", (event) => {
-              event.stopPropagation();
-              console.log(`Leaf clicked on link between ${(d.source as NetworkNode).name} and ${(d.target as NetworkNode).name}`);
-              // TODO: Implement leaf click functionality
-            });
+        // We'll position them in the tick function
+        linkGroup.append("path")
+          .attr("class", "leaf-left")
+          .attr("d", "M0,0 C2,-3 4,-2 6,0 C4,2 2,3 0,0 Z")
+          .attr("fill", "#4ade80")
+          .attr("stroke", "#22c55e")
+          .attr("stroke-width", 0.5)
+          .style("cursor", "pointer")
+          .on("mouseenter", function() {
+            d3.select(this).attr("fill", "#22c55e").attr("stroke", "#16a34a");
+          })
+          .on("mouseleave", function() {
+            d3.select(this).attr("fill", "#4ade80").attr("stroke", "#22c55e");
+          })
+          .on("click", (event) => {
+            event.stopPropagation();
+            console.log("🍃 [LeafDecorations] Left leaf clicked for link:", d);
+            // TODO: Implement leaf click functionality
+          });
           
-          // Create leaf shape using SVG path - more realistic leaf shape
-          const leafPath = leafGroup.append("path")
-            .attr("class", "leaf-shape")
-            .attr("d", "M0,0 Q-6,-3 -10,0 Q-6,3 0,0")
-            .attr("fill", "#4ade80")
-            .attr("stroke", "#22c55e")
-            .attr("stroke-width", 1.5)
-            .attr("opacity", 0.9);
-          
-          // Add hover effects
-          leafGroup
-            .on("mouseenter", function() {
-              d3.select(this).select(".leaf-shape")
-                .attr("fill", "#22d3ee")
-                .attr("stroke", "#06b6d4")
-                .attr("opacity", 1);
-            })
-            .on("mouseleave", function() {
-              d3.select(this).select(".leaf-shape")
-                .attr("fill", "#4ade80")
-                .attr("stroke", "#22c55e")
-                .attr("opacity", 0.8);
-            });
-        });
+        linkGroup.append("path")
+          .attr("class", "leaf-right")
+          .attr("d", "M0,0 C2,-3 4,-2 6,0 C4,2 2,3 0,0 Z")
+          .attr("fill", "#4ade80")
+          .attr("stroke", "#22c55e")
+          .attr("stroke-width", 0.5)
+          .style("cursor", "pointer")
+          .on("mouseenter", function() {
+            d3.select(this).attr("fill", "#22c55e").attr("stroke", "#16a34a");
+          })
+          .on("mouseleave", function() {
+            d3.select(this).attr("fill", "#4ade80").attr("stroke", "#22c55e");
+          })
+          .on("click", (event) => {
+            event.stopPropagation();
+            console.log("🍃 [LeafDecorations] Right leaf clicked for link:", d);
+            // TODO: Implement leaf click functionality
+          });
       });
   };
 
@@ -927,7 +947,6 @@ export default function D3NetworkRenderer({
     networkGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
     links: NetworkLink[]
   ) => {
-    // Render the main connection lines
     const linkElements = networkGroup
       .selectAll(".link")
       .data(links)
@@ -936,10 +955,9 @@ export default function D3NetworkRenderer({
       .attr("class", "link network-link")
       .attr("stroke", "#355367")
       .attr("stroke-width", 2);
-    
-    // Render leaf decorations on the links
-    const leafElements = renderLeafDecorations(networkGroup, links);
-    console.log(`🌿 [D3Renderer] Created ${leafElements.size()} leaf decoration groups`);
+      
+    // Add leaf decorations to the links
+    renderLeafDecorations(networkGroup, links);
     
     return linkElements;
   };
@@ -1264,6 +1282,8 @@ export default function D3NetworkRenderer({
       // Update leaf decoration positions
       const leafDecorations = networkGroup.selectAll(".leaf-decoration");
       if (leafDecorations.size() > 0) {
+        console.log(`🍃 [LeafDecorations] Updating positions for ${leafDecorations.size()} leaf decorations`);
+        
         leafDecorations.each(function(d) {
           const link = d as NetworkLink;
           const source = link.source as NetworkNode;
@@ -1272,30 +1292,32 @@ export default function D3NetworkRenderer({
           if (source.x !== undefined && source.y !== undefined && 
               target.x !== undefined && target.y !== undefined) {
             
+            // Calculate midpoint of the connection line
+            const midX = (source.x + target.x) / 2;
+            const midY = (source.y + target.y) / 2;
+            
+            // Calculate the angle of the connection line
+            const angle = Math.atan2(target.y - source.y, target.x - source.x);
+            
+            // Calculate perpendicular offset for leaf positioning
+            const offset = 16; // Distance from the line
+            
+            // Position left leaf (perpendicular to the left of the line)
+            const leftAngle = angle + Math.PI / 2;
+            const leftX = midX + Math.cos(leftAngle) * offset;
+            const leftY = midY + Math.sin(leftAngle) * offset;
+            
+            // Position right leaf (perpendicular to the right of the line)
+            const rightAngle = angle - Math.PI / 2;
+            const rightX = midX + Math.cos(rightAngle) * offset;
+            const rightY = midY + Math.sin(rightAngle) * offset;
+            
+            // Update leaf positions and rotations
             const leafGroup = d3.select(this);
-            const leafPositions = [0.25, 0.75];
-            
-            leafGroup.selectAll(".leaf").each(function(leafD, leafIndex) {
-              const position = leafPositions[leafIndex];
-              const leaf = d3.select(this);
-              
-              // Calculate position along the line
-              const x = source.x! + (target.x! - source.x!) * position;
-              const y = source.y! + (target.y! - source.y!) * position;
-              
-              // Calculate angle for leaf orientation
-              const angle = Math.atan2(target.y! - source.y!, target.x! - source.x!);
-              // Position leaves perpendicular to the connection line, one on each side
-              const leafAngle = angle + (leafIndex === 0 ? Math.PI / 2 : -Math.PI / 2);
-              
-                          // Position and rotate the leaf
-            leaf.attr("transform", `translate(${x}, ${y}) rotate(${leafAngle * 180 / Math.PI})`);
-            
-            // Debug logging for first few leaves
-            if (Math.random() < 0.1) { // Log 10% of leaves to avoid spam
-              console.log(`🌿 [Leaf] Positioned leaf ${leafIndex} at (${x.toFixed(1)}, ${y.toFixed(1)}) with angle ${(leafAngle * 180 / Math.PI).toFixed(1)}°`);
-            }
-            });
+            leafGroup.select(".leaf-left")
+              .attr("transform", `translate(${leftX}, ${leftY}) rotate(${(leftAngle * 180 / Math.PI) + 90})`);
+            leafGroup.select(".leaf-right")
+              .attr("transform", `translate(${rightX}, ${rightY}) rotate(${(rightAngle * 180 / Math.PI) + 90})`);
           }
         });
       }
