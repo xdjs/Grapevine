@@ -119,17 +119,9 @@ export default function D3NetworkRenderer({
       // Main artist keeps their original size
       return node.size;
     } else {
-      // All other nodes (including expanded ones) get consistent size
-      // Use a size that's appropriate for the node type but consistent across all non-main nodes
-      if (node.type === 'artist') {
-        return 25; // Consistent size for artist nodes
-      } else if (node.type === 'producer') {
-        return 22; // Consistent size for producer nodes
-      } else if (node.type === 'songwriter') {
-        return 22; // Consistent size for songwriter nodes
-      } else {
-        return 20; // Default consistent size for other node types
-      }
+      // All other nodes (including expanded ones) get the exact same size
+      // This ensures Paul Epworth, Adele, and all other nodes have identical sizing
+      return 22; // Consistent size for all non-main artist nodes
     }
   }, [mainArtistNode]);
 
@@ -361,7 +353,7 @@ export default function D3NetworkRenderer({
     
     // Get optimal image size based on node size and zoom level
     getOptimalImageSize(node: NetworkNode, svgElement?: SVGSVGElement): { width: number; height: number; quality: 'low' | 'medium' | 'high' } {
-      const baseSize = (node.size - 4) * 2; // Base image size using original node size
+      const baseSize = (getDisplayNodeSize(node) - 4) * 2; // Base image size using display size
       
       // Get current zoom level if available
       let zoomScale = 1;
