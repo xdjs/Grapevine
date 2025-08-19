@@ -946,6 +946,13 @@ export default function D3NetworkRenderer({
               console.log("🍃 [LeafDecorations] Left leaf clicked for link:", d);
               // TODO: Implement leaf click functionality
             });
+            
+          // Add a small stem line to connect leaf to the connection line
+          linkGroup.append("line")
+            .attr("class", "leaf-stem-left")
+            .attr("stroke", "#22c55e")
+            .attr("stroke-width", 1)
+            .style("cursor", "pointer");
         }
         
         if (leafCount >= 2) {
@@ -970,6 +977,13 @@ export default function D3NetworkRenderer({
               console.log("🍃 [LeafDecorations] Right leaf clicked for link:", d);
               // TODO: Implement leaf click functionality
             });
+            
+          // Add a small stem line to connect leaf to the connection line
+          linkGroup.append("line")
+            .attr("class", "leaf-stem-right")
+            .attr("stroke", "#22c55e")
+            .attr("stroke-width", 1)
+            .style("cursor", "pointer");
         }
       });
   };
@@ -1362,15 +1376,22 @@ export default function D3NetworkRenderer({
           const rightLeafX = rightX + Math.cos(rightAngle) * offset;
           const rightLeafY = rightY + Math.sin(rightAngle) * offset;
             
-                      // Update leaf positions and rotations
-          const leafGroup = d3.select(this);
-          
-          // Update left leaf position and rotation (if it exists)
+                      // Update left leaf position and rotation (if it exists)
           const leftLeaf = leafGroup.select(".leaf-left");
           if (!leftLeaf.empty()) {
             // Use the stored rotation variation to prevent twitching
             const leftRotationVariation = parseFloat(leftLeaf.attr("data-rotation-variation") || "0");
             leftLeaf.attr("transform", `translate(${leftLeafX}, ${leftLeafY}) rotate(${(leftAngle * 180 / Math.PI) + 90 + leftRotationVariation})`);
+            
+            // Update left leaf stem line
+            const leftStem = leafGroup.select(".leaf-stem-left");
+            if (!leftStem.empty()) {
+              leftStem
+                .attr("x1", leftX)
+                .attr("y1", leftY)
+                .attr("x2", leftLeafX)
+                .attr("y2", leftY);
+            }
           }
           
           // Update right leaf position and rotation (if it exists)
@@ -1379,6 +1400,16 @@ export default function D3NetworkRenderer({
             // Use the stored rotation variation to prevent twitching
             const rightRotationVariation = parseFloat(rightLeaf.attr("data-rotation-variation") || "0");
             rightLeaf.attr("transform", `translate(${rightLeafX}, ${rightLeafY}) rotate(${(rightAngle * 180 / Math.PI) + 90 + rightRotationVariation})`);
+            
+            // Update right leaf stem line
+            const rightStem = leafGroup.select(".leaf-stem-right");
+            if (!rightStem.empty()) {
+              rightStem
+                .attr("x1", rightX)
+                .attr("y1", rightY)
+                .attr("x2", rightLeafX)
+                .attr("y2", rightY);
+            }
           }
           }
         });
