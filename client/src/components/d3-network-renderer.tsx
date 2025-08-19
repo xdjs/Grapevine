@@ -885,8 +885,8 @@ export default function D3NetworkRenderer({
       .attr("stroke-width", 2);
 
     // Add leaves on both sides of each connection
-    const leafCount = 3; // Number of leaves per side
-    const leafSpacing = 0.15; // Spacing between leaves (15% of line length)
+    const leafCount = 2; // Number of leaves per side (reduced from 3)
+    const leafSpacing = 0.3; // Spacing between leaves (30% of line length)
     
     // Create leaves for the left side of the connection
     for (let i = 0; i < leafCount; i++) {
@@ -1291,7 +1291,7 @@ export default function D3NetworkRenderer({
         // Update left leaves (positioned on one side)
         linkGroup.selectAll(".left-leaf").each(function(_, i) {
           const leafGroup = d3.select(this);
-          const leafPosition = 0.25 + (i * 0.15); // 25%, 40%, 55% along the line
+          const leafPosition = 0.25 + (i * 0.3); // 25%, 55% along the line
           
           // Calculate position along the line
           const posX = source.x + dx * leafPosition;
@@ -1311,7 +1311,7 @@ export default function D3NetworkRenderer({
         // Update right leaves (positioned on the other side)
         linkGroup.selectAll(".right-leaf").each(function(_, i) {
           const leafGroup = d3.select(this);
-          const leafPosition = 0.75 - (i * 0.15); // 75%, 60%, 45% along the line
+          const leafPosition = 0.75 - (i * 0.3); // 75%, 45% along the line
           
           // Calculate position along the line
           const posX = source.x + dx * leafPosition;
