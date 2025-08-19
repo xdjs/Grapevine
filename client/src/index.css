@@ -41,21 +41,6 @@
   }
 }
 
-/* Leaf animations and styling */
-@keyframes leafFloat {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-1px) rotate(0.5deg);
-  }
-}
-
-.leaf {
-  animation: leafFloat 3s ease-in-out infinite;
-  animation-delay: calc(var(--leaf-index, 0) * 0.5s);
-}
-
 @keyframes pulse {
   0%, 100% {
     opacity: 0.1;
