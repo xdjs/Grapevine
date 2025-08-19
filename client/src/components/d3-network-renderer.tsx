@@ -902,8 +902,8 @@ export default function D3NetworkRenderer({
         const leafCount = Math.random() > 0.3 ? 2 : 1; // 70% chance of 2 leaves, 30% chance of 1
         
         // Randomize leaf size for natural variation
-        const leftLeafSize = 1.2 + Math.random() * 0.6; // 1.2x to 1.8x base size
-        const rightLeafSize = 1.2 + Math.random() * 0.6; // 1.2x to 1.8x base size
+        const leftLeafSize = 1.5 + Math.random() * 0.8; // 1.5x to 2.3x base size - much bigger
+        const rightLeafSize = 1.5 + Math.random() * 0.8; // 1.5x to 2.3x base size - much bigger
         
         // Randomize leaf colors for natural variation
         const leafColors = [
@@ -1315,8 +1315,8 @@ export default function D3NetworkRenderer({
               target.x !== undefined && target.y !== undefined) {
             
                       // Calculate positions along the connection line for leaf distribution
-          const leftLeafPos = 0.3; // 30% along the line from source
-          const rightLeafPos = 0.7; // 70% along the line from source
+          const leftLeafPos = 0.3; // 30% along the line from source - closer to source node
+          const rightLeafPos = 0.7; // 70% along the line from source - closer to target node
           
           const leftX = source.x + (target.x - source.x) * leftLeafPos;
           const leftY = source.y + (target.y - source.y) * leftLeafPos;
@@ -1327,7 +1327,7 @@ export default function D3NetworkRenderer({
           const angle = Math.atan2(target.y - source.y, target.x - source.x);
           
           // Position leaves very close to the line so they appear to stem from it
-          const offset = 1; // Minimal offset so leaves appear to grow directly from the line
+          const offset = 2; // Very small offset so leaves appear to grow from the line
           
           // Position left leaf (perpendicular to the left of the line)
           const leftAngle = angle + Math.PI / 2;
