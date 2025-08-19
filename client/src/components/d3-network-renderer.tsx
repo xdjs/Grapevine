@@ -886,11 +886,11 @@ export default function D3NetworkRenderer({
 
     // Add leaves on both sides of each connection
     const leafCount = 3; // Number of leaves per side
-    const leafSpacing = 0.2; // Spacing between leaves (0.2 = 20% of line length)
+    const leafSpacing = 0.15; // Spacing between leaves (15% of line length)
     
     // Create leaves for the left side of the connection
     for (let i = 0; i < leafCount; i++) {
-      const leafPosition = 0.2 + (i * leafSpacing); // Start at 20% and space evenly
+      const leafPosition = 0.25 + (i * leafSpacing); // Start at 25% and space evenly
       
       linkGroups.each(function(d) {
         const linkGroup = d3.select(this);
@@ -907,21 +907,20 @@ export default function D3NetworkRenderer({
             // Future implementation: handle leaf click
           });
 
-        // Create leaf shape (similar to the reference image)
+        // Create leaf shape (more realistic leaf)
         leafGroup
           .append("path")
           .attr("class", "leaf-shape")
-          .attr("d", "M0,0 Q-8,-4 -12,0 Q-8,4 0,0 Z") // Leaf shape path
-          .attr("fill", "#4ade80") // Green color for leaves
+          .attr("d", "M0,0 Q-6,-3 -10,0 Q-6,3 0,0 Z") // Smaller, more realistic leaf
+          .attr("fill", "#4ade80")
           .attr("stroke", "#22c55e")
-          .attr("stroke-width", 1)
-          .attr("transform", `translate(${leafPosition * 100}, 0) scale(0.8)`);
+          .attr("stroke-width", 0.5);
       });
     }
 
     // Create leaves for the right side of the connection
     for (let i = 0; i < leafCount; i++) {
-      const leafPosition = 0.8 - (i * leafSpacing); // Start at 80% and space backwards
+      const leafPosition = 0.75 - (i * leafSpacing); // Start at 75% and space backwards
       
       linkGroups.each(function(d) {
         const linkGroup = d3.select(this);
@@ -938,15 +937,14 @@ export default function D3NetworkRenderer({
             // Future implementation: handle leaf click
           });
 
-        // Create leaf shape (similar to the reference image)
+        // Create leaf shape (more realistic leaf, mirrored)
         leafGroup
           .append("path")
           .attr("class", "leaf-shape")
-          .attr("d", "M0,0 Q8,-4 12,0 Q8,4 0,0 Z") // Leaf shape path (mirrored)
-          .attr("fill", "#4ade80") // Green color for leaves
+          .attr("d", "M0,0 Q6,-3 10,0 Q6,3 0,0 Z") // Smaller, more realistic leaf (mirrored)
+          .attr("fill", "#4ade80")
           .attr("stroke", "#22c55e")
-          .attr("stroke-width", 1)
-          .attr("transform", `translate(${leafPosition * 100}, 0) scale(0.8)`);
+          .attr("stroke-width", 0.5);
       });
     }
 
@@ -1293,19 +1291,19 @@ export default function D3NetworkRenderer({
         // Update left leaves (positioned on one side)
         linkGroup.selectAll(".left-leaf").each(function(_, i) {
           const leafGroup = d3.select(this);
-          const leafPosition = 0.2 + (i * 0.2); // 20%, 40%, 60% along the line
+          const leafPosition = 0.25 + (i * 0.15); // 25%, 40%, 55% along the line
           
           // Calculate position along the line
           const posX = source.x + dx * leafPosition;
           const posY = source.y + dy * leafPosition;
           
-          // Position leaf perpendicular to the line
-          const leafOffset = 15; // Distance from the line
+          // Position leaf perpendicular to the line with smaller offset
+          const leafOffset = 8; // Smaller distance from the line for more realistic look
           const finalX = posX + perpX * leafOffset;
           const finalY = posY + perpY * leafOffset;
           
-          // Calculate rotation angle for the leaf
-          const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+          // Calculate rotation angle for the leaf (perpendicular to the line)
+          const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90; // Add 90 degrees to make leaves perpendicular
           
           leafGroup.attr("transform", `translate(${finalX}, ${finalY}) rotate(${angle})`);
         });
@@ -1313,19 +1311,19 @@ export default function D3NetworkRenderer({
         // Update right leaves (positioned on the other side)
         linkGroup.selectAll(".right-leaf").each(function(_, i) {
           const leafGroup = d3.select(this);
-          const leafPosition = 0.8 - (i * 0.2); // 80%, 60%, 40% along the line
+          const leafPosition = 0.75 - (i * 0.15); // 75%, 60%, 45% along the line
           
           // Calculate position along the line
           const posX = source.x + dx * leafPosition;
           const posY = source.y + dy * leafPosition;
           
           // Position leaf perpendicular to the line (opposite side)
-          const leafOffset = -15; // Distance from the line (negative for opposite side)
+          const leafOffset = -8; // Smaller distance from the line for more realistic look
           const finalX = posX + perpX * leafOffset;
           const finalY = posY + perpY * leafOffset;
           
-          // Calculate rotation angle for the leaf
-          const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+          // Calculate rotation angle for the leaf (perpendicular to the line)
+          const angle = Math.atan2(dy, dx) * 180 / Math.PI - 90; // Subtract 90 degrees to make leaves perpendicular
           
           leafGroup.attr("transform", `translate(${finalX}, ${finalY}) rotate(${angle})`);
         });
