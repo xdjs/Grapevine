@@ -607,3 +607,38 @@
     bottom: max(calc(env(safe-area-inset-bottom, 0px) + 60px), 140px) !important;
   }
 }
+
+/* Leaf decoration styles for network connections */
+.leaf-decoration {
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  transition: all 0.3s ease;
+}
+
+.leaf-decoration:hover {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4)) brightness(1.1);
+}
+
+.leaf-path {
+  transition: opacity 0.3s ease;
+}
+
+.leaf-decoration:hover .leaf-path {
+  opacity: 1 !important;
+  filter: brightness(1.2);
+}
+
+/* Ensure leaves are rendered above connection lines but below nodes */
+.link-group {
+  z-index: 1;
+}
+
+.leaf-decoration {
+  z-index: 2;
+}
+
+/* Network link styling */
+.network-link {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
