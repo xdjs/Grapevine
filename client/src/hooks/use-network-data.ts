@@ -560,6 +560,11 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
             addedNodeIds: Array.from(v.addedNodeIds),
             addedLinkKeys: Array.from(v.addedLinkKeys),
             neighborIds: Array.from(v.neighborIds || []),
+            batches: (v.batches || []).map(b => ({
+              addedNodeIds: Array.from(b.addedNodeIds || []),
+              addedLinkKeys: Array.from(b.addedLinkKeys || []),
+              neighborIds: Array.from(b.neighborIds || []),
+            })),
           })),
         } as any;
         const existing = (typeof window !== 'undefined' && (window as any).grapevineExpandedState) || (sessionStorage.getItem(PERSIST_KEY) ? JSON.parse(sessionStorage.getItem(PERSIST_KEY) as string) : null);
