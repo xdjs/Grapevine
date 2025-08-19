@@ -101,7 +101,9 @@ export class VineDecorations {
     for (let i = 0; i < leafCount; i++) {
       const leafGroup = linkGroup.append("g")
         .attr("class", "link-leaf")
-        .attr("data-leaf-index", i);
+        .attr("data-leaf-index", i)
+        .style("cursor", "pointer") // Add pointer cursor to indicate clickability
+        .on("click", (event) => this.handleLeafClick(event, leafGroup, linkIndex, i));
       
       // Create vibrant leaf shape with enhanced styling and gradient
       const leaf = leafGroup.append("path")
@@ -137,6 +139,70 @@ export class VineDecorations {
           .style("opacity", 0.4);
       }
     }
+  }
+
+  /**
+   * Handle leaf click event and trigger shaking animation
+   */
+  private handleLeafClick(
+    event: MouseEvent, 
+    leafGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
+    linkIndex: number,
+    leafIndex: number
+  ) {
+    event.stopPropagation(); // Prevent event bubbling
+    
+    // Prevent multiple animations on the same leaf
+    if (leafGroup.classed("shaking")) {
+      return;
+    }
+    
+    console.log(`🍃 [VineDecorations] Leaf clicked: link ${linkIndex}, leaf ${leafIndex}`);
+    
+    // Add shaking class to prevent multiple animations
+    leafGroup.classed("shaking", true);
+    
+    // Get the current transform of the leaf group
+    const currentTransform = leafGroup.attr("transform") || "";
+    
+    // Create shaking animation
+    const shakeDuration = 600; // 600ms total animation
+    const shakeIntensity = 2; // 2px shake distance
+    const shakeSteps = 6; // Number of shake movements
+    
+    // Create keyframe animation using D3 transitions
+    let shakeCount = 0;
+    const shake = () => {
+      if (shakeCount >= shakeSteps) {
+        // End animation - restore original position
+        leafGroup
+          .transition()
+          .duration(100)
+          .attr("transform", currentTransform)
+          .on("end", () => {
+            leafGroup.classed("shaking", false);
+          });
+        return;
+      }
+      
+      // Calculate shake offset
+      const progress = shakeCount / shakeSteps;
+      const intensity = shakeIntensity * (1 - progress); // Decreasing intensity
+      const angle = (shakeCount % 2 === 0 ? 1 : -1) * intensity;
+      
+      // Apply shake transform
+      leafGroup
+        .transition()
+        .duration(shakeDuration / shakeSteps)
+        .attr("transform", `${currentTransform} translate(${angle}, ${angle * 0.5})`)
+        .on("end", () => {
+          shakeCount++;
+          shake();
+        });
+    };
+    
+    // Start the shake animation
+    shake();
   }
 
   /**
