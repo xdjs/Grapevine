@@ -67,7 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Try MusicBrainz first for structured collaboration data
     console.log(`🎵 [Collaboration] Checking MusicBrainz for collaboration data`);
     
-    let collaborationDetails: CollaborationDetails = {
+    const collaborationDetails: CollaborationDetails = {
       description: "",
       projects: [],
       personalHistory: ""

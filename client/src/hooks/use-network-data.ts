@@ -500,7 +500,7 @@ export function useNetworkData({ data }: UseNetworkDataProps): UseNetworkDataRet
       });
       // Never remove the clicked/anchor node itself
       const anchorLower = toKey(clickedId);
-      let remainingNodesHeuristic = workingData.nodes.filter(n => !toRemove.has(n.id) || toKey(n.id) === anchorLower);
+      const remainingNodesHeuristic = workingData.nodes.filter(n => !toRemove.has(n.id) || toKey(n.id) === anchorLower);
 
       // Ensure the anchor's link to any base-graph node remains
       const baseIdsArr = Array.from(baseIds);

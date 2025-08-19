@@ -197,7 +197,7 @@ class MusicBrainzService {
         }
         
         if (relation["target-type"] === "artist" && relation.artist) {
-          let relationType = this.mapRelationType(relation.type);
+          const relationType = this.mapRelationType(relation.type);
           
           if (relationType && !processedArtists.has(relation.artist.name)) {
             collaboratingArtists.push({
@@ -272,7 +272,7 @@ class MusicBrainzService {
             if (relation.artist && relation.artist.name !== artistName) {
               const collaboratorName = relation.artist.name;
               if (!processedArtists.has(collaboratorName)) {
-                let relationType = this.mapRelationType(relation.type);
+                const relationType = this.mapRelationType(relation.type);
                 if (relationType) {
                   collaboratingArtists.push({
                     name: collaboratorName,
