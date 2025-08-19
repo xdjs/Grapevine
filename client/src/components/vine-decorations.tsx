@@ -6,6 +6,27 @@ import { NetworkNode, NetworkLink } from '../types/network';
  */
 export class VineDecorations {
   private defs: d3.Selection<SVGDefsElement, unknown, null, undefined> | null = null;
+  private onGrapeClick?: (data: {
+    linkIndex: number;
+    clusterIndex: number;
+    grapeIndex: number;
+    sourceArtist: string;
+    targetArtist: string;
+  }) => void;
+  private grapesVisible: boolean = false;
+
+  /**
+   * Set the grape click callback
+   */
+  setGrapeClickCallback(callback: (data: {
+    linkIndex: number;
+    clusterIndex: number;
+    grapeIndex: number;
+    sourceArtist: string;
+    targetArtist: string;
+  }) => void) {
+    this.onGrapeClick = callback;
+  }
 
   /**
    * Initialize SVG definitions for vine decorations
@@ -142,6 +163,36 @@ export class VineDecorations {
   }
 
   /**
+   * Handle grape click event and trigger popup
+   */
+  private handleGrapeClick(
+    event: MouseEvent,
+    grapeGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
+    linkIndex: number,
+    clusterIndex: number,
+    grapeIndex: number,
+    linkData: NetworkLink
+  ) {
+    event.stopPropagation(); // Prevent event bubbling
+    
+    console.log(`🍇 [VineDecorations] Grape clicked: link ${linkIndex}, cluster ${clusterIndex}, grape ${grapeIndex}`);
+    
+    // Call the callback if it exists
+    if (this.onGrapeClick) {
+      const sourceArtist = typeof linkData.source === 'string' ? linkData.source : linkData.source.name;
+      const targetArtist = typeof linkData.target === 'string' ? linkData.target : linkData.target.name;
+      
+      this.onGrapeClick({
+        linkIndex,
+        clusterIndex,
+        grapeIndex,
+        sourceArtist,
+        targetArtist
+      });
+    }
+  }
+
+  /**
    * Handle leaf click event and trigger shaking animation
    */
   private handleLeafClick(
@@ -249,7 +300,9 @@ export class VineDecorations {
             .attr("stroke", "#4A2E6B") // Darker purple outline
             .attr("stroke-width", 0.1)
             .style("opacity", 0.9)
-            .style("filter", "url(#grape-shadow)");
+            .style("filter", "url(#grape-shadow)")
+            .style("cursor", "pointer") // Add pointer cursor to indicate clickability
+            .on("click", (event) => this.handleGrapeClick(event, grapeGroup, linkIndex, clusterIndex, grapeIndex, linkData));
           
           grapeIndex++;
         }

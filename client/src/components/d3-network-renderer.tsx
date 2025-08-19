@@ -26,6 +26,14 @@ export interface D3NetworkRendererProps {
   tooltip: UseTooltipReturn;
   /** Main artist node for special positioning */
   mainArtistNode?: NetworkNode;
+  /** Callback for grape clicks */
+  onGrapeClick?: (data: {
+    linkIndex: number;
+    clusterIndex: number;
+    grapeIndex: number;
+    sourceArtist: string;
+    targetArtist: string;
+  }) => void;
 }
 
 /**
@@ -49,6 +57,7 @@ export default function D3NetworkRenderer({
   nodeInteractions,
   tooltip,
   mainArtistNode,
+  onGrapeClick,
 }: D3NetworkRendererProps) {
   
   // Track which node IDs we've already batch-preloaded to avoid re-preloading on small expansions
@@ -1077,6 +1086,9 @@ export default function D3NetworkRenderer({
     try {
       vineDecorationsRef.current = new VineDecorations();
       vineDecorationsRef.current.initializeDefs(svg);
+      if (onGrapeClick) {
+        vineDecorationsRef.current.setGrapeClickCallback(onGrapeClick);
+      }
       console.log('🔍 [D3Renderer] Vine decorations initialized');
     } catch (error) {
       console.error('❌ [D3Renderer] Error initializing vine decorations:', error);

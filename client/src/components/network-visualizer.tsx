@@ -13,6 +13,7 @@ import D3NetworkRenderer from "./d3-network-renderer";
 import ExpandLoading from "./expand-loading";
 import ArtistSelectionModal from "./artist-selection-modal";
 import CollaborationDetailsPopup from "./collaboration-details-popup";
+import GrapePopup from "./grape-popup";
 import NetworkTooltip from "./network-tooltip";
 import ZoomControlsEnhanced from "./zoom-controls-enhanced";
 import NetworkResetButton from "./network-reset-button";
@@ -60,6 +61,16 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
   const maxRetries = 3;
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   
+  // Grape popup state
+  const [showGrapePopup, setShowGrapePopup] = useState(false);
+  const [grapeData, setGrapeData] = useState<{
+    linkIndex: number;
+    clusterIndex: number;
+    grapeIndex: number;
+    sourceArtist: string;
+    targetArtist: string;
+  } | null>(null);
+  
   // Configuration management hook
   const { 
     musicNerdBaseUrl, 
@@ -87,6 +98,18 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
     applyPinchZoom
   } = zoom;
   
+  // Grape click handler
+  const handleGrapeClick = useCallback((data: {
+    linkIndex: number;
+    clusterIndex: number;
+    grapeIndex: number;
+    sourceArtist: string;
+    targetArtist: string;
+  }) => {
+    setGrapeData(data);
+    setShowGrapePopup(true);
+  }, []);
+
   // Touch gestures hook
   useTouchGestures({
     svgRef,
@@ -448,6 +471,7 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
             nodeInteractions={nodeInteractions}
             tooltip={tooltip}
             mainArtistNode={mainArtistNode}
+            onGrapeClick={handleGrapeClick}
           />
           
           {/* Top-right shrink button removed: shrinking is available via tooltip per-node action */}
@@ -465,6 +489,12 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
             artistName={modals.collaborationArtist}
             collaboratorName={modals.collaborationCollaborator}
             mainArtistName={modals.mainArtistName}
+          />
+          
+          <GrapePopup
+            isOpen={showGrapePopup}
+            onClose={() => setShowGrapePopup(false)}
+            grapeData={grapeData || undefined}
           />
           
           {/* Network Tooltip - rendered outside D3 SVG but positioned absolutely */}
