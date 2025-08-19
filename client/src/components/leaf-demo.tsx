@@ -52,47 +52,47 @@ export default function LeafDemo() {
         .attr("class", "leaf-shape")
         .attr("fill", "#4ade80") // Natural green color
         .attr("stroke", "#22c55e") // Darker green border
-        .attr("stroke-width", "0.5")
-        .attr("d", "M0,0 C-2,-2 -4,-4 -6,-6 C-8,-8 -10,-10 -12,-8 C-10,-6 -8,-4 -6,-2 C-4,0 -2,2 0,4 C2,2 4,0 6,-2 C8,-4 10,-6 12,-8 C10,-10 8,-8 6,-6 C4,-4 2,-2 0,0 Z")
-        .attr("transform", "scale(0.8)");
+        .attr("stroke-width", "1")
+        .attr("d", "M0,0 C-3,-3 -6,-6 -9,-9 C-12,-12 -15,-15 -18,-12 C-15,-9 -12,-6 -9,-3 C-6,0 -3,3 0,6 C3,3 6,0 9,-3 C12,-6 15,-9 18,-12 C15,-15 12,-12 9,-9 C6,-6 3,-3 0,0 Z")
+        .attr("transform", "scale(1.0)");
       
       // Add leaf vein details - more natural branching pattern
       const veinPath = leafGroup.append("path")
         .attr("class", "leaf-vein")
         .attr("fill", "none")
         .attr("stroke", "#16a34a") // Darker green for veins
-        .attr("stroke-width", "0.3")
-        .attr("d", "M0,0 C0,-2 0,-4 0,-6 C0,-8 0,-10 0,-12");
+        .attr("stroke-width", "0.8")
+        .attr("d", "M0,0 C0,-3 0,-6 0,-9 C0,-12 0,-15 0,-18");
       
       // Add smaller side veins with natural branching
       const sideVein1 = leafGroup.append("path")
         .attr("class", "leaf-side-vein")
         .attr("fill", "none")
         .attr("stroke", "#16a34a")
-        .attr("stroke-width", "0.2")
-        .attr("d", "M-1,-3 C-2,-4 -3,-5 -4,-6 C-5,-7 -6,-8 -7,-9");
+        .attr("stroke-width", "0.6")
+        .attr("d", "M-2,-4 C-3,-6 -4,-8 -6,-10 C-8,-12 -10,-14 -12,-16");
       
       const sideVein2 = leafGroup.append("path")
         .attr("class", "leaf-side-vein")
         .attr("fill", "none")
         .attr("stroke", "#16a34a")
-        .attr("stroke-width", "0.2")
-        .attr("d", "M1,-3 C2,-4 3,-5 4,-6 C5,-7 6,-8 7,-9");
+        .attr("stroke-width", "0.6")
+        .attr("d", "M2,-4 C3,-6 4,-8 6,-10 C8,-12 10,-14 12,-16");
       
       // Add additional smaller veins for more realism
       const smallVein1 = leafGroup.append("path")
         .attr("class", "leaf-small-vein")
         .attr("fill", "none")
         .attr("stroke", "#15803d")
-        .attr("stroke-width", "0.15")
-        .attr("d", "M-0.5,-1.5 C-1,-2 -1.5,-2.5 -2,-3");
+        .attr("stroke-width", "0.4")
+        .attr("d", "M-1,-2 C-2,-4 -3,-6 -4,-8");
       
       const smallVein2 = leafGroup.append("path")
         .attr("class", "leaf-small-vein")
         .attr("fill", "none")
         .attr("stroke", "#15803d")
-        .attr("stroke-width", "0.15")
-        .attr("d", "M0.5,-1.5 C1,-2 1.5,-2.5 2,-3");
+        .attr("stroke-width", "0.4")
+        .attr("d", "M1,-2 C2,-4 3,-6 4,-8");
       
       // Position the leaf group with slight rotation variation
       const leafAngle = index === 0 ? 15 : -15; // Slight variation in leaf angles
