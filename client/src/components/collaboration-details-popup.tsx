@@ -60,6 +60,9 @@ const externalSvg14 = `<?xml version=\"1.0\" encoding=\"UTF-8\"?>
   <path d="M21 14v7H3V3h7" stroke="${PURPLE}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
 </svg>`;
 
+// Helper to produce an SVG data URL
+const svgDataUrl = (svg: string) => 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+
 // Rasterize SVG into PNG data URL for crisp mobile icons
 function rasterizeSvgToPng(svg: string, px: number): Promise<string> {
   return new Promise((resolve) => {
@@ -130,6 +133,8 @@ export default function CollaborationDetailsPopup({
 
   // Reactive mobile detection that updates on window resize  
   const [isMobile, setIsMobile] = useState(false);
+  // Generate PNG versions of desktop icons for mobile
+  const mobilePng = useMobilePngIcons(isMobile);
   
   useEffect(() => {
     const checkMobile = () => {
@@ -418,7 +423,7 @@ export default function CollaborationDetailsPopup({
                   isMobile ? 'text-base' : 'text-lg'
                 }`}>
                   {isMobile ? (
-                    <img src={(('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(usersSvg12)))} alt="" width={16} height={16} style={{ minWidth: 16, minHeight: 16, maxWidth: 16, maxHeight: 16 }} />
+                    <img src={mobilePng.users || svgDataUrl(usersSvg12)} alt="" width={16} height={16} style={{ minWidth: 16, minHeight: 16, maxWidth: 16, maxHeight: 16 }} />
                   ) : (
                     <Users className="text-purple-400 flex-shrink-0 w-6 h-6 min-w-6 min-h-6 max-w-6 max-h-6" />
                   )}
@@ -434,7 +439,7 @@ export default function CollaborationDetailsPopup({
                     isMobile ? 'text-base' : 'text-lg'
                   }`}>
                     {isMobile ? (
-                      <img src={(('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(musicSvg12)))} alt="" width={16} height={16} style={{ minWidth: 16, minHeight: 16, maxWidth: 16, maxHeight: 16 }} />
+                      <img src={mobilePng.music || svgDataUrl(musicSvg12)} alt="" width={16} height={16} style={{ minWidth: 16, minHeight: 16, maxWidth: 16, maxHeight: 16 }} />
                     ) : (
                       <Music className="text-purple-400 flex-shrink-0 w-6 h-6 min-w-6 min-h-6 max-w-6 max-h-6" />
                     )}
@@ -450,7 +455,7 @@ export default function CollaborationDetailsPopup({
                       >
                         <div className="flex items-center space-x-3">
                           {isMobile ? (
-                            <img src={(('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent((project.type === 'album' || project.type === 'ep') ? discSvg12 : project.type === 'single' ? micSvg12 : musicSvg12)))} alt="" width={18} height={18} style={{ minWidth: 18, minHeight: 18, maxWidth: 18, maxHeight: 18 }} />
+                            <img src={(project.type === 'album' || project.type === 'ep') ? (mobilePng.disc || svgDataUrl(discSvg12)) : project.type === 'single' ? (mobilePng.mic || svgDataUrl(micSvg12)) : (mobilePng.music || svgDataUrl(musicSvg12))} alt="" width={18} height={18} style={{ minWidth: 18, minHeight: 18, maxWidth: 18, maxHeight: 18 }} />
                           ) : (
                             <div className="text-purple-400">{getProjectIcon(project.type)}</div>
                           )}
@@ -476,7 +481,7 @@ export default function CollaborationDetailsPopup({
                                 className="inline-flex items-center px-2 py-1 rounded-md text-green-400 hover:text-green-300 underline text-xs"
                                 title="Open on Spotify"
                               >
-                                <img src={(('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(externalSvg14)))} alt="Open on Spotify" width={18} height={18} style={{ minWidth: 18, minHeight: 18, maxWidth: 18, maxHeight: 18 }} />
+                                <img src={mobilePng.external || svgDataUrl(externalSvg14)} alt="Open on Spotify" width={18} height={18} style={{ minWidth: 18, minHeight: 18, maxWidth: 18, maxHeight: 18 }} />
                               </a>
                             ) : (
                               <a
