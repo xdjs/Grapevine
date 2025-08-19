@@ -366,26 +366,6 @@
     stroke: hsl(215, 20.2%, 65.1%); 
     stroke-opacity: 0.6; 
   }
-
-  /* Leaf styling */
-  .leaf-group {
-    transition: all 0.15s ease;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
-  }
-
-  .leaf-group:hover {
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2)) brightness(1.1);
-  }
-
-  .leaf-shape {
-    transition: all 0.15s ease;
-  }
-
-  .leaf-group:hover .leaf-shape {
-    fill: #22c55e;
-    stroke: #16a34a;
-    stroke-width: 0.8;
-  }
   
   .network-node:hover { 
     stroke: hsl(0, 0%, 100%); 
@@ -626,4 +606,32 @@
   .footer-content + div {
     bottom: max(calc(env(safe-area-inset-bottom, 0px) + 60px), 140px) !important;
   }
+}
+
+/* Leaf decoration styles */
+.leaf-decoration {
+  pointer-events: auto;
+  z-index: 10;
+}
+
+.leaf {
+  transition: all 0.2s ease-in-out;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  z-index: 11;
+}
+
+.leaf:hover {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  transform: scale(1.1);
+  z-index: 12;
+}
+
+.leaf-shape {
+  transition: all 0.2s ease-in-out;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.leaf:hover .leaf-shape {
+  filter: brightness(1.2);
 }
