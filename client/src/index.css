@@ -41,42 +41,19 @@
   }
 }
 
-/* Leaf decoration styles for network connections */
-.leaf-shape {
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-  transition: all 0.2s ease-in-out;
-  animation: leaf-gentle-sway 4s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.leaf-decoration {
-  pointer-events: none;
-  z-index: 10;
-}
-
-@keyframes leaf-gentle-sway {
+/* Leaf animations and styling */
+@keyframes leafFloat {
   0%, 100% {
-    transform: scale(1.0) rotate(0deg);
+    transform: translateY(0px) rotate(0deg);
   }
   50% {
-    transform: scale(1.0) rotate(2deg);
+    transform: translateY(-1px) rotate(0.5deg);
   }
 }
 
-.leaf-shape:hover {
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
-  transform: scale(1.1);
-}
-
-.leaf-vein, .leaf-side-vein, .leaf-small-vein {
-  transition: stroke-width 0.2s ease-in-out;
-}
-
-.leaf-decoration:hover .leaf-vein,
-.leaf-decoration:hover .leaf-side-vein,
-.leaf-decoration:hover .leaf-small-vein {
-  stroke-width: 0.5;
+.leaf {
+  animation: leafFloat 3s ease-in-out infinite;
+  animation-delay: calc(var(--leaf-index, 0) * 0.5s);
 }
 
 @keyframes pulse {
