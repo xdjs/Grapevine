@@ -105,18 +105,33 @@ export default function D3NetworkRenderer({
   };
 
   /**
-   * Compute the display radius for a node. On mobile, all nodes except the main artist
-   * are normalized to a consistent size for visual clarity.
+   * Compute the display radius for a node. All nodes except the main artist
+   * are normalized to a consistent size for visual clarity on both mobile and desktop.
    */
   const getDisplayNodeSize = useCallback((node: NetworkNode): number => {
-    if (!isMobile) return node.size;
     const isMain = Boolean(
       mainArtistNode && (
         node.id === mainArtistNode.id || node.name === mainArtistNode.name
       )
     );
-    return isMain ? node.size : 20; // Normalize non-main nodes to size 20 on mobile
-  }, [isMobile, mainArtistNode]);
+    
+    if (isMain) {
+      // Main artist keeps their original size
+      return node.size;
+    } else {
+      // All other nodes (including expanded ones) get consistent size
+      // Use a size that's appropriate for the node type but consistent across all non-main nodes
+      if (node.type === 'artist') {
+        return 25; // Consistent size for artist nodes
+      } else if (node.type === 'producer') {
+        return 22; // Consistent size for producer nodes
+      } else if (node.type === 'songwriter') {
+        return 22; // Consistent size for songwriter nodes
+      } else {
+        return 20; // Default consistent size for other node types
+      }
+    }
+  }, [mainArtistNode]);
 
   /**
    * Create boundary force to keep nodes within viewport with margin.
@@ -346,7 +361,7 @@ export default function D3NetworkRenderer({
     
     // Get optimal image size based on node size and zoom level
     getOptimalImageSize(node: NetworkNode, svgElement?: SVGSVGElement): { width: number; height: number; quality: 'low' | 'medium' | 'high' } {
-      const baseSize = (node.size - 4) * 2; // Base image size
+      const baseSize = (node.size - 4) * 2; // Base image size using original node size
       
       // Get current zoom level if available
       let zoomScale = 1;
@@ -963,7 +978,7 @@ export default function D3NetworkRenderer({
                       
                       // Create image element
                       const group = d3.select(nodeGroup);
-                      const profileImageSize = node.size - 4;
+                      const profileImageSize = getDisplayNodeSize(node) - 4;
                       const clipId = `clip-${node.id.replace(/[^a-zA-Z0-9]/g, '_')}`;
                       
                       const image = group.append("image")
@@ -995,7 +1010,7 @@ export default function D3NetworkRenderer({
                 
                 // Replace with placeholder
                 const group = d3.select(nodeGroup);
-                const profileImageSize = node.size - 4;
+                const profileImageSize = getDisplayNodeSize(node) - 4;
                 
                 const placeholderGroup = group.append("g")
                   .attr("class", "image-placeholder-lazy")
