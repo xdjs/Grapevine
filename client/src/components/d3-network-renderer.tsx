@@ -863,53 +863,14 @@ export default function D3NetworkRenderer({
   };
 
   /**
-   * Create a leaf shape path that stems off the connection line.
-   */
-  const createLeafPath = () => {
-    // Create a leaf that stems from the center (connection line)
-    // Width and height for a natural leaf shape - larger for better visibility
-    const width = 10;
-    const height = 20;
-    
-    // Create a leaf shape that stems from the center line
-    const path = [
-      `M 0 0`, // Start at center (connection line)
-      `Q -${width/2} -${height/3} -${width/2} -${height/2}`, // Left curve
-      `Q -${width/2} -${height} 0 -${height}`, // Left tip
-      `Q ${width/2} -${height} ${width/2} -${height/2}`, // Right tip
-      `Q ${width/2} -${height/3} 0 0`, // Right curve back to center
-      'Z'
-    ].join(' ');
-    
-    return path;
-  };
-
-  /**
-   * Create a leaf vein path that matches the new leaf shape.
-   */
-  const createLeafVeinPath = () => {
-    // Create vein pattern for the leaf that stems from the connection line
-    const path = [
-      `M 0 0`, // Start at center (connection line)
-      `L 0 -20`, // Main vein to tip
-      `M -2.5 -10`, // Left side vein
-      `L 2.5 -10`,  // Right side vein
-      `M -2 -5`, // Left middle vein
-      `L 2 -5`   // Right middle vein
-    ].join(' ');
-    
-    return path;
-  };
-
-  /**
-   * Render link elements with decorative leaves.
+   * Render link elements with natural leaves.
    */
   const renderLinks = (
     networkGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
     links: NetworkLink[]
   ) => {
     return networkGroup
-      .selectAll(".link-group")
+      .selectAll(".link")
       .data(links)
       .enter()
       .append("g")
@@ -917,34 +878,50 @@ export default function D3NetworkRenderer({
       .each(function(d) {
         const linkGroup = d3.select(this);
         
-        // Add the main connection line
-        linkGroup
-          .append("line")
+        // Create the main connection line
+        linkGroup.append("line")
           .attr("class", "link network-link")
           .attr("stroke", "#355367")
           .attr("stroke-width", 2);
         
-        // Add decorative leaves
-        const leafCount = 4; // Number of leaves per connection (more like the reference image)
-        for (let i = 0; i < leafCount; i++) {
-          const leafGroup = linkGroup.append("g").attr("class", "leaf");
-          
-          // Create leaf shape using path
-          leafGroup
-            .append("path")
-            .attr("class", "leaf-shape")
-            .attr("fill", "#22c55e") // Green color for leaves
-            .attr("stroke", "#16a34a") // Darker green border
-            .attr("stroke-width", 0.5);
-          
-          // Add leaf veins
-          leafGroup
-            .append("path")
-            .attr("class", "leaf-vein")
-            .attr("stroke", "#16a34a")
-            .attr("stroke-width", 0.3)
-            .attr("fill", "none");
-        }
+        // Create two leaves along the connection line
+        // First leaf at 1/3 of the distance
+        const leaf1 = linkGroup.append("g")
+          .attr("class", "leaf leaf-1");
+        
+        // Create natural leaf shape using SVG path - more organic and nature-inspired
+        leaf1.append("path")
+          .attr("d", "M0,0 C-2,-8 -6,-14 -12,-16 C-18,-18 -22,-14 -24,-8 C-26,-2 -24,4 -20,8 C-16,12 -8,16 0,18 C8,16 16,12 20,8 C24,4 26,-2 24,-8 C22,-14 18,-18 12,-16 C6,-14 2,-8 0,0")
+          .attr("fill", "#4ade80") // Green color for leaves
+          .attr("stroke", "#22c55e") // Darker green border
+          .attr("stroke-width", 0.5)
+          .attr("opacity", 0.9);
+        
+        // Add leaf vein for more realism
+        leaf1.append("path")
+          .attr("d", "M0,0 L0,18")
+          .attr("stroke", "#16a34a") // Darker green vein
+          .attr("stroke-width", 0.8)
+          .attr("opacity", 0.7);
+        
+        // Second leaf at 2/3 of the distance
+        const leaf2 = linkGroup.append("g")
+          .attr("class", "leaf leaf-2");
+        
+        // Create slightly different leaf shape for variety
+        leaf2.append("path")
+          .attr("d", "M0,0 C-3,-6 -8,-12 -14,-13 C-20,-14 -25,-10 -27,-4 C-29,2 -27,8 -22,12 C-17,16 -9,18 0,20 C9,18 17,16 22,12 C27,8 29,2 27,-4 C25,-10 20,-14 14,-13 C8,-12 3,-6 0,0")
+          .attr("fill", "#22c55e") // Slightly different green for variety
+          .attr("stroke", "#16a34a") // Darker green border
+          .attr("stroke-width", 0.5)
+          .attr("opacity", 0.9);
+        
+        // Add leaf vein for more realism
+        leaf2.append("path")
+          .attr("d", "M0,0 L0,20")
+          .attr("stroke", "#15803d") // Darker green vein
+          .attr("stroke-width", 0.8)
+          .attr("opacity", 0.7);
       });
   };
 
@@ -1162,7 +1139,7 @@ export default function D3NetworkRenderer({
 
     // Filter out links where either node doesn't exist or is isolated
     const nodeSet = new Set(data.nodes.map(n => n.id));
-    const validLinks = data.links.filter(link => {
+    let validLinks = data.links.filter(link => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       return nodeSet.has(sourceId) && nodeSet.has(targetId);
@@ -1264,40 +1241,31 @@ export default function D3NetworkRenderer({
         const source = d.source as NetworkNode;
         const target = d.target as NetworkNode;
         
-        // Update the main connection line
-        linkGroup.select(".link")
+        // Update main connection line
+        linkGroup.select("line")
           .attr("x1", source.x!)
           .attr("y1", source.y!)
           .attr("x2", target.x!)
           .attr("y2", target.y!);
         
-        // Update leaf positions
-        const leaves = linkGroup.selectAll(".leaf");
-        leaves.each(function(leafNode, leafIndex) {
-          const leaf = d3.select(this);
-          
-          // Calculate position along the line (distribute evenly)
-          const t = (leafIndex + 1) / (leafCount + 1); // Distribute leaves evenly along the line
-          const x = source.x! + (target.x! - source.x!) * t;
-          const y = source.y! + (target.y! - source.y!) * t;
-          
-          // Calculate angle of the line
-          const angle = Math.atan2(target.y! - source.y!, target.x! - source.x!);
-          
-          // Position leaf directly on the line, not offset
-          // The leaf stems from the connection line itself
-          leaf.attr("transform", `translate(${x}, ${y}) rotate(${(angle * 180 / Math.PI) + 90})`);
-          
-          // Create leaf shape path
-          const leafShape = leaf.select(".leaf-shape");
-          const leafPath = createLeafPath();
-          leafShape.attr("d", leafPath);
-          
-          // Create leaf vein path
-          const leafVein = leaf.select(".leaf-vein");
-          const veinPath = createLeafVeinPath();
-          leafVein.attr("d", veinPath);
-        });
+        // Calculate positions for leaves (1/3 and 2/3 along the line)
+        const leaf1X = source.x! + (target.x! - source.x!) * 0.33;
+        const leaf1Y = source.y! + (target.y! - source.y!) * 0.33;
+        const leaf2X = source.x! + (target.x! - source.x!) * 0.67;
+        const leaf2Y = source.y! + (target.y! - source.y!) * 0.67;
+        
+        // Calculate angle for leaf orientation (perpendicular to the line)
+        const lineAngle = Math.atan2(target.y! - source.y!, target.x! - source.x!);
+        const leafAngle1 = lineAngle + Math.PI / 2; // Perpendicular, pointing up
+        const leafAngle2 = lineAngle - Math.PI / 2; // Perpendicular, pointing down
+        
+        // Update first leaf position and rotation
+        linkGroup.select(".leaf-1")
+          .attr("transform", `translate(${leaf1X}, ${leaf1Y}) rotate(${leafAngle1 * 180 / Math.PI})`);
+        
+        // Update second leaf position and rotation
+        linkGroup.select(".leaf-2")
+          .attr("transform", `translate(${leaf2X}, ${leaf2Y}) rotate(${leafAngle2 * 180 / Math.PI})`);
       });
 
       nodeElements.attr("transform", (d) => `translate(${d.x!}, ${d.y!})`);
