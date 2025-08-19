@@ -1,60 +1,83 @@
 # Leaf Decorations Feature
 
 ## Overview
-This feature adds natural-looking leaf decorations to the connection lines between nodes in the network visualization. The leaves are designed to look nature-inspired and are evenly spaced along the connection lines.
+This feature adds natural-looking leaf decorations along the connection lines between nodes in the network visualization. The leaves are evenly spaced, clickable, and provide visual enhancement to the network graph.
 
 ## Features
 
 ### Visual Design
-- **Natural Leaf Shapes**: Each leaf is created using SVG paths that mimic realistic leaf forms with natural curves and pointed tips
-- **Color Variations**: Leaves have slight variations in green colors to create a more organic, natural appearance
-- **Size Variations**: Each leaf has a random scale variation (0.85x to 1.15x) for visual diversity
-- **Random Rotation**: Initial random rotation adds to the natural, organic feel
-- **Shadow Effects**: Subtle drop shadows provide depth and visual separation from the connection lines
+- **Natural Leaf Shape**: Each leaf uses an SVG path to create a realistic leaf appearance
+- **Varied Sizes**: Random sizing between 0.6x and 1.0x scale for natural variety
+- **Color Variation**: Multiple shades of green (#4ade80, #22c55e, #16a34a, #15803d)
+- **Smooth Animations**: CSS transitions for hover effects and interactions
 
 ### Positioning
-- **Even Distribution**: 3 leaves are placed along each connection line at natural intervals
-- **Perpendicular Offset**: Leaves are positioned perpendicular to the connection line for optimal visibility
-- **Random Positioning**: Small random variations in position and angle make the layout look more natural
-- **Side Variation**: Leaves randomly appear on either side of the connection line
+- **Even Distribution**: 3 leaves per connection, positioned at 25%, 50%, and 75% along the line
+- **Natural Variation**: Small random offsets (±5%) to avoid perfect alignment
+- **Dynamic Rotation**: Leaves automatically rotate to point along the connection direction
+- **Real-time Updates**: Positions update automatically as nodes move during simulation
 
 ### Interactivity
-- **Clickable**: Each leaf is clickable and logs information about the connection it represents
-- **Hover Effects**: CSS hover animations include scaling, color changes, and shadow enhancements
-- **Event Handling**: Click events are properly isolated to prevent interference with other interactions
-
-### Animation
-- **Floating Animation**: Subtle floating animation with staggered timing for each leaf
-- **Hover Pause**: Animation pauses on hover for better user interaction
-- **Smooth Transitions**: CSS transitions provide smooth hover effects
+- **Clickable**: Each leaf can be clicked for future functionality implementation
+- **Tooltips**: Hover shows connection information (source ↔ target)
+- **Hover Effects**: Visual feedback with scaling, brightness, and shadow changes
+- **Event Handling**: Proper event propagation and click handling
 
 ## Implementation Details
 
-### File Changes
-- **`d3-network-renderer.tsx`**: Modified `renderLinks` function to create leaf decorations
-- **`index.css`**: Added CSS styles for leaf appearance, animations, and hover effects
-- **`use-filter-visibility.ts`**: Updated to handle the new link structure
+### D3.js Integration
+- **Link Groups**: Each connection creates a group containing the line and leaf decorations
+- **SVG Paths**: Leaves use complex SVG path data for realistic appearance
+- **Transform Attributes**: Position and rotation handled via SVG transforms
+- **Performance Optimized**: Efficient DOM manipulation and event handling
 
-### Key Functions
-- **`renderLinks()`**: Creates link groups with embedded leaf decorations
-- **`createLeafPath()`**: Generates SVG path data for natural leaf shapes
-- **`getLeafPositions()`**: Calculates optimal positioning for leaves along connection lines
+### CSS Styling
+- **Drop Shadows**: Subtle shadows for depth and visual appeal
+- **Smooth Transitions**: CSS transitions for all interactive states
+- **Responsive Design**: Works across different screen sizes and zoom levels
+- **Pointer Events**: Proper event handling for leaves vs. connection lines
 
-### CSS Classes
-- **`.leaf-decoration`**: Container for each leaf with animations and hover effects
-- **`.leaf-shape`**: The actual leaf SVG path with styling and transitions
+### Code Structure
+```typescript
+// Leaf creation in renderLinks function
+const leafGroup = linkGroup
+  .append("g")
+  .attr("class", "leaf-decoration")
+  .attr("data-leaf-index", i)
+  .attr("data-offset", randomOffset.toString());
+
+// Position updates in tick function
+const adjustedT = Math.max(0.1, Math.min(0.9, t + storedOffset));
+const leafX = source.x + dx * adjustedT;
+const leafY = source.y + dy * adjustedT;
+const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+```
 
 ## Future Enhancements
-- **Click Functionality**: Implement specific actions when leaves are clicked
-- **Leaf Types**: Add different leaf varieties based on connection types or node relationships
-- **Seasonal Changes**: Dynamic leaf colors based on time of year or user preferences
-- **Performance Optimization**: Lazy loading of leaf decorations for very large networks
 
-## Technical Notes
-- Leaves are rendered as SVG groups within link groups for proper organization
-- Each leaf gets a unique shadow filter ID to prevent conflicts
-- The implementation maintains compatibility with existing filtering and visibility systems
-- Leaf decorations automatically update their positions when the network simulation runs
+### Planned Features
+- **Leaf Types**: Different leaf shapes for different connection types
+- **Animation**: Leaf growth/fall animations when connections appear/disappear
+- **Interactive Menus**: Right-click context menus for leaf actions
+- **Customization**: User-configurable leaf appearance and behavior
+
+### Technical Improvements
+- **Performance**: Optimize for large networks with many connections
+- **Accessibility**: ARIA labels and keyboard navigation support
+- **Theming**: Support for different color schemes and visual styles
+- **Mobile**: Touch-friendly interactions for mobile devices
 
 ## Usage
-The leaf decorations are automatically applied to all connection lines in the network visualization. No additional configuration is required - they will appear whenever the network is rendered with the updated code.
+
+The leaf decorations are automatically generated for all network connections and require no additional configuration. Users can:
+
+1. **Hover** over leaves to see connection information
+2. **Click** on leaves for future interactive features
+3. **Observe** natural movement as the network simulation runs
+4. **Enjoy** enhanced visual appeal of the network graph
+
+## Browser Support
+
+- **Modern Browsers**: Full support for SVG, CSS transitions, and ES6+
+- **Mobile**: Responsive design with touch-friendly interactions
+- **Performance**: Optimized for smooth animations and interactions

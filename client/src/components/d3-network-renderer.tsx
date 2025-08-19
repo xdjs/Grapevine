@@ -864,117 +864,82 @@ export default function D3NetworkRenderer({
 
   /**
    * Render link elements with leaf decorations.
+   * Creates the main connection line and adds evenly spaced leaf decorations.
    */
   const renderLinks = (
     networkGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
     links: NetworkLink[]
   ) => {
-    return networkGroup
+    // Create link groups to contain both the line and leaf decorations
+    const linkGroups = networkGroup
       .selectAll(".link-group")
       .data(links)
       .enter()
       .append("g")
-      .attr("class", "link-group")
-      .each(function(d) {
-        const linkGroup = d3.select(this);
-        
-        // Create the main connection line
-        linkGroup
-          .append("line")
-          .attr("class", "link network-link")
-          .attr("stroke", "#355367")
-          .attr("stroke-width", 2);
-        
-        // Create leaf decorations along the line
-        const leafCount = 3; // Number of leaves per connection
-        for (let i = 1; i <= leafCount; i++) {
-          const leafGroup = linkGroup.append("g").attr("class", "leaf-decoration");
-          
-          // Create leaf shape using SVG path with slight variations
-          const leafVariation = Math.random() * 0.3 + 0.85; // 0.85 to 1.15 scale variation
-          const leafRotation = Math.random() * 360; // Random initial rotation
-          
-          // Add a subtle shadow effect for depth
-          leafGroup
-            .append("defs")
-            .append("filter")
-            .attr("id", `leaf-shadow-${Math.random().toString(36).substr(2, 9)}`)
-            .append("feDropShadow")
-            .attr("dx", "1")
-            .attr("dy", "1")
-            .attr("stdDeviation", "2")
-            .attr("flood-color", "rgba(0,0,0,0.3)");
-          
-          leafGroup
-            .append("path")
-            .attr("class", "leaf-shape")
-            .attr("d", createLeafPath())
-            .attr("fill", () => {
-              // Vary the green color slightly for natural look
-              const greenVariation = Math.random() * 40 - 20; // -20 to +20 variation
-              return `rgb(${74 + greenVariation}, ${222 + greenVariation}, ${128 + greenVariation})`;
-            })
-            .attr("stroke", "#22c55e")
-            .attr("stroke-width", 1)
-            .style("cursor", "pointer")
-            .style("transform", `scale(${leafVariation}) rotate(${leafRotation}deg)`)
-            .on("click", (event) => {
-              event.stopPropagation();
-              console.log(`Leaf clicked for link: ${(d.source as NetworkNode).name} -> ${(d.target as NetworkNode).name}`);
-              // TODO: Implement leaf click functionality
-            });
-        }
-      });
-  };
+      .attr("class", "link-group network-link-group");
 
-  /**
-   * Create a natural-looking leaf path.
-   */
-  const createLeafPath = () => {
-    // Create a realistic leaf shape with natural curves, pointed tip, and slight asymmetry
-    // The path creates a leaf that looks like it's growing naturally
-    return "M 0,0 Q 1,-1.5 2,-1 Q 3,-0.5 4,0 Q 5,0.5 6,1 Q 7,1.5 8,2 Q 9,2.5 10,3 Q 9.5,3.5 9,4 Q 8.5,4.5 8,5 Q 7.5,5.5 7,6 Q 6.5,6.5 6,7 Q 5.5,7.5 5,8 Q 4.5,8.5 4,9 Q 3.5,9.5 3,10 Q 2.5,10.5 2,11 Q 1.5,11.5 1,12 Q 0.5,12.5 0,13 Q -0.5,12.5 -1,12 Q -1.5,11.5 -2,11 Q -2.5,10.5 -3,10 Q -3.5,9.5 -4,9 Q -4.5,8.5 -5,8 Q -5.5,7.5 -6,7 Q -6.5,6.5 -7,6 Q -7.5,5.5 -8,5 Q -8.5,4.5 -9,4 Q -9.5,3.5 -10,3 Q -9.5,2.5 -9,2 Q -8.5,1.5 -8,1 Q -7.5,0.5 -7,0 Q -6.5,-0.5 -6,-1 Q -5.5,-1.5 -5,-2 Q -4.5,-2.5 -4,-3 Q -3.5,-3.5 -3,-4 Q -2.5,-4.5 -2,-5 Q -1.5,-5.5 -1,-6 Q -0.5,-6.5 0,-7 Q 0.5,-6.5 1,-6 Q 1.5,-5.5 2,-5 Q 2.5,-4.5 3,-4 Q 3.5,-3.5 4,-3 Q 4.5,-2.5 5,-2 Q 5.5,-1.5 6,-1 Q 6.5,-0.5 7,0 Q 7.5,0.5 8,1 Q 8.5,1.5 9,2 Q 9.5,2.5 10,3 Z";
-  };
+    // Add the main connection line
+    linkGroups
+      .append("line")
+      .attr("class", "link network-link")
+      .attr("stroke", "#355367")
+      .attr("stroke-width", 2);
 
-  /**
-   * Calculate leaf positions along a line segment.
-   */
-  const getLeafPositions = (x1: number, y1: number, x2: number, y2: number, leafCount: number) => {
-    const positions = [];
-    for (let i = 1; i <= leafCount; i++) {
-      // Use a more natural distribution - not perfectly even
-      const baseT = i / (leafCount + 1);
-      const t = baseT + (Math.random() - 0.5) * 0.2; // Add some randomness to positioning
-      const x = x1 + (x2 - x1) * t;
-      const y = y1 + (y2 - y1) * t;
+    // Add leaf decorations along each link
+    linkGroups.each(function(d) {
+      const linkGroup = d3.select(this);
+      const numLeaves = 3; // Number of leaves per connection
       
-      // Calculate perpendicular offset for leaf positioning
-      const dx = x2 - x1;
-      const dy = y2 - y1;
-      const length = Math.sqrt(dx * dx + dy * dy);
-      
-      if (length > 0) {
-        // Normalize and rotate 90 degrees for perpendicular offset
-        const perpX = -dy / length;
-        const perpY = dx / length;
+      for (let i = 1; i <= numLeaves; i++) {
+        const t = i / (numLeaves + 1); // Position along the line (0 to 1)
+        const randomOffset = (Math.random() - 0.5) * 0.1; // Small random offset for natural look
+        const adjustedT = Math.max(0.1, Math.min(0.9, t + randomOffset)); // Keep within bounds
         
-        // Vary the offset distance for more natural look
-        const baseOffset = 10 + Math.random() * 6; // 10-16px base offset
-        const sideVariation = Math.random() > 0.5 ? 1 : -1; // Randomly place on either side
-        const offset = baseOffset * sideVariation;
+        // Create leaf group
+        const leafGroup = linkGroup
+          .append("g")
+          .attr("class", "leaf-decoration")
+          .attr("data-leaf-index", i)
+          .attr("data-offset", randomOffset.toString()) // Store the random offset
+          .style("cursor", "pointer")
+          .on("click", (event) => {
+            event.stopPropagation();
+            console.log(`Leaf clicked on link between ${(d.source as NetworkNode).name} and ${(d.target as NetworkNode).name}, leaf ${i}`);
+            // TODO: Implement leaf click functionality
+          })
+          .on("mouseenter", function(event) {
+            // Show tooltip with connection info
+            const sourceName = (d.source as NetworkNode).name;
+            const targetName = (d.target as NetworkNode).name;
+            tooltip.showTooltip(event, `Connection: ${sourceName} ↔ ${targetName}`, `Leaf ${i} of 3`);
+          })
+          .on("mouseleave", function() {
+            tooltip.hideTooltip();
+          });
+
+        // Create leaf shape using SVG path - more natural leaf shape
+        const leafSize = 0.6 + (Math.random() * 0.4); // Random size between 0.6 and 1.0
+        const leafColors = ["#4ade80", "#22c55e", "#16a34a", "#15803d"]; // Different shades of green
+        const randomColorIndex = Math.floor(Math.random() * leafColors.length);
+        const leafColor = leafColors[randomColorIndex];
+        const darkerColor = leafColor === "#4ade80" ? "#22c55e" : 
+                           leafColor === "#22c55e" ? "#16a34a" : 
+                           leafColor === "#16a34a" ? "#15803d" : "#14532d";
         
-        // Add slight random rotation for natural appearance
-        const randomAngle = (Math.random() - 0.5) * 0.4; // Small random rotation
-        const randomOffset = (Math.random() - 0.5) * 4; // Small random position variation
-        
-        positions.push({
-          x: x + perpX * offset + randomOffset,
-          y: y + perpY * offset + randomOffset,
-          angle: Math.atan2(dy, dx) + Math.PI / 2 + randomAngle
-        });
+        const leafPath = leafGroup
+          .append("path")
+          .attr("class", "leaf-shape")
+          .attr("d", "M0,0 Q-6,-3 -6,0 Q-6,3 0,0 Q6,3 6,0 Q6,-3 0,0 M0,0 Q-4,-2 -4,0 Q-4,2 0,0 Q4,2 4,0 Q4,-2 0,0")
+          .attr("fill", leafColor) // Random green color for leaves
+          .attr("stroke", darkerColor) // Darker green border
+          .attr("stroke-width", 0.5)
+          .attr("transform", `scale(${leafSize})`); // Random size for variety
+
+        // Hover effects are now handled in the main event handlers above
       }
-    }
-    return positions;
+    });
+
+    return linkGroups;
   };
 
   /**
@@ -1288,30 +1253,52 @@ export default function D3NetworkRenderer({
 
     // Update positions on tick
     simulation.on("tick", () => {
+      // Update link positions
+      linkElements.selectAll(".link")
+        .attr("x1", (d) => (d.source as NetworkNode).x!)
+        .attr("y1", (d) => (d.source as NetworkNode).y!)
+        .attr("x2", (d) => (d.target as NetworkNode).x!)
+        .attr("y2", (d) => (d.target as NetworkNode).y!);
+
+      // Update leaf decoration positions along the links
       linkElements.each(function(d) {
         const linkGroup = d3.select(this);
         const source = d.source as NetworkNode;
         const target = d.target as NetworkNode;
         
-        // Update the main connection line
-        linkGroup.select(".link")
-          .attr("x1", source.x!)
-          .attr("y1", source.y!)
-          .attr("x2", target.x!)
-          .attr("y2", target.y!);
-        
-        // Update leaf positions
-        const leafCount = 3;
-        const leafPositions = getLeafPositions(source.x!, source.y!, target.x!, target.y!, leafCount);
-        
-        linkGroup.selectAll(".leaf-decoration").each(function(_, i) {
-          if (leafPositions[i]) {
-            const leafGroup = d3.select(this);
-            const pos = leafPositions[i];
+        if (source.x !== undefined && source.y !== undefined && 
+            target.x !== undefined && target.y !== undefined) {
+          
+          // Calculate link vector
+          const dx = target.x - source.x;
+          const dy = target.y - source.y;
+          const length = Math.sqrt(dx * dx + dy * dy);
+          
+          if (length > 0) {
+            // Normalize the vector
+            const unitX = dx / length;
+            const unitY = dy / length;
             
-            leafGroup.attr("transform", `translate(${pos.x}, ${pos.y}) rotate(${pos.angle * 180 / Math.PI})`);
+            // Position leaves along the link
+            const numLeaves = 3;
+            for (let i = 1; i <= numLeaves; i++) {
+              const t = i / (numLeaves + 1); // Position along the line (0 to 1)
+              const leafDecoration = linkGroup.select(`.leaf-decoration[data-leaf-index="${i}"]`);
+              if (!leafDecoration.empty()) {
+                const storedOffset = parseFloat(leafDecoration.attr("data-offset") || "0");
+                const adjustedT = Math.max(0.1, Math.min(0.9, t + storedOffset));
+                const leafX = source.x + dx * adjustedT;
+                const leafY = source.y + dy * adjustedT;
+                
+                // Calculate rotation angle for the leaf to point along the link
+                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                
+                leafDecoration
+                  .attr("transform", `translate(${leafX}, ${leafY}) rotate(${angle})`);
+              }
+            }
           }
-        });
+        }
       });
 
       nodeElements.attr("transform", (d) => `translate(${d.x!}, ${d.y!})`);
