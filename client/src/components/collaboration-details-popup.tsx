@@ -64,54 +64,52 @@ const externalSvg14 = `<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 const svgDataUrl = (svg: string) => 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
 
 // Rasterize SVG into PNG data URL for crisp mobile icons
-function rasterizeSvgToPng(svg: string, px: number): Promise<string> {
-  return new Promise((resolve) => {
-    try {
-      const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
-      const size = px * dpr;
-      const svgUrl = svgDataUrl(svg);
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { resolve(svgUrl); return; }
-        ctx.scale(dpr, dpr);
-        ctx.clearRect(0, 0, px, px);
-        ctx.drawImage(img, 0, 0, px, px);
-        try { resolve(canvas.toDataURL('image/png')); }
-        catch { resolve(svgUrl); }
-      };
-      img.src = svgUrl;
-    } catch {
-      resolve('');
-    }
-  });
+async function rasterizeSvgToPng(svg: string, px: number): Promise<string> {
+  try {
+    const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
+    const size = px * dpr;
+    const svgUrl = svgDataUrl(svg);
+    const img = new Image();
+    await new Promise<void>((resolve) => { img.onload = () => resolve(); img.src = svgUrl; });
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return svgUrl; // graceful fallback
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, px, px);
+    ctx.drawImage(img, 0, 0, px, px);
+    return canvas.toDataURL('image/png');
+  } catch {
+    return '';
+  }
 }
 
 // Pre-generate mobile PNGs matching desktop icons
-const useMobilePngIcons = (isMobile: boolean) => {
-  const [icons, setIcons] = React.useState<{ users: string; music: string; disc: string; mic: string; external: string }>({ users: '', music: '', disc: '', mic: '', external: '' });
+function useMobilePngIcons(isMobile: boolean) {
+  const [icons, setIcons] = useState<{ users: string; music: string; disc: string; mic: string; external: string }>({ users: '', music: '', disc: '', mic: '', external: '' });
   useEffect(() => {
     let cancelled = false;
-    async function generate() {
+    (async () => {
       if (!isMobile || typeof document === 'undefined') { if (!cancelled) setIcons({ users: '', music: '', disc: '', mic: '', external: '' }); return; }
-      const targetPx = 24; // match desktop visual size
+      // Match current desktop sizes in CSS pixels
+      const usersPx = 24; // header and section icons
+      const sectionPx = 24; // titles
+      const rowPx = 28; // per-project icon
+      const externalPx = 28; // external link
       const [users, music, disc, mic, external] = await Promise.all([
-        rasterizeSvgToPng(usersSvg12, targetPx),
-        rasterizeSvgToPng(musicSvg12, targetPx),
-        rasterizeSvgToPng(discSvg12, targetPx),
-        rasterizeSvgToPng(micSvg12, targetPx),
-        rasterizeSvgToPng(externalSvg14, targetPx),
+        rasterizeSvgToPng(usersSvg12, usersPx),
+        rasterizeSvgToPng(musicSvg12, sectionPx),
+        rasterizeSvgToPng(discSvg12, rowPx),
+        rasterizeSvgToPng(micSvg12, rowPx),
+        rasterizeSvgToPng(externalSvg14, externalPx),
       ]);
       if (!cancelled) setIcons({ users, music, disc, mic, external });
-    }
-    generate();
+    })();
     return () => { cancelled = true; };
   }, [isMobile]);
   return icons;
-};
+}
 
 interface CollaborationDetailsPopupProps {
   isOpen: boolean;
