@@ -251,6 +251,15 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
 
   // Generate grape content for all collaboration links after network data is loaded
   useEffect(() => {
+    console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Grape content generation effect triggered:`, {
+      hasNodes: !!finalDisplayData?.nodes?.length,
+      hasLinks: !!finalDisplayData?.links?.length,
+      grapesVisible,
+      nodeCount: finalDisplayData?.nodes?.length || 0,
+      linkCount: finalDisplayData?.links?.length || 0,
+      shouldRun: finalDisplayData?.nodes?.length > 0 && finalDisplayData?.links?.length > 0 && !grapesVisible
+    });
+    
     if (finalDisplayData?.nodes?.length > 0 && finalDisplayData?.links?.length > 0 && !grapesVisible) {
       console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Network data loaded, generating content for ${finalDisplayData.links.length} collaboration links`);
       
@@ -373,6 +382,12 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
 
   // Component initialization and error handling
   useEffect(() => {
+    console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Component mounting/updating with data:`, {
+      hasData: !!data,
+      nodeCount: data?.nodes?.length || 0,
+      linkCount: data?.links?.length || 0
+    });
+    
     const initializeComponent = async () => {
       try {
         setIsInitializing(true);
@@ -585,19 +600,30 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
           )}
 
           {/* D3 Network Renderer Component */}
-          <D3NetworkRenderer
-            data={finalDisplayData}
-            visible={visible}
-            filterState={filterState}
-            svgRef={svgRef}
-            simulationRef={simulationRef}
-            zoom={zoom}
-            nodeInteractions={nodeInteractions}
-            tooltip={tooltip}
-            mainArtistNode={mainArtistNode}
-            onGrapeClick={handleGrapeClick}
-            grapesVisible={grapesVisible}
-          />
+          {(() => {
+            console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Rendering D3NetworkRenderer with:`, {
+              hasData: !!finalDisplayData,
+              nodeCount: finalDisplayData?.nodes?.length || 0,
+              linkCount: finalDisplayData?.links?.length || 0,
+              grapesVisible,
+              visible
+            });
+            return (
+              <D3NetworkRenderer
+                data={finalDisplayData}
+                visible={visible}
+                filterState={filterState}
+                svgRef={svgRef}
+                simulationRef={simulationRef}
+                zoom={zoom}
+                nodeInteractions={nodeInteractions}
+                tooltip={tooltip}
+                mainArtistNode={mainArtistNode}
+                onGrapeClick={handleGrapeClick}
+                grapesVisible={grapesVisible}
+              />
+            );
+          })()}
           
           {/* Top-right shrink button removed: shrinking is available via tooltip per-node action */}
           
