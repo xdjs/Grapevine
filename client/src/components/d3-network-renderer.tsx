@@ -916,11 +916,16 @@ export default function D3NetworkRenderer({
         const leftLeafColor = leafColors[Math.floor(Math.random() * leafColors.length)];
         const rightLeafColor = leafColors[Math.floor(Math.random() * leafColors.length)];
         
+        // Create static rotation variations that won't change each tick
+        const leftRotationVariation = (Math.random() - 0.5) * 20; // ±10 degrees
+        const rightRotationVariation = (Math.random() - 0.5) * 20; // ±10 degrees
+        
         if (leafCount >= 1) {
-          // Create left leaf with more realistic, organic shape
+          // Create left leaf with teardrop shape
           linkGroup.append("path")
             .attr("class", "leaf-left")
-            .attr("d", `M0,0 C${3 * leftLeafSize},${-8 * leftLeafSize} ${6 * leftLeafSize},${-6 * leftLeafSize} ${12 * leftLeafSize},${-2 * leftLeafSize} C${10 * leftLeafSize},0 ${8 * leftLeafSize},${2 * leftLeafSize} ${6 * leftLeafSize},${4 * leftLeafSize} C${4 * leftLeafSize},${6 * leftLeafSize} ${2 * leftLeafSize},${7 * leftLeafSize} 0,0 Z`)
+            .attr("data-rotation-variation", leftRotationVariation) // Store for later use
+            .attr("d", `M0,0 C${2 * leftLeafSize},${-6 * leftLeafSize} ${6 * leftLeafSize},${-4 * leftLeafSize} ${10 * leftLeafSize},0 C${6 * leftLeafSize},${4 * leftLeafSize} ${2 * leftLeafSize},${6 * leftLeafSize} 0,0 Z`)
             .attr("fill", leftLeafColor)
             .attr("stroke", "#22c55e")
             .attr("stroke-width", 1.5)
@@ -939,10 +944,11 @@ export default function D3NetworkRenderer({
         }
         
         if (leafCount >= 2) {
-          // Create right leaf with more realistic, organic shape
+          // Create right leaf with teardrop shape
           linkGroup.append("path")
             .attr("class", "leaf-right")
-            .attr("d", `M0,0 C${3 * rightLeafSize},${-8 * rightLeafSize} ${6 * rightLeafSize},${-6 * rightLeafSize} ${12 * rightLeafSize},${-2 * rightLeafSize} C${10 * rightLeafSize},0 ${8 * rightLeafSize},${2 * rightLeafSize} ${6 * rightLeafSize},${4 * rightLeafSize} C${4 * rightLeafSize},${6 * rightLeafSize} ${2 * rightLeafSize},${7 * rightLeafSize} 0,0 Z`)
+            .attr("data-rotation-variation", rightRotationVariation) // Store for later use
+            .attr("d", `M0,0 C${2 * rightLeafSize},${-6 * rightLeafSize} ${6 * rightLeafSize},${-4 * rightLeafSize} ${10 * rightLeafSize},0 C${6 * rightLeafSize},${4 * rightLeafSize} ${2 * rightLeafSize},${6 * rightLeafSize} 0,0 Z`)
             .attr("fill", rightLeafColor)
             .attr("stroke", "#22c55e")
             .attr("stroke-width", 1.5)
@@ -1346,16 +1352,16 @@ export default function D3NetworkRenderer({
           // Update left leaf position and rotation (if it exists)
           const leftLeaf = leafGroup.select(".leaf-left");
           if (!leftLeaf.empty()) {
-            // Add some random rotation variation for natural appearance
-            const leftRotationVariation = (Math.random() - 0.5) * 20; // ±10 degrees
+            // Use the stored rotation variation to prevent twitching
+            const leftRotationVariation = parseFloat(leftLeaf.attr("data-rotation-variation") || "0");
             leftLeaf.attr("transform", `translate(${leftLeafX}, ${leftLeafY}) rotate(${(leftAngle * 180 / Math.PI) + 90 + leftRotationVariation})`);
           }
           
           // Update right leaf position and rotation (if it exists)
           const rightLeaf = leafGroup.select(".leaf-right");
           if (!rightLeaf.empty()) {
-            // Add some random rotation variation for natural appearance
-            const rightRotationVariation = (Math.random() - 0.5) * 20; // ±10 degrees
+            // Use the stored rotation variation to prevent twitching
+            const rightRotationVariation = parseFloat(rightLeaf.attr("data-rotation-variation") || "0");
             rightLeaf.attr("transform", `translate(${rightLeafX}, ${rightLeafY}) rotate(${(rightAngle * 180 / Math.PI) + 90 + rightRotationVariation})`);
           }
           }
