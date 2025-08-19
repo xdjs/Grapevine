@@ -69,7 +69,7 @@ function rasterizeSvgToPng(svg: string, px: number): Promise<string> {
     try {
       const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
       const size = px * dpr;
-      const svgUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+      const svgUrl = svgDataUrl(svg);
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
@@ -90,19 +90,20 @@ function rasterizeSvgToPng(svg: string, px: number): Promise<string> {
   });
 }
 
-// Pre-generate mobile PNGs matching desktop icons (sizes tuned for UI)
+// Pre-generate mobile PNGs matching desktop icons
 const useMobilePngIcons = (isMobile: boolean) => {
   const [icons, setIcons] = React.useState<{ users: string; music: string; disc: string; mic: string; external: string }>({ users: '', music: '', disc: '', mic: '', external: '' });
-  React.useEffect(() => {
+  useEffect(() => {
     let cancelled = false;
     async function generate() {
       if (!isMobile || typeof document === 'undefined') { if (!cancelled) setIcons({ users: '', music: '', disc: '', mic: '', external: '' }); return; }
+      const targetPx = 24; // match desktop visual size
       const [users, music, disc, mic, external] = await Promise.all([
-        rasterizeSvgToPng(usersSvg12, 16),
-        rasterizeSvgToPng(musicSvg12, 16),
-        rasterizeSvgToPng(discSvg12, 18),
-        rasterizeSvgToPng(micSvg12, 18),
-        rasterizeSvgToPng(externalSvg14, 18),
+        rasterizeSvgToPng(usersSvg12, targetPx),
+        rasterizeSvgToPng(musicSvg12, targetPx),
+        rasterizeSvgToPng(discSvg12, targetPx),
+        rasterizeSvgToPng(micSvg12, targetPx),
+        rasterizeSvgToPng(externalSvg14, targetPx),
       ]);
       if (!cancelled) setIcons({ users, music, disc, mic, external });
     }
@@ -133,8 +134,6 @@ export default function CollaborationDetailsPopup({
 
   // Reactive mobile detection that updates on window resize  
   const [isMobile, setIsMobile] = useState(false);
-  // Generate PNG versions of desktop icons for mobile
-  const mobilePng = useMobilePngIcons(isMobile);
   
   useEffect(() => {
     const checkMobile = () => {
@@ -423,7 +422,7 @@ export default function CollaborationDetailsPopup({
                   isMobile ? 'text-base' : 'text-lg'
                 }`}>
                   {isMobile ? (
-                    <img src={mobilePng.users || svgDataUrl(usersSvg12)} alt="" width={16} height={16} style={{ minWidth: 16, minHeight: 16, maxWidth: 16, maxHeight: 16 }} />
+                    <img src={svgDataUrl(usersSvg12)} alt="" width={24} height={24} style={{ minWidth: 24, minHeight: 24, maxWidth: 24, maxHeight: 24 }} />
                   ) : (
                     <Users className="text-purple-400 flex-shrink-0 w-6 h-6 min-w-6 min-h-6 max-w-6 max-h-6" />
                   )}
@@ -439,7 +438,7 @@ export default function CollaborationDetailsPopup({
                     isMobile ? 'text-base' : 'text-lg'
                   }`}>
                     {isMobile ? (
-                      <img src={mobilePng.music || svgDataUrl(musicSvg12)} alt="" width={16} height={16} style={{ minWidth: 16, minHeight: 16, maxWidth: 16, maxHeight: 16 }} />
+                      <img src={svgDataUrl(musicSvg12)} alt="" width={24} height={24} style={{ minWidth: 24, minHeight: 24, maxWidth: 24, maxHeight: 24 }} />
                     ) : (
                       <Music className="text-purple-400 flex-shrink-0 w-6 h-6 min-w-6 min-h-6 max-w-6 max-h-6" />
                     )}
@@ -455,7 +454,7 @@ export default function CollaborationDetailsPopup({
                       >
                         <div className="flex items-center space-x-3">
                           {isMobile ? (
-                            <img src={(project.type === 'album' || project.type === 'ep') ? (mobilePng.disc || svgDataUrl(discSvg12)) : project.type === 'single' ? (mobilePng.mic || svgDataUrl(micSvg12)) : (mobilePng.music || svgDataUrl(musicSvg12))} alt="" width={18} height={18} style={{ minWidth: 18, minHeight: 18, maxWidth: 18, maxHeight: 18 }} />
+                            <img src={svgDataUrl((project.type === 'album' || project.type === 'ep') ? discSvg12 : project.type === 'single' ? micSvg12 : musicSvg12)} alt="" width={24} height={24} style={{ minWidth: 24, minHeight: 24, maxWidth: 24, maxHeight: 24 }} />
                           ) : (
                             <div className="text-purple-400">{getProjectIcon(project.type)}</div>
                           )}
@@ -481,7 +480,7 @@ export default function CollaborationDetailsPopup({
                                 className="inline-flex items-center px-2 py-1 rounded-md text-green-400 hover:text-green-300 underline text-xs"
                                 title="Open on Spotify"
                               >
-                                <img src={mobilePng.external || svgDataUrl(externalSvg14)} alt="Open on Spotify" width={18} height={18} style={{ minWidth: 18, minHeight: 18, maxWidth: 18, maxHeight: 18 }} />
+                                <img src={svgDataUrl(externalSvg14)} alt="Open on Spotify" width={24} height={24} style={{ minWidth: 24, minHeight: 24, maxWidth: 24, maxHeight: 24 }} />
                               </a>
                             ) : (
                               <a
