@@ -52,6 +52,36 @@
   }
 }
 
+/* Subtle grapevine animations */
+@keyframes vine-sway {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(0.3deg);
+  }
+}
+
+@keyframes leaf-flutter {
+  0%, 100% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(0.5deg) scale(1.01);
+  }
+}
+
+/* Apply subtle animations to grapevine elements */
+.vine-branch {
+  animation: vine-sway 12s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.vine-leaf .leaf {
+  animation: leaf-flutter 8s ease-in-out infinite;
+  transform-origin: center;
+}
+
 .dark {
   --background: hsl(0, 0%, 0%);
   --foreground: hsl(0, 0%, 100%);

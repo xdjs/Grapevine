@@ -839,20 +839,82 @@ export default function D3NetworkRenderer({
   };
 
   /**
-   * Render link elements.
+   * Render link elements with dynamic leaves.
    */
   const renderLinks = (
     networkGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
     links: NetworkLink[]
   ) => {
-    return networkGroup
-      .selectAll(".link")
+    // Create link groups for each connection
+    const linkGroups = networkGroup
+      .selectAll(".link-group")
       .data(links)
       .enter()
+      .append("g")
+      .attr("class", "link-group");
+
+    // Create the main link line
+    const linkLines = linkGroups
       .append("line")
       .attr("class", "link network-link")
       .attr("stroke", "#355367")
       .attr("stroke-width", 2);
+
+    // Add dynamic leaves to each link
+    linkGroups.each(function(d, index) {
+      const linkGroup = d3.select(this);
+      
+      // Use deterministic values based on link data for stability
+      const seed = `${d.source}_${d.target}_${index}`;
+      const hash = seed.split('').reduce((a, b) => {
+        a = ((a << 5) - a) + b.charCodeAt(0);
+        return a & a;
+      }, 0);
+      
+      const leafCount = 1 + (Math.abs(hash) % 2); // 1-2 leaves per link
+      
+      for (let i = 0; i < leafCount; i++) {
+        const leafGroup = linkGroup.append("g")
+          .attr("class", "link-leaf")
+          .attr("data-leaf-index", i);
+        
+        // Create vibrant leaf shape with enhanced styling and gradient
+        const leaf = leafGroup.append("path")
+          .attr("class", "leaf")
+          .attr("fill", "url(#leaf-gradient)")
+          .attr("stroke", "#2D5A1A") // Brighter green outline
+          .attr("stroke-width", 0.25)
+          .style("opacity", 1.0)
+          .style("filter", "url(#leaf-shadow)");
+        
+        // Add vibrant leaf vein system
+        const mainVein = leafGroup.append("line")
+          .attr("class", "leaf-vein main-vein")
+          .attr("stroke", "#2D5A1A")
+          .attr("stroke-width", 0.18)
+          .style("opacity", 0.8);
+        
+        // Add primary side veins
+        for (let veinIndex = 0; veinIndex < 4; veinIndex++) {
+          leafGroup.append("line")
+            .attr("class", "leaf-vein primary-vein")
+            .attr("stroke", "#2D5A1A")
+            .attr("stroke-width", 0.1)
+            .style("opacity", 0.6);
+        }
+        
+        // Add secondary veins for more detail
+        for (let veinIndex = 0; veinIndex < 6; veinIndex++) {
+          leafGroup.append("line")
+            .attr("class", "leaf-vein secondary-vein")
+            .attr("stroke", "#2D5A1A")
+            .attr("stroke-width", 0.05)
+            .style("opacity", 0.4);
+        }
+      }
+    });
+
+    return linkGroups;
   };
 
   /**
@@ -1041,6 +1103,61 @@ export default function D3NetworkRenderer({
     // Clear existing content
     svg.selectAll("*").remove();
 
+    // Create defs section with leaf shadow filter
+    const defs = svg.append("defs");
+    
+    // Add vibrant leaf shadow filter with glow effect
+    const filter = defs.append("filter")
+      .attr("id", "leaf-shadow")
+      .attr("x", "-50%")
+      .attr("y", "-50%")
+      .attr("width", "200%")
+      .attr("height", "200%");
+    
+    // Subtle glow effect
+    filter.append("feDropShadow")
+      .attr("dx", "0")
+      .attr("dy", "0")
+      .attr("stdDeviation", "1")
+      .attr("flood-color", "#7FB069")
+      .attr("flood-opacity", "0.3");
+    
+    // Primary shadow
+    filter.append("feDropShadow")
+      .attr("dx", "0.5")
+      .attr("dy", "0.5")
+      .attr("stdDeviation", "0.5")
+      .attr("flood-color", "#000000")
+      .attr("flood-opacity", "0.15");
+    
+    // Secondary vibrant shadow for depth
+    filter.append("feDropShadow")
+      .attr("dx", "0.2")
+      .attr("dy", "0.2")
+      .attr("stdDeviation", "0.3")
+      .attr("flood-color", "#2D5A1A")
+      .attr("flood-opacity", "0.2");
+    
+    // Add vibrant leaf gradient for eye-catching appearance
+    const gradient = defs.append("linearGradient")
+      .attr("id", "leaf-gradient")
+      .attr("gradientUnits", "userSpaceOnUse");
+    
+    gradient.append("stop")
+      .attr("offset", "0%")
+      .attr("stop-color", "#7FB069") // Bright vibrant green at top
+      .attr("stop-opacity", 1);
+    
+    gradient.append("stop")
+      .attr("offset", "50%")
+      .attr("stop-color", "#6BA84A") // Medium vibrant green in middle
+      .attr("stop-opacity", 1);
+    
+    gradient.append("stop")
+      .attr("offset", "100%")
+      .attr("stop-color", "#5A9B3A") // Rich green at bottom
+      .attr("stop-opacity", 1);
+
     // Filter out links where either node doesn't exist or is isolated
     const nodeSet = new Set(data.nodes.map(n => n.id));
     let validLinks = data.links.filter(link => {
@@ -1140,11 +1257,103 @@ export default function D3NetworkRenderer({
 
     // Update positions on tick
     simulation.on("tick", () => {
+      // Update link lines
       linkElements
+        .select(".link")
         .attr("x1", (d) => (d.source as NetworkNode).x!)
         .attr("y1", (d) => (d.source as NetworkNode).y!)
         .attr("x2", (d) => (d.target as NetworkNode).x!)
         .attr("y2", (d) => (d.target as NetworkNode).y!);
+
+      // Update dynamic leaves with varied rotations - connected at leaf end
+      linkElements.each(function(d, linkIndex) {
+        const linkGroup = d3.select(this);
+        const source = d.source as NetworkNode;
+        const target = d.target as NetworkNode;
+        
+        // Calculate link direction
+        const dx = target.x! - source.x!;
+        const dy = target.y! - source.y!;
+        const linkAngle = Math.atan2(dy, dx);
+        
+        // Update leaves with dynamic rotations
+        const leafGroups = linkGroup.selectAll(".link-leaf");
+        leafGroups.each(function(leafD, leafIndex) {
+          const leafGroup = d3.select(this);
+          const leafPosition = (leafIndex + 1) / (leafGroups.size() + 1);
+          
+          // Calculate position along the link
+          const t = leafPosition;
+          const x = source.x! + dx * t;
+          const y = source.y! + dy * t;
+          
+          // Dynamic leaf properties with varied rotations
+          const leafSeed = Math.abs(linkIndex * 1000 + leafIndex * 100);
+          const leafSize = 8 + (leafSeed % 12); // 8-19px leaves (more randomized)
+          
+          // Ensure leaves are never horizontal - varied rotations
+          const baseRotation = (leafSeed % 360) * Math.PI / 180; // 0-360 degrees
+          const leafAngleVariation = ((leafSeed >> 8) % 120 - 60) * Math.PI / 180; // ±60 degrees
+          const finalAngle = baseRotation + leafAngleVariation;
+          
+          // Create highly realistic grape leaf shape with natural asymmetry and texture
+          // More complex curves with slight asymmetry for natural appearance
+          const asymmetry = (leafSeed % 20 - 10) / 100; // Slight asymmetry factor
+          const leafPath = `M ${x} ${y}
+                           C ${x + leafSize * 0.15} ${y - leafSize * 0.25} ${x + leafSize * 0.35} ${y - leafSize * 0.45} ${x + leafSize * 0.65} ${y - leafSize * 0.35 + asymmetry * leafSize}
+                           C ${x + leafSize * 0.85} ${y - leafSize * 0.25} ${x + leafSize * 1.05} ${y - leafSize * 0.08} ${x + leafSize * 1.15} ${y + asymmetry * leafSize * 0.1}
+                           C ${x + leafSize * 1.05} ${y + leafSize * 0.08} ${x + leafSize * 0.85} ${y + leafSize * 0.25} ${x + leafSize * 0.65} ${y + leafSize * 0.35 + asymmetry * leafSize}
+                           C ${x + leafSize * 0.35} ${y + leafSize * 0.45} ${x + leafSize * 0.15} ${y + leafSize * 0.25} ${x} ${y}
+                           Z`;
+          
+          leafGroup.select(".leaf")
+            .attr("d", leafPath)
+            .attr("transform", `rotate(${finalAngle * 180 / Math.PI}, ${x}, ${y})`);
+          
+          // Update main vein (center line of leaf)
+          leafGroup.select(".main-vein")
+            .attr("x1", x)
+            .attr("y1", y)
+            .attr("x2", x + leafSize * 1.15 * Math.cos(finalAngle))
+            .attr("y2", y + leafSize * 1.15 * Math.sin(finalAngle));
+          
+          // Update primary side veins
+          const primaryVeins = leafGroup.selectAll(".primary-vein");
+          primaryVeins.each(function(veinD, veinIndex) {
+            const vein = d3.select(this);
+            const veinPosition = (veinIndex + 1) / 5; // Distribute along main vein
+            
+            // Calculate vein start and end points
+            const veinStartX = x + veinPosition * leafSize * 0.7 * Math.cos(finalAngle);
+            const veinStartY = y + veinPosition * leafSize * 0.7 * Math.sin(finalAngle);
+            const veinEndX = veinStartX + leafSize * 0.5 * Math.cos(finalAngle + Math.PI/2);
+            const veinEndY = veinStartY + leafSize * 0.5 * Math.sin(finalAngle + Math.PI/2);
+            
+            vein.attr("x1", veinStartX)
+                .attr("y1", veinStartY)
+                .attr("x2", veinEndX)
+                .attr("y2", veinEndY);
+          });
+          
+          // Update secondary veins
+          const secondaryVeins = leafGroup.selectAll(".secondary-vein");
+          secondaryVeins.each(function(veinD, veinIndex) {
+            const vein = d3.select(this);
+            const veinPosition = (veinIndex + 1) / 7; // Distribute along main vein
+            
+            // Calculate vein start and end points with slight variation
+            const veinStartX = x + veinPosition * leafSize * 0.8 * Math.cos(finalAngle);
+            const veinStartY = y + veinPosition * leafSize * 0.8 * Math.sin(finalAngle);
+            const veinEndX = veinStartX + leafSize * 0.3 * Math.cos(finalAngle + Math.PI/2 + (veinIndex % 2 - 0.5) * 0.3);
+            const veinEndY = veinStartY + leafSize * 0.3 * Math.sin(finalAngle + Math.PI/2 + (veinIndex % 2 - 0.5) * 0.3);
+            
+            vein.attr("x1", veinStartX)
+                .attr("y1", veinStartY)
+                .attr("x2", veinEndX)
+                .attr("y2", veinEndY);
+          });
+        });
+      });
 
       nodeElements.attr("transform", (d) => `translate(${d.x!}, ${d.y!})`);
 
