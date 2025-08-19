@@ -318,10 +318,10 @@ export class VineDecorations {
         const row = parseInt(grapeGroup.attr("data-row") || "0");
         const grapeInRow = parseInt(grapeGroup.attr("data-grape-in-row") || "0");
         
-        // Calculate conical cluster positioning with varying grape sizes
-        const baseGrapeSize = 1.5; // Base grape size
-        const grapeSeed = Math.abs(linkIndex * 1000 + clusterIndex * 100 + grapeIndex * 10);
-        const grapeSize = baseGrapeSize + (grapeSeed % 8) / 10; // 1.5-2.3px varying sizes
+                 // Calculate conical cluster positioning with varying grape sizes
+         const baseGrapeSize = 3.0; // Increased base grape size
+         const grapeSeed = Math.abs(linkIndex * 1000 + clusterIndex * 100 + grapeIndex * 10);
+         const grapeSize = baseGrapeSize + (grapeSeed % 12) / 10; // 3.0-4.2px varying sizes
         
         const rowSpacing = baseGrapeSize * 1.8; // Vertical spacing between rows
         const grapeSpacing = baseGrapeSize * 1.6; // Horizontal spacing between grapes
