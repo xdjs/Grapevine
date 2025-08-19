@@ -1114,13 +1114,13 @@ export default function D3NetworkRenderer({
       .attr("width", "200%")
       .attr("height", "200%");
     
-    // Subtle glow effect
+    // Vibrant glow effect
     filter.append("feDropShadow")
       .attr("dx", "0")
       .attr("dy", "0")
-      .attr("stdDeviation", "1")
-      .attr("flood-color", "#7FB069")
-      .attr("flood-opacity", "0.3");
+      .attr("stdDeviation", "1.5")
+      .attr("flood-color", "#8FC069")
+      .attr("flood-opacity", "0.4");
     
     // Primary shadow
     filter.append("feDropShadow")
@@ -1310,24 +1310,24 @@ export default function D3NetworkRenderer({
             .attr("d", leafPath)
             .attr("transform", `rotate(${finalAngle * 180 / Math.PI}, ${x}, ${y})`);
           
-          // Update main vein (center line of leaf)
+          // Update main vein (center line of leaf) - constrained to leaf borders
           leafGroup.select(".main-vein")
             .attr("x1", x)
             .attr("y1", y)
-            .attr("x2", x + leafSize * 1.15 * Math.cos(finalAngle))
-            .attr("y2", y + leafSize * 1.15 * Math.sin(finalAngle));
+            .attr("x2", x + leafSize * 0.85 * Math.cos(finalAngle))
+            .attr("y2", y + leafSize * 0.85 * Math.sin(finalAngle));
           
-          // Update primary side veins
+          // Update primary side veins - constrained to leaf borders
           const primaryVeins = leafGroup.selectAll(".primary-vein");
           primaryVeins.each(function(veinD, veinIndex) {
             const vein = d3.select(this);
             const veinPosition = (veinIndex + 1) / 5; // Distribute along main vein
             
             // Calculate vein start and end points
-            const veinStartX = x + veinPosition * leafSize * 0.7 * Math.cos(finalAngle);
-            const veinStartY = y + veinPosition * leafSize * 0.7 * Math.sin(finalAngle);
-            const veinEndX = veinStartX + leafSize * 0.5 * Math.cos(finalAngle + Math.PI/2);
-            const veinEndY = veinStartY + leafSize * 0.5 * Math.sin(finalAngle + Math.PI/2);
+            const veinStartX = x + veinPosition * leafSize * 0.5 * Math.cos(finalAngle);
+            const veinStartY = y + veinPosition * leafSize * 0.5 * Math.sin(finalAngle);
+            const veinEndX = veinStartX + leafSize * 0.25 * Math.cos(finalAngle + Math.PI/2);
+            const veinEndY = veinStartY + leafSize * 0.25 * Math.sin(finalAngle + Math.PI/2);
             
             vein.attr("x1", veinStartX)
                 .attr("y1", veinStartY)
@@ -1335,17 +1335,17 @@ export default function D3NetworkRenderer({
                 .attr("y2", veinEndY);
           });
           
-          // Update secondary veins
+          // Update secondary veins - constrained to leaf borders
           const secondaryVeins = leafGroup.selectAll(".secondary-vein");
           secondaryVeins.each(function(veinD, veinIndex) {
             const vein = d3.select(this);
             const veinPosition = (veinIndex + 1) / 7; // Distribute along main vein
             
             // Calculate vein start and end points with slight variation
-            const veinStartX = x + veinPosition * leafSize * 0.8 * Math.cos(finalAngle);
-            const veinStartY = y + veinPosition * leafSize * 0.8 * Math.sin(finalAngle);
-            const veinEndX = veinStartX + leafSize * 0.3 * Math.cos(finalAngle + Math.PI/2 + (veinIndex % 2 - 0.5) * 0.3);
-            const veinEndY = veinStartY + leafSize * 0.3 * Math.sin(finalAngle + Math.PI/2 + (veinIndex % 2 - 0.5) * 0.3);
+            const veinStartX = x + veinPosition * leafSize * 0.6 * Math.cos(finalAngle);
+            const veinStartY = y + veinPosition * leafSize * 0.6 * Math.sin(finalAngle);
+            const veinEndX = veinStartX + leafSize * 0.18 * Math.cos(finalAngle + Math.PI/2 + (veinIndex % 2 - 0.5) * 0.3);
+            const veinEndY = veinStartY + leafSize * 0.18 * Math.sin(finalAngle + Math.PI/2 + (veinIndex % 2 - 0.5) * 0.3);
             
             vein.attr("x1", veinStartX)
                 .attr("y1", veinStartY)
