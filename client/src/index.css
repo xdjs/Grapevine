@@ -366,33 +366,25 @@
     stroke: hsl(215, 20.2%, 65.1%); 
     stroke-opacity: 0.6; 
   }
-  
-  /* Leaf decoration styles */
-  .leaf-decoration {
-    pointer-events: all;
+
+  /* Leaf styling */
+  .leaf-group {
     transition: all 0.2s ease;
   }
-  
-  .leaf-decoration:hover {
-    transform: scale(1.1);
+
+  .leaf-group:hover {
+    transform: scale(1.2) !important;
     filter: brightness(1.2);
   }
-  
+
   .leaf-shape {
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
   }
-  
-  .leaf-decoration:hover .leaf-shape {
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4)) brightness(1.1);
-  }
-  
-  .network-link-group {
-    pointer-events: none;
-  }
-  
-  .network-link-group .link {
-    pointer-events: none;
+
+  .leaf-group:hover .leaf-shape {
+    fill: #22c55e;
+    stroke: #16a34a;
+    stroke-width: 1.5;
   }
   
   .network-node:hover { 
