@@ -4,6 +4,7 @@ import { musicBrainzService } from "./musicbrainz.js";
 import { roleService } from './role-service.js';
 import { wikipediaService } from "./wikipedia.js";
 import { musicNerdService } from "./musicnerd-service.js";
+import { openAIService } from './openai-service.js';
 
 export interface IStorage {
   // Artist methods
@@ -145,6 +146,60 @@ export class MemStorage implements IStorage {
       const collaborationData = await musicBrainzService.getArtistCollaborations(artistName);
       console.log(`🎵 [DEBUG] MusicBrainz returned ${collaborationData.artists.length} artist collaborators and ${collaborationData.works.length} works for "${artistName}"`);
       
+      // NEW: Get Spotify "appears on" collaboration data to enhance the network
+      let spotifyCollaborationData: any = { artists: [] };
+      if (openAIService.isServiceAvailable()) {
+        try {
+          console.log(`🎵 [DEBUG] Fetching Spotify "appears on" collaboration data for "${artistName}"`);
+          spotifyCollaborationData = await openAIService.getSpotifyAppearsOnCollaborators(artistName);
+          console.log(`🎵 [DEBUG] Spotify "appears on" returned ${spotifyCollaborationData.artists.length} verified collaborators for "${artistName}"`);
+        } catch (error) {
+          console.warn(`⚠️ [DEBUG] Could not fetch Spotify "appears on" data for "${artistName}":`, error);
+        }
+      }
+
+      // Merge and deduplicate collaboration data
+      const allCollaborators = new Map<string, any>();
+      
+      // Add MusicBrainz collaborators first
+      for (const collaborator of collaborationData.artists) {
+        allCollaborators.set(collaborator.name, {
+          ...collaborator,
+          source: 'musicbrainz'
+        });
+      }
+      
+      // Add Spotify "appears on" collaborators, avoiding duplicates
+      for (const collaborator of spotifyCollaborationData.artists) {
+        if (!allCollaborators.has(collaborator.name)) {
+          // Map Spotify collaborator to our expected format
+          allCollaborators.set(collaborator.name, {
+            name: collaborator.name,
+            type: collaborator.type,
+            topCollaborators: collaborator.topCollaborators || [],
+            source: 'spotify_appears_on',
+            collaborationType: collaborator.collaborationType,
+            verificationLevel: collaborator.verificationLevel
+          });
+          console.log(`🎵 [DEBUG] Added Spotify "appears on" collaborator: "${collaborator.name}" (${collaborator.collaborationType}, ${collaborator.verificationLevel})`);
+        } else {
+          // Enhance existing collaborator with Spotify data
+          const existing = allCollaborators.get(collaborator.name);
+          existing.source = 'musicbrainz+spotify';
+          existing.collaborationType = collaborator.collaborationType;
+          existing.verificationLevel = collaborator.verificationLevel;
+          console.log(`🎵 [DEBUG] Enhanced existing collaborator "${collaborator.name}" with Spotify data`);
+        }
+      }
+      
+      // Convert back to array
+      const enhancedCollaborationData = {
+        artists: Array.from(allCollaborators.values()),
+        works: collaborationData.works
+      };
+      
+      console.log(`🎵 [DEBUG] Combined collaboration data: ${enhancedCollaborationData.artists.length} total collaborators (${collaborationData.artists.length} from MusicBrainz, ${spotifyCollaborationData.artists.length} from Spotify "appears on")`);
+      
       // Get Spotify image for main artist
       let mainArtistImage = null;
       let mainArtistSpotifyId = null;
@@ -198,18 +253,18 @@ export class MemStorage implements IStorage {
       nodes.push(mainArtistNode);
 
       // Add collaborating artists from MusicBrainz
-      console.log(`🎨 [DEBUG] Processing ${collaborationData.artists.length} MusicBrainz collaborators...`);
+      console.log(`🎨 [DEBUG] Processing ${enhancedCollaborationData.artists.length} combined collaborators...`);
       
       // Batch detect roles for ALL people in the network using evidence-based service
       const collaboratorRoleMap = new Map<string, ('artist' | 'producer' | 'songwriter')[]>();
-      if (collaborationData.artists.length > 0) {
+      if (enhancedCollaborationData.artists.length > 0) {
         // Collect ALL people who will be in the network
         const allPeopleInNetwork = new Set<string>();
-        for (const collaborator of collaborationData.artists) {
+        for (const collaborator of enhancedCollaborationData.artists) {
           allPeopleInNetwork.add(collaborator.name);
         }
         // Also collect branching artists from topCollaborators
-        for (const collaborator of collaborationData.artists) {
+        for (const collaborator of enhancedCollaborationData.artists) {
           if (collaborator.type === 'producer' || collaborator.type === 'songwriter') {
             try {
               const producerCollaborations = await musicBrainzService.getArtistCollaborations(collaborator.name);
@@ -238,7 +293,7 @@ export class MemStorage implements IStorage {
       }
       
       // Use only the role data from external sources - no hardcoded role classifications
-      const enhancedCollaborators = collaborationData.artists;
+      const enhancedCollaborators = enhancedCollaborationData.artists;
       
       for (const collaborator of enhancedCollaborators) {
         console.log(`👤 [DEBUG] Processing collaborator: "${collaborator.name}" (type: ${collaborator.type})`);
@@ -283,7 +338,7 @@ export class MemStorage implements IStorage {
               console.log(`✅ [DEBUG] Found ${authenticCollaborators.length} authentic collaborations for "${collaborator.name}":`, topCollaborators);
             } else {
               // Fallback to current network collaborators only if no authentic data exists
-              const networkCollaborators = collaborationData.artists
+              const networkCollaborators = enhancedCollaborationData.artists
                 .filter(c => c.name !== collaborator.name && c.name !== artistName)
                 .map(c => c.name);
               topCollaborators = [artistName, ...networkCollaborators.slice(0, 2)];
@@ -292,7 +347,7 @@ export class MemStorage implements IStorage {
           } catch (error) {
             console.log(`❌ [DEBUG] Error fetching collaborations for "${collaborator.name}":`, error);
             // Fallback to current network collaborators
-            const networkCollaborators = collaborationData.artists
+            const networkCollaborators = enhancedCollaborationData.artists
               .filter(c => c.name !== collaborator.name && c.name !== artistName)
               .map(c => c.name);
             topCollaborators = [artistName, ...networkCollaborators.slice(0, 2)];
@@ -370,7 +425,7 @@ export class MemStorage implements IStorage {
       }
 
       // If no real collaborations found, try Wikipedia
-      if (collaborationData.artists.length === 0) {
+      if (enhancedCollaborationData.artists.length === 0) {
         console.log(`No MusicBrainz collaborations found for ${artistName}, trying Wikipedia`);
         
         try {

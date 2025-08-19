@@ -12,6 +12,9 @@ interface NetworkNode {
   collaborations?: string[];
   imageUrl?: string | null;
   spotifyId?: string | null;
+  source?: string;
+  collaborationType?: string;
+  verificationLevel?: string;
 }
 
 interface NetworkLink {
@@ -164,112 +167,86 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       }
       
       // Generate new network data using OpenAI
-      console.log(`🤖 [Vercel] Generating network for ${artistName} using OpenAI`);
+      console.log(`🤖 [Vercel] Generating network for ${artistName} using OpenAI service`);
       
-      const OpenAI = (await import('openai')).default;
-      const openai = new OpenAI({
-        apiKey: OPENAI_API_KEY,
-      });
-
-      const prompt = `Provide a comprehensive list of music industry professionals who have collaborated with ${correctArtistName}. Focus on producers, songwriters, and other artists who have worked with them.
-
-For well-known/mainstream artists (chart-topping, Grammy-nominated, major label artists): Include all documented collaborations you're aware of, as these are likely well-documented and verifiable.
-
-For lesser-known artists (independent, underground, regional): Be more selective and only include collaborations you're confident about.
-
-Please respond with JSON in this exact format:
-{
-  "collaborators": [
-    {
-      "name": "Person Name",
-      "roles": ["producer", "songwriter"], 
-      "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
-    }
-  ]
-}
-
-Guidelines:
-- For mainstream artists with significant commercial success: Include all known producers, songwriters, and collaborators from album credits, interviews, and industry documentation
-- For independent/underground artists: Be more selective but still include authentic collaborations from official releases
-- If ${correctArtistName} is not a real artist or has absolutely no collaboration data, return: {"collaborators": []}
-- For each person, list ALL their roles from: ["producer", "songwriter", "artist"]
-- Make sure if any of these people have multiple roles (artist, producer, songwriter), it is listed in the data
-- Include their top 3 real collaborating artists (can include both famous and lesser-known artists)
-- Never use generic placeholder names like "John Doe", "Producer X", etc.
-- Maximum 10 real collaborators if they exist
-- Be confident about well-documented collaborations for commercially successful artists
-- Focus on collaborations from official album/song credits, not rumors or speculation`;
-
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: "You are a music industry database expert. For mainstream/well-known artists, confidently provide all documented collaborations. For lesser-known artists, be more selective but still inclusive of authentic collaborations. Prioritize accuracy while being comprehensive for well-documented artists."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.1,
-        max_tokens: 2000,
-      });
-
-      let collaborationData: CollaborationData;
-      try {
-        const openaiContent = completion.choices[0]?.message?.content;
-        console.log(`🤖 [Vercel] OpenAI response length: ${openaiContent?.length || 0} characters`);
-        
-        if (!openaiContent) {
-          console.error('❌ [Vercel] OpenAI returned empty response');
-          await client.end();
-          res.status(503).json({ 
-            error: 'OpenAI API returned empty response',
-            message: 'Failed to generate collaboration data from OpenAI',
-            artist: artistName,
-            timestamp: new Date().toISOString()
-          });
-          return;
-        }
-        
-        // Try to extract JSON from OpenAI response (sometimes includes extra text)
-        let jsonContent = openaiContent.trim();
-        
-        // Remove markdown code blocks if present
-        jsonContent = jsonContent.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
-        
-        // Look for JSON object boundaries
-        const jsonStart = jsonContent.indexOf('{');
-        const jsonEnd = jsonContent.lastIndexOf('}');
-        
-        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-          jsonContent = jsonContent.substring(jsonStart, jsonEnd + 1);
-        }
-        
-        // Try parsing the extracted JSON
-        try {
-          collaborationData = JSON.parse(jsonContent);
-        } catch {
-          // Fallback: try to create a minimal valid structure if parsing fails
-          console.warn('❌ [Vercel] Primary JSON parse failed, trying fallback');
-          collaborationData = { artists: [] };
-        }
-        console.log(`✅ [Vercel] Parsed collaboration data with ${collaborationData.collaborators?.length || collaborationData.artists?.length || 0} collaborators`);
-      } catch (parseError) {
-        console.error('❌ [Vercel] Failed to parse OpenAI response:', parseError);
-        console.error('❌ [Vercel] Raw OpenAI content:', completion.choices[0]?.message?.content);
+      // Import and use our OpenAI service instead of calling OpenAI directly
+      const { openAIService } = await import('../../server/openai-service.js');
+      
+      if (!openAIService.isServiceAvailable()) {
+        console.error(`❌ [Vercel] OpenAI service not available for ${artistName}`);
         await client.end();
         res.status(503).json({ 
-          error: 'Failed to parse OpenAI response',
-          message: 'OpenAI returned invalid JSON format',
+          error: 'OpenAI service not available',
+          message: 'OpenAI service is not properly configured.',
           artist: artistName,
-          parseError: parseError instanceof Error ? parseError.message : 'Unknown parse error',
           timestamp: new Date().toISOString()
         });
         return;
       }
 
+      // Get collaborations using our enhanced service
+      console.log(`🎵 [Vercel] Fetching collaborations for ${correctArtistName} using enhanced OpenAI service`);
+      const collaborationResult = await openAIService.getArtistCollaborations(correctArtistName);
+      
+      // Also get Spotify "appears on" collaborations to enhance the network
+      let spotifyCollaborations: any = { artists: [] };
+      try {
+        console.log(`🎵 [Vercel] Fetching Spotify "appears on" collaborations for ${correctArtistName}`);
+        spotifyCollaborations = await openAIService.getSpotifyAppearsOnCollaborators(correctArtistName);
+        console.log(`🎵 [Vercel] Spotify "appears on" returned ${spotifyCollaborations.artists.length} verified collaborators`);
+      } catch (error) {
+        console.warn(`⚠️ [Vercel] Could not fetch Spotify "appears on" data for ${correctArtistName}:`, error);
+      }
+
+      // Merge and deduplicate collaboration data
+      const allCollaborators = new Map<string, any>();
+      
+      // Add main OpenAI collaborators first
+      for (const collaborator of collaborationResult.artists) {
+        allCollaborators.set(collaborator.name, {
+          ...collaborator,
+          source: 'openai_general'
+        });
+      }
+      
+      // Add Spotify "appears on" collaborators, avoiding duplicates
+      for (const collaborator of spotifyCollaborations.artists) {
+        if (!allCollaborators.has(collaborator.name)) {
+          // Map Spotify collaborator to our expected format
+          allCollaborators.set(collaborator.name, {
+            name: collaborator.name,
+            type: collaborator.type,
+            topCollaborators: collaborator.topCollaborators || [],
+            source: 'spotify_appears_on',
+            collaborationType: collaborator.collaborationType,
+            verificationLevel: collaborator.verificationLevel
+          });
+          console.log(`🎵 [Vercel] Added Spotify "appears on" collaborator: "${collaborator.name}" (${collaborator.collaborationType}, ${collaborator.verificationLevel})`);
+        } else {
+          // Enhance existing collaborator with Spotify data
+          const existing = allCollaborators.get(collaborator.name);
+          existing.source = 'openai_general+spotify';
+          existing.collaborationType = collaborator.collaborationType;
+          existing.verificationLevel = collaborator.verificationLevel;
+          console.log(`🎵 [Vercel] Enhanced existing collaborator "${collaborator.name}" with Spotify data`);
+        }
+      }
+      
+      // Convert back to array
+      const enhancedCollaborations = Array.from(allCollaborators.values());
+      
+      console.log(`🎵 [Vercel] Combined collaboration data: ${enhancedCollaborations.length} total collaborators (${collaborationResult.artists.length} from general OpenAI, ${spotifyCollaborations.artists.length} from Spotify "appears on")`);
+
+      // Transform to the expected format for the network
+      const collaborators = enhancedCollaborations.map(collaborator => ({
+        name: collaborator.name,
+        roles: [collaborator.type],
+        topCollaborators: collaborator.topCollaborators || [],
+        source: collaborator.source,
+        collaborationType: collaborator.collaborationType,
+        verificationLevel: collaborator.verificationLevel
+      }));
+      
       // Build network data structure with comprehensive role consistency
       const nodeMap = new Map<string, NetworkNode>();
       const links: NetworkLink[] = [];
@@ -334,8 +311,7 @@ Guidelines:
       
       console.log(`🎭 [Vercel] Main artist "${correctArtistName}" initialized with ${orderedMainArtistTypes.length} roles:`, orderedMainArtistTypes);
 
-      // Transform new format to expected format and collect all people for batch role detection
-      const collaborators = [];
+      // Collect all people for batch role detection
       const allPeople = new Set<string>();
       
       // Function to detect fake collaborators
@@ -358,50 +334,22 @@ Guidelines:
                !!lowerName.match(/^[a-z]{1,2}$/i);
       };
       
-      if (collaborationData.collaborators) {
-        // Add main artist to batch role detection
-        allPeople.add(correctArtistName);
-        
-        for (const person of collaborationData.collaborators) {
-          // Skip fake collaborators
-          if (isFakeCollaborator(person.name)) {
-            console.log(`🚫 [Vercel] Filtering out fake collaborator: "${person.name}"`);
-            continue;
-          }
-          
-          allPeople.add(person.name);
-          const roles = person.roles || ['producer'];
-          for (const role of roles) {
-            if (role === 'producer' || role === 'songwriter') {
-              collaborators.push({
-                name: person.name,
-                type: role,
-                topCollaborators: person.topCollaborators || []
-              });
-              // Add branching artists to the batch
-              for (const branchingArtist of person.topCollaborators || []) {
-                if (branchingArtist !== correctArtistName && !isFakeCollaborator(branchingArtist)) {
-                  allPeople.add(branchingArtist);
-                }
-              }
-            }
-          }
+      // Add main artist to batch role detection
+      allPeople.add(correctArtistName);
+      
+      // Process collaborators and add to batch role detection
+      for (const collaborator of collaborators) {
+        // Skip fake collaborators
+        if (isFakeCollaborator(collaborator.name)) {
+          console.log(`🚫 [Vercel] Filtering out fake collaborator: "${collaborator.name}"`);
+          continue;
         }
-      } else if (collaborationData.artists) {
-        // Fallback for old format
-        for (const collaborator of collaborationData.artists) {
-          // Skip fake collaborators
-          if (isFakeCollaborator(collaborator.name)) {
-            console.log(`🚫 [Vercel] Filtering out fake collaborator: "${collaborator.name}"`);
-            continue;
-          }
-          
-          collaborators.push(collaborator);
-          allPeople.add(collaborator.name);
-          for (const branchingArtist of collaborator.topCollaborators || []) {
-            if (branchingArtist !== correctArtistName && !isFakeCollaborator(branchingArtist)) {
-              allPeople.add(branchingArtist);
-            }
+        
+        allPeople.add(collaborator.name);
+        // Add branching artists to the batch
+        for (const branchingArtist of collaborator.topCollaborators || []) {
+          if (branchingArtist !== correctArtistName && !isFakeCollaborator(branchingArtist)) {
+            allPeople.add(branchingArtist);
           }
         }
       }
@@ -409,123 +357,20 @@ Guidelines:
       // Track whether hallucinations were used
       let hallucinationsUsed = false;
 
-      // If no collaborators found, check if user wants hallucinated data
+      // If no collaborators found, return single node
       if (collaborators.length === 0) {
-        const allowHallucinations = req.query.allowHallucinations === 'true';
-        
-        if (!allowHallucinations) {
-          console.log(`⚠️ [Vercel] No collaborators found for "${correctArtistName}", returning no-collaborators response`);
-          const singleNodeData = { nodes: [mainNode], links: [] };
-          
-          await client.end();
-          
-          // Return special response indicating no collaborators found
-          res.json({
-            noCollaborators: true,
-            artistName: correctArtistName,
-            artistId: artistMatch.id,
-            singleNodeNetwork: singleNodeData
-          });
-          return;
-        }
-        
-        // User requested hallucinated data - generate creative network
-        console.log(`🎭 [Vercel] No real collaborators found for "${correctArtistName}", generating hallucinated network as requested`);
-        hallucinationsUsed = true;
-        
-        const hallucinatedPrompt = `Create an imaginative collaboration network for ${correctArtistName}. Generate plausible but potentially fictional music industry collaborators who could work with this artist. Include both real and creative professionals.
-
-Please respond with JSON in this exact format:
-{
-  "collaborators": [
-    {
-      "name": "Person Name",
-      "roles": ["producer", "songwriter"], 
-      "topCollaborators": ["Artist 1", "Artist 2", "Artist 3"]
-    }
-  ]
-}
-
-Guidelines:
-- Mix real industry professionals with plausible fictional ones
-- Create 3-8 collaborators total
-- Include producers, songwriters, and artists
-- Use realistic but unique names (avoid common placeholder names like John Doe, Jane Smith, Producer X, etc.)
-- Create names that sound like real music industry professionals
-- Include varied collaboration styles that would fit ${correctArtistName}'s music
-- Return ONLY the JSON object, no other text`;
-
-        try {
-          const hallucinatedCompletion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [{ role: "user", content: hallucinatedPrompt }],
-            temperature: 0.7, // Higher temperature for creativity
-            max_tokens: 2000,
-          });
-
-          const hallucinatedContent = hallucinatedCompletion.choices[0]?.message?.content;
-          if (hallucinatedContent) {
-            // Parse hallucinated content
-            let jsonContent = hallucinatedContent.trim();
-            jsonContent = jsonContent.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
-            
-            const jsonStart = jsonContent.indexOf('{');
-            const jsonEnd = jsonContent.lastIndexOf('}');
-            
-            if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-              jsonContent = jsonContent.substring(jsonStart, jsonEnd + 1);
-            }
-            
-            try {
-              const hallucinatedData = JSON.parse(jsonContent);
-              if (hallucinatedData.collaborators && hallucinatedData.collaborators.length > 0) {
-                // Use hallucinated data and continue with normal processing
-                collaborationData = hallucinatedData;
-                
-                // Reprocess collaborators with hallucinated data
-                for (const person of hallucinatedData.collaborators) {
-                  allPeople.add(person.name);
-                  const roles = person.roles || ['producer'];
-                  for (const role of roles) {
-                    if (role === 'producer' || role === 'songwriter') {
-                      collaborators.push({
-                        name: person.name,
-                        type: role,
-                        topCollaborators: person.topCollaborators || []
-                      });
-                      for (const branchingArtist of person.topCollaborators || []) {
-                        if (branchingArtist !== correctArtistName) {
-                          allPeople.add(branchingArtist);
-                        }
-                      }
-                    }
-                  }
-                }
-                
-                console.log(`✨ [Vercel] Generated ${collaborators.length} hallucinated collaborators for "${correctArtistName}"`);
-              }
-            } catch {
-              console.warn('⚠️ [Vercel] Failed to parse hallucinated data, falling back to single node');
-            }
-          }
-        } catch {
-          console.warn('⚠️ [Vercel] Failed to generate hallucinated data, falling back to single node');
-        }
-        
-        // If still no collaborators after hallucination attempt, return single node
-        if (collaborators.length === 0) {
-          const networkData = { nodes: [mainNode], links: [] };
-          await client.end();
-          res.json(networkData);
-          return;
-        }
+        console.log(`⚠️ [Vercel] No collaborators found for "${correctArtistName}", returning single node`);
+        const networkData = { nodes: [mainNode], links: [] };
+        await client.end();
+        res.json(networkData);
+        return;
       }
       
       // Batch detect roles for all people at once for performance
       console.log(`🎭 [Vercel] Batch detecting roles for ${allPeople.size} people...`);
       await batchDetectRoles([...allPeople]);
 
-      // Process producers and songwriters with multi-role consolidation
+      // Process collaborators and create network nodes
       for (const collaborator of collaborators) {
         // Check if we already have a node for this person
         let collabNode = nodeMap.get(collaborator.name);
@@ -544,7 +389,7 @@ Guidelines:
             const newCollabs = collaborator.topCollaborators.filter((c: string) => !existingCollabs.includes(c));
             collabNode.collaborations = [...existingCollabs, ...newCollabs];
           }
-          // Update color for multi-role nodes (artist + songwriter = multi-color, producer + songwriter = purple)
+          // Update color for multi-role nodes
           if (collabNode.types.includes('artist') && collabNode.types.includes('songwriter')) {
             collabNode.color = '#FF69B4'; // Keep artist color for artist-songwriters
           } else if (collabNode.types.includes('producer') && collabNode.types.includes('songwriter')) {
@@ -560,133 +405,70 @@ Guidelines:
             type: enhancedRoles[0],
             types: enhancedRoles, // Always an array of all roles
             color: color,
-            size: 20, // Fixed size for all collaborators
-            artistId: null,
-            collaborations: collaborator.topCollaborators || []
+            size: 20,
+            collaborations: collaborator.topCollaborators || [],
+            source: collaborator.source,
+            collaborationType: collaborator.collaborationType,
+            verificationLevel: collaborator.verificationLevel
           };
-
-                      // Look up MusicNerd ID for collaborator using enhanced lookup
-            const collabMatch = await findArtistInDatabase(client, collaborator.name);
-            if (collabMatch) {
-              collabNode.artistId = collabMatch.id;
-              // Use the normalized/correct name from database for consistency
-              collabNode.name = collabMatch.name;
-            }
-
           nodeMap.set(collaborator.name, collabNode);
-        }
-
-        // Create link (only once per person, not per role)
-        const existingLink = links.find(link => link.source === correctArtistName && link.target === collaborator.name);
-        if (!existingLink) {
+          
+          // Create link from main artist to collaborator
           links.push({
             source: correctArtistName,
-            target: collaborator.name
+            target: collaborator.name,
           });
         }
+      }
 
-        // Add branching artists with comprehensive multi-role detection
-        for (const branchingArtist of collaborator.topCollaborators || []) {
-          if (branchingArtist !== correctArtistName && !nodeMap.has(branchingArtist)) {
+      // Create branching nodes for top collaborators
+      for (const collaborator of collaborators) {
+        if (collaborator.topCollaborators && collaborator.topCollaborators.length > 0) {
+          const maxBranching = 3;
+          const branchingCount = Math.min(collaborator.topCollaborators.length, maxBranching);
+          
+          for (let i = 0; i < branchingCount; i++) {
+            const branchingArtistName = collaborator.topCollaborators[i];
             
-            // Use evidence-based service to detect roles for this artist node
-            let branchingRoles = ['artist']; // Default fallback
-            try {
-              console.log(`🎭 [Vercel] Detecting roles for artist node: "${branchingArtist}"`);
-              const result = await roleService.computeRoles(branchingArtist, { includeArtistByDefault: true });
-              const detectedRoles = (result.roles || []).filter(r => ['artist','producer','songwriter'].includes(r));
-              if (detectedRoles.length > 0) {
-                branchingRoles = detectedRoles;
-                console.log(`✅ [Vercel] Evidence-based roles for artist "${branchingArtist}":`, branchingRoles);
-              }
-            } catch {
-              console.log(`⚠️ [Vercel] Role detection failed for "${branchingArtist}", using default`);
+            // Skip if it's the main artist or already exists
+            if (branchingArtistName === correctArtistName || nodeMap.has(branchingArtistName)) {
+              continue;
             }
+            
+            // Get enhanced roles from batch detection, fallback to default
+            const branchingArtistRoles = getOptimizedRoles(branchingArtistName, 'artist');
 
-            const branchNode: NetworkNode = {
-              id: branchingArtist,
-              name: branchingArtist,
-              type: branchingRoles[0],
-              types: branchingRoles, // Always an array of all roles
-              color: '#FF69B4',
-              size: 20, // Fixed size for all collaborators (same as other collaborators)
-              artistId: null
+            // Create branching artist node
+            const branchingArtistNode: NetworkNode = {
+              id: branchingArtistName,
+              name: branchingArtistName,
+              type: branchingArtistRoles[0],
+              types: branchingArtistRoles,
+              size: 20,
+              color: branchingArtistRoles.includes('producer') ? '#8A2BE2' : '#00CED1',
             };
-
-            // Look up MusicNerd ID for branching artist using enhanced lookup
-            const branchMatch = await findArtistInDatabase(client, branchingArtist);
-            if (branchMatch) {
-              branchNode.artistId = branchMatch.id;
-              // Use the normalized/correct name from database for consistency
-              branchNode.name = branchMatch.name;
-            }
-
-            nodeMap.set(branchingArtist, branchNode);
-            console.log(`🎭 [Vercel] Created artist node "${branchingArtist}" with ${branchingRoles.length} roles: [${branchingRoles.join(', ')}]`);
             
+            nodeMap.set(branchingArtistName, branchingArtistNode);
+
+            // Create link from collaborator to branching artist
             links.push({
               source: collaborator.name,
-              target: branchingArtist
+              target: branchingArtistName,
             });
           }
         }
       }
 
-      // Convert nodeMap to nodes array
+      // Convert nodeMap to array for final response
       const nodes = Array.from(nodeMap.values());
-
-      // Profile picture fetching is now handled by separate API endpoint
-      // Check database cache for existing profile pictures
-      console.log(`🖼️ [Vercel] Checking cached profile pictures for ${nodes.length} nodes...`);
-      try {
-        for (const node of nodes) {
-          if (node.artistId) {
-            const cacheQuery = 'SELECT node_pfp, spotify_id FROM artists WHERE id = $1 AND node_pfp IS NOT NULL';
-            const cacheResult = await client.query(cacheQuery, [node.artistId]);
-            
-            if (cacheResult.rows.length > 0 && cacheResult.rows[0].node_pfp) {
-              node.imageUrl = cacheResult.rows[0].node_pfp;
-              node.spotifyId = cacheResult.rows[0].spotify_id;
-              console.log(`✅ [Vercel] Loaded cached image for ${node.name}: ${node.imageUrl}`);
-            }
-          }
-        }
-        
-        const cachedImageCount = nodes.filter(n => n.imageUrl).length;
-        console.log(`📦 [Vercel] Profile picture cache check complete: ${cachedImageCount}/${nodes.length} images loaded from cache`);
-      } catch (cacheError) {
-        console.warn(`⚠️ [Vercel] Failed to check profile picture cache:`, cacheError);
-        // Continue without cached images - this is not a breaking error
-      }
-
+      
+      console.log(`🎭 [Vercel] Final network: ${nodes.length} nodes, ${links.length} links`);
+      console.log(`🎵 [Vercel] Network sources: ${new Set(nodes.map(n => n.source).filter(Boolean)).size} different sources`);
+      
+      // Return the network data
       const networkData = { nodes, links };
-
-      // Only cache the generated data if hallucinations were NOT used
-      if (!hallucinationsUsed) {
-        try {
-          const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE LOWER(name) = LOWER($2)';
-          await client.query(updateQuery, [JSON.stringify(networkData), correctArtistName]);
-          console.log(`💾 [Vercel] Cached network data for ${correctArtistName}`);
-        } catch (cacheError) {
-          console.warn('⚠️ [Vercel] Failed to cache data:', cacheError);
-        }
-      } else {
-        console.log(`🎭 [Vercel] Skipping cache for ${correctArtistName} due to hallucinated data`);
-      }
-
       await client.end();
-      console.log(`✅ [Vercel] Generated network with ${nodes.length} nodes for ${artistName}`);
-      
-      // Return network data with note about separate profile picture API
-      const response = {
-        ...networkData,
-        _metadata: {
-          profilePicturesAPI: '/api/artist-profile-pictures-batch',
-          profilePicturesNote: 'Profile pictures should be fetched separately using the batch API for better performance'
-        }
-      };
-      
-      res.json(response);
+      res.json(networkData);
       
     } catch (dbError) {
       console.error('❌ [Vercel] Database/OpenAI error:', dbError);
