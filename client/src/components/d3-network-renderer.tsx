@@ -920,11 +920,16 @@ export default function D3NetworkRenderer({
         const leftRotationVariation = (Math.random() - 0.5) * 20; // ±10 degrees
         const rightRotationVariation = (Math.random() - 0.5) * 20; // ±10 degrees
         
+        // Create static position variations that won't change each tick
+        const leftLeafPos = 0.25 + Math.random() * 0.25; // 25% to 50% along the line from source
+        const rightLeafPos = 0.5 + Math.random() * 0.25; // 50% to 75% along the line from source
+        
         if (leafCount >= 1) {
           // Create left leaf with teardrop shape
           linkGroup.append("path")
             .attr("class", "leaf-left")
             .attr("data-rotation-variation", leftRotationVariation) // Store for later use
+            .attr("data-position-ratio", leftLeafPos) // Store position ratio
             .attr("d", `M0,0 C${2 * leftLeafSize},${-6 * leftLeafSize} ${6 * leftLeafSize},${-4 * leftLeafSize} ${10 * leftLeafSize},0 C${6 * leftLeafSize},${4 * leftLeafSize} ${2 * leftLeafSize},${6 * leftLeafSize} 0,0 Z`)
             .attr("fill", leftLeafColor)
             .attr("stroke", "#22c55e")
@@ -948,6 +953,7 @@ export default function D3NetworkRenderer({
           linkGroup.append("path")
             .attr("class", "leaf-right")
             .attr("data-rotation-variation", rightRotationVariation) // Store for later use
+            .attr("data-position-ratio", rightLeafPos) // Store position ratio
             .attr("d", `M0,0 C${2 * rightLeafSize},${-6 * rightLeafSize} ${6 * rightLeafSize},${-4 * rightLeafSize} ${10 * rightLeafSize},0 C${6 * rightLeafSize},${4 * rightLeafSize} ${2 * rightLeafSize},${6 * rightLeafSize} 0,0 Z`)
             .attr("fill", rightLeafColor)
             .attr("stroke", "#22c55e")
@@ -1321,14 +1327,24 @@ export default function D3NetworkRenderer({
               target.x !== undefined && target.y !== undefined) {
             
                       // Calculate positions along the connection line for leaf distribution
-          // Keep leaves away from nodes (between 25% and 75% of the line)
-          const leftLeafPos = 0.25 + Math.random() * 0.25; // 25% to 50% along the line from source
-          const rightLeafPos = 0.5 + Math.random() * 0.25; // 50% to 75% along the line from source
+          // Use stored position ratios to prevent leaves from moving along the lines
+          let leftX = 0, leftY = 0, rightX = 0, rightY = 0;
           
-          const leftX = source.x + (target.x - source.x) * leftLeafPos;
-          const leftY = source.y + (target.y - source.y) * leftLeafPos;
-          const rightX = source.x + (target.x - source.x) * rightLeafPos;
-          const rightY = source.y + (target.y - source.y) * rightLeafPos;
+          // Get left leaf position if it exists
+          const leftLeaf = leafGroup.select(".leaf-left");
+          if (!leftLeaf.empty()) {
+            const leftLeafPos = parseFloat(leftLeaf.attr("data-position-ratio") || "0.35");
+            leftX = source.x + (target.x - source.x) * leftLeafPos;
+            leftY = source.y + (target.y - source.y) * leftLeafPos;
+          }
+          
+          // Get right leaf position if it exists
+          const rightLeaf = leafGroup.select(".leaf-right");
+          if (!rightLeaf.empty()) {
+            const rightLeafPos = parseFloat(rightLeaf.attr("data-position-ratio") || "0.65");
+            rightX = source.x + (target.x - source.x) * rightLeafPos;
+            rightY = source.y + (target.y - source.y) * rightLeafPos;
+          }
           
           // Calculate the angle of the connection line
           const angle = Math.atan2(target.y - source.y, target.x - source.x);
