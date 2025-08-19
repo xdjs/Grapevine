@@ -608,37 +608,48 @@
   }
 }
 
-/* Leaf decoration styles for network connections */
+/* Leaf decoration styles */
 .leaf-decoration {
-  pointer-events: none;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-  transition: all 0.3s ease;
+  transition: all 0.2s ease-in-out;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  animation: leafFloat 3s ease-in-out infinite;
+}
+
+.leaf-decoration:nth-child(2) {
+  animation-delay: 0.5s;
+}
+
+.leaf-decoration:nth-child(3) {
+  animation-delay: 1s;
+}
+
+@keyframes leafFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-2px) rotate(1deg);
+  }
 }
 
 .leaf-decoration:hover {
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4)) brightness(1.1);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  transform: scale(1.1) !important;
+  animation-play-state: paused;
 }
 
-.leaf-path {
-  transition: opacity 0.3s ease;
+.leaf-shape {
+  transition: all 0.2s ease-in-out;
 }
 
-.leaf-decoration:hover .leaf-path {
-  opacity: 1 !important;
-  filter: brightness(1.2);
+.leaf-decoration:hover .leaf-shape {
+  fill: #22c55e !important;
+  stroke: #16a34a !important;
+  stroke-width: 1.5 !important;
 }
 
-/* Ensure leaves are rendered above connection lines but below nodes */
-.link-group {
-  z-index: 1;
-}
-
+/* Ensure leaves are above the connection lines */
 .leaf-decoration {
-  z-index: 2;
-}
-
-/* Network link styling */
-.network-link {
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  z-index: 10;
+  pointer-events: auto;
 }

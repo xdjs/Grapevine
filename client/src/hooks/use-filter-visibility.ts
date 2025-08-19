@@ -66,7 +66,7 @@ export function useFilterVisibility({
       // Show everything
       svg.selectAll(".node-group").style("display", null);
       svg.selectAll(".label").style("display", null);
-      svg.selectAll(".link").style("display", null);
+      svg.selectAll(".link-group").style("display", null);
       return;
     }
 
@@ -83,7 +83,7 @@ export function useFilterVisibility({
     });
 
     // Hide/show links based on whether both connected nodes are visible
-    svg.selectAll(".link").style("display", function () {
+    svg.selectAll(".link-group").style("display", function () {
       const d = d3.select(this).datum() as NetworkLink;
       const source = d.source as NetworkNode;
       const target = d.target as NetworkNode;

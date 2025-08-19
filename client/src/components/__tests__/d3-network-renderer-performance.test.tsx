@@ -746,5 +746,39 @@ describe('D3NetworkRenderer Performance Tests', () => {
       // Restore original Image mock
       global.Image = MockImage as any;
     });
+
+    test('should create leaf decorations on connection lines', async () => {
+      const networkData = createTestNetworkData(5, false); // Small network for testing
+      
+      const { unmount } = render(
+        <svg ref={mockSvgRef}>
+          <D3NetworkRenderer
+            data={networkData}
+            visible={true}
+            filterState={{ showArtists: true, showProducers: true, showSongwriters: true }}
+            svgRef={mockSvgRef}
+            simulationRef={mockSimulationRef}
+            zoom={mockZoom}
+            nodeInteractions={mockNodeInteractions}
+            tooltip={mockTooltip}
+          />
+        </svg>
+      );
+
+      // Wait for the component to render
+      await waitFor(() => {
+        // Check that leaf decorations are created
+        const mockSelection = createMockSelection();
+        const mockAppend = mockSelection.append as Mock;
+        
+        // Verify that link groups are created with leaf decorations
+        expect(mockAppend).toHaveBeenCalledWith("g");
+        expect(mockAppend).toHaveBeenCalledWith("line");
+        expect(mockAppend).toHaveBeenCalledWith("g");
+        expect(mockAppend).toHaveBeenCalledWith("path");
+      }, { timeout: 1000 });
+
+      unmount();
+    });
   });
 });
