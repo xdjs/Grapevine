@@ -29,6 +29,21 @@ export class VineDecorations {
   }
 
   /**
+   * Show grapes after OpenAI content is generated
+   */
+  showGrapes() {
+    this.grapesVisible = true;
+    // Trigger a re-render of grapes if they exist
+    if (this.defs) {
+      const svg = this.defs.node()?.parentElement;
+      if (svg) {
+        const grapeClusters = d3.select(svg).selectAll('.grape-cluster');
+        grapeClusters.style('opacity', 1);
+      }
+    }
+  }
+
+  /**
    * Initialize SVG definitions for vine decorations
    */
   initializeDefs(svg: d3.Selection<SVGSVGElement, unknown, null, undefined>) {
@@ -279,7 +294,8 @@ export class VineDecorations {
       // Create cluster group
       const clusterGroup = linkGroup.append("g")
         .attr("class", "grape-cluster")
-        .attr("data-cluster-index", clusterIndex);
+        .attr("data-cluster-index", clusterIndex)
+        .style("opacity", this.grapesVisible ? 1 : 0); // Initially hidden
       
       // Create conical grape arrangement
       let grapeIndex = 0;

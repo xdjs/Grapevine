@@ -34,6 +34,8 @@ export interface D3NetworkRendererProps {
     sourceArtist: string;
     targetArtist: string;
   }) => void;
+  /** Whether grapes should be visible */
+  grapesVisible?: boolean;
 }
 
 /**
@@ -58,6 +60,7 @@ export default function D3NetworkRenderer({
   tooltip,
   mainArtistNode,
   onGrapeClick,
+  grapesVisible = false,
 }: D3NetworkRendererProps) {
   
   // Track which node IDs we've already batch-preloaded to avoid re-preloading on small expansions
@@ -72,6 +75,13 @@ export default function D3NetworkRenderer({
     visible,
     filterState
   });
+
+  // Show grapes when grapesVisible prop changes
+  useEffect(() => {
+    if (grapesVisible && vineDecorationsRef.current) {
+      vineDecorationsRef.current.showGrapes();
+    }
+  }, [grapesVisible]);
 
   /**
    * Find connected components for cluster positioning.
@@ -1088,6 +1098,10 @@ export default function D3NetworkRenderer({
       vineDecorationsRef.current.initializeDefs(svg);
       if (onGrapeClick) {
         vineDecorationsRef.current.setGrapeClickCallback(onGrapeClick);
+      }
+      // Show grapes if they should be visible
+      if (grapesVisible) {
+        vineDecorationsRef.current.showGrapes();
       }
       console.log('🔍 [D3Renderer] Vine decorations initialized');
     } catch (error) {

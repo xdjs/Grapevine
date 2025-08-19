@@ -70,6 +70,9 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
     sourceArtist: string;
     targetArtist: string;
   } | null>(null);
+  const [grapeContent, setGrapeContent] = useState<string>('');
+  const [isGrapeContentLoading, setIsGrapeContentLoading] = useState(false);
+  const [grapesVisible, setGrapesVisible] = useState(false);
   
   // Configuration management hook
   const { 
@@ -108,6 +111,35 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
   }) => {
     setGrapeData(data);
     setShowGrapePopup(true);
+  }, []);
+
+  // Generate grape content using OpenAI
+  const generateGrapeContent = useCallback(async (artistName: string) => {
+    if (!artistName) return;
+    
+    setIsGrapeContentLoading(true);
+    try {
+      const response = await fetch(`/api/grape-content/${encodeURIComponent(artistName)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setGrapeContent(data.content);
+        console.log('🍇 [NetworkVisualizer] Generated grape content:', data.content);
+      } else {
+        console.error('❌ [NetworkVisualizer] Failed to generate grape content');
+        setGrapeContent(''); // Don't set error content, leave empty to prevent grapes from showing
+      }
+    } catch (error) {
+      console.error('❌ [NetworkVisualizer] Error generating grape content:', error);
+      setGrapeContent(''); // Don't set error content, leave empty to prevent grapes from showing
+    } finally {
+      setIsGrapeContentLoading(false);
+    }
+  }, []);
+
+  // Show grapes after content is generated
+  const showGrapes = useCallback(() => {
+    setGrapesVisible(true);
+    // This will be passed to D3NetworkRenderer to show grapes
   }, []);
 
   // Touch gestures hook
@@ -180,6 +212,28 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
       }
     })();
   }, [finalDisplayData?.nodes, finalDisplayData?.links]);
+
+  // Generate grape content after network data is loaded and profile pictures are ready
+  useEffect(() => {
+    if (finalDisplayData?.nodes?.length > 0 && !grapesVisible) {
+      const mainArtistNode = finalDisplayData.nodes.find(node => node.size === 30 && node.type === 'artist');
+      if (mainArtistNode?.name) {
+        // Wait a bit for profile pictures to load, then generate content
+        const timer = setTimeout(() => {
+          generateGrapeContent(mainArtistNode.name);
+        }, 2000); // 2 second delay to allow profile pictures to load
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [finalDisplayData?.nodes?.length, grapesVisible, generateGrapeContent]);
+
+  // Show grapes only after content is successfully generated (not empty)
+  useEffect(() => {
+    if (grapeContent && grapeContent.trim() !== '' && !grapesVisible) {
+      showGrapes();
+    }
+  }, [grapeContent, grapesVisible, showGrapes]);
 
   // Tooltip management hook
   const tooltip = useTooltip({
@@ -472,6 +526,7 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
             tooltip={tooltip}
             mainArtistNode={mainArtistNode}
             onGrapeClick={handleGrapeClick}
+            grapesVisible={grapesVisible}
           />
           
           {/* Top-right shrink button removed: shrinking is available via tooltip per-node action */}
@@ -495,6 +550,8 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
             isOpen={showGrapePopup}
             onClose={() => setShowGrapePopup(false)}
             grapeData={grapeData || undefined}
+            content={grapeContent}
+            isLoading={isGrapeContentLoading}
           />
           
           {/* Network Tooltip - rendered outside D3 SVG but positioned absolutely */}

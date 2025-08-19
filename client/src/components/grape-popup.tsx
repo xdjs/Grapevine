@@ -11,12 +11,16 @@ interface GrapePopupProps {
     sourceArtist: string;
     targetArtist: string;
   };
+  content?: string;
+  isLoading?: boolean;
 }
 
 export default function GrapePopup({
   isOpen,
   onClose,
   grapeData,
+  content,
+  isLoading = false,
 }: GrapePopupProps) {
   // Handle keyboard events (especially ESC key)
   React.useEffect(() => {
@@ -64,7 +68,7 @@ export default function GrapePopup({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-700 p-6">
           <h2 className="text-xl font-semibold text-white">
-            Grape Details
+            Insider Information
           </h2>
           <button
             onClick={onClose}
@@ -78,13 +82,24 @@ export default function GrapePopup({
         {/* Content */}
         <div className="p-6">
           <div className="text-center text-gray-300">
-            <p>Grape popup content will go here.</p>
-            {grapeData && (
-              <div className="mt-4 text-sm text-gray-400">
-                <p>Link: {grapeData.sourceArtist} → {grapeData.targetArtist}</p>
-                <p>Cluster: {grapeData.clusterIndex}, Grape: {grapeData.grapeIndex}</p>
+            {isLoading ? (
+              <div className="flex items-center justify-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-400" role="status" aria-label="Loading"></div>
+                <span>Generating content...</span>
               </div>
-            )}
+                         ) : content && content.trim() !== '' ? (
+               <div className="space-y-4">
+                 <p className="text-left leading-relaxed">{content}</p>
+                 {grapeData && (
+                   <div className="mt-4 text-sm text-gray-400 border-t border-gray-700 pt-4">
+                     <p>Link: {grapeData.sourceArtist} → {grapeData.targetArtist}</p>
+                     <p>Cluster: {grapeData.clusterIndex}, Grape: {grapeData.grapeIndex}</p>
+                   </div>
+                 )}
+               </div>
+             ) : (
+               <p>Content generation failed. Please try again later.</p>
+             )}
           </div>
         </div>
       </div>

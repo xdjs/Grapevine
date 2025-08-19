@@ -26,7 +26,7 @@ describe('GrapePopup', () => {
       />
     );
 
-    expect(screen.queryByText('Grape Details')).not.toBeInTheDocument();
+    expect(screen.queryByText('Insider Information')).not.toBeInTheDocument();
   });
 
   it('should render when isOpen is true', () => {
@@ -38,8 +38,8 @@ describe('GrapePopup', () => {
       />
     );
 
-    expect(screen.getByText('Grape Details')).toBeInTheDocument();
-    expect(screen.getByText('Grape popup content will go here.')).toBeInTheDocument();
+    expect(screen.getByText('Insider Information')).toBeInTheDocument();
+    expect(screen.getByText('Content generation failed. Please try again later.')).toBeInTheDocument();
   });
 
   it('should display grape data when provided', () => {
@@ -48,9 +48,11 @@ describe('GrapePopup', () => {
         isOpen={true}
         onClose={mockOnClose}
         grapeData={mockGrapeData}
+        content="This is some generated content about the artist's collaborations."
       />
     );
 
+    expect(screen.getByText('This is some generated content about the artist\'s collaborations.')).toBeInTheDocument();
     expect(screen.getByText('Link: Taylor Swift → Jack Antonoff')).toBeInTheDocument();
     expect(screen.getByText('Cluster: 1, Grape: 2')).toBeInTheDocument();
   });
@@ -65,6 +67,7 @@ describe('GrapePopup', () => {
 
     expect(screen.queryByText(/Link:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Cluster:/)).not.toBeInTheDocument();
+    expect(screen.getByText('Content generation failed. Please try again later.')).toBeInTheDocument();
   });
 
   it('should call onClose when X button is clicked', () => {
@@ -106,7 +109,7 @@ describe('GrapePopup', () => {
       />
     );
 
-    const content = screen.getByText('Grape Details').closest('div');
+    const content = screen.getByText('Insider Information').closest('div');
     if (content) {
       fireEvent.click(content);
     }
@@ -190,6 +193,20 @@ describe('GrapePopup', () => {
     fireEvent.click(closeButton);
 
     expect(mockOnClose).toHaveBeenCalledTimes(3);
+  });
+
+  it('should show loading state when isLoading is true', () => {
+    render(
+      <GrapePopup
+        isOpen={true}
+        onClose={mockOnClose}
+        grapeData={mockGrapeData}
+        isLoading={true}
+      />
+    );
+
+    expect(screen.getByText('Generating content...')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toBeInTheDocument(); // The spinner
   });
 
   it('should clean up event listeners when unmounted', () => {
