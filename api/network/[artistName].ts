@@ -171,7 +171,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         apiKey: OPENAI_API_KEY,
       });
 
-      const prompt = `Provide a comprehensive list of music industry professionals who have collaborated with ${correctArtistName}. Focus on producers, songwriters, and other artists who have worked with them.
+      const prompt = `Search Spotify's "appears on" section and other collaboration data to find music industry professionals who have collaborated with ${correctArtistName}. Focus on producers, songwriters, and other artists who have worked with them.
 
 For well-known/mainstream artists (chart-topping, Grammy-nominated, major label artists): Include all documented collaborations you're aware of, as these are likely well-documented and verifiable.
 
@@ -198,14 +198,15 @@ Guidelines:
 - Never use generic placeholder names like "John Doe", "Producer X", etc.
 - Maximum 10 real collaborators if they exist
 - Be confident about well-documented collaborations for commercially successful artists
-- Focus on collaborations from official album/song credits, not rumors or speculation`;
+- Focus on collaborations from official album/song credits, not rumors or speculation
+- Prioritize collaborations found in Spotify's "appears on" section and official album credits`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
             role: "system",
-            content: "You are a music industry database expert. For mainstream/well-known artists, confidently provide all documented collaborations. For lesser-known artists, be more selective but still inclusive of authentic collaborations. Prioritize accuracy while being comprehensive for well-documented artists."
+            content: "You are a music industry database expert specializing in Spotify collaboration data. Focus on finding collaborators from Spotify's 'appears on' section, album credits, and official releases. For mainstream/well-known artists, confidently provide all documented collaborations. For lesser-known artists, be more selective but still inclusive of authentic collaborations. Prioritize accuracy while being comprehensive for well-documented artists."
           },
           {
             role: "user",

@@ -319,6 +319,69 @@ export class SpotifyService {
     }
   }
 
+  /**
+   * Get tracks where the artist appears as a featured artist
+   * This corresponds to Spotify's "appears on" section
+   * @param artistId - The Spotify artist ID
+   * @returns Promise with array of tracks where the artist appears
+   */
+  async getArtistAppearances(artistId: string): Promise<any[]> {
+    try {
+      const token = await this.getAccessToken();
+      
+      const response = await axios.get(
+        `https://api.spotify.com/v1/artists/${artistId}/albums`,
+        {
+          params: {
+            include_groups: 'appears_on',
+            market: 'US',
+            limit: 50
+          },
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      return response.data.items;
+    } catch (error) {
+      console.error(`Failed to get appearances for artist ${artistId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get comprehensive collaboration data for an artist including their own releases and appearances
+   * @param artistId - The Spotify artist ID
+   * @returns Promise with comprehensive collaboration data
+   */
+  async getArtistCollaborationData(artistId: string): Promise<{
+    ownReleases: any[];
+    appearances: any[];
+    topTracks: SpotifyTrack[];
+  }> {
+    try {
+      const [ownReleases, appearances, topTracks] = await Promise.all([
+        this.getArtistAlbums(artistId),
+        this.getArtistAppearances(artistId),
+        this.getArtistTopTracks(artistId)
+      ]);
+
+      return {
+        ownReleases,
+        appearances,
+        topTracks
+      };
+    } catch (error) {
+      console.error(`Failed to get collaboration data for artist ${artistId}:`, error);
+      return {
+        ownReleases: [],
+        appearances: [],
+        topTracks: []
+      };
+    }
+  }
+
   // Helper method to get artist image
   getArtistImageUrl(artist: SpotifyArtist, size: 'small' | 'medium' | 'large' = 'medium'): string | null {
     if (!artist.images || artist.images.length === 0) {
@@ -469,16 +532,16 @@ export class SpotifyService {
       console.error(`❌ [Spotify:${requestId}] Failed to get profile image for ${artistName} (${duration}ms):`, error);
       
       // Enhanced error monitoring with structured logging
-      const errorType = error?.code || error?.response?.status || 'UNKNOWN';
-      const errorMessage = error?.message || JSON.stringify(error);
+      const errorType = (error as any)?.code || (error as any)?.response?.status || 'UNKNOWN';
+      const errorMessage = (error as any)?.message || JSON.stringify(error);
       console.error(`📊 [Spotify:${requestId}] Error details - Type: ${errorType}, Message: ${errorMessage}, Artist: ${artistName}`);
       
       // Track different error patterns for monitoring
-      if (error?.response?.status === 429) {
+      if ((error as any)?.response?.status === 429) {
         console.error(`🚨 [Spotify:${requestId}] Rate limit exceeded - consider implementing circuit breaker`);
-      } else if (error?.code === 'ECONNREFUSED' || error?.code === 'ETIMEDOUT') {
+      } else if ((error as any)?.code === 'ECONNREFUSED' || (error as any)?.code === 'ETIMEDOUT') {
         console.error(`🚨 [Spotify:${requestId}] Network connectivity issue - check Spotify API status`);
-      } else if (error?.response?.status === 401) {
+      } else if ((error as any)?.response?.status === 401) {
         console.error(`🚨 [Spotify:${requestId}] Authentication failure - check API credentials`);
       }
       
@@ -536,7 +599,7 @@ export class SpotifyService {
           } else {
             failures.add(artistName);
             if (error) {
-              const errorType = error?.code || error?.response?.status || 'UNKNOWN';
+              const errorType = (error as any)?.code || (error as any)?.response?.status || 'UNKNOWN';
               errors.set(artistName, errorType);
             }
           }
@@ -564,9 +627,9 @@ export class SpotifyService {
       
       // Log error distribution for monitoring
       const errorTypes = new Map<string, number>();
-      for (const [artist, errorType] of errors) {
+      errors.forEach((errorType, artist) => {
         errorTypes.set(errorType, (errorTypes.get(errorType) || 0) + 1);
-      }
+      });
       
       if (errorTypes.size > 0) {
         console.log(`📊 [Spotify:${batchId}] Error distribution:`, Object.fromEntries(errorTypes));
