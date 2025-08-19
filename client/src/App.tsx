@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/home";
 import ArtistNetwork from "@/pages/artist-network";
 import NotFound from "@/pages/not-found";
+import LeafDemo from "@/components/leaf-demo";
 import { useViewportHeight } from "@/hooks/use-mobile";
 
 function Router() {
@@ -13,6 +14,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/connections" component={ArtistNetwork} />
+      <Route path="/leaf-demo" component={LeafDemo} />
       <Route path="/:artistId" component={Home} />
       <Route component={NotFound} />
     </Switch>

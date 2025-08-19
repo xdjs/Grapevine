@@ -41,6 +41,37 @@
   }
 }
 
+/* Leaf decoration styles for network connections */
+.leaf-shape {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  transition: all 0.2s ease-in-out;
+  animation: leaf-gentle-sway 4s ease-in-out infinite;
+}
+
+@keyframes leaf-gentle-sway {
+  0%, 100% {
+    transform: scale(0.8) rotate(0deg);
+  }
+  50% {
+    transform: scale(0.8) rotate(2deg);
+  }
+}
+
+.leaf-shape:hover {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+  transform: scale(1.1);
+}
+
+.leaf-vein, .leaf-side-vein, .leaf-small-vein {
+  transition: stroke-width 0.2s ease-in-out;
+}
+
+.leaf-decoration:hover .leaf-vein,
+.leaf-decoration:hover .leaf-side-vein,
+.leaf-decoration:hover .leaf-small-vein {
+  stroke-width: 0.5;
+}
+
 @keyframes pulse {
   0%, 100% {
     opacity: 0.1;
@@ -50,24 +81,6 @@
     opacity: 0.3;
     transform: scale(1.05);
   }
-}
-
-/* Natural leaf styling for network connections */
-.leaf path {
-  transition: opacity 0.3s ease;
-}
-
-.leaf:hover path {
-  opacity: 1 !important;
-  filter: brightness(1.2);
-}
-
-.leaf-1 path {
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-}
-
-.leaf-2 path {
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .dark {
