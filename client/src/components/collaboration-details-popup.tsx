@@ -194,7 +194,7 @@ export default function CollaborationDetailsPopup({
   };
 
   const getProjectIcon = (type: string) => {
-    const iconClass = isMobile ? "w-2 h-2 min-w-2 min-h-2 max-w-2 max-h-2 flex-shrink-0" : "w-6 h-6 min-w-6 min-h-6 max-w-6 max-h-6 flex-shrink-0"; // Larger desktop icons
+    const iconClass = isMobile ? "w-2 h-2 min-w-2 min-h-2 max-w-2 max-h-2 flex-shrink-0" : "w-7 h-7 min-w-7 min-h-7 max-w-7 max-h-7 flex-shrink-0"; // Slightly larger desktop icons
     switch (type) {
       case 'song':
         return <Music className={iconClass} />;
@@ -401,7 +401,7 @@ export default function CollaborationDetailsPopup({
                       >
                         <div className="flex items-center space-x-3">
                           {isMobile ? (
-                            <img src={(('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent((project.type === 'album' || project.type === 'ep') ? discSvg12 : project.type === 'single' ? micSvg12 : musicSvg12)))} alt="" width={16} height={16} style={{ minWidth: 16, minHeight: 16, maxWidth: 16, maxHeight: 16 }} />
+                            <img src={(('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent((project.type === 'album' || project.type === 'ep') ? discSvg12 : project.type === 'single' ? micSvg12 : musicSvg12)))} alt="" width={18} height={18} style={{ minWidth: 18, minHeight: 18, maxWidth: 18, maxHeight: 18 }} />
                           ) : (
                             <div className="text-purple-400">{getProjectIcon(project.type)}</div>
                           )}
