@@ -151,21 +151,22 @@ export class MemStorage implements IStorage {
       if (spotifyService.isConfigured()) {
         try {
           console.log(`🎵 [DEBUG] Fetching real Spotify "appears on" data for "${artistName}"`);
-          const realSpotifyCollaborations = await spotifyService.getArtistAppearsOnData(artistName);
-          console.log(`🎵 [DEBUG] Real Spotify API returned ${realSpotifyCollaborations.length} verified collaborations for "${artistName}"`);
+          const spotifyCollaborators = await spotifyService.getArtistAppearsOn(artistName);
           
-          // Transform real Spotify data to our expected format
+          // Transform Spotify API data to our expected format
           spotifyCollaborationData = {
-            artists: realSpotifyCollaborations.map(collab => ({
-              name: collab.artistName,
-              type: 'producer', // Map featured artist to producer for compatibility
-              topCollaborators: [], // We'll populate this later if needed
+            artists: spotifyCollaborators.map(collaborator => ({
+              name: collaborator.name,
+              type: collaborator.type,
+              topCollaborators: collaborator.topCollaborators || [],
               source: 'spotify_api_real',
-              collaborationType: collab.collaborationType,
-              verificationLevel: collab.verificationLevel,
-              spotifyItems: collab.items // Keep the actual Spotify data
+              collaborationType: collaborator.collaborationType,
+              verificationLevel: collaborator.verificationLevel,
+              spotifyUrl: collaborator.spotifyUrl
             }))
           };
+          
+          console.log(`🎵 [DEBUG] Real Spotify API returned ${spotifyCollaborationData.artists.length} verified collaborators for "${artistName}"`);
         } catch (error) {
           console.warn(`⚠️ [DEBUG] Could not fetch real Spotify "appears on" data for "${artistName}":`, error);
         }
@@ -190,18 +191,20 @@ export class MemStorage implements IStorage {
             name: collaborator.name,
             type: collaborator.type,
             topCollaborators: collaborator.topCollaborators || [],
-            source: 'spotify_appears_on',
+            source: 'spotify_api_real',
             collaborationType: collaborator.collaborationType,
-            verificationLevel: collaborator.verificationLevel
+            verificationLevel: collaborator.verificationLevel,
+            spotifyUrl: collaborator.spotifyUrl
           });
-          console.log(`🎵 [DEBUG] Added Spotify "appears on" collaborator: "${collaborator.name}" (${collaborator.collaborationType}, ${collaborator.verificationLevel})`);
+          console.log(`🎵 [DEBUG] Added real Spotify "appears on" collaborator: "${collaborator.name}" (${collaborator.collaborationType}, ${collaborator.verificationLevel})`);
         } else {
           // Enhance existing collaborator with Spotify data
           const existing = allCollaborators.get(collaborator.name);
-          existing.source = 'musicbrainz+spotify';
+          existing.source = 'musicbrainz+spotify_api_real';
           existing.collaborationType = collaborator.collaborationType;
           existing.verificationLevel = collaborator.verificationLevel;
-          console.log(`🎵 [DEBUG] Enhanced existing collaborator "${collaborator.name}" with Spotify data`);
+          existing.spotifyUrl = collaborator.spotifyUrl;
+          console.log(`🎵 [DEBUG] Enhanced existing collaborator "${collaborator.name}" with real Spotify data`);
         }
       }
       
@@ -211,7 +214,7 @@ export class MemStorage implements IStorage {
         works: collaborationData.works
       };
       
-      console.log(`🎵 [DEBUG] Combined collaboration data: ${enhancedCollaborationData.artists.length} total collaborators (${collaborationData.artists.length} from MusicBrainz, ${spotifyCollaborationData.artists.length} from Spotify "appears on")`);
+      console.log(`🎵 [DEBUG] Combined collaboration data: ${enhancedCollaborationData.artists.length} total collaborators (${collaborationData.artists.length} from MusicBrainz, ${spotifyCollaborationData.artists.length} from real Spotify API)`);
       
       // Get Spotify image for main artist
       let mainArtistImage = null;

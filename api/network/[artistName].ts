@@ -169,7 +169,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       // Generate new network data using OpenAI
       console.log(`🤖 [Vercel] Generating network for ${artistName} using OpenAI service`);
       
-      // Import and use our OpenAI service for general collaboration detection
+      // Import and use our OpenAI service instead of calling OpenAI directly
       const { openAIService } = await import('../../server/openai-service.js');
       
       if (!openAIService.isServiceAvailable()) {
@@ -184,32 +184,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         return;
       }
 
-      // Get general collaborations using OpenAI (for historical/industry knowledge)
-      console.log(`🎵 [Vercel] Fetching general collaborations for ${correctArtistName} using OpenAI service`);
+      // Get collaborations using our enhanced service
+      console.log(`🎵 [Vercel] Fetching collaborations for ${correctArtistName} using enhanced OpenAI service`);
       const collaborationResult = await openAIService.getArtistCollaborations(correctArtistName);
       
       // Also get Spotify "appears on" collaborations to enhance the network
       let spotifyCollaborations: any = { artists: [] };
       try {
         console.log(`🎵 [Vercel] Fetching real Spotify "appears on" data for ${correctArtistName}`);
+        
+        // Import and use the Spotify service to get real data
         const { spotifyService } = await import('../../server/spotify.js');
         
         if (spotifyService.isConfigured()) {
-          const realSpotifyCollaborations = await spotifyService.getArtistAppearsOnData(correctArtistName);
-          console.log(`🎵 [Vercel] Real Spotify API returned ${realSpotifyCollaborations.length} verified collaborations`);
+          const spotifyCollaborators = await spotifyService.getArtistAppearsOn(correctArtistName);
           
-          // Transform real Spotify data to our expected format
+          // Transform Spotify API data to our expected format
           spotifyCollaborations = {
-            artists: realSpotifyCollaborations.map(collab => ({
-              name: collab.artistName,
-              type: 'producer', // Map featured artist to producer for compatibility
-              topCollaborators: [], // We'll populate this later if needed
+            artists: spotifyCollaborators.map(collaborator => ({
+              name: collaborator.name,
+              type: collaborator.type,
+              topCollaborators: collaborator.topCollaborators || [],
               source: 'spotify_api_real',
-              collaborationType: collab.collaborationType,
-              verificationLevel: collab.verificationLevel,
-              spotifyItems: collab.items // Keep the actual Spotify data
+              collaborationType: collaborator.collaborationType,
+              verificationLevel: collaborator.verificationLevel,
+              spotifyUrl: collaborator.spotifyUrl
             }))
           };
+          
+          console.log(`🎵 [Vercel] Real Spotify API returned ${spotifyCollaborations.artists.length} verified collaborators`);
         } else {
           console.log(`⚠️ [Vercel] Spotify service not configured, skipping "appears on" data`);
         }
@@ -236,25 +239,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
             name: collaborator.name,
             type: collaborator.type,
             topCollaborators: collaborator.topCollaborators || [],
-            source: 'spotify_appears_on',
+            source: 'spotify_api_real',
             collaborationType: collaborator.collaborationType,
-            verificationLevel: collaborator.verificationLevel
+            verificationLevel: collaborator.verificationLevel,
+            spotifyUrl: collaborator.spotifyUrl
           });
-          console.log(`🎵 [Vercel] Added Spotify "appears on" collaborator: "${collaborator.name}" (${collaborator.collaborationType}, ${collaborator.verificationLevel})`);
+          console.log(`🎵 [Vercel] Added real Spotify "appears on" collaborator: "${collaborator.name}" (${collaborator.collaborationType}, ${collaborator.verificationLevel})`);
         } else {
           // Enhance existing collaborator with Spotify data
           const existing = allCollaborators.get(collaborator.name);
-          existing.source = 'openai_general+spotify';
+          existing.source = 'openai_general+spotify_api_real';
           existing.collaborationType = collaborator.collaborationType;
           existing.verificationLevel = collaborator.verificationLevel;
-          console.log(`🎵 [Vercel] Enhanced existing collaborator "${collaborator.name}" with Spotify data`);
+          existing.spotifyUrl = collaborator.spotifyUrl;
+          console.log(`🎵 [Vercel] Enhanced existing collaborator "${collaborator.name}" with real Spotify data`);
         }
       }
       
       // Convert back to array
       const enhancedCollaborations = Array.from(allCollaborators.values());
       
-      console.log(`🎵 [Vercel] Combined collaboration data: ${enhancedCollaborations.length} total collaborators (${collaborationResult.artists.length} from general OpenAI, ${spotifyCollaborations.artists.length} from Spotify "appears on")`);
+      console.log(`🎵 [Vercel] Combined collaboration data: ${enhancedCollaborations.length} total collaborators (${collaborationResult.artists.length} from general OpenAI, ${spotifyCollaborations.artists.length} from real Spotify API)`);
 
       // Transform to the expected format for the network
       const collaborators = enhancedCollaborations.map(collaborator => ({
@@ -265,7 +270,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         collaborationType: collaborator.collaborationType,
         verificationLevel: collaborator.verificationLevel
       }));
-      
+
       // Build network data structure with comprehensive role consistency
       const nodeMap = new Map<string, NetworkNode>();
       const links: NetworkLink[] = [];
@@ -353,22 +358,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
                !!lowerName.match(/^[a-z]{1,2}$/i);
       };
       
-      // Add main artist to batch role detection
-      allPeople.add(correctArtistName);
-      
+        // Add main artist to batch role detection
+        allPeople.add(correctArtistName);
+        
       // Process collaborators and add to batch role detection
       for (const collaborator of collaborators) {
-        // Skip fake collaborators
-        if (isFakeCollaborator(collaborator.name)) {
-          console.log(`🚫 [Vercel] Filtering out fake collaborator: "${collaborator.name}"`);
-          continue;
-        }
-        
-        allPeople.add(collaborator.name);
+          // Skip fake collaborators
+          if (isFakeCollaborator(collaborator.name)) {
+            console.log(`🚫 [Vercel] Filtering out fake collaborator: "${collaborator.name}"`);
+            continue;
+          }
+          
+          allPeople.add(collaborator.name);
         // Add branching artists to the batch
-        for (const branchingArtist of collaborator.topCollaborators || []) {
-          if (branchingArtist !== correctArtistName && !isFakeCollaborator(branchingArtist)) {
-            allPeople.add(branchingArtist);
+          for (const branchingArtist of collaborator.topCollaborators || []) {
+            if (branchingArtist !== correctArtistName && !isFakeCollaborator(branchingArtist)) {
+              allPeople.add(branchingArtist);
           }
         }
       }
@@ -379,10 +384,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       // If no collaborators found, return single node
       if (collaborators.length === 0) {
         console.log(`⚠️ [Vercel] No collaborators found for "${correctArtistName}", returning single node`);
-        const networkData = { nodes: [mainNode], links: [] };
-        await client.end();
-        res.json(networkData);
-        return;
+          const networkData = { nodes: [mainNode], links: [] };
+          await client.end();
+          res.json(networkData);
+          return;
       }
       
       // Batch detect roles for all people at once for performance
@@ -431,7 +436,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
             verificationLevel: collaborator.verificationLevel
           };
           nodeMap.set(collaborator.name, collabNode);
-          
+
           // Create link from main artist to collaborator
           links.push({
             source: correctArtistName,
@@ -480,7 +485,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
       // Convert nodeMap to array for final response
       const nodes = Array.from(nodeMap.values());
-      
+
       console.log(`🎭 [Vercel] Final network: ${nodes.length} nodes, ${links.length} links`);
       console.log(`🎵 [Vercel] Network sources: ${new Set(nodes.map(n => n.source).filter(Boolean)).size} different sources`);
       
