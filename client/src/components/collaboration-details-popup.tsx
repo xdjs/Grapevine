@@ -60,6 +60,54 @@ const externalSvg14 = `<?xml version=\"1.0\" encoding=\"UTF-8\"?>
   <path d="M21 14v7H3V3h7" stroke="${PURPLE}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
 </svg>`;
 
+// Rasterize the SVG strings into PNG data URLs for mobile
+function rasterizeSvgToPng(svg: string, px: number): Promise<string> {
+  return new Promise((resolve) => {
+    try {
+      const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
+      const size = px * dpr;
+      const svgUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(svgUrl); return; }
+        ctx.scale(dpr, dpr);
+        ctx.clearRect(0, 0, px, px);
+        ctx.drawImage(img, 0, 0, px, px);
+        try { resolve(canvas.toDataURL('image/png')); }
+        catch { resolve(svgUrl); }
+      };
+      img.src = svgUrl;
+    } catch {
+      resolve('');
+    }
+  });
+}
+
+const useMobilePngIcons = (isMobile: boolean) => {
+  const [icons, setIcons] = useState({ users: '', music: '', disc: '', mic: '', external: '' });
+  useEffect(() => {
+    let cancelled = false;
+    async function gen() {
+      if (!isMobile || typeof document === 'undefined') { if (!cancelled) setIcons({ users: '', music: '', disc: '', mic: '', external: '' }); return; }
+      const [users, music, disc, mic, external] = await Promise.all([
+        rasterizeSvgToPng(usersSvg12, 16),
+        rasterizeSvgToPng(musicSvg12, 16),
+        rasterizeSvgToPng(discSvg12, 18),
+        rasterizeSvgToPng(micSvg12, 18),
+        rasterizeSvgToPng(externalSvg14, 18),
+      ]);
+      if (!cancelled) setIcons({ users, music, disc, mic, external });
+    }
+    gen();
+    return () => { cancelled = true; };
+  }, [isMobile]);
+  return icons;
+};
+
 interface CollaborationDetailsPopupProps {
   isOpen: boolean;
   onClose: () => void;
@@ -78,6 +126,7 @@ export default function CollaborationDetailsPopup({
   const [details, setDetails] = useState<CollaborationDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const mobilePng = useMobilePngIcons(true);
 
   // Reactive mobile detection that updates on window resize  
   const [isMobile, setIsMobile] = useState(false);
@@ -369,7 +418,7 @@ export default function CollaborationDetailsPopup({
                   isMobile ? 'text-base' : 'text-lg'
                 }`}>
                   {isMobile ? (
-                    <img src={('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(usersSvg12))} alt="" width={16} height={16} style={{ minWidth: 16, minHeight: 16, maxWidth: 16, maxHeight: 16 }} />
+                    <img src={mobilePng.users || ('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(usersSvg12))} alt="" width={16} height={16} style={{ minWidth: 16, minHeight: 16, maxWidth: 16, maxHeight: 16 }} />
                   ) : (
                     <Users className="text-purple-400 flex-shrink-0 w-6 h-6 min-w-6 min-h-6 max-w-6 max-h-6" />
                   )}
@@ -385,7 +434,7 @@ export default function CollaborationDetailsPopup({
                     isMobile ? 'text-base' : 'text-lg'
                   }`}>
                     {isMobile ? (
-                      <img src={('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(musicSvg12))} alt="" width={16} height={16} style={{ minWidth: 16, minHeight: 16, maxWidth: 16, maxHeight: 16 }} />
+                      <img src={mobilePng.music || ('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(musicSvg12))} alt="" width={16} height={16} style={{ minWidth: 16, minHeight: 16, maxWidth: 16, maxHeight: 16 }} />
                     ) : (
                       <Music className="text-purple-400 flex-shrink-0 w-6 h-6 min-w-6 min-h-6 max-w-6 max-h-6" />
                     )}
@@ -401,7 +450,7 @@ export default function CollaborationDetailsPopup({
                       >
                         <div className="flex items-center space-x-3">
                           {isMobile ? (
-                            <img src={(('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent((project.type === 'album' || project.type === 'ep') ? discSvg12 : project.type === 'single' ? micSvg12 : musicSvg12)))} alt="" width={18} height={18} style={{ minWidth: 18, minHeight: 18, maxWidth: 18, maxHeight: 18 }} />
+                            <img src={(project.type === 'album' || project.type === 'ep') ? (mobilePng.disc || ('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(discSvg12))) : project.type === 'single' ? (mobilePng.mic || ('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(micSvg12))) : (mobilePng.music || ('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(musicSvg12)))} alt="" width={18} height={18} style={{ minWidth: 18, minHeight: 18, maxWidth: 18, maxHeight: 18 }} />
                           ) : (
                             <div className="text-purple-400">{getProjectIcon(project.type)}</div>
                           )}
@@ -427,7 +476,7 @@ export default function CollaborationDetailsPopup({
                                 className="inline-flex items-center px-2 py-1 rounded-md text-green-400 hover:text-green-300 underline text-xs"
                                 title="Open on Spotify"
                               >
-                                <img src={('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(externalSvg14))} alt="Open on Spotify" width={18} height={18} style={{ minWidth: 18, minHeight: 18, maxWidth: 18, maxHeight: 18 }} />
+                                <img src={mobilePng.external || ('data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(externalSvg14))} alt="Open on Spotify" width={18} height={18} style={{ minWidth: 18, minHeight: 18, maxWidth: 18, maxHeight: 18 }} />
                               </a>
                             ) : (
                               <a
