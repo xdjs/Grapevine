@@ -74,6 +74,10 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
   const [isGrapeContentLoading, setIsGrapeContentLoading] = useState(false);
   const [grapesVisible, setGrapesVisible] = useState(false);
   
+  // Store content for each collaboration link
+  const [linkContents, setLinkContents] = useState<Map<string, string>>(new Map());
+  const [linkLoadingStates, setLinkLoadingStates] = useState<Map<string, boolean>>(new Map());
+  
   // Configuration management hook
   const { 
     musicNerdBaseUrl, 
@@ -116,39 +120,54 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
       sourceArtist: data.sourceArtist,
       targetArtist: data.targetArtist
     });
+    
+    const linkKey = `${data.sourceArtist}→${data.targetArtist}`;
+    const content = linkContents.get(linkKey);
+    const isLoading = linkLoadingStates.get(linkKey) || false;
+    
     setGrapeData(data);
+    setGrapeContent(content || '');
+    setIsGrapeContentLoading(isLoading);
     setShowGrapePopup(true);
-    console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Grape popup opened for ${data.sourceArtist} → ${data.targetArtist}`);
-  }, []);
+    
+    console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Grape popup opened for ${linkKey} with content:`, {
+      hasContent: !!content,
+      contentLength: content?.length || 0,
+      isLoading
+    });
+  }, [linkContents, linkLoadingStates]);
 
-  // Generate grape content using OpenAI
-  const generateGrapeContent = useCallback(async (artistName: string) => {
-    if (!artistName) {
-      console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] generateGrapeContent called with empty artistName, skipping`);
+  // Generate grape content for a specific collaboration
+  const generateGrapeContent = useCallback(async (sourceArtist: string, targetArtist: string) => {
+    if (!sourceArtist || !targetArtist) {
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] generateGrapeContent called with empty artist names, skipping`);
       return;
     }
     
-    console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Starting grape content generation for artist: ${artistName}`);
-    setIsGrapeContentLoading(true);
+    const linkKey = `${sourceArtist}→${targetArtist}`;
+    console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Starting grape content generation for collaboration: ${linkKey}`);
+    
+    // Set loading state for this specific link
+    setLinkLoadingStates(prev => new Map(prev).set(linkKey, true));
     
     try {
-      console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Making API call to /api/grape-content/${encodeURIComponent(artistName)}`);
-      const response = await fetch(`/api/grape-content/${encodeURIComponent(artistName)}`);
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Making API call to /api/grape-content/${encodeURIComponent(sourceArtist)}/${encodeURIComponent(targetArtist)}`);
+      const response = await fetch(`/api/grape-content/${encodeURIComponent(sourceArtist)}/${encodeURIComponent(targetArtist)}`);
       
       if (response.ok) {
         const data = await response.json();
-        console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] API call successful, received content:`, data.content);
-        setGrapeContent(data.content);
+        console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] API call successful for ${linkKey}, received content:`, data.content);
+        setLinkContents(prev => new Map(prev).set(linkKey, data.content));
       } else {
-        console.error(`🕐 [${new Date().toISOString()}] ❌ [NetworkVisualizer] API call failed with status ${response.status}: ${response.statusText}`);
-        setGrapeContent(''); // Don't set error content, leave empty to prevent grapes from showing
+        console.error(`🕐 [${new Date().toISOString()}] ❌ [NetworkVisualizer] API call failed for ${linkKey} with status ${response.status}: ${response.statusText}`);
+        setLinkContents(prev => new Map(prev).set(linkKey, '')); // Don't set error content, leave empty to prevent grapes from showing
       }
     } catch (error) {
-      console.error(`🕐 [${new Date().toISOString()}] ❌ [NetworkVisualizer] Error generating grape content:`, error);
-      setGrapeContent(''); // Don't set error content, leave empty to prevent grapes from showing
+      console.error(`🕐 [${new Date().toISOString()}] ❌ [NetworkVisualizer] Error generating grape content for ${linkKey}:`, error);
+      setLinkContents(prev => new Map(prev).set(linkKey, '')); // Don't set error content, leave empty to prevent grapes from showing
     } finally {
-      console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Grape content generation completed, setting loading to false`);
-      setIsGrapeContentLoading(false);
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Grape content generation completed for ${linkKey}, setting loading to false`);
+      setLinkLoadingStates(prev => new Map(prev).set(linkKey, false));
     }
   }, []);
 
@@ -230,55 +249,61 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
     })();
   }, [finalDisplayData?.nodes, finalDisplayData?.links]);
 
-  // Generate grape content after network data is loaded and profile pictures are ready
+  // Generate grape content for all collaboration links after network data is loaded
   useEffect(() => {
-    if (finalDisplayData?.nodes?.length > 0 && !grapesVisible) {
-      const mainArtistNode = finalDisplayData.nodes.find(node => node.size === 30 && node.type === 'artist');
-      if (mainArtistNode?.name) {
-        console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Network data loaded, main artist found: ${mainArtistNode.name}`);
-        console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Setting 2-second timer to generate grape content after profile pictures load`);
+    if (finalDisplayData?.nodes?.length > 0 && finalDisplayData?.links?.length > 0 && !grapesVisible) {
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Network data loaded, generating content for ${finalDisplayData.links.length} collaboration links`);
+      
+      // Wait a bit for profile pictures to load, then generate content for each link
+      const timer = setTimeout(() => {
+        console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Timer expired, generating content for all collaboration links`);
         
-        // Wait a bit for profile pictures to load, then generate content
-        const timer = setTimeout(() => {
-          console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Timer expired, calling generateGrapeContent for ${mainArtistNode.name}`);
-          generateGrapeContent(mainArtistNode.name);
-        }, 2000); // 2 second delay to allow profile pictures to load
-        
-        return () => {
-          console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Clearing grape content generation timer`);
-          clearTimeout(timer);
-        };
-      } else {
-        console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Network data loaded but no main artist node found`);
-      }
+        finalDisplayData.links.forEach((link, linkIndex) => {
+          const sourceArtist = typeof link.source === 'string' ? link.source : link.source.name;
+          const targetArtist = typeof link.target === 'string' ? link.target : link.target.name;
+          
+          console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Generating content for link ${linkIndex}: ${sourceArtist} → ${targetArtist}`);
+          generateGrapeContent(sourceArtist, targetArtist);
+        });
+      }, 2000); // 2 second delay to allow profile pictures to load
+      
+      return () => {
+        console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Clearing grape content generation timer`);
+        clearTimeout(timer);
+      };
     } else {
       console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Grape content generation effect skipped:`, {
         hasNodes: !!finalDisplayData?.nodes?.length,
+        hasLinks: !!finalDisplayData?.links?.length,
         grapesVisible,
-        nodeCount: finalDisplayData?.nodes?.length || 0
+        nodeCount: finalDisplayData?.nodes?.length || 0,
+        linkCount: finalDisplayData?.links?.length || 0
       });
     }
-  }, [finalDisplayData?.nodes?.length, grapesVisible, generateGrapeContent]);
+  }, [finalDisplayData?.nodes?.length, finalDisplayData?.links?.length, grapesVisible, generateGrapeContent]);
 
-  // Show grapes only after content is successfully generated (not empty)
+  // Show grapes only after at least one collaboration has content
   useEffect(() => {
+    const hasAnyContent = Array.from(linkContents.values()).some(content => content && content.trim() !== '');
+    const anyLoading = Array.from(linkLoadingStates.values()).some(loading => loading);
+    
     console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Grape visibility effect triggered:`, {
-      hasContent: !!grapeContent,
-      contentLength: grapeContent?.length || 0,
-      contentTrimmed: grapeContent?.trim() || '',
+      linkContentsSize: linkContents.size,
+      hasAnyContent,
+      anyLoading,
       grapesVisible,
-      shouldShow: grapeContent && grapeContent.trim() !== '' && !grapesVisible
+      shouldShow: hasAnyContent && !grapesVisible
     });
     
-    if (grapeContent && grapeContent.trim() !== '' && !grapesVisible) {
-      console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Content is valid and grapes not visible, calling showGrapes`);
+    if (hasAnyContent && !grapesVisible) {
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] At least one collaboration has content and grapes not visible, calling showGrapes`);
       showGrapes();
     } else {
       console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Grapes will not be shown:`, {
-        reason: !grapeContent ? 'no content' : grapeContent.trim() === '' ? 'empty content' : grapesVisible ? 'already visible' : 'unknown'
+        reason: !hasAnyContent ? 'no content for any collaboration' : grapesVisible ? 'already visible' : 'unknown'
       });
     }
-  }, [grapeContent, grapesVisible, showGrapes]);
+  }, [linkContents, linkLoadingStates, grapesVisible, showGrapes]);
 
   // Tooltip management hook
   const tooltip = useTooltip({

@@ -144,6 +144,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get grape content for popup
+  app.get("/api/grape-content/:sourceArtist/:targetArtist", async (req, res) => {
+    try {
+      const sourceArtist = decodeURIComponent(req.params.sourceArtist);
+      const targetArtist = decodeURIComponent(req.params.targetArtist);
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [Server] Grape content request received for collaboration: ${sourceArtist} → ${targetArtist}`);
+      
+      if (!sourceArtist || !targetArtist) {
+        console.log(`🕐 [${new Date().toISOString()}] ❌ [Server] Artist names are empty, returning 400 error`);
+        return res.status(400).json({ error: 'Both source and target artist names are required' });
+      }
+
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [Server] Starting content generation for collaboration: ${sourceArtist} → ${targetArtist}`);
+
+      // Create a prompt for OpenAI to generate grape popup content for the specific collaboration
+      const prompt = `Tell me a fun fact about the most recent project that ${sourceArtist} and ${targetArtist} worked on together. Keep your answer short but informative. Do not include "Fun Fact:" or mention fun facts in your answer; only show the information. Do not ask for any extra questions or clarification.`;
+
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [Server] Making OpenAI API call for collaboration: ${sourceArtist} → ${targetArtist}`);
+      
+      const { openai } = await import("./openai-service");
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are a music expert who provides concise, factual information about recent music collaborations. Keep responses under 100 words and focus on specific, interesting details about recent projects."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: 150,
+        temperature: 0.7,
+      });
+      
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [Server] OpenAI API call completed for collaboration: ${sourceArtist} → ${targetArtist}`);
+
+      const content = completion.choices[0]?.message?.content?.trim();
+
+      if (!content) {
+        console.log(`🕐 [${new Date().toISOString()}] ❌ [Server] No content generated from OpenAI for collaboration: ${sourceArtist} → ${targetArtist}`);
+        throw new Error('No content generated from OpenAI');
+      }
+
+      console.log(`🕐 [${new Date().toISOString()}] ✅ [Server] Generated content for ${sourceArtist} → ${targetArtist}:`, content);
+
+      console.log(`🕐 [${new Date().toISOString()}] 🍇 [Server] Returning successful response for collaboration: ${sourceArtist} → ${targetArtist}`);
+      res.json({
+        content,
+        sourceArtist,
+        targetArtist,
+        generatedAt: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error(`🕐 [${new Date().toISOString()}] ❌ [Server] Error generating content for collaboration ${req.params.sourceArtist} → ${req.params.targetArtist}:`, error);
+      
+      res.status(500).json({ 
+        error: 'Failed to generate grape content',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Get configuration including MusicNerd base URL
   app.get("/api/config", async (req, res) => {
     try {
