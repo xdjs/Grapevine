@@ -258,7 +258,10 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
       grapesVisible,
       nodeCount: finalDisplayData?.nodes?.length || 0,
       linkCount: finalDisplayData?.links?.length || 0,
-      shouldRun: finalDisplayData?.nodes?.length > 0 && finalDisplayData?.links?.length > 0 && !grapesVisible
+      shouldRun: finalDisplayData?.nodes?.length > 0 && finalDisplayData?.links?.length > 0 && !grapesVisible,
+      finalDisplayDataExists: !!finalDisplayData,
+      finalDisplayDataType: typeof finalDisplayData,
+      finalDisplayDataKeys: finalDisplayData ? Object.keys(finalDisplayData) : []
     });
     
     if (finalDisplayData?.nodes?.length > 0 && finalDisplayData?.links?.length > 0 && !grapesVisible) {
@@ -694,6 +697,52 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
               }}
             >
               Manual Grape Opacity
+            </button>
+            <button
+              onClick={() => {
+                console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Debug: Manually triggering content generation`);
+                if (finalDisplayData?.links?.length > 0) {
+                  console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Found ${finalDisplayData.links.length} links, generating content for each`);
+                  finalDisplayData.links.forEach(async (link, linkIndex) => {
+                    const sourceArtist = typeof link.source === 'string' ? link.source : link.source.name;
+                    const targetArtist = typeof link.target === 'string' ? link.target : link.target.name;
+                    console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Manual content generation for link ${linkIndex}: ${sourceArtist} → ${targetArtist}`);
+                    if (sourceArtist && targetArtist) {
+                      const linkKey = `${sourceArtist}→${targetArtist}`;
+                      setLinkLoadingStates(prev => new Map(prev).set(linkKey, true));
+                      try {
+                        const response = await fetch(`/api/grape-content/${encodeURIComponent(sourceArtist)}/${encodeURIComponent(targetArtist)}`);
+                        if (response.ok) {
+                          const data = await response.json();
+                          console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Manual API call successful for ${linkKey}:`, data.content);
+                          setLinkContents(prev => new Map(prev).set(linkKey, data.content));
+                        } else {
+                          console.error(`🕐 [${new Date().toISOString()}] ❌ [NetworkVisualizer] Manual API call failed for ${linkKey}: ${response.status}`);
+                          setLinkContents(prev => new Map(prev).set(linkKey, ''));
+                        }
+                      } catch (error) {
+                        console.error(`🕐 [${new Date().toISOString()}] ❌ [NetworkVisualizer] Manual API call error for ${linkKey}:`, error);
+                        setLinkContents(prev => new Map(prev).set(linkKey, ''));
+                      } finally {
+                        setLinkLoadingStates(prev => new Map(prev).set(linkKey, false));
+                      }
+                    }
+                  });
+                } else {
+                  console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] No links found in finalDisplayData`);
+                }
+              }}
+              style={{
+                padding: '8px 12px',
+                backgroundColor: 'green',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '12px'
+              }}
+            >
+              Manual Content Generation
             </button>
           </div>
           
