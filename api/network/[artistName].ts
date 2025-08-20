@@ -166,28 +166,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         return;
       }
       
-      // Generate new network data using OpenAI
-      console.log(`🤖 [Vercel] Generating network for ${artistName} using OpenAI service`);
+      console.log(`🤖 [Vercel] Generating network for ${artistName} using real data sources only`);
       
-      // Import and use our OpenAI service instead of calling OpenAI directly
-      const { openAIService } = await import('../../server/openai-service.js');
+      // REMOVED: OpenAI hallucination call that was adding fake collaborators
+      // Now we only use real data sources: MusicBrainz, Wikipedia, and real Spotify API
+      console.log(`🎵 [Vercel] Skipping OpenAI to prevent hallucinations - using only real data sources for "${correctArtistName}"`);
       
-      if (!openAIService.isServiceAvailable()) {
-        console.error(`❌ [Vercel] OpenAI service not available for ${artistName}`);
-        await client.end();
-        res.status(503).json({ 
-          error: 'OpenAI service not available',
-          message: 'OpenAI service is not properly configured.',
-          artist: artistName,
-          timestamp: new Date().toISOString()
-        });
-        return;
+      // Initialize empty collaboration result to prevent errors
+      const collaborationResult = { artists: [] };
+      
+      // NEW: Get MusicBrainz general collaboration data (producers, songwriters, etc.)
+      let musicBrainzCollaborations: any = { artists: [] };
+      try {
+        console.log(`🎵 [Vercel] Fetching MusicBrainz general collaboration data for ${correctArtistName}`);
+        
+        // Import and use the MusicBrainz service to get real general collaboration data
+        const { musicBrainzService } = await import('../../server/musicbrainz.js');
+        
+        const musicBrainzData = await musicBrainzService.getArtistCollaborations(correctArtistName);
+        musicBrainzCollaborations = {
+          artists: musicBrainzData.artists.map(collaborator => ({
+            name: collaborator.name,
+            type: collaborator.type,
+            topCollaborators: collaborator.topCollaborators || [],
+            source: 'musicbrainz_api_real',
+            collaborationType: 'general_collaboration',
+            verificationLevel: 'high'
+          }))
+        };
+        
+        console.log(`🎵 [Vercel] MusicBrainz API returned ${musicBrainzCollaborations.artists.length} general collaborators`);
+      } catch (error) {
+        console.warn(`⚠️ [Vercel] Could not fetch MusicBrainz general collaboration data for ${correctArtistName}:`, error);
       }
 
-      // Get collaborations using our enhanced service
-      console.log(`🎵 [Vercel] Fetching collaborations for ${correctArtistName} using enhanced OpenAI service`);
-      const collaborationResult = await openAIService.getArtistCollaborations(correctArtistName);
-      
       // Also get Spotify "appears on" collaborations to enhance the network
       let spotifyCollaborations: any = { artists: [] };
       try {
@@ -223,12 +235,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       // Merge and deduplicate collaboration data
       const allCollaborators = new Map<string, any>();
       
-      // Add main OpenAI collaborators first
-      for (const collaborator of collaborationResult.artists) {
+      // Add MusicBrainz general collaborators first (producers, songwriters, etc.)
+      for (const collaborator of musicBrainzCollaborations.artists) {
         allCollaborators.set(collaborator.name, {
           ...collaborator,
-          source: 'openai_general'
+          source: 'musicbrainz_api_real'
         });
+        console.log(`🎵 [Vercel] Added MusicBrainz general collaborator: "${collaborator.name}" (${collaborator.type})`);
       }
       
       // Add Spotify "appears on" collaborators, avoiding duplicates
@@ -248,7 +261,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         } else {
           // Enhance existing collaborator with Spotify data
           const existing = allCollaborators.get(collaborator.name);
-          existing.source = 'openai_general+spotify_api_real';
+          existing.source = 'musicbrainz_api_real+spotify_api_real';
           existing.collaborationType = collaborator.collaborationType;
           existing.verificationLevel = collaborator.verificationLevel;
           existing.spotifyUrl = collaborator.spotifyUrl;
@@ -259,7 +272,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       // Convert back to array
       const enhancedCollaborations = Array.from(allCollaborators.values());
       
-      console.log(`🎵 [Vercel] Combined collaboration data: ${enhancedCollaborations.length} total collaborators (${collaborationResult.artists.length} from general OpenAI, ${spotifyCollaborations.artists.length} from real Spotify API)`);
+      console.log(`🎵 [Vercel] Combined collaboration data: ${enhancedCollaborations.length} total collaborators (${musicBrainzCollaborations.artists.length} from MusicBrainz general, ${spotifyCollaborations.artists.length} from real Spotify API)`);
 
       // Transform to the expected format for the network
       const collaborators = enhancedCollaborations.map(collaborator => ({
