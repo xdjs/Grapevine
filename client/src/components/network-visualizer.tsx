@@ -264,15 +264,43 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
       console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Network data loaded, generating content for ${finalDisplayData.links.length} collaboration links`);
       
       // Wait a bit for profile pictures to load, then generate content for each link
-      const timer = setTimeout(() => {
+      const timer = setTimeout(async () => {
         console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Timer expired, generating content for all collaboration links`);
         
-        finalDisplayData.links.forEach((link, linkIndex) => {
+        finalDisplayData.links.forEach(async (link, linkIndex) => {
           const sourceArtist = typeof link.source === 'string' ? link.source : link.source.name;
           const targetArtist = typeof link.target === 'string' ? link.target : link.target.name;
           
           console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Generating content for link ${linkIndex}: ${sourceArtist} → ${targetArtist}`);
-          generateGrapeContent(sourceArtist, targetArtist);
+          
+          // Call generateGrapeContent directly without dependency issues
+          if (sourceArtist && targetArtist) {
+            const linkKey = `${sourceArtist}→${targetArtist}`;
+            console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Starting grape content generation for collaboration: ${linkKey}`);
+            
+            // Set loading state for this specific link
+            setLinkLoadingStates(prev => new Map(prev).set(linkKey, true));
+            
+            try {
+              console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Making API call to /api/grape-content/${encodeURIComponent(sourceArtist)}/${encodeURIComponent(targetArtist)}`);
+              const response = await fetch(`/api/grape-content/${encodeURIComponent(sourceArtist)}/${encodeURIComponent(targetArtist)}`);
+              
+              if (response.ok) {
+                const data = await response.json();
+                console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] API call successful for ${linkKey}, received content:`, data.content);
+                setLinkContents(prev => new Map(prev).set(linkKey, data.content));
+              } else {
+                console.error(`🕐 [${new Date().toISOString()}] ❌ [NetworkVisualizer] API call failed for ${linkKey} with status ${response.status}: ${response.statusText}`);
+                setLinkContents(prev => new Map(prev).set(linkKey, '')); // Don't set error content, leave empty to prevent grapes from showing
+              }
+            } catch (error) {
+              console.error(`🕐 [${new Date().toISOString()}] ❌ [NetworkVisualizer] Error generating grape content for ${linkKey}:`, error);
+              setLinkContents(prev => new Map(prev).set(linkKey, '')); // Don't set error content, leave empty to prevent grapes from showing
+            } finally {
+              console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Grape content generation completed for ${linkKey}, setting loading to false`);
+              setLinkLoadingStates(prev => new Map(prev).set(linkKey, false));
+            }
+          }
         });
       }, 2000); // 2 second delay to allow profile pictures to load
       
@@ -289,7 +317,7 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
         linkCount: finalDisplayData?.links?.length || 0
       });
     }
-  }, [finalDisplayData?.nodes?.length, finalDisplayData?.links?.length, grapesVisible, generateGrapeContent]);
+  }, [finalDisplayData?.nodes?.length, finalDisplayData?.links?.length, grapesVisible]);
 
   // Show grapes only after at least one collaboration has content
   useEffect(() => {
@@ -624,6 +652,30 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
               />
             );
           })()}
+          
+          {/* Temporary debug button to force grape visibility */}
+          {process.env.NODE_ENV === 'development' && (
+            <button
+              onClick={() => {
+                console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Debug: Force showing grapes`);
+                setGrapesVisible(true);
+              }}
+              style={{
+                position: 'absolute',
+                top: '10px',
+                left: '10px',
+                zIndex: 1000,
+                padding: '8px 12px',
+                backgroundColor: 'purple',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Force Show Grapes
+            </button>
+          )}
           
           {/* Top-right shrink button removed: shrinking is available via tooltip per-node action */}
           
