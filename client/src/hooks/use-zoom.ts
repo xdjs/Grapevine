@@ -278,6 +278,7 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
         const isTouchEvent = event.type.startsWith('touch');
         
         // Allow all mouse events for panning (including background clicks)
+        // This ensures that mousedown, mousemove, and mouseup events are allowed for panning
         const shouldAllow = !isWheelEvent && !isTouchEvent;
         console.log(`🔍 [useZoom] Event filter: ${event.type} -> ${shouldAllow ? 'ALLOW' : 'BLOCK'}`);
         return shouldAllow;
@@ -363,6 +364,24 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     // Ensure the SVG can receive mouse events for panning
     svg.style("pointer-events", "all");
     
+    // Explicitly enable panning by ensuring the zoom behavior is properly configured
+    // This should allow users to click and drag on the background to pan around
+    console.log('🔍 [useZoom] Panning should now be enabled - users can click and drag on background');
+    
+    // Set initial cursor style to indicate panning is available
+    svg.style("cursor", "grab");
+    
+    // Test if the zoom behavior is working by trying to apply a small transform
+    setTimeout(() => {
+      try {
+        const testTransform = d3.zoomIdentity.translate(10, 10);
+        svg.call(zoom.transform, testTransform);
+        console.log('🔍 [useZoom] Test transform applied successfully - panning should work');
+      } catch (error) {
+        console.error('🔍 [useZoom] Test transform failed:', error);
+      }
+    }, 1000);
+    
     // Add debug event listeners to see what's happening
     svg.on("mousedown", (event) => {
       console.log('🔍 [useZoom] SVG mousedown event', event.target, event.currentTarget);
@@ -375,12 +394,25 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
         target: event.target,
         currentTarget: event.currentTarget
       });
+      
+      // Check if this is a background click (not on a node)
+      if (event.target === event.currentTarget || (event.target as Element).tagName === 'svg') {
+        console.log('🔍 [useZoom] Background mousedown detected - panning should start');
+      }
     });
     
     svg.on("mousemove", (event) => {
       // Only log occasionally to avoid spam
       if (Math.random() < 0.01) {
         console.log('🔍 [useZoom] SVG mousemove event', event.target, event.currentTarget);
+      }
+    });
+    
+    // Add mouseup listener to see when panning ends
+    svg.on("mouseup", (event) => {
+      console.log('🔍 [useZoom] SVG mouseup event', event.target, event.currentTarget);
+      if (event.target === event.currentTarget || (event.target as Element).tagName === 'svg') {
+        console.log('🔍 [useZoom] Background mouseup detected - panning should end');
       }
     });
     

@@ -399,6 +399,8 @@
     display: block;
     overflow: visible;
     cursor: grab;
+    /* Ensure pointer events work for panning */
+    pointer-events: all;
   }
 
   .network-container svg:active {
@@ -487,11 +489,15 @@
       -moz-user-select: none;
       -ms-user-select: none;
       user-select: none;
+      /* Ensure pointer events work for panning */
+      pointer-events: all;
     }
     
     /* Allow panning and zooming on network group */
     .network-group {
       touch-action: manipulation;
+      /* Ensure pointer events work for panning */
+      pointer-events: all;
     }
   }
   

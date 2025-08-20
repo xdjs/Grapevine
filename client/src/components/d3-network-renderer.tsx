@@ -1142,10 +1142,15 @@ export default function D3NetworkRenderer({
     console.log('🔍 [D3Renderer] Setup zoom behavior');
 
     // Add background click handler to hide tooltip and reset highlighting
-    svg.on("click", function(event) {
-      // Only trigger if clicking on the background (not on a node)
+    // Use a more specific event handler that won't interfere with panning
+    svg.on("click.background", function(event) {
+      // Only trigger if clicking on the background (not on a node) and not during panning
       if (event.target === this || event.target.tagName === 'svg') {
-        tooltip.hideTooltip();
+        // Check if this is a quick click (not part of a drag operation)
+        const isQuickClick = !event.defaultPrevented && event.detail === 1;
+        if (isQuickClick) {
+          tooltip.hideTooltip();
+        }
       }
     });
 
