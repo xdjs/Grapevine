@@ -311,79 +311,58 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
           textAlign: 'left',
         }}
       >
-        Roles: {roles.map((role, index) => (
-          <span key={role} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <div style={{ position: 'relative', width: '12px', height: '12px', flexShrink: 0 }}>
-              {/* Grape emoji style cluster */}
-              <svg width="12" height="12" viewBox="0 0 12 12" style={{ position: 'absolute', top: 0, left: 0 }}>
-                {/* Main stem */}
-                <path d="M6 0.5 Q6 1.2 6 1.8" stroke="#4ade80" strokeWidth="0.8" fill="none" />
-                
-                {/* Top row - 3 grapes */}
-                <circle cx="5" cy="2.2" r="1.2" fill={role === 'artist' ? '#FF0ACF' : 
-                                                      role === 'producer' ? '#AE53FF' : 
-                                                      role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                <circle cx="6.5" cy="2.2" r="1.2" fill={role === 'artist' ? '#FF0ACF' : 
-                                                        role === 'producer' ? '#AE53FF' : 
-                                                        role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                <circle cx="8" cy="2.2" r="1.2" fill={role === 'artist' ? '#FF0ACF' : 
-                                                      role === 'producer' ? '#AE53FF' : 
-                                                      role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                
-                {/* Second row - 4 grapes */}
-                <circle cx="4.5" cy="3.8" r="1.1" fill={role === 'artist' ? '#FF0ACF' : 
-                                                        role === 'producer' ? '#AE53FF' : 
-                                                        role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                <circle cx="6" cy="3.8" r="1.1" fill={role === 'artist' ? '#FF0ACF' : 
-                                                      role === 'producer' ? '#AE53FF' : 
-                                                      role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                <circle cx="7.5" cy="3.8" r="1.1" fill={role === 'artist' ? '#FF0ACF' : 
-                                                        role === 'producer' ? '#AE53FF' : 
-                                                        role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                <circle cx="9" cy="3.8" r="1.1" fill={role === 'artist' ? '#FF0ACF' : 
-                                                      role === 'producer' ? '#AE53FF' : 
-                                                      role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                
-                {/* Third row - 4 grapes */}
-                <circle cx="4" cy="5.4" r="1" fill={role === 'artist' ? '#FF0ACF' : 
-                                                   role === 'producer' ? '#AE53FF' : 
-                                                   role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                <circle cx="5.5" cy="5.4" r="1" fill={role === 'artist' ? '#FF0ACF' : 
-                                                      role === 'producer' ? '#AE53FF' : 
-                                                      role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                <circle cx="7" cy="5.4" r="1" fill={role === 'artist' ? '#FF0ACF' : 
-                                                   role === 'producer' ? '#AE53FF' : 
-                                                   role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                <circle cx="8.5" cy="5.4" r="1" fill={role === 'artist' ? '#FF0ACF' : 
-                                                      role === 'producer' ? '#AE53FF' : 
-                                                      role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                
-                {/* Fourth row - 3 grapes */}
-                <circle cx="4.5" cy="6.8" r="0.9" fill={role === 'artist' ? '#FF0ACF' : 
-                                                        role === 'producer' ? '#AE53FF' : 
-                                                        role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                <circle cx="6" cy="6.8" r="0.9" fill={role === 'artist' ? '#FF0ACF' : 
-                                                      role === 'producer' ? '#AE53FF' : 
-                                                      role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                <circle cx="7.5" cy="6.8" r="0.9" fill={role === 'artist' ? '#FF0ACF' : 
-                                                        role === 'producer' ? '#AE53FF' : 
-                                                        role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                
-                {/* Bottom row - 2 grapes */}
-                <circle cx="5.5" cy="8.2" r="0.8" fill={role === 'artist' ? '#FF0ACF' : 
-                                                        role === 'producer' ? '#AE53FF' : 
-                                                        role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                <circle cx="7" cy="8.2" r="0.8" fill={role === 'artist' ? '#FF0ACF' : 
-                                                      role === 'producer' ? '#AE53FF' : 
-                                                      role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                
-                {/* Leaf */}
-                <path d="M6 0.5 Q7.5 0.2 8.5 1 Q8 1.8 6 1.2" fill="#4ade80" />
-              </svg>
-            </div>
-            {role}{index < roles.length - 1 ? ', ' : ''}
-          </span>
-        ))}
+        Roles: {roleDisplay}
+      </div>
+
+      {/* Role Legend */}
+      <div
+        style={{
+          marginTop: '8px',
+          padding: '8px',
+          background: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: '6px',
+          fontSize: roleFontSize,
+        }}
+      >
+        <div style={{ marginBottom: '4px', fontWeight: '500' }}>Role Colors:</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: '#FF0ACF',
+                flexShrink: 0,
+              }}
+            />
+            <span>Artist</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: '#AE53FF',
+                flexShrink: 0,
+              }}
+            />
+            <span>Producer</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: '#67D1F8',
+                flexShrink: 0,
+              }}
+            />
+            <span>Songwriter</span>
+          </div>
+        </div>
       </div>
 
       {/* Actions container */}
