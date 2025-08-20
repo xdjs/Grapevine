@@ -59,7 +59,6 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 3;
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-  const [showPanHint, setShowPanHint] = useState(false);
   
   // Configuration management hook
   const { 
@@ -325,19 +324,6 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
     },
   }));
 
-  // Show pan hint briefly when visualization first loads
-  useEffect(() => {
-    if (!isInitializing && !componentError && rehydrateReady && visible) {
-      const timer = setTimeout(() => {
-        setShowPanHint(true);
-        // Hide the hint after 4 seconds
-        setTimeout(() => setShowPanHint(false), 4000);
-      }, 1000); // Show after 1 second delay
-      
-      return () => clearTimeout(timer);
-    }
-  }, [isInitializing, componentError, rehydrateReady, visible]);
-
 
   // Loading state component
   const LoadingState = () => (
@@ -410,7 +396,7 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
             ref={svgRef} 
             className="w-full h-full" 
             role="img" 
-            aria-label="Music collaboration network visualization. Click and drag on empty space to pan around the network. Use zoom controls or mouse wheel to zoom."
+            aria-label="Music collaboration network visualization"
             style={{ 
               touchAction: 'manipulation',
               WebkitTouchCallout: 'none',
@@ -430,18 +416,6 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
               aria-live="polite"
             >
               {toast.message}
-            </div>
-          )}
-
-          {/* Pan hint notification */}
-          {showPanHint && (
-            <div
-              className="absolute top-20 left-1/2 -translate-x-1/2 px-4 py-3 rounded-lg shadow-lg bg-gray-800/90 backdrop-blur text-white z-30 border border-gray-600 max-w-sm text-center transition-all duration-500 ease-in-out animate-pulse"
-            >
-              <div className="text-sm font-medium mb-1">💡 Pro Tip</div>
-              <div className="text-xs text-gray-300">
-                Click and drag on empty space to pan around the network
-              </div>
             </div>
           )}
 

@@ -1091,6 +1091,10 @@ export default function D3NetworkRenderer({
     // Clear existing content
     svg.selectAll("*").remove();
 
+    // Set SVG dimensions explicitly for proper zoom/pan behavior
+    svg.attr("width", width).attr("height", height);
+    console.log('🔍 [D3Renderer] Set SVG dimensions:', { width, height });
+
     // Filter out links where either node doesn't exist or is isolated
     const nodeSet = new Set(data.nodes.map(n => n.id));
     let validLinks = data.links.filter(link => {
