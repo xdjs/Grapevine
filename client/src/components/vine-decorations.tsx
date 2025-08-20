@@ -364,6 +364,9 @@ export class VineDecorations {
     // Store link index in the link group for later reference
     linkGroup.attr("data-link-index", linkIndex.toString());
     
+    // First, create a leaf on this line (always visible)
+    this.createLeaf(linkGroup, linkIndex, linkData.source, linkData.target);
+    
     const seed = `${linkData.source}_${linkData.target}_${linkIndex}`;
     const hash = seed.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
@@ -539,6 +542,200 @@ export class VineDecorations {
             .attr("y2", veinEndY);
       });
     });
+    
+    // Also update vine leaves (the ones connected to grapes)
+    this.updateLeaf(linkGroup, linkIndex, source, target);
+  }
+
+  /**
+   * Create a leaf on a vine line
+   */
+  private createLeaf(
+    linkGroup: d3.Selection<SVGGElement, NetworkLink, SVGGElement, unknown>,
+    linkIndex: number,
+    source: NetworkNode,
+    target: NetworkNode
+  ) {
+    const dx = target.x! - source.x!;
+    const dy = target.y! - source.y!;
+    
+    // Position leaf in the middle portion of the line
+    const leafSeed = Math.abs(linkIndex * 1000);
+    const leafPosition = 0.4 + (leafSeed % 30) / 100; // Random position between 0.4 and 0.7
+    const leafX = source.x! + dx * leafPosition;
+    const leafY = source.y! + dy * leafPosition;
+    
+    // Create leaf group
+    const leafGroup = linkGroup.append("g")
+      .attr("class", "vine-leaf")
+      .attr("data-link-index", linkIndex.toString())
+      .style("cursor", "pointer");
+    
+    // Create vibrant leaf shape
+    const leaf = leafGroup.append("path")
+      .attr("class", "leaf")
+      .attr("fill", "url(#leaf-gradient)")
+      .attr("stroke", "#2D5A1A")
+      .attr("stroke-width", 0.25)
+      .style("opacity", 1.0)
+      .style("filter", "url(#leaf-shadow)");
+    
+    // Add leaf vein system
+    const mainVein = leafGroup.append("line")
+      .attr("class", "leaf-vein main-vein")
+      .attr("stroke", "#2D5A1A")
+      .attr("stroke-width", 0.18)
+      .style("opacity", 0.8);
+    
+    // Add primary side veins
+    for (let veinIndex = 0; veinIndex < 4; veinIndex++) {
+      leafGroup.append("line")
+        .attr("class", "leaf-vein primary-vein")
+        .attr("stroke", "#2D5A1A")
+        .attr("stroke-width", 0.1)
+        .style("opacity", 0.6);
+    }
+    
+    // Add secondary veins
+    for (let veinIndex = 0; veinIndex < 6; veinIndex++) {
+      leafGroup.append("line")
+        .attr("class", "leaf-vein secondary-vein")
+        .attr("stroke", "#2D5A1A")
+        .attr("stroke-width", 0.05)
+        .style("opacity", 0.4);
+    }
+    
+    // Position the leaf
+    const leafSize = 8 + (leafSeed % 8); // 8-15px leaves
+    const leafAngle = (leafSeed % 360) * Math.PI / 180; // Random rotation
+    
+    // Create leaf path
+    const asymmetry = (leafSeed % 20 - 10) / 100;
+    const leafPath = `M ${leafX} ${leafY}
+                     C ${leafX + leafSize * 0.15} ${leafY - leafSize * 0.25} ${leafX + leafSize * 0.35} ${leafY - leafSize * 0.45} ${leafX + leafSize * 0.65} ${leafY - leafSize * 0.35 + asymmetry * leafSize}
+                     C ${leafX + leafSize * 0.85} ${leafY - leafSize * 0.25} ${leafX + leafSize * 1.05} ${leafY - leafSize * 0.08} ${leafX + leafSize * 1.15} ${leafY + asymmetry * leafSize * 0.1}
+                     C ${leafX + leafSize * 1.05} ${leafY + leafSize * 0.08} ${leafX + leafSize * 0.85} ${leafY + leafSize * 0.25} ${leafX + leafSize * 0.65} ${leafY + leafSize * 0.35 + asymmetry * leafSize}
+                     C ${leafX + leafSize * 0.35} ${leafY + leafSize * 0.45} ${leafX + leafSize * 0.15} ${leafY + leafSize * 0.25} ${leafX} ${leafY}
+                     Z`;
+    
+    leaf.attr("d", leafPath)
+        .attr("transform", `rotate(${leafAngle * 180 / Math.PI}, ${leafX}, ${leafY})`);
+    
+    // Position veins
+    mainVein.attr("x1", leafX)
+            .attr("y1", leafY)
+            .attr("x2", leafX + leafSize * 0.85 * Math.cos(leafAngle))
+            .attr("y2", leafY + leafSize * 0.85 * Math.sin(leafAngle));
+    
+    // Position primary veins
+    const primaryVeins = leafGroup.selectAll(".primary-vein");
+    primaryVeins.each(function(veinD, veinIndex) {
+      const vein = d3.select(this);
+      const veinPosition = (veinIndex + 1) / 5;
+      const veinStartX = leafX + veinPosition * leafSize * 0.5 * Math.cos(leafAngle);
+      const veinStartY = leafY + veinPosition * leafSize * 0.5 * Math.sin(leafAngle);
+      const veinEndX = veinStartX + leafSize * 0.25 * Math.cos(leafAngle + Math.PI/2);
+      const veinEndY = veinStartY + leafSize * 0.25 * Math.sin(leafAngle + Math.PI/2);
+      
+      vein.attr("x1", veinStartX)
+          .attr("y1", veinStartY)
+          .attr("x2", veinEndX)
+          .attr("y2", veinEndY);
+    });
+    
+    // Position secondary veins
+    const secondaryVeins = leafGroup.selectAll(".secondary-vein");
+    secondaryVeins.each(function(veinD, veinIndex) {
+      const vein = d3.select(this);
+      const veinPosition = (veinIndex + 1) / 7;
+      const veinStartX = leafX + veinPosition * leafSize * 0.6 * Math.cos(leafAngle);
+      const veinStartY = leafY + veinPosition * leafSize * 0.6 * Math.sin(leafAngle);
+      const veinEndX = veinStartX + leafSize * 0.18 * Math.cos(leafAngle + Math.PI/2 + (veinIndex % 2 - 0.5) * 0.3);
+      const veinEndY = veinStartY + leafSize * 0.18 * Math.sin(leafAngle + Math.PI/2 + (veinIndex % 2 - 0.5) * 0.3);
+      
+      vein.attr("x1", veinStartX)
+          .attr("y1", veinStartY)
+          .attr("x2", veinEndX)
+          .attr("y2", veinEndY);
+    });
+  }
+
+  /**
+   * Update leaf position
+   */
+  private updateLeaf(
+    linkGroup: d3.Selection<SVGGElement, NetworkLink, SVGGElement, unknown>,
+    linkIndex: number,
+    source: NetworkNode,
+    target: NetworkNode
+  ) {
+    const dx = target.x! - source.x!;
+    const dy = target.y! - source.y!;
+    
+    // Find the leaf for this link
+    const leaf = linkGroup.select(`.vine-leaf[data-link-index="${linkIndex}"]`);
+    if (leaf.empty()) return;
+    
+    // Update leaf position
+    const leafSeed = Math.abs(linkIndex * 1000);
+    const leafPosition = 0.4 + (leafSeed % 30) / 100; // Random position between 0.4 and 0.7
+    const leafX = source.x! + dx * leafPosition;
+    const leafY = source.y! + dy * leafPosition;
+    
+    // Update leaf path
+    const leafSize = 8 + (leafSeed % 8); // 8-15px leaves
+    const leafAngle = (leafSeed % 360) * Math.PI / 180; // Random rotation
+    
+    const asymmetry = (leafSeed % 20 - 10) / 100;
+    const leafPath = `M ${leafX} ${leafY}
+                     C ${leafX + leafSize * 0.15} ${leafY - leafSize * 0.25} ${leafX + leafSize * 0.35} ${leafY - leafSize * 0.45} ${leafX + leafSize * 0.65} ${leafY - leafSize * 0.35 + asymmetry * leafSize}
+                     C ${leafX + leafSize * 0.85} ${leafY - leafSize * 0.25} ${leafX + leafSize * 1.05} ${leafY - leafSize * 0.08} ${leafX + leafSize * 1.15} ${leafY + asymmetry * leafSize * 0.1}
+                     C ${leafX + leafSize * 1.05} ${leafY + leafSize * 0.08} ${leafX + leafSize * 0.85} ${leafY + leafSize * 0.25} ${leafX + leafSize * 0.65} ${leafY + leafSize * 0.35 + asymmetry * leafSize}
+                     C ${leafX + leafSize * 0.35} ${leafY + leafSize * 0.45} ${leafX + leafSize * 0.15} ${leafY + leafSize * 0.25} ${leafX} ${leafY}
+                     Z`;
+    
+    leaf.select(".leaf")
+      .attr("d", leafPath)
+      .attr("transform", `rotate(${leafAngle * 180 / Math.PI}, ${leafX}, ${leafY})`);
+    
+    // Update main vein
+    leaf.select(".main-vein")
+      .attr("x1", leafX)
+      .attr("y1", leafY)
+      .attr("x2", leafX + leafSize * 0.85 * Math.cos(leafAngle))
+      .attr("y2", leafY + leafSize * 0.85 * Math.sin(leafAngle));
+    
+    // Update primary veins
+    const primaryVeins = leaf.selectAll(".primary-vein");
+    primaryVeins.each(function(veinD, veinIndex) {
+      const vein = d3.select(this);
+      const veinPosition = (veinIndex + 1) / 5;
+      const veinStartX = leafX + veinPosition * leafSize * 0.5 * Math.cos(leafAngle);
+      const veinStartY = leafY + veinPosition * leafSize * 0.5 * Math.sin(leafAngle);
+      const veinEndX = veinStartX + leafSize * 0.25 * Math.cos(leafAngle + Math.PI/2);
+      const veinEndY = veinStartY + leafSize * 0.25 * Math.sin(leafAngle + Math.PI/2);
+      
+      vein.attr("x1", veinStartX)
+          .attr("y1", veinStartY)
+          .attr("x2", veinEndX)
+          .attr("y2", veinEndY);
+    });
+    
+    // Update secondary veins
+    const secondaryVeins = leaf.selectAll(".secondary-vein");
+    secondaryVeins.each(function(veinD, veinIndex) {
+      const vein = d3.select(this);
+      const veinPosition = (veinIndex + 1) / 7;
+      const veinStartX = leafX + veinPosition * leafSize * 0.6 * Math.cos(leafAngle);
+      const veinStartY = leafY + veinPosition * leafSize * 0.6 * Math.sin(leafAngle);
+      const veinEndX = veinStartX + leafSize * 0.18 * Math.cos(leafAngle + Math.PI/2 + (veinIndex % 2 - 0.5) * 0.3);
+      const veinEndY = veinStartY + leafSize * 0.18 * Math.sin(leafAngle + Math.PI/2 + (veinIndex % 2 - 0.5) * 0.3);
+      
+      vein.attr("x1", veinStartX)
+          .attr("y1", veinStartY)
+          .attr("x2", veinEndX)
+          .attr("y2", veinEndY);
+    });
   }
 
   /**
@@ -553,22 +750,34 @@ export class VineDecorations {
     const dx = target.x! - source.x!;
     const dy = target.y! - source.y!;
     
-    // Update grape clusters directly on vine lines
+    // Update grape clusters connected to leaves
     const grapeClusters = linkGroup.selectAll(".grape-cluster");
     grapeClusters.each(function(grapeD, clusterIndex) {
       const clusterGroup = d3.select(this);
       const clusterSeed = Math.abs(linkIndex * 1000 + clusterIndex * 100);
       
-             // Position single cluster further out on the vine line to avoid any node overlap
-      const clusterPosition = 0.45 + (clusterSeed % 40) / 100; // Random position between 0.45 and 0.85 along the line
-      const baseX = source.x! + dx * clusterPosition;
-      const baseY = source.y! + dy * clusterPosition;
+      // Find the leaf for this link to position grapes connected to it
+      const leaf = linkGroup.select(`.vine-leaf[data-link-index="${linkIndex}"]`);
+      if (leaf.empty()) return;
+      
+      // Get leaf position and angle
+      const leafSeed = Math.abs(linkIndex * 1000);
+      const leafPosition = 0.4 + (leafSeed % 30) / 100; // Same position as leaf (0.4-0.7)
+      const leafX = source.x! + dx * leafPosition;
+      const leafY = source.y! + dy * leafPosition;
+      const leafAngle = (leafSeed % 360) * Math.PI / 180;
+      
+      // Position grape cluster connected to the leaf (slightly offset from leaf)
+      const grapeOffset = 15; // Distance from leaf center
+      const grapeAngle = leafAngle + Math.PI / 2; // Perpendicular to leaf
+      const baseX = leafX + grapeOffset * Math.cos(grapeAngle);
+      const baseY = leafY + grapeOffset * Math.sin(grapeAngle);
       
       // Calculate cluster rotation and size variation
       const clusterRotation = (clusterSeed % 360) * Math.PI / 180; // 0-360 degrees
       const clusterSize = 0.8 + (clusterSeed % 40) / 100; // 0.8-1.2 size variation
       
-      // Apply rotation and positioning to cluster group - directly on line with higher z-index
+      // Apply rotation and positioning to cluster group - connected to leaf with higher z-index
       clusterGroup
         .attr("transform", `translate(${baseX}, ${baseY}) rotate(${clusterRotation * 180 / Math.PI}) scale(${clusterSize})`)
         .style("z-index", "10"); // Ensure grapes appear above other elements
