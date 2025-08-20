@@ -53,8 +53,9 @@ describe('GrapePopup', () => {
     );
 
     expect(screen.getByText('This is some generated content about the artist\'s collaborations.')).toBeInTheDocument();
-    expect(screen.getByText('Link: Taylor Swift → Jack Antonoff')).toBeInTheDocument();
-    expect(screen.getByText('Cluster: 1, Grape: 2')).toBeInTheDocument();
+    // Metadata (Link and Cluster info) has been removed from the popup
+    expect(screen.queryByText(/Link:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Cluster:/)).not.toBeInTheDocument();
   });
 
   it('should not display grape data when not provided', () => {

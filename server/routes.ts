@@ -163,7 +163,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`🕐 [${new Date().toISOString()}] 🍇 [Server] Making OpenAI API call for collaboration: ${sourceArtist} → ${targetArtist}`);
       
-      const { openai } = await import("./openai-service");
+      const { openAIService } = await import("./openai-service");
+      
+      if (!openAIService.isServiceAvailable()) {
+        throw new Error('OpenAI service is not configured');
+      }
+      
+      // Create a simple OpenAI instance for this specific use case
+      const OpenAI = (await import("openai")).default;
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        throw new Error('OpenAI API key not found');
+      }
+      
+      const openai = new OpenAI({ apiKey });
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [

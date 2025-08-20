@@ -39,21 +39,55 @@ export class VineDecorations {
     if (this.defs) {
       const svg = this.defs.node()?.parentElement;
       if (svg) {
-        // Look for grape clusters within the network group structure
-        const networkGroup = d3.select(svg).select('.network-group');
-        if (networkGroup.empty()) {
-          console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] No network group found, searching entire SVG`);
-          const grapeClusters = d3.select(svg).selectAll('.grape-cluster');
-          const clusterCount = grapeClusters.size();
-          console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Found ${clusterCount} grape clusters in entire SVG, setting opacity to 1`);
-          grapeClusters.style('opacity', 1);
-        } else {
-          const grapeClusters = networkGroup.selectAll('.grape-cluster');
-          const clusterCount = grapeClusters.size();
-          console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Found ${clusterCount} grape clusters in network group, setting opacity to 1`);
-          grapeClusters.style('opacity', 1);
-        }
-        console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Grapes are now visible in the SVG`);
+        const grapeClusters = d3.select(svg).selectAll('.grape-cluster');
+        const clusterCount = grapeClusters.size();
+        console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Found ${clusterCount} grape clusters, setting opacity to 1`);
+        grapeClusters.style('opacity', 1);
+        
+        // Add click handlers to all existing grapes now that they're visible
+        const grapeCircles = d3.select(svg).selectAll('.grape');
+        const grapeCount = grapeCircles.size();
+        console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Adding click handlers to ${grapeCount} grape circles`);
+        
+        grapeCircles.each((d, i, nodes) => {
+          const grapeCircle = d3.select(nodes[i]);
+          const grapeGroup = grapeCircle.select(function() { return this.parentNode; });
+          const clusterGroup = grapeGroup.select(function() { return this.parentNode; });
+          const linkGroup = clusterGroup.select(function() { return this.parentNode; });
+          
+          // Extract data from the DOM structure
+          const linkIndex = parseInt(linkGroup.attr('data-link-index') || '0');
+          const clusterIndex = parseInt(clusterGroup.attr('data-cluster-index') || '0');
+          const grapeIndex = parseInt(grapeGroup.attr('data-grape-index') || '0');
+          const linkData = linkGroup.datum() as NetworkLink;
+          
+          // Add click handler and pointer cursor
+          grapeCircle
+            .style('cursor', 'pointer')
+            .on('click', (event) => {
+              // Immediately prevent all event propagation
+              event.stopPropagation();
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              
+              // Call the grape click handler
+              this.handleGrapeClick(event, grapeGroup, linkIndex, clusterIndex, grapeIndex, linkData);
+            })
+            .on('mousedown', (event) => {
+              // Prevent any mouse events that might trigger zoom
+              event.stopPropagation();
+              event.preventDefault();
+              event.stopImmediatePropagation();
+            })
+            .on('mouseup', (event) => {
+              // Prevent any mouse events that might trigger zoom
+              event.stopPropagation();
+              event.preventDefault();
+              event.stopImmediatePropagation();
+            });
+        });
+        
+        console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Grapes are now visible and clickable in the SVG`);
       } else {
         console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] No SVG parent found for defs`);
       }
@@ -130,11 +164,11 @@ export class VineDecorations {
       .attr("height", "200%");
     
     grapeFilter.append("feDropShadow")
-      .attr("dx", "0.3")
-      .attr("dy", "0.3")
-      .attr("stdDeviation", "0.3")
+      .attr("dx", "0.5")
+      .attr("dy", "0.5")
+      .attr("stdDeviation", "0.5")
       .attr("flood-color", "#000000")
-      .attr("flood-opacity", "0.3");
+      .attr("flood-opacity", "0.4");
   }
 
   /**
@@ -207,9 +241,23 @@ export class VineDecorations {
     grapeIndex: number,
     linkData: NetworkLink
   ) {
-    event.stopPropagation(); // Prevent event bubbling
+    // Prevent event bubbling and default behavior to avoid zoom reset
+    event.stopPropagation();
+    event.preventDefault();
+    event.stopImmediatePropagation();
     
-    console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Grape clicked: link ${linkIndex}, cluster ${clusterIndex}, grape ${grapeIndex}`);
+    // Also prevent any custom events that might be triggered
+    event.stopImmediatePropagation();
+    
+    // Log the event details for debugging
+    console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Grape clicked: link ${linkIndex}, cluster ${clusterIndex}, grape ${grapeIndex}`, {
+      eventType: event.type,
+      target: event.target,
+      currentTarget: event.currentTarget,
+      defaultPrevented: event.defaultPrevented,
+      bubbles: event.bubbles,
+      cancelable: event.cancelable
+    });
     
     // Call the callback if it exists
     if (this.onGrapeClick) {
@@ -313,14 +361,18 @@ export class VineDecorations {
     
     console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Creating grapes for link ${linkIndex}: ${sourceArtist} → ${targetArtist}`);
     
+    // Store link index in the link group for later reference
+    linkGroup.attr("data-link-index", linkIndex.toString());
+    
     const seed = `${linkData.source}_${linkData.target}_${linkIndex}`;
     const hash = seed.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
     }, 0);
     
-    const grapeClusterCount = 1 + (Math.abs(hash) % 3); // 1-3 grape clusters per link
-    console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Will create ${grapeClusterCount} grape clusters for link ${linkIndex}`);
+    // Create exactly one grape cluster per line
+    const grapeClusterCount = 1;
+    console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Will create ${grapeClusterCount} grape cluster for link ${linkIndex}`);
     
     for (let clusterIndex = 0; clusterIndex < grapeClusterCount; clusterIndex++) {
       const clusterSeed = Math.abs(linkIndex * 1000 + clusterIndex * 100);
@@ -330,7 +382,12 @@ export class VineDecorations {
       const clusterGroup = linkGroup.append("g")
         .attr("class", "grape-cluster")
         .attr("data-cluster-index", clusterIndex)
-        .style("opacity", this.grapesVisible ? 1 : 0); // Initially hidden
+        .style("opacity", this.grapesVisible ? 1 : 0) // Initially hidden
+        .on("click", (event) => {
+          // Prevent any click events on the cluster group from bubbling up
+          event.stopPropagation();
+          event.preventDefault();
+        });
       
       console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Created grape cluster ${clusterIndex} with ${grapesInCluster} grapes, opacity: ${this.grapesVisible ? 1 : 0}`);
       
@@ -344,18 +401,49 @@ export class VineDecorations {
             .attr("class", "grape-item")
             .attr("data-grape-index", grapeIndex)
             .attr("data-row", row)
-            .attr("data-grape-in-row", grapeInRow);
+            .attr("data-grape-in-row", grapeInRow)
+            .on("click", (event) => {
+              // Prevent any click events on the grape group from bubbling up
+              event.stopPropagation();
+              event.preventDefault();
+            });
           
           // Create individual grape
-          grapeGroup.append("circle")
+          const grapeCircle = grapeGroup.append("circle")
             .attr("class", "grape")
             .attr("fill", "#6A4C93") // Purple grape color
             .attr("stroke", "#4A2E6B") // Darker purple outline
-            .attr("stroke-width", 0.1)
-            .style("opacity", 0.9)
+            .attr("stroke-width", 0.5) // Thicker stroke for better visibility
+            .style("opacity", 1.0) // Full opacity for better visibility
             .style("filter", "url(#grape-shadow)")
-            .style("cursor", "pointer") // Add pointer cursor to indicate clickability
-            .on("click", (event) => this.handleGrapeClick(event, grapeGroup, linkIndex, clusterIndex, grapeIndex, linkData));
+            .style("cursor", this.grapesVisible ? "pointer" : "default") // Only show pointer cursor when visible
+            .style("z-index", "15"); // Ensure individual grapes appear above everything
+          
+          // Only add click handler if grapes are visible
+          if (this.grapesVisible) {
+            grapeCircle
+              .on("click", (event) => {
+                // Immediately prevent all event propagation
+                event.stopPropagation();
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                
+                // Call the grape click handler
+                this.handleGrapeClick(event, grapeGroup, linkIndex, clusterIndex, grapeIndex, linkData);
+              })
+              .on("mousedown", (event) => {
+                // Prevent any mouse events that might trigger zoom
+                event.stopPropagation();
+                event.preventDefault();
+                event.stopImmediatePropagation();
+              })
+              .on("mouseup", (event) => {
+                // Prevent any mouse events that might trigger zoom
+                event.stopPropagation();
+                event.preventDefault();
+                event.stopImmediatePropagation();
+              });
+          }
           
           grapeIndex++;
         }
@@ -471,8 +559,8 @@ export class VineDecorations {
       const clusterGroup = d3.select(this);
       const clusterSeed = Math.abs(linkIndex * 1000 + clusterIndex * 100);
       
-      // Position cluster directly on vine line - no offsets
-      const clusterPosition = 0.2 + (clusterIndex * 0.3); // Spread clusters out along vine
+             // Position single cluster further out on the vine line to avoid any node overlap
+      const clusterPosition = 0.45 + (clusterSeed % 40) / 100; // Random position between 0.45 and 0.85 along the line
       const baseX = source.x! + dx * clusterPosition;
       const baseY = source.y! + dy * clusterPosition;
       
@@ -480,26 +568,29 @@ export class VineDecorations {
       const clusterRotation = (clusterSeed % 360) * Math.PI / 180; // 0-360 degrees
       const clusterSize = 0.8 + (clusterSeed % 40) / 100; // 0.8-1.2 size variation
       
-      // Apply rotation and positioning to cluster group - directly on line
-      clusterGroup.attr("transform", `translate(${baseX}, ${baseY}) rotate(${clusterRotation * 180 / Math.PI}) scale(${clusterSize})`);
+      // Apply rotation and positioning to cluster group - directly on line with higher z-index
+      clusterGroup
+        .attr("transform", `translate(${baseX}, ${baseY}) rotate(${clusterRotation * 180 / Math.PI}) scale(${clusterSize})`)
+        .style("z-index", "10"); // Ensure grapes appear above other elements
       
       // Update individual grapes within the cluster
       const grapeItems = clusterGroup.selectAll(".grape-item");
+      const totalGrapesInCluster = grapeItems.size();
+      
       grapeItems.each(function(grapeD, grapeIndex) {
         const grapeGroup = d3.select(this);
         const row = parseInt(grapeGroup.attr("data-row") || "0");
         const grapeInRow = parseInt(grapeGroup.attr("data-grape-in-row") || "0");
         
-                 // Calculate conical cluster positioning with varying grape sizes
-         const baseGrapeSize = 3.0; // Increased base grape size
-         const grapeSeed = Math.abs(linkIndex * 1000 + clusterIndex * 100 + grapeIndex * 10);
-         const grapeSize = baseGrapeSize + (grapeSeed % 12) / 10; // 3.0-4.2px varying sizes
+        // Calculate conical cluster positioning with varying grape sizes
+        const baseGrapeSize = 3.0; // Increased base grape size
+        const grapeSeed = Math.abs(linkIndex * 1000 + clusterIndex * 100 + grapeIndex * 10);
+        const grapeSize = baseGrapeSize + (grapeSeed % 12) / 10; // 3.0-4.2px varying sizes
         
         const rowSpacing = baseGrapeSize * 1.8; // Vertical spacing between rows
         const grapeSpacing = baseGrapeSize * 1.6; // Horizontal spacing between grapes
         
         // Position grapes in conical shape
-        const totalGrapesInCluster = grapeItems.size();
         const grapesInRow = totalGrapesInCluster - row;
         const rowWidth = (grapesInRow - 1) * grapeSpacing;
         const startX = -rowWidth / 2; // Center the cluster
