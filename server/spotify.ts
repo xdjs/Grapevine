@@ -102,157 +102,6 @@ export class SpotifyService {
     }
   }
 
-  async getArtistAppearsOn(artistName: string): Promise<Array<{
-    name: string;
-    type: 'producer' | 'songwriter' | 'artist';
-    collaborationType: 'featured artist' | 'producer' | 'songwriter' | 'guest appearance';
-    verificationLevel: 'high' | 'medium' | 'low';
-    topCollaborators: string[];
-    spotifyUrl?: string;
-  }>> {
-    try {
-      console.log(`🎵 [Spotify] Fetching "appears on" data for: ${artistName}`);
-      
-      // First, search for the artist to get their Spotify ID
-      const artist = await this.searchArtist(artistName);
-      if (!artist) {
-        console.log(`❌ [Spotify] Artist not found: ${artistName}`);
-        return [];
-      }
-
-      const token = await this.getAccessToken();
-      
-      // Get albums where the artist appears (this includes "appears on" section)
-      const response = await axios.get(
-        `https://api.spotify.com/v1/artists/${artist.id}/albums`,
-        {
-          params: {
-            include_groups: 'appears_on',
-            limit: 50,
-            market: 'US'
-          },
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-
-      const albums = response.data.items || [];
-      console.log(`🎵 [Spotify] Found ${albums.length} "appears on" albums for ${artistName}`);
-
-      const collaborators = new Map<string, {
-        name: string;
-        type: 'producer' | 'songwriter' | 'artist';
-        collaborationType: 'featured artist' | 'producer' | 'songwriter' | 'guest appearance';
-        verificationLevel: 'high' | 'medium' | 'low';
-        topCollaborators: string[];
-        spotifyUrl?: string;
-      }>();
-
-      // Process each album to extract collaboration information
-      for (const album of albums) {
-        try {
-          // Get detailed album information to see all artists involved
-          const albumResponse = await axios.get(
-            `https://api.spotify.com/v1/albums/${album.id}`,
-            {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            }
-          );
-
-          const albumData = albumResponse.data;
-          const albumArtists = albumData.artists || [];
-          const tracks = albumData.tracks?.items || [];
-
-          // Skip compilation albums (albums with "Various Artists" or too many artists)
-          if (albumArtists.length > 3 || albumArtists.some((a: any) => a.name.toLowerCase().includes('various'))) {
-            console.log(`🚫 [Spotify] Skipping compilation album: ${albumData.name}`);
-            continue;
-          }
-
-          // Process each track to find collaborations
-          for (const track of tracks) {
-            const trackArtists = track.artists || [];
-            
-            // Look for tracks where our artist is featured (not the main artist)
-            const isFeatured = trackArtists.some((a: any) => a.name.toLowerCase() === artistName.toLowerCase()) &&
-                              !trackArtists.some((a: any) => a.name.toLowerCase() === albumArtists[0]?.name.toLowerCase());
-
-            if (isFeatured) {
-              // This is a track where our artist appears as a featured artist
-              const mainArtist = albumArtists[0]?.name;
-              if (mainArtist && mainArtist.toLowerCase() !== artistName.toLowerCase()) {
-                
-                // Determine collaboration type based on context
-                let collaborationType: 'featured artist' | 'producer' | 'songwriter' | 'guest appearance' = 'featured artist';
-                let verificationLevel: 'high' | 'medium' | 'low' = 'high';
-                
-                // Check if this is a soundtrack or special compilation
-                if (albumData.album_type === 'compilation' || 
-                    albumData.name.toLowerCase().includes('soundtrack') ||
-                    albumData.name.toLowerCase().includes('various')) {
-                  verificationLevel = 'medium';
-                }
-
-                // Add the main artist as a collaborator
-                if (!collaborators.has(mainArtist)) {
-                  collaborators.set(mainArtist, {
-                    name: mainArtist,
-                    type: 'artist', // Default to artist, can be enhanced later
-                    collaborationType,
-                    verificationLevel,
-                    topCollaborators: [],
-                    spotifyUrl: albumData.external_urls?.spotify
-                  });
-                  
-                  console.log(`✅ [Spotify] Added collaborator: ${mainArtist} (${collaborationType}, ${verificationLevel})`);
-                }
-
-                // Add other featured artists from the same track
-                for (const trackArtist of trackArtists) {
-                  if (trackArtist.name.toLowerCase() !== artistName.toLowerCase() && 
-                      trackArtist.name.toLowerCase() !== mainArtist.toLowerCase()) {
-                    
-                    if (!collaborators.has(trackArtist.name)) {
-                      collaborators.set(trackArtist.name, {
-                        name: trackArtist.name,
-                        type: 'artist',
-                        collaborationType: 'featured artist',
-                        verificationLevel: 'medium',
-                        topCollaborators: [],
-                        spotifyUrl: track.external_urls?.spotify
-                      });
-                      
-                      console.log(`✅ [Spotify] Added track collaborator: ${trackArtist.name}`);
-                    }
-                  }
-                }
-              }
-            }
-          }
-
-          // Add a small delay to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
-
-        } catch (albumError) {
-          console.warn(`⚠️ [Spotify] Error processing album ${album.name}:`, albumError);
-          continue;
-        }
-      }
-
-      const results = Array.from(collaborators.values());
-      console.log(`🎵 [Spotify] Total unique collaborators found: ${results.length}`);
-      
-      return results;
-
-    } catch (error) {
-      console.error(`❌ [Spotify] Failed to get "appears on" data for ${artistName}:`, error);
-      return [];
-    }
-  }
-
   async searchTrackWithValidation(
     trackName: string, 
     primaryArtist: string, 
@@ -450,6 +299,94 @@ export class SpotifyService {
     }
   }
 
+  async getArtistAppearsOn(artistId: string): Promise<any[]> {
+    try {
+      const token = await this.getAccessToken();
+      
+      const response = await axios.get(
+        `https://api.spotify.com/v1/artists/${artistId}/albums`,
+        {
+          params: {
+            include_groups: 'appears_on',
+            market: 'US',
+            limit: 50
+          },
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      return response.data.items;
+    } catch (error) {
+      console.error(`Failed to get "appears on" data for artist ${artistId}:`, error);
+      return [];
+    }
+  }
+
+  async getArtistAppearsOnCollaborators(artistName: string): Promise<{
+    artists: Array<{
+      name: string;
+      type: 'producer' | 'songwriter';
+      topCollaborators: string[];
+      collaborationType: string;
+      verificationLevel: 'high';
+      source: 'spotify_appears_on';
+    }>;
+  }> {
+    try {
+      console.log(`🎵 [Spotify] Fetching "appears on" collaborators for: ${artistName}`);
+      
+      // First, search for the artist to get their Spotify ID
+      const artist = await this.searchArtist(artistName);
+      if (!artist) {
+        console.log(`❌ [Spotify] No artist found for: ${artistName}`);
+        return { artists: [] };
+      }
+
+      // Get the "appears on" albums/tracks
+      const appearsOnItems = await this.getArtistAppearsOn(artist.id);
+      console.log(`🎵 [Spotify] Found ${appearsOnItems.length} "appears on" items for ${artistName}`);
+
+      const collaborators = new Map<string, any>();
+      
+      for (const item of appearsOnItems) {
+        // Skip compilation albums and various artists
+        if (item.album_type === 'compilation' || 
+            item.artists.some((a: any) => a.name.toLowerCase().includes('various') || 
+                                               a.name.toLowerCase().includes('various artists'))) {
+          continue;
+        }
+
+        // Get the main artist of this track/album
+        const mainArtist = item.artists[0];
+        if (mainArtist && mainArtist.id !== artist.id) {
+          const collaboratorName = mainArtist.name;
+          
+          if (!collaborators.has(collaboratorName)) {
+            collaborators.set(collaboratorName, {
+              name: collaboratorName,
+              type: 'producer' as const, // Default to producer, can be enhanced later
+              topCollaborators: [],
+              collaborationType: 'featured artist',
+              verificationLevel: 'high' as const,
+              source: 'spotify_appears_on'
+            });
+          }
+        }
+      }
+
+      const result = Array.from(collaborators.values());
+      console.log(`✅ [Spotify] Extracted ${result.length} verified collaborators from "appears on" data for ${artistName}`);
+      
+      return { artists: result };
+      
+    } catch (error) {
+      console.error(`❌ [Spotify] Failed to get "appears on" collaborators for ${artistName}:`, error);
+      return { artists: [] };
+    }
+  }
+
   async getAlbumTracks(albumId: string): Promise<any[]> {
     try {
       const token = await this.getAccessToken();
@@ -620,16 +557,16 @@ export class SpotifyService {
       console.error(`❌ [Spotify:${requestId}] Failed to get profile image for ${artistName} (${duration}ms):`, error);
       
       // Enhanced error monitoring with structured logging
-      const errorType = (error as any)?.code || (error as any)?.response?.status || 'UNKNOWN';
-      const errorMessage = (error as any)?.message || JSON.stringify(error);
+      const errorType = error?.code || error?.response?.status || 'UNKNOWN';
+      const errorMessage = error?.message || JSON.stringify(error);
       console.error(`📊 [Spotify:${requestId}] Error details - Type: ${errorType}, Message: ${errorMessage}, Artist: ${artistName}`);
       
       // Track different error patterns for monitoring
-      if ((error as any)?.response?.status === 429) {
+      if (error?.response?.status === 429) {
         console.error(`🚨 [Spotify:${requestId}] Rate limit exceeded - consider implementing circuit breaker`);
-      } else if ((error as any)?.code === 'ECONNREFUSED' || (error as any)?.code === 'ETIMEDOUT') {
+      } else if (error?.code === 'ECONNREFUSED' || error?.code === 'ETIMEDOUT') {
         console.error(`🚨 [Spotify:${requestId}] Network connectivity issue - check Spotify API status`);
-      } else if ((error as any)?.response?.status === 401) {
+      } else if (error?.response?.status === 401) {
         console.error(`🚨 [Spotify:${requestId}] Authentication failure - check API credentials`);
       }
       

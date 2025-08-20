@@ -146,78 +146,27 @@ export class MemStorage implements IStorage {
       const collaborationData = await musicBrainzService.getArtistCollaborations(artistName);
       console.log(`🎵 [DEBUG] MusicBrainz returned ${collaborationData.artists.length} artist collaborators and ${collaborationData.works.length} works for "${artistName}"`);
       
-      // NEW: Get OpenAI general collaboration data (artists they've worked with)
-      let openAICollaborationData: any = { artists: [] };
-      if (openAIService.isServiceAvailable()) {
-        try {
-          console.log(`🎵 [DEBUG] Fetching OpenAI general collaboration data for "${artistName}"`);
-          openAICollaborationData = await openAIService.getArtistCollaborations(artistName);
-          console.log(`🎵 [DEBUG] OpenAI general collaboration returned ${openAICollaborationData.artists.length} collaborators`);
-        } catch (error) {
-          console.warn(`⚠️ [DEBUG] Could not fetch OpenAI general collaboration data for "${artistName}":`, error);
-        }
-      }
-      
       // NEW: Get Spotify "appears on" collaboration data to enhance the network
       let spotifyCollaborationData: any = { artists: [] };
       if (spotifyService.isConfigured()) {
         try {
-          console.log(`🎵 [DEBUG] Fetching real Spotify "appears on" data for "${artistName}"`);
-          const spotifyCollaborators = await spotifyService.getArtistAppearsOn(artistName);
-          
-          // Transform Spotify API data to our expected format
-          spotifyCollaborationData = {
-            artists: spotifyCollaborators.map(collaborator => ({
-              name: collaborator.name,
-              type: collaborator.type,
-              topCollaborators: collaborator.topCollaborators || [],
-              source: 'spotify_api_real',
-              collaborationType: collaborator.collaborationType,
-              verificationLevel: collaborator.verificationLevel,
-              spotifyUrl: collaborator.spotifyUrl
-            }))
-          };
-          
-          console.log(`🎵 [DEBUG] Real Spotify API returned ${spotifyCollaborationData.artists.length} verified collaborators for "${artistName}"`);
+          console.log(`🎵 [DEBUG] Fetching Spotify "appears on" collaboration data for "${artistName}"`);
+          spotifyCollaborationData = await spotifyService.getArtistAppearsOnCollaborators(artistName);
+          console.log(`🎵 [DEBUG] Spotify "appears on" returned ${spotifyCollaborationData.artists.length} verified collaborators for "${artistName}"`);
         } catch (error) {
-          console.warn(`⚠️ [DEBUG] Could not fetch real Spotify "appears on" data for "${artistName}":`, error);
+          console.warn(`⚠️ [DEBUG] Could not fetch Spotify "appears on" data for "${artistName}":`, error);
         }
       }
 
-      // Merge all collaboration data sources
+      // Merge and deduplicate collaboration data
       const allCollaborators = new Map<string, any>();
       
       // Add MusicBrainz collaborators first
       for (const collaborator of collaborationData.artists) {
         allCollaborators.set(collaborator.name, {
-          name: collaborator.name,
-          type: collaborator.type,
-          topCollaborators: collaborator.topCollaborators || [],
-          source: 'musicbrainz_api_real',
-          collaborationType: 'general_collaboration',
-          verificationLevel: 'high'
+          ...collaborator,
+          source: 'musicbrainz'
         });
-      }
-      
-      // Add OpenAI general collaborators, avoiding duplicates
-      for (const collaborator of openAICollaborationData.artists) {
-        if (!allCollaborators.has(collaborator.name)) {
-          allCollaborators.set(collaborator.name, {
-            name: collaborator.name,
-            type: collaborator.type,
-            topCollaborators: collaborator.topCollaborators || [],
-            source: 'openai_general',
-            collaborationType: 'general_collaboration',
-            verificationLevel: 'medium'
-          });
-          console.log(`🎵 [DEBUG] Added OpenAI general collaborator: "${collaborator.name}" (${collaborator.type})`);
-        } else {
-          // Enhance existing collaborator with OpenAI data
-          const existing = allCollaborators.get(collaborator.name);
-          existing.source = 'musicbrainz_api_real+openai_general';
-          existing.verificationLevel = 'high'; // MusicBrainz data is more reliable
-          console.log(`🎵 [DEBUG] Enhanced existing collaborator "${collaborator.name}" with OpenAI data`);
-        }
       }
       
       // Add Spotify "appears on" collaborators, avoiding duplicates
@@ -228,20 +177,18 @@ export class MemStorage implements IStorage {
             name: collaborator.name,
             type: collaborator.type,
             topCollaborators: collaborator.topCollaborators || [],
-            source: 'spotify_api_real',
+            source: 'spotify_appears_on',
             collaborationType: collaborator.collaborationType,
-            verificationLevel: collaborator.verificationLevel,
-            spotifyUrl: collaborator.spotifyUrl
+            verificationLevel: collaborator.verificationLevel
           });
-          console.log(`🎵 [DEBUG] Added real Spotify "appears on" collaborator: "${collaborator.name}" (${collaborator.collaborationType}, ${collaborator.verificationLevel})`);
+          console.log(`🎵 [DEBUG] Added Spotify "appears on" collaborator: "${collaborator.name}" (${collaborator.collaborationType}, ${collaborator.verificationLevel})`);
         } else {
           // Enhance existing collaborator with Spotify data
           const existing = allCollaborators.get(collaborator.name);
-          existing.source = 'musicbrainz_api_real+spotify_api_real';
+          existing.source = 'musicbrainz+spotify';
           existing.collaborationType = collaborator.collaborationType;
           existing.verificationLevel = collaborator.verificationLevel;
-          existing.spotifyUrl = collaborator.spotifyUrl;
-          console.log(`🎵 [DEBUG] Enhanced existing collaborator "${collaborator.name}" with real Spotify data`);
+          console.log(`🎵 [DEBUG] Enhanced existing collaborator "${collaborator.name}" with Spotify data`);
         }
       }
       
@@ -251,7 +198,7 @@ export class MemStorage implements IStorage {
         works: collaborationData.works
       };
       
-      console.log(`🎵 [DEBUG] Combined collaboration data: ${enhancedCollaborationData.artists.length} total collaborators (${collaborationData.artists.length} from MusicBrainz, ${openAICollaborationData.artists.length} from OpenAI general, ${spotifyCollaborationData.artists.length} from real Spotify API)`);
+      console.log(`🎵 [DEBUG] Combined collaboration data: ${enhancedCollaborationData.artists.length} total collaborators (${collaborationData.artists.length} from MusicBrainz, ${spotifyCollaborationData.artists.length} from Spotify "appears on")`);
       
       // Get Spotify image for main artist
       let mainArtistImage = null;
