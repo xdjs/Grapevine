@@ -265,6 +265,7 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     if (!svgRef.current) return;
 
     const svg = d3.select(svgRef.current);
+    console.log('🔍 [useZoom] Setting up zoom behavior');
 
     // Create zoom behavior for mouse/touch interaction
     const zoom = d3
@@ -276,12 +277,26 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
         const isWheelEvent = event.type === 'wheel';
         const isTouchEvent = event.type.startsWith('touch');
         
-        // Allow all mouse events for panning
-        return !isWheelEvent && !isTouchEvent;
+        // Allow all other events (especially mouse events) for panning
+        const shouldAllow = !isWheelEvent && !isTouchEvent;
+        console.log(`🔍 [useZoom] Event filter: ${event.type} -> ${shouldAllow ? 'ALLOW' : 'BLOCK'}`);
+        return shouldAllow;
       })
       .on("zoom", (event) => {
         // Handle zoom and pan events
-        const { transform } = event;
+        const { transform, sourceEvent } = event;
+        
+        // Log different types of zoom/pan operations
+        if (sourceEvent) {
+          const eventType = sourceEvent.type;
+          if (eventType === 'mousemove' && sourceEvent.buttons === 1) {
+            console.log(`🔍 [useZoom] Pan event: k=${transform.k}, x=${transform.x}, y=${transform.y}`);
+          } else if (eventType !== 'mousemove') {
+            console.log(`🔍 [useZoom] Zoom event (${eventType}): k=${transform.k}, x=${transform.x}, y=${transform.y}`);
+          }
+        } else {
+          console.log(`🔍 [useZoom] Programmatic transform: k=${transform.k}, x=${transform.x}, y=${transform.y}`);
+        }
         
         // Apply transform to the network group
         networkGroup.attr("transform", transform);
@@ -293,7 +308,28 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
         
         // No DOM resets here to avoid flicker; watchdog runs on zoom end
       })
-      .on("end", () => {
+      .on("start", (event) => {
+        // Handle start of zoom/pan operations
+        const { sourceEvent } = event;
+        if (sourceEvent && sourceEvent.type === 'mousedown') {
+          console.log('🔍 [useZoom] Pan operation started');
+          // Update cursor to indicate dragging
+          if (svgRef.current) {
+            svgRef.current.style.cursor = 'grabbing';
+          }
+        }
+      })
+      .on("end", (event) => {
+        // Handle end of zoom/pan operations
+        const { sourceEvent } = event;
+        if (sourceEvent && (sourceEvent.type === 'mouseup' || sourceEvent.type === 'mouseleave')) {
+          console.log('🔍 [useZoom] Pan operation ended');
+          // Reset cursor to grab state
+          if (svgRef.current) {
+            svgRef.current.style.cursor = 'grab';
+          }
+        }
+        console.log('🔍 [useZoom] Zoom event ended');
         // Visibility watchdog: ensure elements are visible and transform is valid after pan/zoom end
         try {
           const g = svg.select('g.network-group');
@@ -327,11 +363,14 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     // Apply zoom behavior - this enables both zooming and panning
     svg.call(zoom);
     zoomRef.current = zoom;
+    console.log('🔍 [useZoom] Zoom behavior applied to SVG');
 
     // Keep D3's mouse handling for panning, but disable touch handling since we handle it manually
     svg.on("touchstart.zoom", null)
        .on("touchmove.zoom", null)
        .on("touchend.zoom", null);
+       
+    console.log('🔍 [useZoom] Zoom behavior setup complete');
   }, [svgRef, onZoomChange]);
 
   // Handle custom zoom events from zoom controls
