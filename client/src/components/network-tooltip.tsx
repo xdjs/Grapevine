@@ -314,59 +314,71 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
         Roles: {roles.map((role, index) => (
           <span key={role} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
             <div style={{ position: 'relative', width: '12px', height: '12px', flexShrink: 0 }}>
-              {/* Natural grape cluster */}
+              {/* Grape emoji style cluster */}
               <svg width="12" height="12" viewBox="0 0 12 12" style={{ position: 'absolute', top: 0, left: 0 }}>
                 {/* Main stem */}
-                <path d="M6 0.5 Q6 1.5 6 2.5" stroke="#4ade80" strokeWidth="0.8" fill="none" />
+                <path d="M6 0.5 Q6 1.2 6 1.8" stroke="#4ade80" strokeWidth="0.8" fill="none" />
                 
-                {/* Grape 1 - top */}
-                <ellipse cx="6" cy="2.8" rx="1.4" ry="1.8" fill={role === 'artist' ? '#FF0ACF' : 
-                                                               role === 'producer' ? '#AE53FF' : 
-                                                               role === 'songwriter' ? '#67D1F8' : '#355367'} />
+                {/* Top row - 3 grapes */}
+                <circle cx="5" cy="2.2" r="1.2" fill={role === 'artist' ? '#FF0ACF' : 
+                                                      role === 'producer' ? '#AE53FF' : 
+                                                      role === 'songwriter' ? '#67D1F8' : '#355367'} />
+                <circle cx="6.5" cy="2.2" r="1.2" fill={role === 'artist' ? '#FF0ACF' : 
+                                                        role === 'producer' ? '#AE53FF' : 
+                                                        role === 'songwriter' ? '#67D1F8' : '#355367'} />
+                <circle cx="8" cy="2.2" r="1.2" fill={role === 'artist' ? '#FF0ACF' : 
+                                                      role === 'producer' ? '#AE53FF' : 
+                                                      role === 'songwriter' ? '#67D1F8' : '#355367'} />
                 
-                {/* Grape 2 - upper left */}
-                <ellipse cx="4.5" cy="3.5" rx="1.3" ry="1.7" fill={role === 'artist' ? '#FF0ACF' : 
-                                                                 role === 'producer' ? '#AE53FF' : 
-                                                                 role === 'songwriter' ? '#67D1F8' : '#355367'} />
+                {/* Second row - 4 grapes */}
+                <circle cx="4.5" cy="3.8" r="1.1" fill={role === 'artist' ? '#FF0ACF' : 
+                                                        role === 'producer' ? '#AE53FF' : 
+                                                        role === 'songwriter' ? '#67D1F8' : '#355367'} />
+                <circle cx="6" cy="3.8" r="1.1" fill={role === 'artist' ? '#FF0ACF' : 
+                                                      role === 'producer' ? '#AE53FF' : 
+                                                      role === 'songwriter' ? '#67D1F8' : '#355367'} />
+                <circle cx="7.5" cy="3.8" r="1.1" fill={role === 'artist' ? '#FF0ACF' : 
+                                                        role === 'producer' ? '#AE53FF' : 
+                                                        role === 'songwriter' ? '#67D1F8' : '#355367'} />
+                <circle cx="9" cy="3.8" r="1.1" fill={role === 'artist' ? '#FF0ACF' : 
+                                                      role === 'producer' ? '#AE53FF' : 
+                                                      role === 'songwriter' ? '#67D1F8' : '#355367'} />
                 
-                {/* Grape 3 - upper right */}
-                <ellipse cx="7.5" cy="3.5" rx="1.3" ry="1.7" fill={role === 'artist' ? '#FF0ACF' : 
-                                                                 role === 'producer' ? '#AE53FF' : 
-                                                                 role === 'songwriter' ? '#67D1F8' : '#355367'} />
+                {/* Third row - 4 grapes */}
+                <circle cx="4" cy="5.4" r="1" fill={role === 'artist' ? '#FF0ACF' : 
+                                                   role === 'producer' ? '#AE53FF' : 
+                                                   role === 'songwriter' ? '#67D1F8' : '#355367'} />
+                <circle cx="5.5" cy="5.4" r="1" fill={role === 'artist' ? '#FF0ACF' : 
+                                                      role === 'producer' ? '#AE53FF' : 
+                                                      role === 'songwriter' ? '#67D1F8' : '#355367'} />
+                <circle cx="7" cy="5.4" r="1" fill={role === 'artist' ? '#FF0ACF' : 
+                                                   role === 'producer' ? '#AE53FF' : 
+                                                   role === 'songwriter' ? '#67D1F8' : '#355367'} />
+                <circle cx="8.5" cy="5.4" r="1" fill={role === 'artist' ? '#FF0ACF' : 
+                                                      role === 'producer' ? '#AE53FF' : 
+                                                      role === 'songwriter' ? '#67D1F8' : '#355367'} />
                 
-                {/* Grape 4 - middle left */}
-                <ellipse cx="4" cy="5" rx="1.2" ry="1.6" fill={role === 'artist' ? '#FF0ACF' : 
-                                                              role === 'producer' ? '#AE53FF' : 
-                                                              role === 'songwriter' ? '#67D1F8' : '#355367'} />
+                {/* Fourth row - 3 grapes */}
+                <circle cx="4.5" cy="6.8" r="0.9" fill={role === 'artist' ? '#FF0ACF' : 
+                                                        role === 'producer' ? '#AE53FF' : 
+                                                        role === 'songwriter' ? '#67D1F8' : '#355367'} />
+                <circle cx="6" cy="6.8" r="0.9" fill={role === 'artist' ? '#FF0ACF' : 
+                                                      role === 'producer' ? '#AE53FF' : 
+                                                      role === 'songwriter' ? '#67D1F8' : '#355367'} />
+                <circle cx="7.5" cy="6.8" r="0.9" fill={role === 'artist' ? '#FF0ACF' : 
+                                                        role === 'producer' ? '#AE53FF' : 
+                                                        role === 'songwriter' ? '#67D1F8' : '#355367'} />
                 
-                {/* Grape 5 - middle right */}
-                <ellipse cx="8" cy="5" rx="1.2" ry="1.6" fill={role === 'artist' ? '#FF0ACF' : 
-                                                              role === 'producer' ? '#AE53FF' : 
-                                                              role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                
-                {/* Grape 6 - lower left */}
-                <ellipse cx="4.8" cy="6.5" rx="1.1" ry="1.5" fill={role === 'artist' ? '#FF0ACF' : 
-                                                                 role === 'producer' ? '#AE53FF' : 
-                                                                 role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                
-                {/* Grape 7 - lower right */}
-                <ellipse cx="7.2" cy="6.5" rx="1.1" ry="1.5" fill={role === 'artist' ? '#FF0ACF' : 
-                                                                 role === 'producer' ? '#AE53FF' : 
-                                                                 role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                
-                {/* Grape 8 - bottom center */}
-                <ellipse cx="6" cy="7.8" rx="1" ry="1.4" fill={role === 'artist' ? '#FF0ACF' : 
-                                                              role === 'producer' ? '#AE53FF' : 
-                                                              role === 'songwriter' ? '#67D1F8' : '#355367'} />
-                
-                {/* Subtle connecting lines (very light) */}
-                <path d="M6 2.5 Q6 3 4.5 3.5" stroke="#4ade80" strokeWidth="0.3" fill="none" opacity="0.6" />
-                <path d="M6 2.5 Q6 3 7.5 3.5" stroke="#4ade80" strokeWidth="0.3" fill="none" opacity="0.6" />
-                <path d="M4.5 3.5 Q4.2 4.2 4 5" stroke="#4ade80" strokeWidth="0.3" fill="none" opacity="0.6" />
-                <path d="M7.5 3.5 Q7.8 4.2 8 5" stroke="#4ade80" strokeWidth="0.3" fill="none" opacity="0.6" />
+                {/* Bottom row - 2 grapes */}
+                <circle cx="5.5" cy="8.2" r="0.8" fill={role === 'artist' ? '#FF0ACF' : 
+                                                        role === 'producer' ? '#AE53FF' : 
+                                                        role === 'songwriter' ? '#67D1F8' : '#355367'} />
+                <circle cx="7" cy="8.2" r="0.8" fill={role === 'artist' ? '#FF0ACF' : 
+                                                      role === 'producer' ? '#AE53FF' : 
+                                                      role === 'songwriter' ? '#67D1F8' : '#355367'} />
                 
                 {/* Leaf */}
-                <path d="M6 0.5 Q7.5 0 8.5 1 Q8 2 6 1.5" fill="#4ade80" />
+                <path d="M6 0.5 Q7.5 0.2 8.5 1 Q8 1.8 6 1.2" fill="#4ade80" />
               </svg>
             </div>
             {role}{index < roles.length - 1 ? ', ' : ''}
