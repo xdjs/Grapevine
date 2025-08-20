@@ -183,7 +183,7 @@ describe('useZoom', () => {
   });
 
   describe('zoom bounds', () => {
-    it('should respect maximum zoom limit of 1000x', async () => {
+    it('should respect maximum zoom limit of 5x', async () => {
       const { result } = renderHook(() =>
         useZoom({
           svgRef: mockSvgRef,
@@ -199,11 +199,10 @@ describe('useZoom', () => {
         });
       }
 
-      // Should be capped at 1000x
-      expect(result.current.currentZoom).toBeLessThanOrEqual(1000);
+      expect(result.current.currentZoom).toBe(5);
     });
 
-    it('should respect minimum zoom limit of 0.001x', async () => {
+    it('should respect minimum zoom limit of 0.2x', async () => {
       const { result } = renderHook(() =>
         useZoom({
           svgRef: mockSvgRef,
@@ -219,57 +218,7 @@ describe('useZoom', () => {
         });
       }
 
-      // Should be capped at 0.001x
-      expect(result.current.currentZoom).toBeGreaterThanOrEqual(0.001);
-    });
-  });
-
-  describe('panning functionality', () => {
-    it('should setup pan event handlers when visible', () => {
-      const { result } = renderHook(() =>
-        useZoom({
-          svgRef: mockSvgRef,
-          visible: true,
-          onZoomChange: mockOnZoomChange,
-        })
-      );
-
-      // The pan handlers should be set up via useEffect
-      expect(mockSvgElement.addEventListener).toHaveBeenCalledWith('mousedown', expect.any(Function));
-      expect(mockSvgElement.addEventListener).toHaveBeenCalledWith('mousemove', expect.any(Function));
-      expect(mockSvgElement.addEventListener).toHaveBeenCalledWith('mouseup', expect.any(Function));
-      expect(mockSvgElement.addEventListener).toHaveBeenCalledWith('mouseleave', expect.any(Function));
-    });
-
-    it('should not setup pan event handlers when not visible', () => {
-      const { result } = renderHook(() =>
-        useZoom({
-          svgRef: mockSvgRef,
-          visible: false,
-          onZoomChange: mockOnZoomChange,
-        })
-      );
-
-      // Pan handlers should not be set up when not visible
-      expect(mockSvgElement.addEventListener).not.toHaveBeenCalledWith('mousedown', expect.any(Function));
-    });
-
-    it('should cleanup pan event handlers on unmount', () => {
-      const { unmount } = renderHook(() =>
-        useZoom({
-          svgRef: mockSvgRef,
-          visible: true,
-          onZoomChange: mockOnZoomChange,
-        })
-      );
-
-      unmount();
-
-      // Should cleanup all event listeners
-      expect(mockSvgElement.removeEventListener).toHaveBeenCalledWith('mousedown', expect.any(Function));
-      expect(mockSvgElement.removeEventListener).toHaveBeenCalledWith('mousemove', expect.any(Function));
-      expect(mockSvgElement.removeEventListener).toHaveBeenCalledWith('mouseup', expect.any(Function));
-      expect(mockSvgElement.removeEventListener).toHaveBeenCalledWith('mouseleave', expect.any(Function));
+      expect(result.current.currentZoom).toBe(0.2);
     });
   });
 

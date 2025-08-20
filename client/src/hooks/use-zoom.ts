@@ -27,116 +27,83 @@ export interface UseZoomReturn {
 export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoomReturn {
   const [currentZoom, setCurrentZoom] = useState(1);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
-  
-  // Pan state tracking
-  const panStateRef = useRef({
-    isPanning: false,
-    startX: 0,
-    startY: 0,
-    startViewBox: { x: 0, y: 0, width: 0, height: 0 }
-  });
+  const currentTransformRef = useRef<d3.ZoomTransform>(d3.zoomIdentity);
 
   // Zoom function for buttons (centered zoom)
   const applyZoom = useCallback((scale: number) => {
-    if (!svgRef.current) return;
+    if (!svgRef.current || !zoomRef.current) return;
     
     const container = svgRef.current.parentElement;
     const width = container ? container.clientWidth : window.innerWidth;
     const height = container ? container.clientHeight : window.innerHeight;
     
-    // Calculate new viewBox dimensions centered
-    const newWidth = width / scale;
-    const newHeight = height / scale;
-    const offsetX = (width - newWidth) / 2;
-    const offsetY = (height - newHeight) / 2;
+    // Calculate center of the current view
+    const centerX = width / 2;
+    const centerY = height / 2;
     
-    // Apply smooth transition
+    // Create new transform centered on the view center
+    const newTransform = d3.zoomIdentity
+      .translate(centerX - (centerX * scale), centerY - (centerY * scale))
+      .scale(scale);
+    
+    // Apply the transform using the zoom behavior
     const svg = d3.select(svgRef.current);
     svg.transition()
       .duration(200)
-      .attrTween('viewBox', () => {
-        const currentViewBox = svgRef.current?.getAttribute('viewBox') || `0 0 ${width} ${height}`;
-        const [cx, cy, cw, ch] = currentViewBox.split(' ').map(Number);
-        const interpolator = d3.interpolate([cx, cy, cw, ch], [offsetX, offsetY, newWidth, newHeight]);
-        return (t: number) => {
-          const [x, y, w, h] = interpolator(t);
-          return `${x} ${y} ${w} ${h}`;
-        };
-      });
-  }, [svgRef]);
+      .call(zoomRef.current.transform, newTransform);
+    
+    currentTransformRef.current = newTransform;
+    setCurrentZoom(scale);
+    onZoomChange({ k: scale, x: newTransform.x, y: newTransform.y });
+  }, [svgRef, onZoomChange]);
 
   // Zoom function for pinch gestures (zoom around focal point)
   const applyPinchZoom = useCallback((scale: number, focalX: number, focalY: number) => {
-    if (!svgRef.current) return;
+    if (!svgRef.current || !zoomRef.current) return;
     
-    const container = svgRef.current.parentElement;
-    const width = container ? container.clientWidth : window.innerWidth;
-    const height = container ? container.clientHeight : window.innerHeight;
+    // Get current transform
+    const currentTransform = currentTransformRef.current;
     
-    // Get current viewBox
-    const currentViewBox = svgRef.current.getAttribute('viewBox') || `0 0 ${width} ${height}`;
-    const [currentX, currentY, currentWidth, currentHeight] = currentViewBox.split(' ').map(Number);
+    // Calculate focal point in SVG coordinates
+    const focalPoint = d3.pointer({ clientX: focalX, clientY: focalY }, svgRef.current);
     
-    // Calculate new dimensions
-    const newWidth = width / scale;
-    const newHeight = height / scale;
+    // Create new transform that zooms around the focal point
+    const newTransform = currentTransform
+      .scale(scale / currentTransform.k)
+      .translate(
+        focalPoint[0] * (1 - scale / currentTransform.k),
+        focalPoint[1] * (1 - scale / currentTransform.k)
+      );
     
-    // Calculate focal point in viewBox coordinates
-    const focalXInViewBox = currentX + (focalX / width) * currentWidth;
-    const focalYInViewBox = currentY + (focalY / height) * currentHeight;
-    
-    // Calculate new viewBox position to keep focal point in same screen position
-    const newX = focalXInViewBox - (focalX / width) * newWidth;
-    const newY = focalYInViewBox - (focalY / height) * newHeight;
-    
-    // Apply transition
+    // Apply the transform using the zoom behavior
     const svg = d3.select(svgRef.current);
     svg.transition()
-      .duration(100) // Shorter duration for more responsive pinch zoom
-      .attrTween('viewBox', () => {
-        const interpolator = d3.interpolate([currentX, currentY, currentWidth, currentHeight], [newX, newY, newWidth, newHeight]);
-        return (t: number) => {
-          const [x, y, w, h] = interpolator(t);
-          return `${x} ${y} ${w} ${h}`;
-        };
-      });
-  }, [svgRef]);
-
-  // Pan function to move the viewBox
-  const applyPan = useCallback((deltaX: number, deltaY: number) => {
-    if (!svgRef.current) return;
+      .duration(100)
+      .call(zoomRef.current.transform, newTransform);
     
-    const currentViewBox = svgRef.current.getAttribute('viewBox');
-    if (!currentViewBox) return;
-    
-    const [currentX, currentY, currentWidth, currentHeight] = currentViewBox.split(' ').map(Number);
-    
-    // Calculate new position
-    const newX = currentX - deltaX;
-    const newY = currentY - deltaY;
-    
-    // Apply the new viewBox
-    svgRef.current.setAttribute('viewBox', `${newX} ${newY} ${currentWidth} ${currentHeight}`);
-  }, [svgRef]);
+    currentTransformRef.current = newTransform;
+    setCurrentZoom(scale);
+    onZoomChange({ k: scale, x: newTransform.x, y: newTransform.y });
+  }, [svgRef, onZoomChange]);
 
   // Pinch zoom helpers
-      const handlePinchZoomIn = useCallback((focalX: number, focalY: number) => {
-      setCurrentZoom(prevZoom => {
-        const newZoom = Math.min(1000, prevZoom * 1.15); // Cap at 1000x (more responsive zoom - 15% increase)
-        console.log(`🤏 Pinch zoom in: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
-        applyPinchZoom(newZoom, focalX, focalY);
-        return newZoom;
-      });
-    }, [applyPinchZoom]);
+  const handlePinchZoomIn = useCallback((focalX: number, focalY: number) => {
+    setCurrentZoom(prevZoom => {
+      const newZoom = Math.min(1000, prevZoom * 1.15); // Cap at 1000x (more responsive zoom - 15% increase)
+      console.log(`🤏 Pinch zoom in: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+      applyPinchZoom(newZoom, focalX, focalY);
+      return newZoom;
+    });
+  }, [applyPinchZoom]);
 
-    const handlePinchZoomOut = useCallback((focalX: number, focalY: number) => {
-      setCurrentZoom(prevZoom => {
-        const newZoom = Math.max(0.001, prevZoom / 1.15); // Min 0.001x (more responsive zoom - 15% decrease)
-        console.log(`🤏 Pinch zoom out: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
-        applyPinchZoom(newZoom, focalX, focalY);
-        return newZoom;
-      });
-    }, [applyPinchZoom]);
+  const handlePinchZoomOut = useCallback((focalX: number, focalY: number) => {
+    setCurrentZoom(prevZoom => {
+      const newZoom = Math.max(0.001, prevZoom / 1.15); // Min 0.001x (more responsive zoom - 15% decrease)
+      console.log(`🤏 Pinch zoom out: ${prevZoom.toFixed(2)} to ${newZoom.toFixed(2)}`);
+      applyPinchZoom(newZoom, focalX, focalY);
+      return newZoom;
+    });
+  }, [applyPinchZoom]);
 
   // Button zoom handlers
   const handleZoomIn = useCallback(() => {
@@ -154,110 +121,19 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
   }, [currentZoom, applyZoom]);
 
   const handleZoomReset = useCallback(() => {
-    if (!svgRef.current) return;
+    if (!svgRef.current || !zoomRef.current) return;
     
-    const container = svgRef.current.parentElement;
-    const width = container ? container.clientWidth : window.innerWidth;
-    const height = container ? container.clientHeight : window.innerHeight;
-    
-    // Reset to default viewBox (centered, 1x zoom)
+    // Reset to default transform (no zoom, no pan)
     const svg = d3.select(svgRef.current);
     svg.transition()
       .duration(300)
-      .attr('viewBox', `0 0 ${width} ${height}`);
+      .call(zoomRef.current.transform, d3.zoomIdentity);
     
+    currentTransformRef.current = d3.zoomIdentity;
     setCurrentZoom(1);
+    onZoomChange({ k: 1, x: 0, y: 0 });
     console.log('Zoom and position reset to center');
-  }, [svgRef]);
-
-  // Pan event handlers
-  const setupPanHandlers = useCallback(() => {
-    if (!svgRef.current) return () => {};
-
-    const svgElement = svgRef.current;
-    
-    const handleMouseDown = (event: MouseEvent) => {
-      // Only enable panning when zoomed in (zoom > 1) or when there's a viewBox offset
-      const currentViewBox = svgElement.getAttribute('viewBox');
-      if (!currentViewBox) return;
-      
-      const [x, y, width, height] = currentViewBox.split(' ').map(Number);
-      const container = svgElement.parentElement;
-      const containerWidth = container ? container.clientWidth : window.innerWidth;
-      const containerHeight = container ? container.clientHeight : window.innerHeight;
-      
-      // Check if we're zoomed in or have an offset
-      const isZoomedIn = width < containerWidth || height < containerHeight;
-      const hasOffset = x !== 0 || y !== 0;
-      
-      if (!isZoomedIn && !hasOffset) return;
-      
-      // Start panning
-      panStateRef.current.isPanning = true;
-      panStateRef.current.startX = event.clientX;
-      panStateRef.current.startY = event.clientY;
-      panStateRef.current.startViewBox = { x, y, width, height };
-      
-      // Change cursor to indicate panning
-      svgElement.style.cursor = 'grabbing';
-      
-      event.preventDefault();
-      event.stopPropagation();
-    };
-
-    const handleMouseMove = (event: MouseEvent) => {
-      if (!panStateRef.current.isPanning) return;
-      
-      const deltaX = event.clientX - panStateRef.current.startX;
-      const deltaY = event.clientY - panStateRef.current.startY;
-      
-      // Apply pan with the stored starting viewBox
-      const { startViewBox } = panStateRef.current;
-      const newX = startViewBox.x - deltaX;
-      const newY = startViewBox.y - deltaY;
-      
-      svgElement.setAttribute('viewBox', `${newX} ${newY} ${startViewBox.width} ${startViewBox.height}`);
-      
-      event.preventDefault();
-      event.stopPropagation();
-    };
-
-    const handleMouseUp = (event: MouseEvent) => {
-      if (panStateRef.current.isPanning) {
-        panStateRef.current.isPanning = false;
-        svgElement.style.cursor = '';
-        console.log('🖱️ Pan ended');
-      }
-    };
-
-    const handleMouseLeave = () => {
-      if (panStateRef.current.isPanning) {
-        panStateRef.current.isPanning = false;
-        svgElement.style.cursor = '';
-        console.log('🖱️ Pan ended (mouse left)');
-      }
-    };
-
-    // Add event listeners
-    svgElement.addEventListener('mousedown', handleMouseDown);
-    svgElement.addEventListener('mousemove', handleMouseMove);
-    svgElement.addEventListener('mouseup', handleMouseUp);
-    svgElement.addEventListener('mouseleave', handleMouseLeave);
-    
-    // Also handle global mouse events to catch mouse up outside the SVG
-    document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('mouseleave', handleMouseLeave);
-
-    // Return cleanup function
-    return () => {
-      svgElement.removeEventListener('mousedown', handleMouseDown);
-      svgElement.removeEventListener('mousemove', handleMouseMove);
-      svgElement.removeEventListener('mouseup', handleMouseUp);
-      svgElement.removeEventListener('mouseleave', handleMouseLeave);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('mouseleave', handleMouseLeave);
-    };
-  }, [svgRef]);
+  }, [svgRef, onZoomChange]);
 
   // Touch and wheel event handlers
   const setupTouchAndWheelHandlers = useCallback(() => {
@@ -395,19 +271,26 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.001, 1000])
       .filter((event) => {
-        // Block all wheel events since we handle them manually for better zoom control
+        // Block wheel events since we handle them manually for better zoom control
         // Block touch events since we handle them manually for better pinch zoom control
         const isWheelEvent = event.type === 'wheel';
-        const isProgrammaticZoom = !event.sourceEvent && event.type !== 'click' && event.type !== 'mousedown';
+        const isTouchEvent = event.type.startsWith('touch');
         
-        return !isWheelEvent && (isProgrammaticZoom || event.type === 'mousedown' || event.type === 'mousemove');
+        // Allow all mouse events for panning
+        return !isWheelEvent && !isTouchEvent;
       })
       .on("zoom", (event) => {
-        // Respond to user scroll wheel and programmatic zoom only
+        // Handle zoom and pan events
         const { transform } = event;
+        
+        // Apply transform to the network group
         networkGroup.attr("transform", transform);
+        
+        // Update our internal state
+        currentTransformRef.current = transform;
         setCurrentZoom(transform.k);
         onZoomChange({ k: transform.k, x: transform.x, y: transform.y });
+        
         // No DOM resets here to avoid flicker; watchdog runs on zoom end
       })
       .on("end", () => {
@@ -430,27 +313,23 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
           // Guard against non-finite transform values
           const m = (g.node() as SVGGElement)?.getCTM();
           if (m && (!isFinite(m.a) || !isFinite(m.d) || !isFinite(m.e) || !isFinite(m.f))) {
-            // Reset viewBox if corrupt
-            const container = svgRef.current?.parentElement;
-            const width = container ? container.clientWidth : window.innerWidth;
-            const height = container ? container.clientHeight : window.innerHeight;
-            svg.attr('viewBox', `0 0 ${width} ${height}`);
+            // Reset transform if corrupt
+            svg.call(zoom.transform, d3.zoomIdentity);
+            currentTransformRef.current = d3.zoomIdentity;
             setCurrentZoom(1);
+            onZoomChange({ k: 1, x: 0, y: 0 });
           }
         } catch {
           // Ignore watchdog errors
         }
       });
 
-    // Apply zoom behavior but prevent background dragging and clicking
+    // Apply zoom behavior - this enables both zooming and panning
     svg.call(zoom);
     zoomRef.current = zoom;
 
-    // Completely disable D3's touch handling - we'll handle it manually
-    svg.on("mousedown.drag", null)
-       .on("click.zoom", null)
-       .on("dblclick.zoom", null)
-       .on("touchstart.zoom", null)
+    // Keep D3's mouse handling for panning, but disable touch handling since we handle it manually
+    svg.on("touchstart.zoom", null)
        .on("touchmove.zoom", null)
        .on("touchend.zoom", null);
   }, [svgRef, onZoomChange]);
@@ -489,14 +368,6 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     const cleanup = setupTouchAndWheelHandlers();
     return cleanup;
   }, [visible, setupTouchAndWheelHandlers]);
-
-  // Setup pan event handlers
-  useEffect(() => {
-    if (!visible) return;
-    
-    const cleanup = setupPanHandlers();
-    return cleanup;
-  }, [visible, setupPanHandlers]);
 
   return {
     currentZoom,

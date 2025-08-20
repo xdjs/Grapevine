@@ -398,10 +398,27 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
             role="img" 
             aria-label="Music collaboration network visualization"
             style={{ 
-              touchAction: 'none',
+              touchAction: 'manipulation',
               WebkitTouchCallout: 'none',
               WebkitUserSelect: 'none',
-              userSelect: 'none'
+              userSelect: 'none',
+              overflow: 'visible',
+              cursor: 'grab'
+            }}
+            onMouseDown={() => {
+              if (svgRef.current) {
+                svgRef.current.style.cursor = 'grabbing';
+              }
+            }}
+            onMouseUp={() => {
+              if (svgRef.current) {
+                svgRef.current.style.cursor = 'grab';
+              }
+            }}
+            onMouseLeave={() => {
+              if (svgRef.current) {
+                svgRef.current.style.cursor = 'grab';
+              }
             }}
           />
 

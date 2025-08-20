@@ -1131,18 +1131,25 @@ export default function D3NetworkRenderer({
 
     // Create network group
     const networkGroup = svg.append("g").attr("class", "network-group");
-    console.log('🔍 [D3Renderer] Created network group');
+
+    // Add background rectangle to capture mouse events for panning
+    const backgroundRect = networkGroup.append("rect")
+      .attr("class", "background-panning")
+      .attr("width", width * 10) // Make it larger to allow panning beyond viewport
+      .attr("height", height * 10)
+      .attr("x", -width * 4.5) // Center it
+      .attr("y", -height * 4.5)
+      .attr("fill", "transparent")
+      .attr("pointer-events", "all");
 
     // Setup zoom behavior using the zoom hook
     zoom.setupZoomBehavior(networkGroup);
-    console.log('🔍 [D3Renderer] Setup zoom behavior');
 
     // Add background click handler to hide tooltip and reset highlighting
-    svg.on("click", function(event) {
-      // Only trigger if clicking on the background (not on a node)
-      if (event.target === this || event.target.tagName === 'svg') {
-        tooltip.hideTooltip();
-      }
+    backgroundRect.on("click", function(event) {
+      // Only trigger if clicking on the background rectangle (not on a node)
+      tooltip.hideTooltip();
+      event.stopPropagation(); // Prevent event bubbling
     });
 
     // Find connected components for cluster positioning
