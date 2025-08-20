@@ -326,42 +326,48 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
       >
         <div style={{ marginBottom: '4px', fontWeight: '500' }}>Role Colors:</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div
-              style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: '#FF0ACF',
-                flexShrink: 0,
-              }}
-            />
-            <span>Artist</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div
-              style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: '#AE53FF',
-                flexShrink: 0,
-              }}
-            />
-            <span>Producer</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div
-              style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: '#67D1F8',
-                flexShrink: 0,
-              }}
-            />
-            <span>Songwriter</span>
-          </div>
+          {roles.includes('artist') && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: '#FF0ACF',
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontWeight: '500' }}>Artist</span>
+            </div>
+          )}
+          {roles.includes('producer') && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: '#AE53FF',
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontWeight: '500' }}>Producer</span>
+            </div>
+          )}
+          {roles.includes('songwriter') && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: '#67D1F8',
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontWeight: '500' }}>Songwriter</span>
+            </div>
+          )}
         </div>
       </div>
 
