@@ -39,10 +39,20 @@ export class VineDecorations {
     if (this.defs) {
       const svg = this.defs.node()?.parentElement;
       if (svg) {
-        const grapeClusters = d3.select(svg).selectAll('.grape-cluster');
-        const clusterCount = grapeClusters.size();
-        console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Found ${clusterCount} grape clusters, setting opacity to 1`);
-        grapeClusters.style('opacity', 1);
+        // Look for grape clusters within the network group structure
+        const networkGroup = d3.select(svg).select('.network-group');
+        if (networkGroup.empty()) {
+          console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] No network group found, searching entire SVG`);
+          const grapeClusters = d3.select(svg).selectAll('.grape-cluster');
+          const clusterCount = grapeClusters.size();
+          console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Found ${clusterCount} grape clusters in entire SVG, setting opacity to 1`);
+          grapeClusters.style('opacity', 1);
+        } else {
+          const grapeClusters = networkGroup.selectAll('.grape-cluster');
+          const clusterCount = grapeClusters.size();
+          console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Found ${clusterCount} grape clusters in network group, setting opacity to 1`);
+          grapeClusters.style('opacity', 1);
+        }
         console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] Grapes are now visible in the SVG`);
       } else {
         console.log(`🕐 [${new Date().toISOString()}] 🍇 [VineDecorations] No SVG parent found for defs`);

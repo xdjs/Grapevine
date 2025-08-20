@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from "react";
+import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import { useNetworkData } from "@/hooks/use-network-data";
 import { useConfig } from "@/hooks/use-config";
@@ -653,29 +654,48 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
             );
           })()}
           
-          {/* Temporary debug button to force grape visibility */}
-          {process.env.NODE_ENV === 'development' && (
+          {/* Temporary debug buttons to force grape visibility */}
+          <div style={{ position: 'absolute', top: '10px', left: '10px', zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <button
               onClick={() => {
-                console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Debug: Force showing grapes`);
+                console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Debug: Force showing grapes via state`);
                 setGrapesVisible(true);
               }}
               style={{
-                position: 'absolute',
-                top: '10px',
-                left: '10px',
-                zIndex: 1000,
                 padding: '8px 12px',
                 backgroundColor: 'purple',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                fontSize: '12px'
               }}
             >
-              Force Show Grapes
+              Force Show Grapes (State)
             </button>
-          )}
+            <button
+              onClick={() => {
+                console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Debug: Manually setting grape opacity to 1`);
+                if (svgRef.current) {
+                  const svg = d3.select(svgRef.current);
+                  const grapeClusters = svg.selectAll('.grape-cluster');
+                  console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Found ${grapeClusters.size()} grape clusters, setting opacity to 1`);
+                  grapeClusters.style('opacity', 1);
+                }
+              }}
+              style={{
+                padding: '8px 12px',
+                backgroundColor: 'orange',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '12px'
+              }}
+            >
+              Manual Grape Opacity
+            </button>
+          </div>
           
           {/* Top-right shrink button removed: shrinking is available via tooltip per-node action */}
           
