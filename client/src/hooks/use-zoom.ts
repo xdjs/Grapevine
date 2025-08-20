@@ -27,6 +27,14 @@ export interface UseZoomReturn {
 export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoomReturn {
   const [currentZoom, setCurrentZoom] = useState(1);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  
+  // Pan state tracking
+  const panStateRef = useRef({
+    isPanning: false,
+    startX: 0,
+    startY: 0,
+    startViewBox: { x: 0, y: 0, width: 0, height: 0 }
+  });
 
   // Zoom function for buttons (centered zoom)
   const applyZoom = useCallback((scale: number) => {
@@ -94,6 +102,23 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
       });
   }, [svgRef]);
 
+  // Pan function to move the viewBox
+  const applyPan = useCallback((deltaX: number, deltaY: number) => {
+    if (!svgRef.current) return;
+    
+    const currentViewBox = svgRef.current.getAttribute('viewBox');
+    if (!currentViewBox) return;
+    
+    const [currentX, currentY, currentWidth, currentHeight] = currentViewBox.split(' ').map(Number);
+    
+    // Calculate new position
+    const newX = currentX - deltaX;
+    const newY = currentY - deltaY;
+    
+    // Apply the new viewBox
+    svgRef.current.setAttribute('viewBox', `${newX} ${newY} ${currentWidth} ${currentHeight}`);
+  }, [svgRef]);
+
   // Pinch zoom helpers
       const handlePinchZoomIn = useCallback((focalX: number, focalY: number) => {
       setCurrentZoom(prevZoom => {
@@ -143,6 +168,95 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     
     setCurrentZoom(1);
     console.log('Zoom and position reset to center');
+  }, [svgRef]);
+
+  // Pan event handlers
+  const setupPanHandlers = useCallback(() => {
+    if (!svgRef.current) return () => {};
+
+    const svgElement = svgRef.current;
+    
+    const handleMouseDown = (event: MouseEvent) => {
+      // Only enable panning when zoomed in (zoom > 1) or when there's a viewBox offset
+      const currentViewBox = svgElement.getAttribute('viewBox');
+      if (!currentViewBox) return;
+      
+      const [x, y, width, height] = currentViewBox.split(' ').map(Number);
+      const container = svgElement.parentElement;
+      const containerWidth = container ? container.clientWidth : window.innerWidth;
+      const containerHeight = container ? container.clientHeight : window.innerHeight;
+      
+      // Check if we're zoomed in or have an offset
+      const isZoomedIn = width < containerWidth || height < containerHeight;
+      const hasOffset = x !== 0 || y !== 0;
+      
+      if (!isZoomedIn && !hasOffset) return;
+      
+      // Start panning
+      panStateRef.current.isPanning = true;
+      panStateRef.current.startX = event.clientX;
+      panStateRef.current.startY = event.clientY;
+      panStateRef.current.startViewBox = { x, y, width, height };
+      
+      // Change cursor to indicate panning
+      svgElement.style.cursor = 'grabbing';
+      
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!panStateRef.current.isPanning) return;
+      
+      const deltaX = event.clientX - panStateRef.current.startX;
+      const deltaY = event.clientY - panStateRef.current.startY;
+      
+      // Apply pan with the stored starting viewBox
+      const { startViewBox } = panStateRef.current;
+      const newX = startViewBox.x - deltaX;
+      const newY = startViewBox.y - deltaY;
+      
+      svgElement.setAttribute('viewBox', `${newX} ${newY} ${startViewBox.width} ${startViewBox.height}`);
+      
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const handleMouseUp = (event: MouseEvent) => {
+      if (panStateRef.current.isPanning) {
+        panStateRef.current.isPanning = false;
+        svgElement.style.cursor = '';
+        console.log('🖱️ Pan ended');
+      }
+    };
+
+    const handleMouseLeave = () => {
+      if (panStateRef.current.isPanning) {
+        panStateRef.current.isPanning = false;
+        svgElement.style.cursor = '';
+        console.log('🖱️ Pan ended (mouse left)');
+      }
+    };
+
+    // Add event listeners
+    svgElement.addEventListener('mousedown', handleMouseDown);
+    svgElement.addEventListener('mousemove', handleMouseMove);
+    svgElement.addEventListener('mouseup', handleMouseUp);
+    svgElement.addEventListener('mouseleave', handleMouseLeave);
+    
+    // Also handle global mouse events to catch mouse up outside the SVG
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mouseleave', handleMouseLeave);
+
+    // Return cleanup function
+    return () => {
+      svgElement.removeEventListener('mousedown', handleMouseDown);
+      svgElement.removeEventListener('mousemove', handleMouseMove);
+      svgElement.removeEventListener('mouseup', handleMouseUp);
+      svgElement.removeEventListener('mouseleave', handleMouseLeave);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+    };
   }, [svgRef]);
 
   // Touch and wheel event handlers
@@ -375,6 +489,14 @@ export function useZoom({ svgRef, visible, onZoomChange }: UseZoomProps): UseZoo
     const cleanup = setupTouchAndWheelHandlers();
     return cleanup;
   }, [visible, setupTouchAndWheelHandlers]);
+
+  // Setup pan event handlers
+  useEffect(() => {
+    if (!visible) return;
+    
+    const cleanup = setupPanHandlers();
+    return cleanup;
+  }, [visible, setupPanHandlers]);
 
   return {
     currentZoom,
