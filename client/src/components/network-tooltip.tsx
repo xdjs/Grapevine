@@ -311,61 +311,24 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
           textAlign: 'left',
         }}
       >
-        Roles: {roleDisplay}
-      </div>
-
-      {/* Role Legend */}
-      <div
-        style={{
-          marginTop: '8px',
-          padding: '8px',
-          background: 'rgba(255, 255, 255, 0.1)',
-          borderRadius: '6px',
-          fontSize: roleFontSize,
-        }}
-      >
-        <div style={{ marginBottom: '4px', fontWeight: '500' }}>Role Colors:</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        Roles: {roles.map((role, index) => (
+          <span key={role} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
             <div
               style={{
-                width: '12px',
-                height: '12px',
+                width: '8px',
+                height: '8px',
                 borderRadius: '50%',
-                border: '2px solid #FF0ACF',
+                border: '2px solid',
+                borderColor: role === 'artist' ? '#FF0ACF' : 
+                             role === 'producer' ? '#AE53FF' : 
+                             role === 'songwriter' ? '#67D1F8' : '#355367',
                 background: 'transparent',
                 flexShrink: 0,
               }}
             />
-            <span>Artist</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div
-              style={{
-                width: '12px',
-                height: '12px',
-                borderRadius: '50%',
-                border: '2px solid #AE53FF',
-                background: 'transparent',
-                flexShrink: 0,
-              }}
-            />
-            <span>Producer</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div
-              style={{
-                width: '12px',
-                height: '12px',
-                borderRadius: '50%',
-                border: '2px solid #67D1F8',
-                background: 'transparent',
-                flexShrink: 0,
-              }}
-            />
-            <span>Songwriter</span>
-          </div>
-        </div>
+            {role}{index < roles.length - 1 ? ', ' : ''}
+          </span>
+        ))}
       </div>
 
       {/* Actions container */}
