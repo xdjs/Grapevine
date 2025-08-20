@@ -178,7 +178,7 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
     setGrapesVisible(true);
     console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Grapes will now be visible in the network visualization`);
   }, []);
-
+  
   // Touch gestures hook
   useTouchGestures({
     svgRef,
@@ -641,16 +641,16 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
               visible
             });
             return (
-              <D3NetworkRenderer
-                data={finalDisplayData}
-                visible={visible}
-                filterState={filterState}
-                svgRef={svgRef}
-                simulationRef={simulationRef}
-                zoom={zoom}
-                nodeInteractions={nodeInteractions}
-                tooltip={tooltip}
-                mainArtistNode={mainArtistNode}
+          <D3NetworkRenderer
+            data={finalDisplayData}
+            visible={visible}
+            filterState={filterState}
+            svgRef={svgRef}
+            simulationRef={simulationRef}
+            zoom={zoom}
+            nodeInteractions={nodeInteractions}
+            tooltip={tooltip}
+            mainArtistNode={mainArtistNode}
                 onGrapeClick={handleGrapeClick}
                 grapesVisible={grapesVisible}
               />
@@ -658,8 +658,11 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
           })()}
           
           {/* Temporary debug buttons to force grape visibility */}
-          <div style={{ position: 'absolute', top: '10px', left: '10px', zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <button
+          {(() => {
+            console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Rendering debug buttons`);
+            return (
+              <div style={{ position: 'absolute', top: '10px', left: '10px', zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button
               onClick={() => {
                 console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Debug: Force showing grapes via state`);
                 setGrapesVisible(true);
@@ -700,6 +703,9 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
             </button>
             <button
               onClick={() => {
+                alert('Green button clicked!'); // Simple test to see if button works
+                console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Debug: Green button clicked!`);
+                console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] finalDisplayData:`, finalDisplayData);
                 console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Debug: Manually triggering content generation`);
                 if (finalDisplayData?.links?.length > 0) {
                   console.log(`🕐 [${new Date().toISOString()}] 🍇 [NetworkVisualizer] Found ${finalDisplayData.links.length} links, generating content for each`);
@@ -743,8 +749,10 @@ const NetworkVisualizer = forwardRef<NetworkVisualizerRef, NetworkVisualizerProp
               }}
             >
               Manual Content Generation
-            </button>
-          </div>
+                </button>
+              </div>
+            );
+          })()}
           
           {/* Top-right shrink button removed: shrinking is available via tooltip per-node action */}
           
