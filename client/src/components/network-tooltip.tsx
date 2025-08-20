@@ -313,19 +313,15 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
       >
         Roles: {roles.map((role, index) => (
           <span key={role} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <div
-              style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                border: '2px solid',
-                borderColor: role === 'artist' ? '#FF0ACF' : 
-                             role === 'producer' ? '#AE53FF' : 
-                             role === 'songwriter' ? '#67D1F8' : '#355367',
-                background: 'transparent',
-                flexShrink: 0,
-              }}
-            />
+            <span style={{ 
+              fontSize: '12px',
+              filter: role === 'artist' ? 'hue-rotate(300deg) saturate(1.5) brightness(1.2)' :
+                       role === 'producer' ? 'hue-rotate(270deg) saturate(1.3) brightness(1.1)' :
+                       role === 'songwriter' ? 'hue-rotate(200deg) saturate(1.2) brightness(1.3)' :
+                       'hue-rotate(0deg) saturate(1) brightness(1)'
+            }}>
+              🍇
+            </span>
             {role}{index < roles.length - 1 ? ', ' : ''}
           </span>
         ))}
