@@ -13,6 +13,15 @@
   ],
   "headers": [
     {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "ALLOW-FROM https://music-nerd-git-staging-musicnerd.vercel.app https://www.musicnerd.xyz"
+        }
+      ]
+    },
+    {
       "source": "/favicon.ico",
       "headers": [
         {
