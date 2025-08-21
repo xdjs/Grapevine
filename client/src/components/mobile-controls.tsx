@@ -970,30 +970,7 @@ export default function MobileControls({
             <HelpCircle className="w-6 h-6" />
           </Button>
 
-          {/* Close Button */}
-          <Button
-            size="icon"
-            variant="destructive"
-            className="w-12 h-12 bg-red-900/90 backdrop-blur hover:bg-red-800 border-2 rounded-full shadow-lg animate-in zoom-in-95 duration-700 ease-out"
-            style={{ 
-              borderColor: '#b427b4',
-              pointerEvents: 'auto',
-              touchAction: 'manipulation',
-              animationDelay: '0ms',
-              transformOrigin: 'bottom right'
-            }}
-            title="Close Menu"
-            onClick={() => {
-              console.log('📱 [Mobile Controls] Close button clicked');
-              setShowMenu(false);
-            }}
-            onTouchStart={(e) => {
-              console.log('📱 [Mobile Controls] Close button touch start');
-              e.stopPropagation();
-            }}
-          >
-            <X className="w-6 h-6" />
-          </Button>
+
         </div>
       )}
 
