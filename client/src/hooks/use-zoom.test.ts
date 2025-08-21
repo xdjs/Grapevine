@@ -333,7 +333,7 @@ describe('useZoom', () => {
       });
 
       expect(d3.zoom).toHaveBeenCalled();
-      expect(mockZoomBehavior.scaleExtent).toHaveBeenCalledWith([0.2, 8]);
+      expect(mockZoomBehavior.scaleExtent).toHaveBeenCalledWith([0.001, 1000]);
     });
 
     it('should disable D3 touch events', () => {

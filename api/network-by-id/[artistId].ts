@@ -480,7 +480,7 @@ Guidelines:
               type: branchingRoles[0],
               types: branchingRoles,
               color: '#FF69B4',
-              size: 15,
+              size: 20, // Fixed size for all collaborators (same as other collaborators)
               artistId: null
             };
 

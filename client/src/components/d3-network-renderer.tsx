@@ -1,10 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import * as d3 from "d3";
 import { NetworkData, NetworkNode, NetworkLink, FilterState } from "@/types/network";
 import { UseZoomReturn } from "@/hooks/use-zoom";
 import { UseNodeInteractionsReturn } from "@/hooks/use-node-interactions";
 import { UseTooltipReturn } from "@/hooks/use-tooltip";
 import { useFilterVisibility } from "@/hooks/use-filter-visibility";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface D3NetworkRendererProps {
   /** Network data to visualize */
@@ -49,6 +50,7 @@ export default function D3NetworkRenderer({
   tooltip,
   mainArtistNode,
 }: D3NetworkRendererProps) {
+  const isMobile = useIsMobile();
   
   // Track which node IDs we've already batch-preloaded to avoid re-preloading on small expansions
   const preloadedNodeIdsRef = useRef<Set<string>>(new Set());
@@ -101,6 +103,27 @@ export default function D3NetworkRenderer({
     
     return components;
   };
+
+  /**
+   * Compute the display radius for a node. All nodes except the main artist
+   * are normalized to a consistent size for visual clarity on both mobile and desktop.
+   */
+  const getDisplayNodeSize = useCallback((node: NetworkNode): number => {
+    const isMain = Boolean(
+      mainArtistNode && (
+        node.id === mainArtistNode.id || node.name === mainArtistNode.name
+      )
+    );
+    
+    if (isMain) {
+      // Main artist keeps their original size
+      return node.size;
+    } else {
+      // All other nodes (including expanded ones) get the exact same size
+      // This ensures Paul Epworth, Adele, and all other nodes have identical sizing
+      return 22; // Consistent size for all non-main artist nodes
+    }
+  }, [mainArtistNode]);
 
   /**
    * Create boundary force to keep nodes within viewport with margin.
@@ -183,10 +206,11 @@ export default function D3NetworkRenderer({
         d3
           .forceLink<NetworkNode, NetworkLink>(links)
           .id((d) => d.id)
-          .distance(80)
+          .distance(100)
       )
+
       .force("charge", d3.forceManyBody().strength(-150))
-      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => d.size + 10))
+      .force("collision", d3.forceCollide<NetworkNode>().radius((d) => getDisplayNodeSize(d) + 10))
       .force("boundary", boundaryForce)
       .force("centerX", d3.forceX(width / 2).strength((d) => d === mainArtist ? 0.1 : 0))
       .force("centerY", d3.forceY(height / 2).strength((d) => d === mainArtist ? 0.1 : 0));
@@ -329,7 +353,7 @@ export default function D3NetworkRenderer({
     
     // Get optimal image size based on node size and zoom level
     getOptimalImageSize(node: NetworkNode, svgElement?: SVGSVGElement): { width: number; height: number; quality: 'low' | 'medium' | 'high' } {
-      const baseSize = (node.size - 4) * 2; // Base image size
+      const baseSize = (getDisplayNodeSize(node) - 4) * 2; // Base image size using display size
       
       // Get current zoom level if available
       let zoomScale = 1;
@@ -586,7 +610,7 @@ export default function D3NetworkRenderer({
       if (roles.length === 1) {
         // Single role - simple circle
         group.append("circle")
-          .attr("r", d.size)
+          .attr("r", getDisplayNodeSize(d))
           .attr("fill", "transparent")
           .attr("stroke", () => {
             if (roles[0] === 'artist') return '#FF0ACF';       // Magenta Pink
@@ -605,8 +629,8 @@ export default function D3NetworkRenderer({
           
           // Create arc path for each role
           const arcPath = d3.arc()
-            .innerRadius(d.size - 4)
-            .outerRadius(d.size)
+            .innerRadius(getDisplayNodeSize(d) - 4)
+            .outerRadius(getDisplayNodeSize(d))
             .startAngle(startAngle)
             .endAngle(endAngle);
           const arcD = (arcPath as unknown as () => string | null)() || '';
@@ -625,7 +649,7 @@ export default function D3NetworkRenderer({
         
         // Add inner circle for better visibility
         group.append("circle")
-          .attr("r", d.size - 4)
+          .attr("r", getDisplayNodeSize(d) - 4)
           .attr("fill", "transparent")
           .attr("stroke", "white")
           .attr("stroke-width", 2);
@@ -633,7 +657,7 @@ export default function D3NetworkRenderer({
 
       // Add profile picture support for any node with an imageUrl (optimized)
       if (d.imageUrl) {
-        const profileImageSize = d.size - 4; // Leave minimal space for border
+        const profileImageSize = getDisplayNodeSize(d) - 4; // Leave minimal space for border
         const nodeIndex = nodes.indexOf(d);
         const shouldLoad = ImageLoadingManager.shouldLoadImage(d, nodeIndex, svgRef.current || undefined);
         
@@ -872,10 +896,36 @@ export default function D3NetworkRenderer({
       .attr("dy", (d) => {
         // Position labels below nodes when they have profile pictures
         const hasProfilePicture = Boolean(d.imageUrl);
-        return hasProfilePicture ? `${d.size + 18}px` : "0.35em";
+        return hasProfilePicture ? `${getDisplayNodeSize(d) + 18}px` : "0.35em";
       })
-      .attr("font-size", (d) => d.type === 'artist' ? "14px" : "11px")
-      .attr("font-weight", (d) => d.type === 'artist' ? "600" : "500")
+      .attr("font-size", (d) => {
+        // Check if this is the main artist node
+        const isMainArtist = mainArtistNode && (
+          d.id === mainArtistNode.id || d.name === mainArtistNode.name
+        );
+        
+        if (isMainArtist) {
+          // Main artist gets larger font size
+          return d.type === 'artist' ? "16px" : "14px";
+        } else {
+          // All other nodes (including expanded ones) get consistent smaller font size
+          return d.type === 'artist' ? "12px" : "11px";
+        }
+      })
+      .attr("font-weight", (d) => {
+        // Check if this is the main artist node
+        const isMainArtist = mainArtistNode && (
+          d.id === mainArtistNode.id || d.name === mainArtistNode.name
+        );
+        
+        if (isMainArtist) {
+          // Main artist gets bolder font weight
+          return d.type === 'artist' ? "700" : "600";
+        } else {
+          // All other nodes get consistent font weight
+          return d.type === 'artist' ? "500" : "500";
+        }
+      })
       .attr("fill", "white")
       .attr("pointer-events", "none")
       .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.8)")
@@ -920,7 +970,7 @@ export default function D3NetworkRenderer({
                       
                       // Create image element
                       const group = d3.select(nodeGroup);
-                      const profileImageSize = node.size - 4;
+                      const profileImageSize = getDisplayNodeSize(node) - 4;
                       const clipId = `clip-${node.id.replace(/[^a-zA-Z0-9]/g, '_')}`;
                       
                       const image = group.append("image")
@@ -952,7 +1002,7 @@ export default function D3NetworkRenderer({
                 
                 // Replace with placeholder
                 const group = d3.select(nodeGroup);
-                const profileImageSize = node.size - 4;
+                const profileImageSize = getDisplayNodeSize(node) - 4;
                 
                 const placeholderGroup = group.append("g")
                   .attr("class", "image-placeholder-lazy")
@@ -999,7 +1049,7 @@ export default function D3NetworkRenderer({
       clearTimeout(viewportUpdateTimeout);
       svg.on('zoom.viewport', null);
     };
-  }, [data.nodes, visible]);
+  }, [data?.nodes, visible]);
   
   // Main D3 visualization effect
   useEffect(() => {

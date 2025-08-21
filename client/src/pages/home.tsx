@@ -368,7 +368,7 @@ export default function Home() {
         >
           <div className="w-full max-w-2xl mx-auto px-4 py-1 sm:py-2 md:py-3 space-y-1 sm:space-y-2">
             <div className="text-gray-500 text-xs sm:text-sm">
-              <p className="mb-1">Data sourced from MusicBrainz, OpenAI, and Spotify APIs</p>
+              <p className="mb-1">Data sourced from OpenAI and Spotify APIs</p>
               <p className="mb-1">Powered by Music Nerd</p>
               <p>Click on artist nodes to visit their Music Nerd profiles</p>
             </div>
@@ -449,12 +449,14 @@ export default function Home() {
 
 
 
-      {/* Share Button - Only visible when network is shown and not on mobile */}
-      {showNetworkView && !isMobile && <ShareButton artistId={currentArtistId} />}
+      {/* Share Button - hide on mobile */}
+      {showNetworkView && !isMobile && (
+        <ShareButton artistId={currentArtistId} networkData={networkData} />
+      )}
 
 
-      {/* Help Button - Hide on mobile when network view is shown */}
-      {(!showNetworkView || !isMobile) && <HelpButton />}
+      {/* Help Button - hide on mobile only when map is visible */}
+      {!(isMobile && showNetworkView) && <HelpButton />}
     </div>
   );
 }

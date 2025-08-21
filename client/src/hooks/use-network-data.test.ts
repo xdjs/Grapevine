@@ -15,7 +15,7 @@ const baseData: NetworkData = {
 
 function mockNetworkResponse(forId: string, neighbors: string[]): NetworkData {
   const nodes = [{ id: forId, name: forId, type: 'artist', size: 20 }].concat(
-    neighbors.map(n => ({ id: n, name: n, type: 'artist', size: 16 }))
+    neighbors.map(n => ({ id: n, name: n, type: 'artist', size: 20 }))
   );
   const links = neighbors.map(n => ({ source: forId, target: n }));
   return { nodes, links };
