@@ -1,6 +1,20 @@
 import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import { NetworkNode } from '@/types/network';
 
+// Utility function to get role color
+const getRoleColor = (role: string): string => {
+  switch (role.toLowerCase()) {
+    case 'artist':
+      return '#FF0ACF'; // Magenta Pink
+    case 'producer':
+      return '#AE53FF'; // Bright Purple
+    case 'songwriter':
+      return '#67D1F8'; // Light Blue
+    default:
+      return '#355367'; // Police Blue
+  }
+};
+
 export interface NetworkTooltipProps {
   node: NetworkNode;
   position: { x: number; y: number };
@@ -311,7 +325,12 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
           textAlign: 'left',
         }}
       >
-        Roles: {roleDisplay}
+        Roles: {roles.map((role, index) => (
+          <span key={role} style={{ color: getRoleColor(role) }}>
+            {role}
+            {index < roles.length - 1 ? ', ' : ''}
+          </span>
+        ))}
       </div>
 
       {/* Actions container */}
