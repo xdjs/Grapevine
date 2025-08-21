@@ -275,10 +275,7 @@ Guidelines:
     
     console.log(`✅ [Collaboration] Final result: ${collaborationDetails.projects.length} projects from combined sources`);
     
-    // Add a note about data sources if we have projects
-    if (collaborationDetails.projects.length > 0) {
-      collaborationDetails.description += ` Data sourced from MusicBrainz and enhanced with AI-generated information.`;
-    }
+    // Data source note removed - no longer adding attribution text to description
 
     // If Spotify is configured, try to enhance the projects with Spotify data
     if (SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET) {
