@@ -46,7 +46,7 @@ export default function HelpButton() {
           <div className="flex justify-center items-center py-4">
             <img 
               key={isOpen ? 'gif-playing' : 'gif-stopped'}
-              src="/help-button.gif?v=2" 
+              src="/help-button.gif?v=5" 
               alt="Help instructions" 
               className="max-w-full max-h-96 rounded-lg border-2"
               style={{ borderColor: '#b427b4' }}
