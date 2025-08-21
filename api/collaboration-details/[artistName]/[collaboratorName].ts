@@ -156,11 +156,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         apiKey: OPENAI_API_KEY,
       });
 
-      const prompt = `Given the artist "${artistName}" and their collaborator "${collaboratorName}", write a brief sentence describing how they worked together, and cite the real project (song, album, etc) that they worked on together. All instances of collaborations should be mentioned, as well as their personal history (if the information is available).
+      const prompt = `Given the artist "${artistName}" and their collaborator "${collaboratorName}", write a brief sentence describing how they worked together, and cite the real project (song, album, etc) that they worked on together. All instances of collaborations should be mentioned. If possible, include any statistics about the popularity of their collaborations when available. For example, if their collaboration/project charted or won any awards, include this information. Also include any information on live performances of the collaborations if the information is available. Do not make any information up. Also include any details about how these people work together in a professional setting. Again, do not make up any information.
 
 Please respond with JSON in this exact format:
 {
-  "description": "A brief sentence describing their collaboration relationship",
+  "description": "A brief sentence describing their collaboration relationship, including any chart performance, awards, popularity statistics, live performances, and professional working dynamics when available",
   "projects": [
     {
       "name": "Project Name",
@@ -168,7 +168,7 @@ Please respond with JSON in this exact format:
       "year": "YYYY"
     }
   ],
-  "personalHistory": "Optional personal history or background information about their relationship"
+  "personalHistory": "Optional personal history or background information about their relationship (focus on personal/professional relationship context, not collaboration details)"
 }
 
 Guidelines:
@@ -178,8 +178,12 @@ Guidelines:
 - Include years when available
 - Keep the description concise but informative
 - If no real collaborations exist, return empty projects array
-- Personal history should be factual and relevant
-- Focus on factual collaboration information only`;
+- Personal history should focus on personal/professional relationship context, not collaboration details
+- Focus on factual collaboration information only
+- Include chart performance, awards, and popularity statistics in the description field when available
+- Include live performance information when available
+- Include professional working relationship details when available
+- Do not make up any information or hallucinate`;
 
           const completion = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -273,10 +277,7 @@ Guidelines:
     
     console.log(`✅ [Collaboration] Final result: ${collaborationDetails.projects.length} projects from combined sources`);
     
-    // Add a note about data sources if we have projects
-    if (collaborationDetails.projects.length > 0) {
-      collaborationDetails.description += ` Data sourced from MusicBrainz and enhanced with AI-generated information.`;
-    }
+    // Data source note removed - no longer adding attribution text to description
 
     // If Spotify is configured, try to enhance the projects with Spotify data
     if (SPOTIFY_CLIENT_ID && SPOTIFY_CLIENT_SECRET) {
