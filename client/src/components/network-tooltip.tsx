@@ -344,54 +344,56 @@ export const NetworkTooltip: React.FC<NetworkTooltipProps> = ({
           overflow: 'hidden',
         }}
       >
-        {/* Network action - always available */}
-        <div
-          data-testid="network-action"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap,
-            cursor: 'pointer',
-            width: '100%',
-            overflow: 'hidden',
-          }}
-          onClick={(e) => handleActionClick(e, () => onNetworkAction(node))}
-          onKeyDown={(e) => handleKeyPress(e, () => onNetworkAction(node))}
-          tabIndex={0}
-          role="button"
-          aria-label={`View ${node.name}'s network`}
-        >
-          <img
-            src={networkIconPath}
-            alt="Network"
+        {/* Network action - available for non-main-artist nodes */}
+        {!isMainArtist && (
+          <div
+            data-testid="network-action"
             style={{
-              width: `${iconSize}px`,
-              height: `${iconSize}px`,
-              minWidth: `${iconSize}px`,
-              minHeight: `${iconSize}px`,
-              maxWidth: `${iconSize}px`,
-              maxHeight: `${iconSize}px`,
-              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              gap,
               cursor: 'pointer',
-              objectFit: 'contain',
-              flexShrink: 0,
-            }}
-          />
-          <span
-            style={{
-              fontSize: linkFontSize,
-              fontStyle: 'italic',
-              textDecoration: 'underline',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              flex: 1,
+              width: '100%',
               overflow: 'hidden',
-              textOverflow: 'ellipsis',
             }}
+            onClick={(e) => handleActionClick(e, () => onNetworkAction(node))}
+            onKeyDown={(e) => handleKeyPress(e, () => onNetworkAction(node))}
+            tabIndex={0}
+            role="button"
+            aria-label={`View ${node.name}'s network`}
           >
-            {node.name}&apos;s network
-          </span>
-        </div>
+            <img
+              src={networkIconPath}
+              alt="Network"
+              style={{
+                width: `${iconSize}px`,
+                height: `${iconSize}px`,
+                minWidth: `${iconSize}px`,
+                minHeight: `${iconSize}px`,
+                maxWidth: `${iconSize}px`,
+                maxHeight: `${iconSize}px`,
+                borderRadius: '50%',
+                cursor: 'pointer',
+                objectFit: 'contain',
+                flexShrink: 0,
+              }}
+            />
+            <span
+              style={{
+                fontSize: linkFontSize,
+                fontStyle: 'italic',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flex: 1,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {node.name}&apos;s network
+            </span>
+          </div>
+        )}
 
         {/* Expand action - available for any non-main-artist node */}
         {!isMainArtist && (
