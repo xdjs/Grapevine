@@ -1237,7 +1237,7 @@ export default function MobileControls({
           <div className="flex justify-center items-center py-4">
             <img 
               key={showHelp ? 'gif-playing' : 'gif-stopped'}
-              src="/help-button.gif" 
+              src="/help-button.gif?v=2" 
               alt="Help instructions" 
               className="max-w-full max-h-96 rounded-lg border-2"
               style={{ borderColor: '#b427b4' }}
