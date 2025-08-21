@@ -46,12 +46,13 @@ export default function HelpButton() {
           <div className="flex justify-center items-center py-4">
             <img 
               key={isOpen ? 'gif-playing' : 'gif-stopped'}
-              src="/help-button.gif?v=3" 
+              src={`/help-button.gif?v=${Date.now()}`}
               alt="Help instructions" 
               className="max-w-full max-h-96 rounded-lg border-2"
               style={{ borderColor: '#b427b4' }}
               loading="eager"
               decoding="async"
+              crossOrigin="anonymous"
               onLoad={() => {
                 console.log('Help GIF loaded successfully');
               }}
