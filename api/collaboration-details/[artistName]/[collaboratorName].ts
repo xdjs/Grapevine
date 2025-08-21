@@ -156,7 +156,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         apiKey: OPENAI_API_KEY,
       });
 
-      const prompt = `Given the artist "${artistName}" and their collaborator "${collaboratorName}", write a brief sentence describing how they worked together, and cite the real project (song, album, etc) that they worked on together. All instances of collaborations should be mentioned, as well as their personal history (if the information is available).
+      const prompt = `Given the artist "${artistName}" and their collaborator "${collaboratorName}", write a brief sentence describing how they worked together, and cite the real project (song, album, etc) that they worked on together. All instances of collaborations should be mentioned, as well as their personal history (if the information is available). If possible, include any statistics about the popularity of their collaborations when available. For example, if their collaboration/project charted or won any awards, include this information.
 
 Please respond with JSON in this exact format:
 {
@@ -179,7 +179,8 @@ Guidelines:
 - Keep the description concise but informative
 - If no real collaborations exist, return empty projects array
 - Personal history should be factual and relevant
-- Focus on factual collaboration information only`;
+- Focus on factual collaboration information only
+- If possible, include any statistics about the popularity of their collaborations when available. For example, if their collaboration/project charted or won any awards, include this information. Do not make up any information or hallucinate.`;
 
           const completion = await openai.chat.completions.create({
         model: "gpt-4o",
