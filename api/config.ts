@@ -18,7 +18,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     // Use production URL with fallback to environment variable
-    const musicNerdBaseUrl = process.env.MUSICNERD_BASE_URL_OVERRIDE || 'https://www.musicnerd.xyz';
+    const musicNerdBaseUrl = process.env.MUSICNERD_BASE_URL_OVERRIDE || 'https://musicnerd.net';
     
     console.log(`🔧 [Vercel Config] Returning musicNerdBaseUrl: ${musicNerdBaseUrl}`);
     

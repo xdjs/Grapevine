@@ -76,7 +76,7 @@ function createSafeNetworkNode(params: {
     spotifyId: params.spotifyId,
     artistId: params.artistId,
     collaborations: params.collaborations,
-    musicNerdUrl: params.musicNerdUrl || 'https://musicnerd.xyz',
+    musicNerdUrl: params.musicNerdUrl || 'https://musicnerd.net',
   };
 }
 
@@ -223,11 +223,11 @@ export class DatabaseStorage implements IStorage {
     const nodeMap = new Map<string, SafeNetworkNode>();
     
     // Get MusicNerd URL for main artist
-    let musicNerdUrl = 'https://musicnerd.xyz';
+    let musicNerdUrl = 'https://musicnerd.net';
     try {
       const artistId = await musicNerdService.getArtistId(artistName);
       if (artistId) {
-        musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
+        musicNerdUrl = `https://musicnerd.net/artist/${artistId}`;
       }
     } catch (error) {
       console.log(`📭 [DEBUG] No MusicNerd ID found for main artist ${artistName}`);
@@ -441,7 +441,7 @@ export class DatabaseStorage implements IStorage {
               if (result.status === 'fulfilled' && result.value.artistId) {
                 const node = nodeMap.get(result.value.name);
                 if (node) {
-                  node.musicNerdUrl = `https://musicnerd.xyz/artist/${result.value.artistId}`;
+                  node.musicNerdUrl = `https://musicnerd.net/artist/${result.value.artistId}`;
                 }
               }
             }
@@ -516,7 +516,7 @@ export class DatabaseStorage implements IStorage {
         name: artistName,
         type: 'artist',
         size: 30,
-        musicNerdUrl: musicNerdUrl || 'https://musicnerd.xyz',
+        musicNerdUrl: musicNerdUrl || 'https://musicnerd.net',
       });
       return { nodes: [fallbackNode], links: [] };
     }

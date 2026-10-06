@@ -387,7 +387,7 @@ export default function Home() {
         >
           <button
             onClick={() => {
-              window.open('https://www.musicnerd.xyz', '_blank', 'noopener,noreferrer');
+              window.open('https://musicnerd.net', '_blank', 'noopener,noreferrer');
             }}
             className="font-medium py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg transition-colors text-white text-xs sm:text-sm"
             style={{

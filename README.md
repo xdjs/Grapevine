@@ -183,3 +183,11 @@ If you encounter any issues or have questions:
 
 **Built with ❤️ for the music community**
 
+## Music Nerd website links
+
+Music Nerd's primary website is `https://musicnerd.net`. Default API lookups,
+newly generated artist links and the Music Nerd navigation button use that origin.
+`MUSICNERD_BASE_URL_OVERRIDE` still selects an explicit alternative for development.
+Existing stored links and external source URLs are not rewritten by this change.
+
+Tracked in [MusicNerdWeb #1427](https://github.com/xdjs/MusicNerdWeb/issues/1427).
