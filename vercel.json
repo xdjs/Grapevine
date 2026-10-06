@@ -17,7 +17,7 @@
       "headers": [
         {
           "key": "X-Frame-Options",
-          "value": "ALLOW-FROM https://music-nerd-git-staging-musicnerd.vercel.app https://www.musicnerd.xyz"
+          "value": "ALLOW-FROM https://music-nerd-git-staging-musicnerd.vercel.app https://musicnerd.net"
         }
       ]
     },

@@ -148,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/config", async (req, res) => {
     try {
       // Use production URL with fallback to environment variable
-      const musicNerdBaseUrl = process.env.MUSICNERD_BASE_URL_OVERRIDE || 'https://www.musicnerd.xyz';
+      const musicNerdBaseUrl = process.env.MUSICNERD_BASE_URL_OVERRIDE || 'https://musicnerd.net';
       
       console.log(`🔧 [DEBUG] Config endpoint called, returning musicNerdBaseUrl: ${musicNerdBaseUrl}`);
       

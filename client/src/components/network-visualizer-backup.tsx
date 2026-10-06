@@ -897,7 +897,7 @@ export default function NetworkVisualizer({
   const handleArtistSelection = (artistId: string) => {
     // Open the specific artist page with the selected ID
 
-    const musicNerdUrl = `https://musicnerd.xyz/artist/${artistId}`;
+    const musicNerdUrl = `https://musicnerd.net/artist/${artistId}`;
 
     console.log(`🎵 Opening selected artist page: ${musicNerdUrl}`);
     
