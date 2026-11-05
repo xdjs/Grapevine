@@ -69,7 +69,7 @@ class MusicNerdService {
           if (artistName.length === 1) {
             // For single character: only show names starting with that character
             query = `
-              SELECT id, name FROM artists 
+              SELECT id, name FROM mn_public.artists
               WHERE LOWER(name) LIKE LOWER($1)
               ORDER BY LENGTH(name), name 
               LIMIT 100
@@ -78,7 +78,7 @@ class MusicNerdService {
           } else if (artistName.length <= 3) {
             // For short inputs: prefix matching with secondary contains matching
             query = `
-              SELECT id, name FROM artists 
+              SELECT id, name FROM mn_public.artists
               WHERE LOWER(name) LIKE LOWER($1) OR LOWER(name) LIKE LOWER($2)
               ORDER BY 
                 CASE 
@@ -93,7 +93,7 @@ class MusicNerdService {
             params = [`${artistName.toLowerCase()}%`, `%${artistName.toLowerCase()}%`, `${artistName.toLowerCase()}%`];
           } else {
             // For longer inputs: comprehensive fuzzy matching
-            query = 'SELECT id, name FROM artists WHERE LOWER(name) LIKE LOWER($1) ORDER BY LENGTH(name), name LIMIT 200';
+            query = 'SELECT id, name FROM mn_public.artists WHERE LOWER(name) LIKE LOWER($1) ORDER BY LENGTH(name), name LIMIT 200';
             params = [`%${artistName.toLowerCase()}%`];
           }
           
@@ -177,7 +177,7 @@ class MusicNerdService {
           console.log(`🔍 [DEBUG] Artists table columns:`, schemaResult.rows.map(r => r.column_name));
           
           // First get all potential matches case-insensitively to see what's available
-          const query = 'SELECT * FROM artists WHERE LOWER(name) = LOWER($1)';
+          const query = 'SELECT id, name FROM mn_public.artists WHERE LOWER(name) = LOWER($1)';
           console.log(`🔍 [DEBUG] Executing search query: ${query} with parameter: "${artistName}"`);
           let result = await client.query(query, [artistName]);
           console.log(`🔍 [DEBUG] Found ${result.rows.length} potential matches for "${artistName}"`);

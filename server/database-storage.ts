@@ -111,7 +111,7 @@ export class DatabaseStorage implements IStorage {
       // Use raw SQL since our schema doesn't match the actual database columns
       const result = await db.execute(sql`
         SELECT id, name, spotify as spotify_id, node_pfp, webmapdata, x, instagram, facebook
-        FROM artists 
+        FROM mn_public.artists
         WHERE name = ${name}
         LIMIT 1
       `);
@@ -535,7 +535,7 @@ export class DatabaseStorage implements IStorage {
       
       if (existingArtist) {
         await db.execute(sql`
-          UPDATE artists 
+          UPDATE public.artists
           SET webmapdata = ${JSON.stringify(networkData)}::jsonb 
           WHERE name = ${artistName}
         `);
@@ -558,7 +558,7 @@ export class DatabaseStorage implements IStorage {
       console.log(`💾 [DEBUG] Caching webmapdata for artist ID "${artistId}"`);
       
       await db.execute(sql`
-        UPDATE artists 
+        UPDATE public.artists
         SET webmapdata = ${JSON.stringify(networkData)}::jsonb 
         WHERE id = ${artistId}
       `);
@@ -687,7 +687,7 @@ export class DatabaseStorage implements IStorage {
       if (existingArtist) {
         // Update existing artist with profile picture data
         await db.execute(sql`
-          UPDATE artists 
+          UPDATE public.artists
           SET 
             node_pfp = ${JSON.stringify(nodeProfileData)}::jsonb,
             spotify = ${profileData.spotifyId},
@@ -699,7 +699,7 @@ export class DatabaseStorage implements IStorage {
       } else {
         // Create new artist entry if it doesn't exist
         await db.execute(sql`
-          INSERT INTO artists (name, spotify, node_pfp, created_at, updated_at)
+          INSERT INTO public.artists (name, spotify, node_pfp, created_at, updated_at)
           VALUES (${artistName}, ${profileData.spotifyId}, ${JSON.stringify(nodeProfileData)}::jsonb, NOW(), NOW())
         `);
         console.log(`✅ [DEBUG] Created new artist entry with profile picture cache for "${artistName}"`);
@@ -725,7 +725,7 @@ export class DatabaseStorage implements IStorage {
       // Use raw SQL to match actual database schema
       const result = await db.execute(sql`
         SELECT node_pfp, spotify as spotify_id
-        FROM artists 
+        FROM mn_public.artists
         WHERE name = ${artistName}
         LIMIT 1
       `);

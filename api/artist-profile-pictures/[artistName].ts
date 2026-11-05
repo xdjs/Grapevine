@@ -64,7 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       let notFoundReason: string = 'unknown';
       if (client && !forceRefresh) {
         try {
-          const cacheQuery = 'SELECT node_pfp, spotify_id FROM artists WHERE LOWER(name) = LOWER($1) AND node_pfp IS NOT NULL';
+          const cacheQuery = 'SELECT node_pfp, spotify_id FROM mn_public.artists WHERE LOWER(name) = LOWER($1) AND node_pfp IS NOT NULL';
           const cacheResult = await client.query(cacheQuery, [decodedArtistName]);
           if (cacheResult.rows.length > 0 && cacheResult.rows[0].node_pfp) {
             console.log(`📦 [ProfilePics:single] Cache hit for ${decodedArtistName}`);
@@ -181,7 +181,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // Update cache best-effort
             if (client) {
               try {
-                const up = `UPDATE artists SET node_pfp = $1, spotify_id = $2 WHERE LOWER(name) = LOWER($3)`;
+                const up = `UPDATE public.artists SET node_pfp = $1, spotify_id = $2 WHERE LOWER(name) = LOWER($3)`;
                 await client.query(up, [data.imageUrl, data.spotifyId, decodedArtistName]);
               } catch (dbErr) {
                 console.warn(`⚠️ [ProfilePics:single] Failed to cache DB for ${decodedArtistName}:`, dbErr);

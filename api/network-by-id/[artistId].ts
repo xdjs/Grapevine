@@ -72,7 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await client.connect();
       
       // Get artist by ID
-      const artistQuery = 'SELECT id, name, webmapdata FROM artists WHERE id = $1';
+      const artistQuery = 'SELECT id, name, webmapdata FROM mn_public.artists WHERE id = $1';
       const artistResult = await client.query(artistQuery, [artistId]);
       
       if (artistResult.rows.length === 0) {
@@ -436,7 +436,7 @@ Guidelines:
           };
 
           // Look up MusicNerd ID for collaborator
-          const collabQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
+          const collabQuery = 'SELECT id FROM mn_public.artists WHERE LOWER(name) = LOWER($1)';
           const collabResult = await client.query(collabQuery, [collaborator.name]);
           if (collabResult.rows.length > 0) {
             collabNode.artistId = collabResult.rows[0].id;
@@ -485,7 +485,7 @@ Guidelines:
             };
 
             // Look up MusicNerd ID for branching artist
-            const branchQuery = 'SELECT id FROM artists WHERE LOWER(name) = LOWER($1)';
+            const branchQuery = 'SELECT id FROM mn_public.artists WHERE LOWER(name) = LOWER($1)';
             const branchResult = await client.query(branchQuery, [branchingArtist]);
             if (branchResult.rows.length > 0) {
               branchNode.artistId = branchResult.rows[0].id;
@@ -510,7 +510,7 @@ Guidelines:
       // Only cache the generated data if hallucinations were NOT used
       if (!hallucinationsUsed) {
         try {
-          const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE id = $2';
+          const updateQuery = 'UPDATE public.artists SET webmapdata = $1 WHERE id = $2';
           await client.query(updateQuery, [JSON.stringify(networkData), artistId]);
           console.log(`💾 [Vercel] Cached network data for artist ID ${artistId} (${artist.name})`);
         } catch (cacheError) {

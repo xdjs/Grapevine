@@ -31,7 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await client.connect();
 
     // Query for the artist's X username from the 'x' column
-    const query = 'SELECT id, name, x FROM artists WHERE id = $1';
+    const query = 'SELECT id, name, x FROM mn_public.artists WHERE id = $1';
     const result = await client.query(query, [artistId]);
 
     await client.end();

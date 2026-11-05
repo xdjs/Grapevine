@@ -63,7 +63,7 @@ async function findArtistInDatabase(client: any, artistName: string): Promise<{i
     
     console.log(`🔍 [Vercel] Trying artist lookup with variation: "${variation}"`);
     
-    const query = 'SELECT id, name FROM artists WHERE LOWER(name) = LOWER($1)';
+    const query = 'SELECT id, name FROM mn_public.artists WHERE LOWER(name) = LOWER($1)';
     const result = await client.query(query, [variation]);
     
     if (result.rows.length > 0) {
@@ -641,7 +641,7 @@ Guidelines:
       try {
         for (const node of nodes) {
           if (node.artistId) {
-            const cacheQuery = 'SELECT node_pfp, spotify_id FROM artists WHERE id = $1 AND node_pfp IS NOT NULL';
+            const cacheQuery = 'SELECT node_pfp, spotify_id FROM mn_public.artists WHERE id = $1 AND node_pfp IS NOT NULL';
             const cacheResult = await client.query(cacheQuery, [node.artistId]);
             
             if (cacheResult.rows.length > 0 && cacheResult.rows[0].node_pfp) {
@@ -664,7 +664,7 @@ Guidelines:
       // Only cache the generated data if hallucinations were NOT used
       if (!hallucinationsUsed) {
         try {
-          const updateQuery = 'UPDATE artists SET webmapdata = $1 WHERE LOWER(name) = LOWER($2)';
+          const updateQuery = 'UPDATE public.artists SET webmapdata = $1 WHERE LOWER(name) = LOWER($2)';
           await client.query(updateQuery, [JSON.stringify(networkData), correctArtistName]);
           console.log(`💾 [Vercel] Cached network data for ${correctArtistName}`);
         } catch (cacheError) {

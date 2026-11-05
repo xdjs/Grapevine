@@ -53,7 +53,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Single character: find artists starting with that character
         searchQuery = `
           SELECT id, name, bio 
-          FROM artists 
+          FROM mn_public.artists
           WHERE LOWER(name) LIKE LOWER($1) 
           ORDER BY 
             CASE WHEN LOWER(name) LIKE LOWER($2) THEN 1 ELSE 2 END,
@@ -65,7 +65,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Multiple characters: comprehensive fuzzy search
         searchQuery = `
           SELECT id, name, bio 
-          FROM artists 
+          FROM mn_public.artists
           WHERE LOWER(name) LIKE LOWER($1) 
              OR LOWER(name) LIKE LOWER($2) 
              OR LOWER(name) LIKE LOWER($3)

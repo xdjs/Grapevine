@@ -244,7 +244,7 @@ describe('/api/network/[artistName] with Spotify Integration', () => {
 
       // Verify database update for Spotify data
       expect(mockClient.query).toHaveBeenCalledWith(
-        'UPDATE artists SET image_url = $1, spotify_id = $2 WHERE id = $3',
+        'UPDATE public.artists SET image_url = $1, spotify_id = $2 WHERE id = $3',
         ['https://spotify.com/taylor-swift.jpg', 'spotify-taylor-swift-id', '1']
       );
     });

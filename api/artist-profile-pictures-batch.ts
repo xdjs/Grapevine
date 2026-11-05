@@ -94,7 +94,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       for (const artistName of body.artistNames) {
         try {
           // Check database cache using node_pfp column
-          const cacheQuery = 'SELECT node_pfp, spotify_id FROM artists WHERE LOWER(name) = LOWER($1) AND node_pfp IS NOT NULL';
+          const cacheQuery = 'SELECT node_pfp, spotify_id FROM mn_public.artists WHERE LOWER(name) = LOWER($1) AND node_pfp IS NOT NULL';
           const cacheResult = await client.query(cacheQuery, [artistName]);
           
           if (cacheResult.rows.length > 0 && cacheResult.rows[0].node_pfp) {
@@ -144,7 +144,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 // Update database cache
                 try {
                   const updateQuery = `
-                    UPDATE artists 
+                    UPDATE public.artists
                     SET node_pfp = $1, spotify_id = $2 
                     WHERE LOWER(name) = LOWER($3)
                   `;

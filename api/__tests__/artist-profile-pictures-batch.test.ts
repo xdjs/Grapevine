@@ -301,7 +301,7 @@ describe('Artist Profile Pictures Batch API', () => {
       
       // Should cache the results in database
       expect(mockClient.query).toHaveBeenCalledWith(
-        expect.stringContaining('UPDATE artists'),
+        expect.stringContaining('UPDATE public.artists'),
         ['https://spotify-image-1.jpg', 'spotify1', 'New Artist']
       );
     });
@@ -568,7 +568,7 @@ describe('Artist Profile Pictures Batch API', () => {
       
       // Verify cache update was attempted
       expect(mockClient.query).toHaveBeenCalledWith(
-        expect.stringContaining('UPDATE artists'),
+        expect.stringContaining('UPDATE public.artists'),
         ['https://new-image.jpg', 'new-spotify-id', 'New Artist']
       );
     });

@@ -126,7 +126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const { Client } = await import('pg');
                 const client = new Client({ connectionString });
                 await client.connect();
-                await client.query('UPDATE artists SET webmapdata = NULL WHERE LOWER(name) = LOWER($1)', [artistName]);
+                await client.query('UPDATE public.artists SET webmapdata = NULL WHERE LOWER(name) = LOWER($1)', [artistName]);
                 await client.end();
                 console.log(`✅ [DEBUG] Cache cleared for "${artistName}"`);
                 res.json({ message: `Cache cleared for ${artistName}` });
